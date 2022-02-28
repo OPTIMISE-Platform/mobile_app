@@ -27,12 +27,12 @@ class _SettingsState extends State<Settings> {
         body: ListView(
           children: [
             ListTile(
-              title: Text("Switch Style"),
+              title: const Text("Switch Style"),
               onTap: () => MyTheme.toggleTheme(context),
             ),
             Divider(),
             ListTile(
-              title: Text("Logout"),
+              title: const Text("Logout"),
               onTap: () => Auth.logout(),
             ),
             // const Divider(),
