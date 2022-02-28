@@ -94,20 +94,23 @@ class _DeviceListState extends State<DeviceList> {
       return
         RefreshIndicator(
           onRefresh: () async => _searchDevices(_searchText, setState, mounted, true),
-          child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          itemCount: _totalDevices * 2,
-          itemBuilder: (context, i) {
-            if (i.isOdd) return const Divider();
-            final index = i ~/ 2;
-            if (index >= _devices.length) {
-              _loadMoreDevices(setState, mounted);
-            }
-            return ListTile(
-              title: Text(getDeviceTitle(index)),
-            );
-          }),
+          child: Scrollbar(
+            isAlwaysShown: true,
+            child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                itemCount: _totalDevices * 2,
+                itemBuilder: (context, i) {
+                  if (i.isOdd) return const Divider();
+                  final index = i ~/ 2;
+                  if (index >= _devices.length) {
+                    _loadMoreDevices(setState, mounted);
+                  }
+                  return ListTile(
+                    title: Text(getDeviceTitle(index)),
+                  );
+                }),
+          ),
         );
     });
   }
