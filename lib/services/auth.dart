@@ -57,7 +57,7 @@ class Auth {
       await init();
     }
 
-    if (token != null && token!.expiresAt != null && token!.expiresAt!.isAfter(DateTime.now())) {
+    if (_tokenValid()) {
       _logger.d("Old token still valid");
       return;
     }
@@ -129,7 +129,7 @@ class Auth {
   }
 
   static Future<http.Client> getHttpClient() async {
-    if (httpClient != null) {
+    if (httpClient != null && _tokenValid()) {
       return httpClient!;
     }
     if (c == null) {
@@ -137,5 +137,9 @@ class Auth {
     }
     httpClient = c!.createHttpClient();
     return httpClient!;
+  }
+
+  static _tokenValid() {
+    return _initialized && token != null && token!.expiresAt != null && token!.expiresAt!.isAfter(DateTime.now());
   }
 }
