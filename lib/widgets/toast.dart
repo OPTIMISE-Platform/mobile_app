@@ -39,4 +39,14 @@ class Toast {
       Text(text)];
     showToast(context, widgets, Colors.redAccent);
   }
+
+  static showConfirmationToast(BuildContext context, String text) {
+    List<Widget> widgets = [
+      Icon(PlatformIcons(context).checkMark),
+      const SizedBox(
+        width: 12.0,
+      ),
+      Text(text)];
+    showToast(context, widgets, Colors.greenAccent);
+  }
 }

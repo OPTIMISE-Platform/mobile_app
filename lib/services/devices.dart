@@ -25,10 +25,10 @@ class DevicesService {
       return;
     }
 
-    String? dir = await CacheHelper.getCacheDir();
+    String? cacheFile = await CacheHelper.getCacheFile();
 
     options = CacheOptions(
-      store: HiveCacheStore(dir != null ? dir + '/cache.box' : null),
+      store: HiveCacheStore(cacheFile),
       policy: CachePolicy.refreshForceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -15,17 +16,22 @@ class CacheHelper {
     return sha1.convert(bytes).toString();
   }
 
-  static Future<String?> getCacheDir() async {
+  static Future<String?> getCacheFile() async {
     if (kIsWeb) {
       return null;
     }
     if (Platform.isAndroid) {
       List<Directory>? cacheDirs = await getExternalCacheDirectories();
       if (cacheDirs != null && cacheDirs.isNotEmpty) {
-        return cacheDirs[0].path;
+        return cacheDirs[0].path + "/cache.box";
       }
     }
 
-    return (await getApplicationDocumentsDirectory()).path;
+    return (await getApplicationDocumentsDirectory()).path + "/cache.box";
+  }
+
+  static clearCache() async {
+    final cacheFile = (await getCacheFile());
+    HiveCacheStore(cacheFile).clean();
   }
 }

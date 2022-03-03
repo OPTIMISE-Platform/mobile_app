@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/page_spinner.dart';
+import 'package:mobile_app/widgets/toast.dart';
+
 
 import '../services/auth.dart';
 import '../theme.dart';
@@ -30,6 +33,14 @@ class _SettingsState extends State<Settings> {
           ListTile(
             title: const Text("Switch Style"),
             onTap: () => MyTheme.toggleTheme(context),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text("Clear Cache"),
+            onTap: () {
+              CacheHelper.clearCache();
+              Toast.showConfirmationToast(context, "Cache cleared");
+            },
           ),
           const Divider(),
           ListTile(
