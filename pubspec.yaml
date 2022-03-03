@@ -35,12 +35,23 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.4
   flutter_platform_widgets: ^1.20.0
-  openid_client: ^0.4.6
   url_launcher: ^6.0.20
   flutter_dotenv: ^5.0.2
   logger: ^1.1.0
   flutter_secure_storage: ^5.0.2
   json_annotation: ^4.4.0
+  dio_cache_interceptor: ^3.2.6
+  dio_cache_interceptor_hive_store: ^3.1.1
+  path_provider: ^2.0.9
+  mutex: ^3.0.0
+  openidconnect:
+    git:
+      url: git://github.com/tahiti-web-design/openidconnect_flutter
+      path: openidconnect
+      ref: feat/keycloak-logout-support
+  connectivity_plus: ^2.2.1
+  crypto: ^3.0.1
+  fluttertoast: ^8.0.9
 
 dev_dependencies:
   flutter_test:

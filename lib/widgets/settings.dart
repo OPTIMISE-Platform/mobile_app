@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
+import 'package:mobile_app/widgets/page_spinner.dart';
 
 import '../services/auth.dart';
 import '../theme.dart';
@@ -23,22 +24,29 @@ class _SettingsState extends State<Settings> {
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
-        appBar: _appBar.getAppBar(context, []),
-        body: ListView(
-          children: [
-            ListTile(
-              title: const Text("Switch Style"),
-              onTap: () => MyTheme.toggleTheme(context),
-            ),
-            Divider(),
-            ListTile(
-              title: const Text("Logout"),
-              onTap: () => Auth.logout(),
-            ),
-            // const Divider(),
-          ],
-        ),
+      appBar: _appBar.getAppBar(context),
+      body: ListView(
+        children: [
+          ListTile(
+            title: const Text("Switch Style"),
+            onTap: () => MyTheme.toggleTheme(context),
+          ),
+          const Divider(),
+          ListTile(
+            title: const Text("Logout"),
+            onTap: () {
+              Navigator.push(
+                  context,
+                  platformPageRoute(
+                    context: context,
+                    builder: (context) => const PageSpinner("Logout"),
+                  ));
+              Auth.logout(context);
+            },
+          ),
+          // const Divider(),
+        ],
+      ),
     );
   }
 }
-

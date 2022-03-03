@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
@@ -8,6 +9,7 @@ import 'package:mobile_app/models/device_permsearch.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
+import 'package:mobile_app/widgets/toast.dart';
 
 class DeviceList extends StatefulWidget {
   DeviceList({Key? key}) : super(key: key) {}
@@ -30,16 +32,21 @@ class _DeviceListState extends State<DeviceList> {
   _DeviceListState() {
     _appBar = MyAppBar();
     _appBar.setTitle("Devices");
-    _loadMoreDevices(setState, _mounted);
   }
 
   bool _mounted() {
     return mounted;
   }
 
-  _loadMoreDevices(StateSetter setState, bool Function() mounted) async {
+  _loadMoreDevices(BuildContext context, StateSetter setState,
+      bool Function() mounted) async {
     if (_totalDevices == 0) {
-      _totalDevices = await DevicesService.getTotalDevices(_searchText);
+      try {
+        _totalDevices =
+            await DevicesService.getTotalDevices(context, _searchText);
+      } catch (e) {
+        _logger.e("Could not get total devices: " + e.toString());
+      }
     }
 
     if (_devices.length < _offset) {
@@ -48,8 +55,15 @@ class _DeviceListState extends State<DeviceList> {
     }
     const pageSize = 100;
     _offset += pageSize;
-    final newDevices =
-        await DevicesService.getDevices(pageSize, _offset - pageSize, _searchText, []);
+    late final List<DevicePermSearch> newDevices;
+    try {
+      newDevices = await DevicesService.getDevices(
+          context, pageSize, _offset - pageSize, _searchText, []);
+    } catch (e) {
+      _logger.e("Could not get devices: " + e.toString());
+      Toast.showErrorToast(context, "Could not load devices");
+      return;
+    }
     if (mounted()) {
       _devices.addAll(newDevices);
       setState(() {});
@@ -76,7 +90,8 @@ class _DeviceListState extends State<DeviceList> {
     });
   }
 
-  _searchDevices(String search, StateSetter setState, bool Function() mounted, bool force) {
+  _searchDevices(String search, StateSetter setState, bool Function() mounted,
+      bool force) {
     if (_searchText == search && !force) {
       return;
     }
@@ -84,34 +99,36 @@ class _DeviceListState extends State<DeviceList> {
     _offset = 0;
     _totalDevices = 0;
     _devices = [];
-    _loadMoreDevices(setState, mounted);
+    _loadMoreDevices(context, setState, mounted);
   }
 
   Widget _buildListWidget(String query, bool Function() mounted) {
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
       _searchChanged(query, setState, mounted);
-      return
-        RefreshIndicator(
-          onRefresh: () async => _searchDevices(_searchText, setState, mounted, true),
-          child: Scrollbar(
-            isAlwaysShown: true,
-            child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                itemCount: _totalDevices * 2,
-                itemBuilder: (context, i) {
-                  if (i.isOdd) return const Divider();
-                  final index = i ~/ 2;
-                  if (index >= _devices.length) {
-                    _loadMoreDevices(setState, mounted);
-                  }
-                  return ListTile(
-                    title: Text(getDeviceTitle(index)),
-                  );
-                }),
-          ),
-        );
+      return RefreshIndicator(
+        onRefresh: () async =>
+            _searchDevices(_searchText, setState, mounted, true),
+        child: Scrollbar(
+          isAlwaysShown: true,
+          child: _totalDevices == 0
+              ? const Center(child: Text("No devices"))
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: _totalDevices * 2,
+                  itemBuilder: (context, i) {
+                    if (i.isOdd) return const Divider();
+                    final index = i ~/ 2;
+                    if (index >= _devices.length) {
+                      _loadMoreDevices(context, setState, mounted);
+                    }
+                    return ListTile(
+                      title: Text(getDeviceTitle(index)),
+                    );
+                  }),
+        ),
+      );
     });
   }
 
@@ -123,27 +140,43 @@ class _DeviceListState extends State<DeviceList> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO MyTheme.loadTheme(context);
+    if (_devices.isEmpty) {
+      _loadMoreDevices(context, setState, _mounted);
+    }
+
+    List<Widget> actions = [
+      PlatformWidget(
+        material: (_, __) => PlatformIconButton(
+            icon: Icon(PlatformIcons(context).search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: DevicesSearchDelegate(
+                  _buildListWidget,
+                  () {
+                    _searchDebounce?.cancel();
+                    _searchDevices("", setState, _mounted, false);
+                  },
+                ),
+              );
+            }),
+        cupertino: (_, __) => const SizedBox.shrink(),
+      ),
+    ];
+
+    if (kIsWeb) {
+      actions.add(PlatformIconButton(
+        onPressed: () async =>
+            _searchDevices(_searchText, setState, () => mounted, true),
+        icon: const Icon(Icons.refresh),
+        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+      ));
+    }
+
+    actions.addAll(MyAppBar.getDefaultActions(context));
+
     return PlatformScaffold(
-      appBar: _appBar.getAppBar(context, [
-        PlatformWidget(
-          material: (_, __) => PlatformIconButton(
-              icon: Icon(PlatformIcons(context).search),
-              onPressed: () {
-                showSearch(
-                  context: context,
-                  delegate: DevicesSearchDelegate(
-                    _buildListWidget,
-                    () {
-                      _searchDebounce?.cancel();
-                      _searchDevices("", setState, _mounted, false);
-                    },
-                  ),
-                );
-              }),
-          cupertino: (_, __) => const SizedBox.shrink(),
-        ),
-      ...MyAppBar.getDefaultActions(context)]),
+      appBar: _appBar.getAppBar(context, actions),
       body: Column(children: [
         PlatformWidget(
             cupertino: (_, __) => Container(

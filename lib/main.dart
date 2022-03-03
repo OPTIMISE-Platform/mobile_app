@@ -4,10 +4,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/device_list.dart';
+
+import 'home.dart';
 
 Future main() async {
   await dotenv.load(fileName: ".env");
+  await Auth.init();
   runApp(const MyApp());
 }
 
@@ -20,7 +22,6 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   _MyAppState() {
-    Auth.login();
   }
 
   @override
@@ -35,7 +36,7 @@ class _MyAppState extends State<MyApp> {
             DefaultWidgetsLocalizations.delegate,
             DefaultCupertinoLocalizations.delegate,
           ],
-          home: DeviceList(),
+          home: const Home(),
           material: (_, __) => MaterialAppData(
             theme: MyTheme.materialTheme,
           ),

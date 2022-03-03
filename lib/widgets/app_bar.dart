@@ -17,11 +17,10 @@ class MyAppBar {
         onPressed: () {
           Navigator.push(
             context,
-            // Add lines from here...
             platformPageRoute(
               context: context,
               builder: (context) => Settings(),
-            ), // ...to here.
+            ),
           );
         },
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
@@ -29,7 +28,7 @@ class MyAppBar {
     ];
   }
 
-  PlatformAppBar getAppBar(BuildContext context, List<Widget> trailingActions) {
+  PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions]) {
       return PlatformAppBar(
         title: Text(_title),
         cupertino: (_, __) => CupertinoNavigationBarData(
@@ -38,7 +37,7 @@ class MyAppBar {
           backgroundColor: Colors.black,
         ),
         trailingActions: [
-          ...trailingActions,
+          ...trailingActions ?? [],
         ],
     );
   }

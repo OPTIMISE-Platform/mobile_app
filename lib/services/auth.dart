@@ -1,145 +1,126 @@
-import 'dart:convert';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:openid_client/openid_client_io.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:logger/logger.dart';
-import 'package:http/http.dart' as http;
+import 'package:mutex/mutex.dart';
+import 'package:openidconnect/openidconnect.dart';
 
-
-const storageKeyUserInfo =  "auth/userinfo";
-const storageKeyToken =  "auth/token";
-const storageKeyCredential =  "auth/credential";
+const storageKeyToken = "auth/token";
 
 class Auth {
-  static bool _initialized = false;
-  static late Issuer _issuer;
-  static late Client _client;
-  static final _logger = Logger(printer: SimplePrinter(),);
-  static const _storage = FlutterSecureStorage();
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+  static final _m = Mutex();
 
-  static Credential? c;
-  static TokenResponse? token;
-  static UserInfo? userinfo;
-  static http.Client? httpClient;
+  static OpenIdConnectClient? _client;
+  static OpenIdIdentity? _token;
 
   static Future<void> init() async {
-    if (_initialized) {
+    if (_initialized()) {
       return;
     }
-    _issuer = await Issuer.discover(Uri.https(dotenv.env['KEYCLOAK_HOST'] ?? 'localhost', '/auth/realms/' + (dotenv.env['KEYCLOAK_REALM'] ?? 'master')));
-    _client = Client(_issuer, dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app');
+    ConnectivityResult connectivityResult =
+        await (Connectivity().checkConnectivity());
 
-    String? saved = await _storage.read(key: storageKeyUserInfo);
-    if (saved != null) {
-      _logger.d('Using stored userInfo');
-      userinfo = UserInfo.fromJson(json.decode(saved));
+    if (connectivityResult != ConnectivityResult.none) {
+      _client = await OpenIdConnectClient.create(
+        discoveryDocumentUrl:
+            (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
+                '/auth/realms/' +
+                (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
+                "/.well-known/openid-configuration",
+        clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
+        redirectUrl: kIsWeb
+            ? Uri.base.scheme +
+                "://" +
+                Uri.base.host +
+                ":" +
+                Uri.base.port.toString() +
+                "/callback.html"
+            : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
+      );
+    } else {
+      _logger.d("Postponing init(): Currently offline");
     }
-
-    saved = await _storage.read(key: storageKeyToken);
-    if (saved != null) {
-      _logger.d('Using stored token');
-      token = TokenResponse.fromJson(json.decode(saved));
+    _token = await OpenIdIdentity.load();
+    if (_token != null) {
+      _logger.d("Using token from storage");
+      if (!tokenValid()) {
+        _logger.d("But token is expired");
+      }
     }
-
-    saved = await _storage.read(key: storageKeyCredential);
-    if (saved != null) {
-      _logger.d('Using stored credential');
-      c = Credential.fromJson(json.decode(saved));
-    }
-    
-    _initialized = true;
   }
 
-  static Future<void> login() async {
-    if (!_initialized) {
+  static bool _initialized() {
+    return _client != null;
+  }
+
+  static Future<void> login(BuildContext context) async {
+    await _m.acquire();
+    if (!_initialized()) {
       await init();
     }
 
-    if (_tokenValid()) {
+    if (tokenValid()) {
       _logger.d("Old token still valid");
       return;
     }
-    // TODO check refresh token usable
-
-    urlLauncher(String url) async {
-      if (await canLaunch(url)) {
-        await launch(url, forceWebView: true);
-      } else {
-        throw 'Could not launch $url';
-      }
-    }
-
-    // create an authenticator
-    var authenticator = Authenticator(_client,
-        scopes: ['openid'],
-        port: 4000, urlLancher: urlLauncher);
-
-    // starts the authentication
-    c = await authenticator.authorize();
-    _storage.write(key: storageKeyCredential, value: json.encode(c));
-
-    // close the webview when finished
     try {
-      closeWebView();
-    } on UnimplementedError {
-      // pass
+      _token = await _client?.loginInteractive(
+          context: context,
+          title: "Login",
+          popupHeight: 640,
+          popupWidth: 480);
+    } catch (e) {
+      _logger.e("Login failed: " + e.toString());
+      _m.release();
+      return;
     }
 
-    token = await c?.getTokenResponse();
-
-    if (token != null) {
-      _storage.write(key: storageKeyToken, value: json.encode(token));
+    if (_token != null) {
+      _token?.save();
+      _logger.i('Logged in');
+    } else {
+      _logger.w("_token null");
     }
-
-    _logger.i(token != null ? 'Logged in' : 'Could not login');
-    
+    _m.release();
     return;
   }
 
-  static logout() async {
+  static logout(BuildContext context) async {
+    if (!_initialized()) {
+      await init();
+    }
+    if (_token == null) {
+      return;
+    }
+
+    await _client?.logoutToken();
+    await OpenIdIdentity.clear(); // remove saved token
+
     _logger.d("logout");
-    final uri = c?.generateLogoutUrl();
-    if (uri != null) {
-      (await getHttpClient()).get(uri);
-    }
-
-    c = null;
-    token = null;
-    userinfo = null;
-    httpClient = null;
-    await _storage.delete(key: storageKeyUserInfo);
-    await _storage.delete(key: storageKeyCredential);
-    await _storage.delete(key: storageKeyToken);
-    _initialized = false;
-    await login();
+    _token = null;
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  static Future<UserInfo?> getUserInfo() async {
-    if (c == null) {
-      await login();
+  static Future<Map<String, String>> getHeaders(BuildContext context) async {
+    if (_token == null) {
+      await login(context);
     }
-    userinfo ??= await c?.getUserInfo();
-    
-    if (userinfo != null) {
-      _storage.write(key: storageKeyUserInfo, value: json.encode(userinfo));
+    if (_token == null) {
+      throw "login error";
     }
-    return userinfo;
+    return {"Authorization": "Bearer " + _token!.accessToken};
   }
 
-  static Future<http.Client> getHttpClient() async {
-    if (httpClient != null && _tokenValid()) {
-      return httpClient!;
-    }
-    if (c == null) {
-      await login();
-    }
-    httpClient = c!.createHttpClient();
-    return httpClient!;
+  static bool tokenValid() {
+    return _token != null &&
+        _token!.expiresAt.isAfter(DateTime.now());
   }
 
-  static _tokenValid() {
-    return _initialized && token != null && token!.expiresAt != null && token!.expiresAt!.isAfter(DateTime.now());
+  static bool loggingIn() {
+    return _m.isLocked;
   }
 }
