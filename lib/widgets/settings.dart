@@ -10,7 +10,7 @@ import '../services/auth.dart';
 import '../theme.dart';
 
 class Settings extends StatefulWidget {
-  Settings({Key? key}) : super(key: key);
+  const Settings({Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _SettingsState();

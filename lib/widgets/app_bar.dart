@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/settings.dart';
@@ -19,7 +18,7 @@ class MyAppBar {
             context,
             platformPageRoute(
               context: context,
-              builder: (context) => Settings(),
+              builder: (context) => const Settings(),
             ),
           );
         },

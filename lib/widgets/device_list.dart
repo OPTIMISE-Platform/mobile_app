@@ -5,14 +5,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_permsearch.dart';
+import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/services/device_classes.dart';
+import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/toast.dart';
+import 'package:mutex/mutex.dart';
 
 class DeviceList extends StatefulWidget {
-  DeviceList({Key? key}) : super(key: key) {}
+  const DeviceList({Key? key}) : super(key: key);
 
   @override
   State<DeviceList> createState() => _DeviceListState();
@@ -21,13 +26,17 @@ class DeviceList extends StatefulWidget {
 class _DeviceListState extends State<DeviceList> {
   late final MyAppBar _appBar;
   List<DevicePermSearch> _devices = <DevicePermSearch>[];
-  int _offset = 0;
   int _totalDevices = 0;
   Timer? _searchDebounce;
   String _searchText = '';
+  int _deviceClassArrIndex = 0;
+  int _classOffset = 0;
+  final _m = Mutex();
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
+  final Map<String, DeviceClass> _deviceClasses = {};
+  final Map<String, DeviceTypePermSearch> _deviceTypes = {};
 
   _DeviceListState() {
     _appBar = MyAppBar();
@@ -38,8 +47,27 @@ class _DeviceListState extends State<DeviceList> {
     return mounted;
   }
 
-  _loadMoreDevices(BuildContext context, StateSetter setState,
-      bool Function() mounted) async {
+  _loadMoreDevices(
+      BuildContext context, StateSetter setState, bool Function() mounted,
+      [int size = 100]) async {
+    // default page size = 100
+    if (_m.isLocked) {
+      return;
+    }
+    _m.acquire();
+    _logger.d("Loading more devices");
+    if (_deviceClasses.isEmpty) {
+      for (var element
+          in (await DeviceClassesService.getDeviceClasses(context))) {
+        _deviceClasses[element.id] = element;
+      }
+    }
+    if (_deviceTypes.isEmpty) {
+      for (var element in (await DeviceTypesService.getDeviceTypes(context))) {
+        _deviceTypes[element.id] = element;
+      }
+    }
+
     if (_totalDevices == 0) {
       try {
         _totalDevices =
@@ -48,25 +76,34 @@ class _DeviceListState extends State<DeviceList> {
         _logger.e("Could not get total devices: " + e.toString());
       }
     }
-
-    if (_devices.length < _offset) {
-      // already loading
-      return;
-    }
-    const pageSize = 100;
-    _offset += pageSize;
     late final List<DevicePermSearch> newDevices;
     try {
+      List<String> deviceTypeIds = _deviceTypes.values
+          .where((element) =>
+              element.device_class_id ==
+              _deviceClasses.keys.elementAt(_deviceClassArrIndex))
+          .map((e) => e.id)
+          .toList(growable: false);
+
       newDevices = await DevicesService.getDevices(
-          context, pageSize, _offset - pageSize, _searchText, []);
+          context, size, _classOffset, _searchText, deviceTypeIds);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
       return;
+    } finally {
+      _m.release();
     }
     if (mounted()) {
       _devices.addAll(newDevices);
+      _classOffset += newDevices.length;
       setState(() {});
+      if (newDevices.length < size &&
+          _deviceClasses.length - 1 > _deviceClassArrIndex) {
+        _classOffset = 0;
+        _deviceClassArrIndex++;
+        _loadMoreDevices(context, setState, mounted, size - newDevices.length);
+      }
     } else {
       _logger.d("Skipping setState, no longer mounted");
     }
@@ -96,10 +133,25 @@ class _DeviceListState extends State<DeviceList> {
       return;
     }
     _searchText = search;
-    _offset = 0;
+    _classOffset = 0;
+    _deviceClassArrIndex = 0;
     _totalDevices = 0;
     _devices = [];
     _loadMoreDevices(context, setState, mounted);
+  }
+
+  DeviceClass? _indexNeedsDeviceClassDivider(int i) {
+    if (i > _devices.length - 1) {
+      return null; // device not loaded yet
+    }
+    final deviceClassId =
+        _deviceTypes[_devices[i].device_type_id]?.device_class_id;
+    if (i == 0 ||
+        deviceClassId !=
+            _deviceTypes[_devices[i - 1].device_type_id]?.device_class_id) {
+      return _deviceClasses[deviceClassId];
+    }
+    return null;
   }
 
   Widget _buildListWidget(String query, bool Function() mounted) {
@@ -110,21 +162,39 @@ class _DeviceListState extends State<DeviceList> {
         onRefresh: () async =>
             _searchDevices(_searchText, setState, mounted, true),
         child: Scrollbar(
-          isAlwaysShown: true,
           child: _totalDevices == 0
               ? const Center(child: Text("No devices"))
               : ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16.0),
-                  itemCount: _totalDevices * 2,
+                  itemCount: _totalDevices,
                   itemBuilder: (context, i) {
-                    if (i.isOdd) return const Divider();
-                    final index = i ~/ 2;
-                    if (index >= _devices.length) {
+                    if (i >= _devices.length) {
                       _loadMoreDevices(context, setState, mounted);
                     }
-                    return ListTile(
-                      title: Text(getDeviceTitle(index)),
+                    final DeviceClass? c = _indexNeedsDeviceClassDivider(i);
+                    List<Widget> columnWidgets = [const Divider()];
+                    if (c != null) {
+                      columnWidgets.add(ListTile(
+                        trailing: Container(
+                          height: MediaQuery.of(context).textScaleFactor * 24,
+                          width: MediaQuery.of(context).textScaleFactor * 24,
+                          decoration: BoxDecoration(
+                              color: const Color(0xFF6c6c6c),
+                              borderRadius: BorderRadius.circular(50)),
+                          child: Image(image: NetworkImage(c.image)),
+                        ),
+                        title: Text(c.name, style: const TextStyle(color: Colors.grey),),
+                      ));
+                      columnWidgets.add(const Divider());
+                    }
+                    columnWidgets.add(ListTile(
+                      title: Container(
+                          padding: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 24),
+                          child: Text(getDeviceTitle(i))),
+                    ));
+                    return Column(
+                      children: columnWidgets,
                     );
                   }),
         ),

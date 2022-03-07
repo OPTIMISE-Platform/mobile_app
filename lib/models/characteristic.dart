@@ -6,7 +6,7 @@ part 'characteristic.g.dart';
 class Characteristic {
   String id, name, type;
   double? min_value, max_value;
-  dynamic? value;
+  dynamic value;
   List<Characteristic>? sub_characteristics;
 
 

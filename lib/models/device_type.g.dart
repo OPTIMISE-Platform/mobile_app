@@ -11,7 +11,7 @@ DeviceType _$DeviceTypeFromJson(Map<String, dynamic> json) => DeviceType(
       json['name'] as String,
       json['description'] as String,
       json['device_class_id'] as String,
-      (json['services'] as List<dynamic>)
+      (json['service'] as List<dynamic>)
           .map((e) => Service.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -22,5 +22,5 @@ Map<String, dynamic> _$DeviceTypeToJson(DeviceType instance) =>
       'name': instance.name,
       'description': instance.description,
       'device_class_id': instance.device_class_id,
-      'services': instance.services,
+      'service': instance.service,
     };

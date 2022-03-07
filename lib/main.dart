@@ -21,8 +21,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  _MyAppState() {
-  }
+  _MyAppState();
 
   @override
   Widget build(BuildContext context) {

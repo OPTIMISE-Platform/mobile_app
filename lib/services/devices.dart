@@ -39,13 +39,14 @@ class DevicesService {
   }
 
   static Future<List<DevicePermSearch>> getDevices(BuildContext context,
-      int limit, int offset, String search, List<String>? byDeviceTypes) async {
-    _logger.v("Devices '" +
+      int limit, int offset, String search, [List<String>? byDeviceTypes]) async {
+    _logger.d("Devices '" +
         search +
         "' " +
         offset.toString() +
         "-" +
-        (offset + limit).toString());
+        (offset + limit).toString() +
+        (byDeviceTypes != null ? (" types: " + byDeviceTypes.join(",")) : ""));
 
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
     final body = <String, dynamic>{
@@ -57,8 +58,8 @@ class DevicesService {
         "search": search,
       }
     };
-    if (byDeviceTypes != null && byDeviceTypes.length > 0) {
-      body["filter"] = {
+    if (byDeviceTypes != null && byDeviceTypes.isNotEmpty) {
+      body["find"]["filter"] = {
         "condition": {
           "feature": "features.device_type_id",
           "operation": "any_value_in_feature",

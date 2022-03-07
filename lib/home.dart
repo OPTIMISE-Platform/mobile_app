@@ -66,7 +66,7 @@ class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
     return _loggedIn
-        ? DeviceList()
+        ? const DeviceList()
         : PlatformScaffold(
             //backgroundColor: MyTheme.appColor,
             appBar: _appBar.getAppBar(context),
