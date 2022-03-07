@@ -14,14 +14,14 @@ class DeviceClassesService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? options;
+  static CacheOptions? _options;
 
   static initOptions() async {
-    if (options != null) {
+    if (_options != null) {
       return;
     }
 
-    options = CacheOptions(
+    _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
       policy: CachePolicy.forceCache,
       hitCacheOnErrorExcept: [401, 403],
@@ -42,7 +42,7 @@ class DeviceClassesService {
 
     final headers = await Auth.getHeaders(context);
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: options!));
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {

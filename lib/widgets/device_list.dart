@@ -182,7 +182,7 @@ class _DeviceListState extends State<DeviceList> {
                           decoration: BoxDecoration(
                               color: const Color(0xFF6c6c6c),
                               borderRadius: BorderRadius.circular(50)),
-                          child: Image(image: NetworkImage(c.image)),
+                          child: c.imageWidget,
                         ),
                         title: Text(c.name, style: const TextStyle(color: Colors.grey),),
                       ));

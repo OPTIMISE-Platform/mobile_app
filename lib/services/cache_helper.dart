@@ -17,17 +17,25 @@ class CacheHelper {
   }
 
   static Future<String?> getCacheFile() async {
+    final dir = await getCacheDir();
+    if (dir == null) {
+      return null;
+    }
+    return dir.path + "/cache.box";
+  }
+
+  static Future<Directory?> getCacheDir() async {
     if (kIsWeb) {
       return null;
     }
     if (Platform.isAndroid) {
       List<Directory>? cacheDirs = await getExternalCacheDirectories();
       if (cacheDirs != null && cacheDirs.isNotEmpty) {
-        return cacheDirs[0].path + "/cache.box";
+        return cacheDirs[0];
       }
     }
 
-    return (await getApplicationDocumentsDirectory()).path + "/cache.box";
+    return await getApplicationDocumentsDirectory();
   }
 
   static clearCache() async {

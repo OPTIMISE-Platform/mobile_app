@@ -18,16 +18,16 @@ class DevicesService {
 
 
 
-  static CacheOptions? options;
+  static CacheOptions? _options;
 
   static initOptions() async {
-    if (options != null) {
+    if (_options != null) {
       return;
     }
 
     String? cacheFile = await CacheHelper.getCacheFile();
 
-    options = CacheOptions(
+    _options = CacheOptions(
       store: HiveCacheStore(cacheFile),
       policy: CachePolicy.refreshForceCache,
       hitCacheOnErrorExcept: [401, 403],
@@ -73,7 +73,7 @@ class DevicesService {
     final headers = await Auth.getHeaders(context);
     await initOptions();
     final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: options!));
+      ..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
 
 
@@ -102,7 +102,7 @@ class DevicesService {
     final headers = await Auth.getHeaders(context);
     await initOptions();
     final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: options!));
+      ..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
 
     if (resp.statusCode == null || resp.statusCode! > 304) {
