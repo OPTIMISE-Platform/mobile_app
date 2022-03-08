@@ -4,8 +4,9 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/page_spinner.dart';
 import 'package:mobile_app/widgets/toast.dart';
+import 'package:provider/provider.dart';
 
-
+import '../app_state.dart';
 import '../services/auth.dart';
 import '../theme.dart';
 
@@ -43,19 +44,20 @@ class _SettingsState extends State<Settings> {
             },
           ),
           const Divider(),
-          ListTile(
-            title: const Text("Logout"),
-            onTap: () {
-              Navigator.push(
-                  context,
-                  platformPageRoute(
-                    context: context,
-                    builder: (context) => const PageSpinner("Logout"),
-                  ));
-              Auth.logout(context);
-            },
+          Consumer<AppState>(
+            builder: (context, state, child) => ListTile(
+              title: const Text("Logout"),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    platformPageRoute(
+                      context: context,
+                      builder: (context) => const PageSpinner("Logout"),
+                    ));
+                Auth.logout(context, state);
+              },
+            ),
           ),
-          // const Divider(),
         ],
       ),
     );

@@ -4,10 +4,12 @@ import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_stor
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import 'auth.dart';
+import 'exceptions/unexpected_status_code_exception.dart';
 
 class DeviceClassesService {
   static final _logger = Logger(
@@ -31,7 +33,7 @@ class DeviceClassesService {
     );
   }
 
-  static Future<List<DeviceClass>> getDeviceClasses(BuildContext context,
+  static Future<List<DeviceClass>> getDeviceClasses(BuildContext context, AppState state,
       [List<String>? ids]) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/permissions/query/v3/resources/device-classes';
@@ -40,13 +42,13 @@ class DeviceClassesService {
       queryParameters["ids"] = ids.join(",");
     }
 
-    final headers = await Auth.getHeaders(context);
+    final headers = await Auth.getHeaders(context, state);
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw "Unexpected status code " + resp.statusCode.toString();
+      throw UnexpectedStatusCodeException(resp.statusCode);
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device classes");

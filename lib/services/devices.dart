@@ -6,10 +6,12 @@ import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_stor
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_permsearch.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import 'auth.dart';
+import 'exceptions/unexpected_status_code_exception.dart';
 
 class DevicesService {
   static final _logger = Logger(
@@ -38,8 +40,8 @@ class DevicesService {
     );
   }
 
-  static Future<List<DevicePermSearch>> getDevices(BuildContext context,
-      int limit, int offset, String search, [List<String>? byDeviceTypes]) async {
+  static Future<List<DevicePermSearch>> getDevices(BuildContext context, AppState state,
+  int limit, int offset, String search, [List<String>? byDeviceTypes]) async {
     _logger.d("Devices '" +
         search +
         "' " +
@@ -70,7 +72,7 @@ class DevicesService {
 
     final encoded = json.encode(body);
 
-    final headers = await Auth.getHeaders(context);
+    final headers = await Auth.getHeaders(context, state);
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!));
@@ -78,7 +80,7 @@ class DevicesService {
 
 
     if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw "Unexpected status code " + resp.statusCode.toString();
+      throw UnexpectedStatusCodeException(resp.statusCode);
     }
 
     if (resp.statusCode == 304) {
@@ -91,7 +93,7 @@ class DevicesService {
   }
 
   static Future<int> getTotalDevices(
-      BuildContext context, String search) async {
+      BuildContext context, AppState state, String search) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/permissions/query/v3/total/devices';
 
@@ -99,14 +101,14 @@ class DevicesService {
     if (search.isNotEmpty) {
       queryParameters["search"] = search;
     }
-    final headers = await Auth.getHeaders(context);
+    final headers = await Auth.getHeaders(context, state);
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
 
     if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw "Unexpected status code " + resp.statusCode.toString();
+      throw UnexpectedStatusCodeException(resp.statusCode);
     }
 
     if (resp.statusCode == 304) {

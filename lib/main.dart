@@ -2,15 +2,22 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:provider/provider.dart';
 
 import 'home.dart';
 
 Future main() async {
   await dotenv.load(fileName: ".env");
   await Auth.init();
-  runApp(const MyApp());
+  runApp(
+      ChangeNotifierProvider(
+        create: (context) => AppState(),
+        child: const MyApp(),
+      )
+  );
 }
 
 class MyApp extends StatefulWidget {

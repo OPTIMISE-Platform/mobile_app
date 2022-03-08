@@ -5,13 +5,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import 'auth.dart';
 import 'exceptions/unexpected_status_code_exception.dart';
 
-class DeviceTypesService {
+class FunctionsService {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -25,7 +25,7 @@ class DeviceTypesService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.refreshForceCache,
+      policy: CachePolicy.forceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
@@ -33,30 +33,22 @@ class DeviceTypesService {
     );
   }
 
-  static Future<List<DeviceTypePermSearch>> getDeviceTypes(BuildContext context, AppState state,
-      [List<String>? ids]) async {
+  static Future<List<NestedFunction>> getNestedFunctions(BuildContext context, AppState state) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/resources/device-types';
-    final Map<String, String> queryParameters = {};
-    queryParameters["limit"] = "9999";
-    if (ids != null && ids.isNotEmpty) {
-      queryParameters["ids"] = ids.join(",");
-    }
-
+        '/api-aggregator/nested-function-infos';
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<List<dynamic>?>(uri,
-        queryParameters: queryParameters, options: Options(headers: headers));
+    final resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
     if (resp.statusCode == 304) {
-      _logger.d("Using cached device types");
+      _logger.d("Using cached nested functions");
     }
 
     final l = resp.data ?? [];
-    return List<DeviceTypePermSearch>.generate(
-        l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
+    return List<NestedFunction>.generate(
+        l.length, (index) => NestedFunction.fromJson(l[index]));
   }
 }

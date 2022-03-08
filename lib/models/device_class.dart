@@ -5,6 +5,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/util/base64_response_decoder.dart';
 
@@ -18,6 +19,9 @@ class DeviceClass {
 
   Widget? imageWidget;
 
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
   static CacheOptions? _options;
 
   static initOptions() async {
@@ -40,13 +44,25 @@ class DeviceClass {
       return;
     }
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
+    final dio = Dio()
+      ..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.get<String?>(image,
+        options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw "Unexpected status code " + resp.statusCode.toString();
+      _logger.e("Could not load deviceClass image: Response code was: " +
+          resp.statusCode.toString() +
+          ". ID: " +
+          id +
+          ", URL: " +
+          image);
+      return;
     }
     if (resp.data == null) {
-      throw "Unexpected null data";
+      _logger.e("Could not load deviceClass image: response was null. ID: " +
+          id +
+          ", URL: " +
+          image);
+      return;
     }
     final b64 = const Base64Decoder().convert(resp.data!);
     imageWidget = Image.memory(b64);

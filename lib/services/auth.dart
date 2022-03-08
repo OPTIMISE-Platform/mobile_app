@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/exceptions/auth_exception.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
@@ -57,7 +59,7 @@ class Auth {
     return _client != null;
   }
 
-  static Future<void> login(BuildContext context) async {
+  static Future<void> login(BuildContext context, AppState state) async {
     await _m.acquire();
     if (!_initialized()) {
       await init();
@@ -86,10 +88,11 @@ class Auth {
       _logger.w("_token null");
     }
     _m.release();
+    state.notifyListeners();
     return;
   }
 
-  static logout(BuildContext context) async {
+  static logout(BuildContext context, AppState state) async {
     if (!_initialized()) {
       await init();
     }
@@ -103,14 +106,15 @@ class Auth {
     _logger.d("logout");
     _token = null;
     Navigator.of(context).popUntil((route) => route.isFirst);
+    state.notifyListeners();
   }
 
-  static Future<Map<String, String>> getHeaders(BuildContext context) async {
-    if (_token == null) {
-      await login(context);
+  static Future<Map<String, String>> getHeaders(BuildContext context, AppState state) async {
+    if (!tokenValid()) {
+      await login(context, state);
     }
-    if (_token == null) {
-      throw "login error";
+    if (!tokenValid()) {
+      throw AuthException("login error: token is null");
     }
     return {"Authorization": "Bearer " + _token!.accessToken};
   }
