@@ -8,6 +8,8 @@ import 'package:mobile_app/services/exceptions/auth_exception.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
+import 'cache_helper.dart';
+
 const storageKeyToken = "auth/token";
 
 class Auth {
@@ -105,6 +107,8 @@ class Auth {
 
     _logger.d("logout");
     _token = null;
+    CacheHelper.clearCache();
+    state.refreshDevices(context);
     Navigator.of(context).popUntil((route) => route.isFirst);
     state.notifyListeners();
   }
