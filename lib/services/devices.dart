@@ -19,11 +19,11 @@ class DevicesService {
   );
 
 
-
+  static late final Dio? _dio;
   static CacheOptions? _options;
 
   static initOptions() async {
-    if (_options != null) {
+    if (_options != null && _dio != null) {
       return;
     }
 
@@ -38,6 +38,8 @@ class DevicesService {
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
+    _dio = Dio()
+      ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<List<DevicePermSearch>> getDevices(BuildContext context, AppState state,
@@ -74,9 +76,7 @@ class DevicesService {
 
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
+    final resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
 
 
     if (resp.statusCode == null || resp.statusCode! > 304) {
@@ -103,9 +103,7 @@ class DevicesService {
     }
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
+    final resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
 
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
