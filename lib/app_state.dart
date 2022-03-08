@@ -1,9 +1,11 @@
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/functions.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
@@ -24,6 +26,9 @@ class AppState extends ChangeNotifier {
   final Map<String, DeviceTypePermSearch> deviceTypes = {};
   final Mutex _deviceTypesMutex = Mutex();
 
+  final Map<String, NestedFunction> nestedFunctions = {};
+  final Mutex _nestedFunctionsMutex = Mutex();
+
   String _deviceSearchText = '';
 
   int totalDevices = 0;
@@ -42,6 +47,7 @@ class AppState extends ChangeNotifier {
   initAllMeta(BuildContext context) async {
     await loadDeviceClasses(context);
     await loadDeviceTypes(context);
+    await loadNestedFunctions(context);
     _metaInitialized = true;
   }
 
@@ -71,6 +77,20 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     _deviceTypesMutex.release();
+  }
+
+  loadNestedFunctions(BuildContext context) async {
+    final locked = _nestedFunctionsMutex.isLocked;
+    _nestedFunctionsMutex.acquire();
+    if (locked) {
+      return nestedFunctions;
+    }
+    for (var element
+    in (await FunctionsService.getNestedFunctions(context, this))) {
+      nestedFunctions[element.id] = element;
+    }
+    notifyListeners();
+    _nestedFunctionsMutex.release();
   }
 
   updateTotalDevices(BuildContext context) async {

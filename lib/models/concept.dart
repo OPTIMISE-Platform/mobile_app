@@ -1,13 +1,15 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/models/characteristic.dart';
 
 part 'concept.g.dart';
 
 @JsonSerializable()
 class Concept {
   String id, name, base_characteristic_id;
-  List<String> characteristic_ids;
+  List<String>? characteristic_ids;
+  Characteristic? base_characteristic;
 
-  Concept(this.id, this.name, this.base_characteristic_id, this.characteristic_ids);
+  Concept(this.id, this.name, this.base_characteristic_id, this.characteristic_ids, this.base_characteristic);
   factory Concept.fromJson(Map<String, dynamic> json) => _$ConceptFromJson(json);
   Map<String, dynamic> toJson() => _$ConceptToJson(this);
 }

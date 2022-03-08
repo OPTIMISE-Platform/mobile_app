@@ -6,13 +6,15 @@ part of 'function.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-Function _$FunctionFromJson(Map<String, dynamic> json) => Function(
+PlatformFunction _$PlatformFunctionFromJson(Map<String, dynamic> json) =>
+    PlatformFunction(
       json['id'] as String,
       json['name'] as String,
       json['concept_id'] as String,
     );
 
-Map<String, dynamic> _$FunctionToJson(Function instance) => <String, dynamic>{
+Map<String, dynamic> _$PlatformFunctionToJson(PlatformFunction instance) =>
+    <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
       'concept_id': instance.concept_id,

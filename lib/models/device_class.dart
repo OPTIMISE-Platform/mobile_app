@@ -17,6 +17,7 @@ const cachSubdir = "/img";
 class DeviceClass {
   String id, image, name;
 
+  @JsonKey(ignore: true)
   Widget? imageWidget;
 
   static final _logger = Logger(
