@@ -27,7 +27,8 @@ DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
       json['function_id'] as String,
       json['device_id'] as String,
       json['service_id'] as String,
-    )..input = json['input'];
+      json['input'],
+    );
 
 Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
     <String, dynamic>{

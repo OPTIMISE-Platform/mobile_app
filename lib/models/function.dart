@@ -21,9 +21,9 @@ part 'function.g.dart';
 
 @JsonSerializable()
 class PlatformFunction {
-  String id, name, concept_id;
+  String id, name, concept_id, display_name;
 
-  PlatformFunction(this.id, this.name, this.concept_id);
+  PlatformFunction(this.id, this.name, this.concept_id, this.display_name);
   factory PlatformFunction.fromJson(Map<String, dynamic> json) => _$PlatformFunctionFromJson(json);
   Map<String, dynamic> toJson() => _$PlatformFunctionToJson(this);
 }
@@ -32,7 +32,8 @@ class PlatformFunction {
 class NestedFunction extends PlatformFunction {
   Concept concept;
 
-  NestedFunction(String id, String name, String concept_id, this.concept): super(id, name, concept_id);
+  NestedFunction(String id, String name, String concept_id, String display_name, this.concept): super(id, name, concept_id, display_name);
   factory NestedFunction.fromJson(Map<String, dynamic> json) => _$NestedFunctionFromJson(json);
+  @override
   Map<String, dynamic> toJson() => _$NestedFunctionToJson(this);
 }

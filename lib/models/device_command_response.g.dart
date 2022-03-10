@@ -26,7 +26,7 @@ DeviceCommandResponse _$DeviceCommandResponseFromJson(
         Map<String, dynamic> json) =>
     DeviceCommandResponse(
       json['status_code'] as int,
-      json['message'] as dynamic,
+      json['message'],
     );
 
 Map<String, dynamic> _$DeviceCommandResponseToJson(

@@ -52,6 +52,9 @@ class DeviceInstance {
   Map<String, dynamic> toJson() => _$DeviceInstanceToJson(this);
 
   prepareStates(DeviceType deviceType) {
+    if (states.isNotEmpty) { // only once
+      return;
+    }
     if (deviceType.id != device_type_id) {
       throw ArgumentException("device type has wrong id");
     }
@@ -82,6 +85,7 @@ class DeviceInstance {
         } else {
           states[i].value = value;
         }
+        states[i].transitioning = false;
       }));
     }
     return result;
@@ -101,7 +105,7 @@ class DeviceInstance {
   _addStateFromContentVariable(
       Service service, ContentVariable contentVariable, bool isInput) async {
     if (contentVariable.function_id != null) {
-      states.add(DeviceState(null, service.id, contentVariable.function_id!,
+      states.add(DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!,
           contentVariable.aspect_id, isInput));
     }
     contentVariable.sub_content_variables?.forEach(
