@@ -24,6 +24,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/config/function_config.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/theme.dart';
@@ -115,11 +116,11 @@ class _DeviceListState extends State<DeviceList> {
                       if (i > _state.devices.length - 1) {
                         return const SizedBox.shrink();
                       }
-                      final List<Widget> onOffButtons = [];
+                      final List<Widget> trailingWidgets = [];
                       _state.devices[i].states
                           .where((element) => !element.isControlling && element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'])
                           .forEach((element) {
-                        onOffButtons.add(Container(
+                        trailingWidgets.add(Container(
                           width: MediaQuery.of(context).textScaleFactor * 50,
                           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
                           decoration: element.transitioning || element.value == null
@@ -127,6 +128,7 @@ class _DeviceListState extends State<DeviceList> {
                               : BoxDecoration(
                                   border: Border.all(color: Colors.grey),
                                   borderRadius: BorderRadius.circular(10),
+                                  color: _state.devices[i].getConnectionStatus() == DeviceConnectionStatus.online ? null : Colors.grey,
                                 ),
                           child: element.transitioning || element.value == null
                               ? Center(child: PlatformCircularProgressIndicator())
@@ -140,7 +142,7 @@ class _DeviceListState extends State<DeviceList> {
                                       const Icon(Icons.help_outline),
                                   onPressed: () async {
                                     if (_state.devices[i].getConnectionStatus() != DeviceConnectionStatus.online) {
-                                      Toast.showWarningToast(context, "Device not online");
+                                      Toast.showWarningToast(context, "Device not online", const Duration(milliseconds: 750));
                                       return;
                                     }
                                     if (element.transitioning) {
@@ -172,8 +174,13 @@ class _DeviceListState extends State<DeviceList> {
                                     }
                                     element.transitioning = true;
                                     _state.notifyListeners();
-                                    var responses = await DeviceCommandsService.runCommands(
-                                        context, _state, [controllingStates.first.toCommand(_state.devices[i].id)]);
+                                    final List<DeviceCommandResponse> responses = [];
+                                    if (!await DeviceCommandsService.runCommandsSecurely(
+                                        context, _state, [controllingStates.first.toCommand(_state.devices[i].id)], responses)) {
+                                      element.transitioning = false;
+                                      _state.notifyListeners();
+                                      return;
+                                    }
                                     assert(responses.length == 1);
                                     if (responses[0].status_code != 200) {
                                       final err = "Error running command: " + responses[0].message.toString();
@@ -181,12 +188,19 @@ class _DeviceListState extends State<DeviceList> {
                                       _logger.e(err);
                                       return;
                                     }
-                                    responses = await DeviceCommandsService.runCommands(
-                                        context, _state, [element.toCommand(_state.devices[i].id)]);
+                                    responses.clear();
+                                    if (!await DeviceCommandsService.runCommandsSecurely(
+                                        context, _state, [element.toCommand(_state.devices[i].id)], responses)) {
+                                      element.transitioning = false;
+                                      _state.notifyListeners();
+                                      return;
+                                    }
                                     assert(responses.length == 1);
                                     if (responses[0].status_code != 200) {
                                       final err = "Error running command: " + responses[0].message.toString();
                                       Toast.showErrorToast(context, err);
+                                      element.transitioning = false;
+                                      _state.notifyListeners();
                                       _logger.e(err);
                                       return;
                                     }
@@ -200,16 +214,20 @@ class _DeviceListState extends State<DeviceList> {
 
                       final connectionStatus = _state.devices[i].getConnectionStatus();
                       columnWidgets.add(ListTile(
-                        leading: Icon(connectionStatus == DeviceConnectionStatus.online
-                            ? PlatformIcons(context).checkMarkCircledOutline
-                            : connectionStatus == DeviceConnectionStatus.offline
-                                ? PlatformIcons(context).clearThickCircled
-                                : PlatformIcons(context).helpOutline),
+                        leading: connectionStatus == DeviceConnectionStatus.online
+                            ? null
+                            : Tooltip(
+                                message: connectionStatus == DeviceConnectionStatus.offline
+                                    ? "Device is offline"
+                                    : (connectionStatus == DeviceConnectionStatus.unknown ? "Device status unknown" : ""),
+                                child: connectionStatus == DeviceConnectionStatus.online
+                                    ? null
+                                    : Icon(PlatformIcons(context).error, color: MyTheme.warnColor)),
                         title: Text(_state.devices[i].name),
-                        trailing: onOffButtons.isEmpty
+                        trailing: trailingWidgets.isEmpty
                             ? null
                             : Row(
-                                children: onOffButtons,
+                                children: trailingWidgets,
                                 mainAxisSize: MainAxisSize.min, // limit size to needed
                               ),
                       ));

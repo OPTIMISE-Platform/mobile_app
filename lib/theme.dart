@@ -23,6 +23,9 @@ typedef ThemeStyle = String;
 
 class MyTheme {
   static Color appColor = const Color.fromRGBO(50, 184, 186, 1);
+  static const Color warnColor = Colors.deepOrange;
+  static const Color errorColor = Colors.redAccent;
+  static const Color successColor = Colors.greenAccent;
 
   static ThemeData materialTheme = ThemeData(
     cupertinoOverrideTheme: cupertinoTheme,

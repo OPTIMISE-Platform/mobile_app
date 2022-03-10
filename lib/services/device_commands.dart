@@ -14,27 +14,35 @@
  *  limitations under the License.
  */
 
-
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
+import '../widgets/toast.dart';
 import 'auth.dart';
-import 'package:http/http.dart' as http;
-
 
 class DeviceCommandsService {
   static final _client = http.Client();
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
 
-  static Future<List<DeviceCommandResponse>> runCommands(BuildContext context, AppState state,
-      List<DeviceCommand> commands) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/device-command/commands/batch?timeout=25s';
+
+  static Future<List<DeviceCommandResponse>> runCommands(BuildContext context, AppState state, List<DeviceCommand> commands) async {
+    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
+
+    if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
+
+    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/device-command/commands/batch?timeout=25s';
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
@@ -49,7 +57,24 @@ class DeviceCommandsService {
 
     final List<dynamic> l = json.decode(resp.body);
 
-    return List<DeviceCommandResponse>.generate(
-        l.length, (index) => DeviceCommandResponse.fromJson(l[index]));
+    return List<DeviceCommandResponse>.generate(l.length, (index) => DeviceCommandResponse.fromJson(l[index]));
+  }
+
+  /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
+  static Future<bool> runCommandsSecurely(BuildContext context, AppState state, List<DeviceCommand> commands, List<DeviceCommandResponse> responses) async {
+    try {
+      responses.addAll(await DeviceCommandsService.runCommands(context, state, commands));
+    } on NoNetworkException {
+      const err = "You are offline";
+      Toast.showErrorToast(context, err);
+      _logger.e(err);
+      return false;
+    } catch (e) {
+      const err = "Couldn't run command";
+      Toast.showErrorToast(context, err);
+      _logger.e(err);
+      return false;
+    }
+    return true;
   }
 }

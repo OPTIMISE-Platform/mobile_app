@@ -17,6 +17,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -28,6 +29,7 @@ import 'package:mobile_app/services/functions.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
+import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
 import 'models/device_type.dart';
 import 'widgets/toast.dart';
@@ -212,8 +214,17 @@ class AppState extends ChangeNotifier {
     if (commandCallbacks.isEmpty) {
       return;
     }
-    final result = await DeviceCommandsService.runCommands(context, this,
-        commandCallbacks.map((e) => e.command).toList(growable: false));
+    final List<DeviceCommandResponse> result;
+    try {
+      result = await DeviceCommandsService.runCommands(context, this,
+          commandCallbacks.map((e) => e.command).toList(growable: false));
+    } on NoNetworkException {
+      _logger.e("failed to loadOnOffStates: currently offline");
+      rethrow;
+    } catch(e) {
+      _logger.e("failed to loadOnOffStates: " + e.toString());
+      rethrow;
+    }
     assert(result.length == commandCallbacks.length);
     for (var i = 0; i < commandCallbacks.length; i++) {
       if (result[i].status_code == 200) {
