@@ -44,16 +44,16 @@ class MyAppBar {
   }
 
   PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions]) {
-      return PlatformAppBar(
-        title: Text(_title),
-        cupertino: (_, __) => CupertinoNavigationBarData(
-          // Issue with cupertino where a bar with no transparency
-          // will push the list down. Adding some alpha value fixes it (in a hacky way)
-          backgroundColor: Colors.black,
-        ),
-        trailingActions: [
-          ...trailingActions ?? [],
-        ],
+    return PlatformAppBar(
+      title: PlatformWidget(material: (_, __) => Text(_title), cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white))),
+      cupertino: (_, __) => CupertinoNavigationBarData(
+        // Issue with cupertino where a bar with no transparency
+        // will push the list down. Adding some alpha value fixes it (in a hacky way)
+        backgroundColor: Colors.black,
+      ),
+      trailingActions: [
+        ...trailingActions ?? [],
+      ],
     );
   }
 }
