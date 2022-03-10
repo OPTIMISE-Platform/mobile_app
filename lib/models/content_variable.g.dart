@@ -29,7 +29,7 @@ ContentVariable _$ContentVariableFromJson(Map<String, dynamic> json) =>
       json['characteristic_id'] as String?,
       json['unit_reference'] as String?,
       json['aspect_id'] as String?,
-      json['concept_id'] as String?,
+      json['function_id'] as String?,
       json['type'] as String,
       (json['sub_content_variables'] as List<dynamic>?)
           ?.map((e) => ContentVariable.fromJson(e as Map<String, dynamic>))
@@ -47,7 +47,7 @@ Map<String, dynamic> _$ContentVariableToJson(ContentVariable instance) =>
       'characteristic_id': instance.characteristic_id,
       'unit_reference': instance.unit_reference,
       'aspect_id': instance.aspect_id,
-      'concept_id': instance.concept_id,
+      'function_id': instance.function_id,
       'type': instance.type,
       'sub_content_variables': instance.sub_content_variables,
       'value': instance.value,

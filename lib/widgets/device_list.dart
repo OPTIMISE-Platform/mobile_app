@@ -19,8 +19,10 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:provider/provider.dart';
@@ -45,14 +47,6 @@ class _DeviceListState extends State<DeviceList> {
     _appBar.setTitle("Devices");
   }
 
-  String getDeviceTitle(int index) {
-    if (_state.devices.length > index) {
-      return _state.devices[index].name;
-    } else {
-      return "";
-    }
-  }
-
   _searchChanged(String search) {
     _searchText = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
@@ -65,11 +59,12 @@ class _DeviceListState extends State<DeviceList> {
     if (i > _state.devices.length - 1) {
       return null; // device not loaded yet
     }
-    final deviceClassId =
-        _state.deviceTypes[_state.devices[i].device_type_id]?.device_class_id;
+    final deviceClassId = _state
+        .deviceTypesPermSearch[_state.devices[i].device_type_id]
+        ?.device_class_id;
     if (i == 0 ||
         deviceClassId !=
-            _state.deviceTypes[_state.devices[i - 1].device_type_id]
+            _state.deviceTypesPermSearch[_state.devices[i - 1].device_type_id]
                 ?.device_class_id) {
       return _state.deviceClasses[deviceClassId];
     }
@@ -83,43 +78,88 @@ class _DeviceListState extends State<DeviceList> {
       child: Scrollbar(
         child: _state.totalDevices == 0
             ? const Center(child: Text("No devices"))
-            : ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
-                itemCount: _state.totalDevices,
-                itemBuilder: (context, i) {
-                  if (i >= _state.devices.length) {
-                    _state.loadDevices(context);
-                  }
-                  final DeviceClass? c = _indexNeedsDeviceClassDivider(i);
-                  List<Widget> columnWidgets = [const Divider()];
-                  if (c != null) {
-                    columnWidgets.add(ListTile(
-                      trailing: Container(
-                        height: MediaQuery.of(context).textScaleFactor * 24,
-                        width: MediaQuery.of(context).textScaleFactor * 24,
-                        decoration: BoxDecoration(
-                            color: const Color(0xFF6c6c6c),
-                            borderRadius: BorderRadius.circular(50)),
-                        child: c.imageWidget,
-                      ),
-                      title: Text(
-                        c.name,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ));
-                    columnWidgets.add(const Divider());
-                  }
-                  columnWidgets.add(ListTile(
-                    title: Container(
-                        padding: EdgeInsets.only(
-                            left: MediaQuery.of(context).textScaleFactor * 24),
-                        child: Text(getDeviceTitle(i))),
-                  ));
-                  return Column(
-                    children: columnWidgets,
-                  );
-                }),
+            : _state.totalDevices == -1
+                ? Center(child: PlatformCircularProgressIndicator())
+                : ListView.builder(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16.0),
+                    itemCount: _state.totalDevices,
+                    itemBuilder: (context, i) {
+                      if (i >= _state.devices.length) {
+                        _state.loadDevices(context);
+                      }
+                      final DeviceClass? c = _indexNeedsDeviceClassDivider(i);
+                      List<Widget> columnWidgets = [const Divider()];
+                      if (c != null) {
+                        columnWidgets.add(ListTile(
+                          /*
+                          trailing: Container(
+                            height: MediaQuery.of(context).textScaleFactor * 24,
+                            width: MediaQuery.of(context).textScaleFactor * 24,
+                            decoration: BoxDecoration(
+                                color: const Color(0xFF6c6c6c),
+                                borderRadius: BorderRadius.circular(50)),
+                            child: c.imageWidget,
+                          ),
+                           */
+                          title: Text(
+                            c.name,
+                            style: const TextStyle(
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic),
+                          ),
+                        ));
+                        columnWidgets.add(const Divider());
+                      }
+                      if (i > _state.devices.length - 1) {
+                        return const SizedBox.shrink();
+                      }
+                      final List<Widget> onOffButtons = [];
+                      _state.devices[i].states
+                          .where((element) =>
+                              !element.isControlling &&
+                              element.functionId ==
+                                  dotenv.env['FUNCTION_GET_ON_OFF_STATE'])
+                          .forEach((element) {
+                        onOffButtons.add(Container(
+                          margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey, width: 1),
+                            borderRadius: BorderRadius.circular(50),
+                          ),
+                          child: IconButton(
+                            icon: Icon(element.value == true
+                                ? Icons.power_outlined
+                                : Icons.power_off_outlined),
+                            onPressed: () {
+                              // TODO
+                            },
+                          ),
+                        ));
+                      });
+
+                      final connectionStatus =
+                          _state.devices[i].getConnectionStatus();
+                      columnWidgets.add(ListTile(
+                        leading: Icon(connectionStatus ==
+                                DeviceConnectionStatus.online
+                            ? PlatformIcons(context).checkMarkCircledOutline
+                            : connectionStatus == DeviceConnectionStatus.offline
+                                ? PlatformIcons(context).clearThickCircled
+                                : PlatformIcons(context).helpOutline),
+                        title: Text(_state.devices[i].name),
+                        trailing: onOffButtons.isEmpty
+                            ? null
+                            : Row(
+                                children: onOffButtons,
+                                mainAxisSize:
+                                    MainAxisSize.min, // limit size to needed
+                              ),
+                      ));
+                      return Column(
+                        children: columnWidgets,
+                      );
+                    }),
       ),
     );
   }
@@ -162,7 +202,7 @@ class _DeviceListState extends State<DeviceList> {
 
         if (kIsWeb) {
           actions.add(PlatformIconButton(
-            onPressed: () async => _searchChanged(_searchText),
+            onPressed: () => _state.refreshDevices(context),
             icon: const Icon(Icons.refresh),
             cupertino: (_, __) =>
                 CupertinoIconButtonData(padding: EdgeInsets.zero),

@@ -24,10 +24,10 @@ part 'device_type.g.dart';
 @JsonSerializable()
 class DeviceType {
   String id, name, description, device_class_id;
-  List<Service> service;
+  List<Service> services;
 
   DeviceType(
-      this.id, this.name, this.description, this.device_class_id, this.service);
+      this.id, this.name, this.description, this.device_class_id, this.services);
 
   factory DeviceType.fromJson(Map<String, dynamic> json) =>
       _$DeviceTypeFromJson(json);

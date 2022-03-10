@@ -24,8 +24,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
-import 'exceptions/unexpected_status_code_exception.dart';
 
 class DeviceClassesService {
   static final _logger = Logger(

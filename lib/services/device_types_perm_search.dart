@@ -27,51 +27,52 @@ import 'package:mobile_app/services/cache_helper.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
-class DeviceTypesService {
+class DeviceTypesPermSearchService {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
   static CacheOptions? _options;
-  static late final Dio? _dio;
 
   static initOptions() async {
-    if (_options != null && _dio != null) {
+    if (_options != null) {
       return;
     }
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
+      policy: CachePolicy.refreshForceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<DeviceType?> getDeviceType(BuildContext context, AppState state,
-      String id) async {
+  static Future<List<DeviceTypePermSearch>> getDeviceTypes(BuildContext context, AppState state,
+      [List<String>? ids]) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/device-manager/device-types/' + id;
+        '/permissions/query/v3/resources/device-types';
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = "9999";
+    if (ids != null && ids.isNotEmpty) {
+      queryParameters["ids"] = ids.join(",");
+    }
 
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
-    final resp = await _dio!.get<Map<String, dynamic>>(uri,
-        options: Options(headers: headers));
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.get<List<dynamic>?>(uri,
+        queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
     if (resp.statusCode == 304) {
-      _logger.d("Using cached device type");
+      _logger.d("Using cached device types");
     }
 
-    if (resp.data == null || resp.data == "null") {
-      return null;
-    }
-
-    return DeviceType.fromJson(resp.data!);
+    final l = resp.data ?? [];
+    return List<DeviceTypePermSearch>.generate(
+        l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
   }
 }

@@ -32,13 +32,13 @@ class ContentVariable {
 
 
 
-  String? id, name, characteristic_id, unit_reference, aspect_id, concept_id;
+  String? id, name, characteristic_id, unit_reference, aspect_id, function_id;
   ContentType type;
   List<ContentVariable>? sub_content_variables;
   dynamic value;
   List<String>? serialization_options;
 
-  ContentVariable(this.id, this.name, this.characteristic_id, this.unit_reference, this.aspect_id, this.concept_id, this.type, this.sub_content_variables, this.value, this.serialization_options);
+  ContentVariable(this.id, this.name, this.characteristic_id, this.unit_reference, this.aspect_id, this.function_id, this.type, this.sub_content_variables, this.value, this.serialization_options);
   factory ContentVariable.fromJson(Map<String, dynamic> json) => _$ContentVariableFromJson(json);
   Map<String, dynamic> toJson() => _$ContentVariableToJson(this);
 }

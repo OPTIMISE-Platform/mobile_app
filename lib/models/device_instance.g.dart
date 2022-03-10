@@ -16,14 +16,14 @@
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'device_permsearch.dart';
+part of 'device_instance.dart';
 
 // **************************************************************************
 // JsonSerializableGenerator
 // **************************************************************************
 
-DevicePermSearch _$DevicePermSearchFromJson(Map<String, dynamic> json) =>
-    DevicePermSearch(
+DeviceInstance _$DeviceInstanceFromJson(Map<String, dynamic> json) =>
+    DeviceInstance(
       json['id'] as String,
       json['local_id'] as String,
       json['name'] as String,
@@ -38,7 +38,7 @@ DevicePermSearch _$DevicePermSearchFromJson(Map<String, dynamic> json) =>
       json['creator'] as String,
     );
 
-Map<String, dynamic> _$DevicePermSearchToJson(DevicePermSearch instance) =>
+Map<String, dynamic> _$DeviceInstanceToJson(DeviceInstance instance) =>
     <String, dynamic>{
       'id': instance.id,
       'local_id': instance.local_id,

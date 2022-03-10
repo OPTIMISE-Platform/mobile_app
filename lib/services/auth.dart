@@ -20,7 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/services/exceptions/auth_exception.dart';
+import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 

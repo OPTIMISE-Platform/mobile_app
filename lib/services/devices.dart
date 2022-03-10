@@ -23,11 +23,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/device_permsearch.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import 'auth.dart';
-import 'exceptions/unexpected_status_code_exception.dart';
+import '../exceptions/unexpected_status_code_exception.dart';
 
 class DevicesService {
   static final _logger = Logger(
@@ -58,7 +58,7 @@ class DevicesService {
       ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<DevicePermSearch>> getDevices(BuildContext context, AppState state,
+  static Future<List<DeviceInstance>> getDevices(BuildContext context, AppState state,
   int limit, int offset, String search, [List<String>? byDeviceTypes]) async {
     _logger.d("Devices '" +
         search +
@@ -104,8 +104,8 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    return List<DevicePermSearch>.generate(
-        l.length, (index) => DevicePermSearch.fromJson(l[index]));
+    return List<DeviceInstance>.generate(
+        l.length, (index) => DeviceInstance.fromJson(l[index]));
   }
 
   static Future<int> getTotalDevices(

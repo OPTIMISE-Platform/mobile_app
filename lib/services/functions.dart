@@ -25,7 +25,7 @@ import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import 'auth.dart';
-import 'exceptions/unexpected_status_code_exception.dart';
+import '../exceptions/unexpected_status_code_exception.dart';
 
 class FunctionsService {
   static final _logger = Logger(

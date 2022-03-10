@@ -30,11 +30,11 @@ Service _$ServiceFromJson(Map<String, dynamic> json) => Service(
       json['protocol_id'] as String,
       json['interaction'] as String,
       json['service_group_key'] as String,
-      (json['inputs'] as List<dynamic>)
-          .map((e) => Content.fromJson(e as Map<String, dynamic>))
+      (json['inputs'] as List<dynamic>?)
+          ?.map((e) => Content.fromJson(e as Map<String, dynamic>))
           .toList(),
-      (json['outputs'] as List<dynamic>)
-          .map((e) => Content.fromJson(e as Map<String, dynamic>))
+      (json['outputs'] as List<dynamic>?)
+          ?.map((e) => Content.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
 

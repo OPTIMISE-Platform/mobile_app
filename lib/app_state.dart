@@ -15,17 +15,20 @@
  */
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
+import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_types.dart';
+import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
-import 'models/device_permsearch.dart';
+import 'models/device_instance.dart';
 import 'models/device_type.dart';
 import 'widgets/toast.dart';
 
@@ -39,18 +42,20 @@ class AppState extends ChangeNotifier {
   final Map<String, DeviceClass> deviceClasses = {};
   final Mutex _deviceClassesMutex = Mutex();
 
-  final Map<String, DeviceTypePermSearch> deviceTypes = {};
-  final Mutex _deviceTypesMutex = Mutex();
+  final Map<String, DeviceTypePermSearch> deviceTypesPermSearch = {};
+  final Mutex _deviceTypesPermSearchMutex = Mutex();
+
+  final Map<String, DeviceType> deviceTypes = {};
 
   final Map<String, NestedFunction> nestedFunctions = {};
   final Mutex _nestedFunctionsMutex = Mutex();
 
   String _deviceSearchText = '';
 
-  int totalDevices = 0;
+  int totalDevices = -1;
   final Mutex _totalDevicesMutex = Mutex();
 
-  final List<DevicePermSearch> devices = <DevicePermSearch>[];
+  final List<DeviceInstance> devices = <DeviceInstance>[];
   final Mutex _devicesMutex = Mutex();
 
   int _deviceClassArrIndex = 0;
@@ -82,17 +87,17 @@ class AppState extends ChangeNotifier {
   }
 
   loadDeviceTypes(BuildContext context) async {
-    final locked = _deviceTypesMutex.isLocked;
-    _deviceTypesMutex.acquire();
+    final locked = _deviceTypesPermSearchMutex.isLocked;
+    _deviceTypesPermSearchMutex.acquire();
     if (locked) {
-      return deviceTypes;
+      return deviceTypesPermSearch;
     }
     for (var element
-        in (await DeviceTypesService.getDeviceTypes(context, this))) {
-      deviceTypes[element.id] = element;
+        in (await DeviceTypesPermSearchService.getDeviceTypes(context, this))) {
+      deviceTypesPermSearch[element.id] = element;
     }
     notifyListeners();
-    _deviceTypesMutex.release();
+    _deviceTypesPermSearchMutex.release();
   }
 
   loadNestedFunctions(BuildContext context) async {
@@ -102,7 +107,7 @@ class AppState extends ChangeNotifier {
       return nestedFunctions;
     }
     for (var element
-    in (await FunctionsService.getNestedFunctions(context, this))) {
+        in (await FunctionsService.getNestedFunctions(context, this))) {
       nestedFunctions[element.id] = element;
     }
     notifyListeners();
@@ -119,7 +124,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  searchDevices(String query, BuildContext context, [bool force = false]) async {
+  searchDevices(String query, BuildContext context,
+      [bool force = false]) async {
     if (!force && query == _deviceSearchText) {
       return;
     }
@@ -138,19 +144,20 @@ class AppState extends ChangeNotifier {
     await searchDevices(_deviceSearchText, context, true);
   }
 
-  loadDevices(BuildContext context, [int size = 50]) async {
-    if (_devicesMutex.isLocked) {
+  loadDevices(BuildContext context,
+      [int size = 50, bool skipMutex = false]) async {
+    if (!skipMutex && _devicesMutex.isLocked) {
       return;
     }
-    _devicesMutex.acquire();
+    if (!skipMutex) _devicesMutex.acquire();
 
     if (!_metaInitialized) {
       await initAllMeta(context);
     }
 
-    late final List<DevicePermSearch> newDevices;
+    late final List<DeviceInstance> newDevices;
     try {
-      List<String> deviceTypeIds = deviceTypes.values
+      List<String> deviceTypeIds = deviceTypesPermSearch.values
           .where((element) =>
               element.device_class_id ==
               deviceClasses.keys.elementAt(_deviceClassArrIndex))
@@ -162,13 +169,15 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
+      if (!skipMutex) _devicesMutex.release();
       return;
-    } finally {
-      _devicesMutex.release();
     }
     devices.addAll(newDevices);
     _classOffset += newDevices.length;
-    if (newDevices.isNotEmpty) notifyListeners();
+    if (newDevices.isNotEmpty) {
+      notifyListeners();
+      loadOnOffStates(context, newDevices); // no await => run in background
+    }
     if (totalDevices < devices.length) {
       await updateTotalDevices(context); // when loadDevices called directly
     }
@@ -176,8 +185,44 @@ class AppState extends ChangeNotifier {
         deviceClasses.length - 1 > _deviceClassArrIndex) {
       _classOffset = 0;
       _deviceClassArrIndex++;
-      loadDevices(context, size - newDevices.length);
+      loadDevices(context, size - newDevices.length, true);
     }
+    if (!skipMutex) _devicesMutex.release();
+  }
+
+  loadDeviceType(BuildContext context, String id, [bool force = false]) async {
+    if (!force && deviceTypes.containsKey(id)) {
+      return;
+    }
+    final t = await DeviceTypesService.getDeviceType(context, this, id);
+    if (t == null) {
+      return;
+    }
+    deviceTypes[id] = t;
+  }
+
+  loadOnOffStates(BuildContext context, List<DeviceInstance> devices) async {
+    final List<CommandCallback> commandCallbacks = [];
+    for (var element in devices) {
+      await loadDeviceType(context, element.device_type_id);
+      element.prepareStates(deviceTypes[element.device_type_id]!);
+      commandCallbacks.addAll(element.getStateFillFunctions(
+          [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']));
+    }
+    if (commandCallbacks.isEmpty) {
+      return;
+    }
+    final result = await DeviceCommandsService.runCommands(context, this,
+        commandCallbacks.map((e) => e.command).toList(growable: false));
+    assert(result.length == commandCallbacks.length);
+    for (var i = 0; i < commandCallbacks.length; i++) {
+      if (result[i].status_code == 200) {
+        commandCallbacks[i].callback(result[i].message);
+      } else {
+        _logger.e(result[i].status_code.toString() + ": " + result[i].message);
+      }
+    }
+    notifyListeners();
   }
 
   @override
