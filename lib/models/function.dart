@@ -36,4 +36,8 @@ class NestedFunction extends PlatformFunction {
   factory NestedFunction.fromJson(Map<String, dynamic> json) => _$NestedFunctionFromJson(json);
   @override
   Map<String, dynamic> toJson() => _$NestedFunctionToJson(this);
+
+  bool hasInput() {
+    return concept.base_characteristic != null && concept.base_characteristic!.type != "";
+  }
 }

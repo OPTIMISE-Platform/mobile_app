@@ -29,6 +29,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
+import 'package:mobile_app/widgets/device_page.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:provider/provider.dart';
 
@@ -96,16 +97,6 @@ class _DeviceListState extends State<DeviceList> {
                       List<Widget> columnWidgets = [const Divider()];
                       if (c != null) {
                         columnWidgets.add(ListTile(
-                          /*
-                          trailing: Container(
-                            height: MediaQuery.of(context).textScaleFactor * 24,
-                            width: MediaQuery.of(context).textScaleFactor * 24,
-                            decoration: BoxDecoration(
-                                color: const Color(0xFF6c6c6c),
-                                borderRadius: BorderRadius.circular(50)),
-                            child: c.imageWidget,
-                          ),
-                           */
                           title: Text(
                             c.name,
                             style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
@@ -136,7 +127,7 @@ class _DeviceListState extends State<DeviceList> {
                                   splashRadius: 25,
                                   tooltip: _state
                                       .nestedFunctions[
-                                          functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value)]
+                                          functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction!(element.value)]
                                       ?.display_name,
                                   icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getIcon(element.value) ??
                                       const Icon(Icons.help_outline),
@@ -149,7 +140,7 @@ class _DeviceListState extends State<DeviceList> {
                                       return; // avoid double presses
                                     }
                                     final controllingFunction =
-                                        functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value);
+                                        functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction!(element.value);
                                     if (controllingFunction == null) {
                                       const err = "Could not find related controlling function";
                                       Toast.showErrorToast(context, err);
@@ -230,6 +221,12 @@ class _DeviceListState extends State<DeviceList> {
                                 children: trailingWidgets,
                                 mainAxisSize: MainAxisSize.min, // limit size to needed
                               ),
+                        onTap: () => Navigator.push(
+                            context,
+                            platformPageRoute(
+                              context: context,
+                              builder: (context) => DevicePage(i),
+                            )),
                       ));
                       return Column(
                         children: columnWidgets,

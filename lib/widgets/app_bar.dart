@@ -26,7 +26,7 @@ class MyAppBar {
   }
 
   static List<Widget> getDefaultActions(BuildContext context) {
-    return [
+    final List<Widget> actions = [
       PlatformIconButton(
         icon: Icon(PlatformIcons(context).settings),
         onPressed: () {
@@ -41,6 +41,7 @@ class MyAppBar {
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )
     ];
+    return actions;
   }
 
   PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions]) {

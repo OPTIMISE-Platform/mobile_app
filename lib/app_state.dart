@@ -204,12 +204,16 @@ class AppState extends ChangeNotifier {
   }
 
   loadOnOffStates(BuildContext context, List<DeviceInstance> devices) async {
+    await loadStates(context, devices, [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
+  }
+
+  loadStates(BuildContext context, List<DeviceInstance> devices, [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
       await loadDeviceType(context, element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
       commandCallbacks.addAll(element.getStateFillFunctions(
-          [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']));
+          limitToFunctionIds));
     }
     if (commandCallbacks.isEmpty) {
       return;
@@ -219,10 +223,10 @@ class AppState extends ChangeNotifier {
       result = await DeviceCommandsService.runCommands(context, this,
           commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
-      _logger.e("failed to loadOnOffStates: currently offline");
+      _logger.e("failed to loadAllStates: currently offline");
       rethrow;
     } catch(e) {
-      _logger.e("failed to loadOnOffStates: " + e.toString());
+      _logger.e("failed to loadAllStates: " + e.toString());
       rethrow;
     }
     assert(result.length == commandCallbacks.length);
