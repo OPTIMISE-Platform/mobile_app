@@ -19,18 +19,22 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/config/set_color.dart';
 import 'package:mobile_app/config/set_off_state.dart';
 import 'package:mobile_app/config/set_on_state.dart';
 
 import '../app_state.dart';
 import '../models/characteristic.dart';
 import '../models/content_variable.dart';
+import 'get_color.dart';
 import 'get_on_off_state.dart';
 
 final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfigGetOnOffState(),
   dotenv.env['FUNCTION_SET_ON_STATE']: FunctionConfigSetOnState(),
   dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfigSetOffState(),
+  dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor(),
+  dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor(),
 };
 
 abstract class FunctionConfig {
