@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/config/get_timestamp.dart';
 import 'package:mobile_app/config/set_color.dart';
 import 'package:mobile_app/config/set_off_state.dart';
 import 'package:mobile_app/config/set_on_state.dart';
@@ -35,6 +36,7 @@ final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfigSetOffState(),
   dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor(),
   dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor(),
+  dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp(),
 };
 
 abstract class FunctionConfig {

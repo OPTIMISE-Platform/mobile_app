@@ -15,25 +15,33 @@
  */
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:intl/intl.dart';
+import "package:intl/intl_standalone.dart"
+if (dart.library.html) "package:intl/intl_browser.dart";
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'home.dart';
 
 Future main() async {
   await dotenv.load(fileName: ".env");
   await Auth.init();
+  await findSystemLocale();
+  await initializeDateFormatting(Intl.systemLocale, null);
   runApp(
       ChangeNotifierProvider(
         create: (context) => AppState(),
         child: const MyApp(),
       )
-  );
+  )
+  ;
 }
 
 class MyApp extends StatefulWidget {
