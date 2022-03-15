@@ -35,37 +35,29 @@ class Auth {
   static final _m = Mutex();
 
   static OpenIdConnectClient? _client;
-  static OpenIdIdentity? _token;
 
   static Future<void> init() async {
     if (_initialized()) {
       return;
     }
-    ConnectivityResult connectivityResult =
-        await (Connectivity().checkConnectivity());
+    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
 
     if (connectivityResult != ConnectivityResult.none) {
       _client = await OpenIdConnectClient.create(
-        discoveryDocumentUrl:
-            (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
-                '/auth/realms/' +
-                (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
-                "/.well-known/openid-configuration",
+        discoveryDocumentUrl: (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
+            '/auth/realms/' +
+            (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
+            "/.well-known/openid-configuration",
         clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
         redirectUrl: kIsWeb
-            ? Uri.base.scheme +
-                "://" +
-                Uri.base.host +
-                ":" +
-                Uri.base.port.toString() +
-                "/callback.html"
+            ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
             : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
       );
     } else {
       _logger.d("Postponing init(): Currently offline");
     }
-    _token = await OpenIdIdentity.load();
-    if (_token != null) {
+    final token = await OpenIdIdentity.load();
+    if (token != null) {
       _logger.d("Using token from storage");
       if (!tokenValid()) {
         _logger.d("But token is expired");
@@ -87,20 +79,20 @@ class Auth {
       _logger.d("Old token still valid");
       return;
     }
+    if (await _client!.refresh(raiseEvents: false)) {
+      _logger.d("refreshed token");
+    }
+    final OpenIdIdentity? token;
     try {
-      _token = await _client?.loginInteractive(
-          context: context,
-          title: "Login",
-          popupHeight: 640,
-          popupWidth: 480);
+      token = await _client?.loginInteractive(context: context, title: "Login", popupHeight: 640, popupWidth: 480);
     } catch (e) {
       _logger.e("Login failed: " + e.toString());
       _m.release();
       return;
     }
 
-    if (_token != null) {
-      _token?.save();
+    if (token != null) {
+      token.save();
       _logger.i('Logged in');
     } else {
       _logger.w("_token null");
@@ -114,7 +106,7 @@ class Auth {
     if (!_initialized()) {
       await init();
     }
-    if (_token == null) {
+    if (_client?.identity == null) {
       return;
     }
 
@@ -122,7 +114,6 @@ class Auth {
     await OpenIdIdentity.clear(); // remove saved token
 
     _logger.d("logout");
-    _token = null;
     CacheHelper.clearCache();
     state.refreshDevices(context);
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -136,12 +127,11 @@ class Auth {
     if (!tokenValid()) {
       throw AuthException("login error: token is null");
     }
-    return {"Authorization": "Bearer " + _token!.accessToken};
+    return {"Authorization": "Bearer " + _client!.identity!.accessToken};
   }
 
   static bool tokenValid() {
-    return _token != null &&
-        _token!.expiresAt.isAfter(DateTime.now());
+    return _client?.identity != null && _client!.identity!.expiresAt.isAfter(DateTime.now());
   }
 
   static bool loggingIn() {
