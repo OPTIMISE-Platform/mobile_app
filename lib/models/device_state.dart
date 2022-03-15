@@ -26,6 +26,6 @@ class DeviceState {
   DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling);
 
   DeviceCommand toCommand(String deviceId, [dynamic value]) {
-    return DeviceCommand(functionId, deviceId, serviceId, value);
+    return DeviceCommand(functionId, deviceId, serviceId, aspectId, value);
   }
 }

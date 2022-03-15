@@ -127,7 +127,7 @@ class _DeviceListState extends State<DeviceList> {
                                   splashRadius: 25,
                                   tooltip: _state
                                       .nestedFunctions[
-                                          functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction!(element.value)]
+                                          functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value)]
                                       ?.display_name,
                                   icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getIcon(element.value) ??
                                       const Icon(Icons.help_outline),
@@ -140,7 +140,7 @@ class _DeviceListState extends State<DeviceList> {
                                       return; // avoid double presses
                                     }
                                     final controllingFunction =
-                                        functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction!(element.value);
+                                        functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value);
                                     if (controllingFunction == null) {
                                       const err = "Could not find related controlling function";
                                       Toast.showErrorToast(context, err);

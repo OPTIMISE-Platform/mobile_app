@@ -47,7 +47,7 @@ class Toast {
 
   static showErrorToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).error),
+      Icon(PlatformIcons(context).error, color: Colors.black),
       const SizedBox(
         width: 12.0,
       ),
@@ -57,7 +57,7 @@ class Toast {
 
   static showConfirmationToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).checkMark),
+      Icon(PlatformIcons(context).checkMark, color: Colors.black),
       const SizedBox(
         width: 12.0,
       ),
@@ -67,7 +67,7 @@ class Toast {
 
   static showWarningToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).error),
+      Icon(PlatformIcons(context).error, color: Colors.black),
       const SizedBox(
         width: 12.0,
       ),

@@ -33,7 +33,7 @@ Characteristic _$CharacteristicFromJson(Map<String, dynamic> json) =>
       (json['sub_characteristics'] as List<dynamic>?)
           ?.map((e) => Characteristic.fromJson(e as Map<String, dynamic>))
           .toList(),
-      json['display_unit'],
+      json['display_unit'] as String,
     );
 
 Map<String, dynamic> _$CharacteristicToJson(Characteristic instance) =>
@@ -41,9 +41,9 @@ Map<String, dynamic> _$CharacteristicToJson(Characteristic instance) =>
       'id': instance.id,
       'name': instance.name,
       'type': instance.type,
+      'display_unit': instance.display_unit,
       'min_value': instance.min_value,
       'max_value': instance.max_value,
       'value': instance.value,
       'sub_characteristics': instance.sub_characteristics,
-      'display_unit': instance.display_unit,
     };

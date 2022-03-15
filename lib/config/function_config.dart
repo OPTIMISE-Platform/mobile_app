@@ -15,40 +15,257 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:logger/logger.dart';
+import 'package:mobile_app/config/set_off_state.dart';
+import 'package:mobile_app/config/set_on_state.dart';
+
+import '../app_state.dart';
+import '../models/characteristic.dart';
+import '../models/content_variable.dart';
+import 'get_on_off_state.dart';
 
 final Map<String?, FunctionConfig> functionConfigs = {
-  dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfig((dynamic value) {
-    if (value is bool && value) {
-      return dotenv.env['FUNCTION_SET_OFF_STATE'];
-    }
-    if (value is bool && !value) {
-      return dotenv.env['FUNCTION_SET_ON_STATE'];
-    }
-  }, (dynamic value) {
-    if (value is bool && value) {
-      return const Icon(Icons.power_outlined);
-    }
-    if (value is bool && !value) {
-      return const Icon(Icons.power_off_outlined);
-    }
-  }, (dynamic value) {
-    if (value is bool && value) {
-      return const Icon(Icons.power_outlined);
-    }
-    if (value is bool && !value) {
-      return const Icon(Icons.power_off_outlined);
-    }
-    return Text(value.toString());
-  }),
-  dotenv.env['FUNCTION_SET_ON_STATE']: FunctionConfig(null, (_) => const Icon(Icons.power_outlined), null),
-  dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfig(null, (_) => const Icon(Icons.power_off_outlined), null),
+  dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfigGetOnOffState(),
+  dotenv.env['FUNCTION_SET_ON_STATE']: FunctionConfigSetOnState(),
+  dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfigSetOffState(),
 };
 
-class FunctionConfig {
-  String? Function(dynamic)? getRelatedControllingFunction;
-  Icon? Function(dynamic) getIcon;
-  Widget Function(dynamic)? displayValue;
+abstract class FunctionConfig {
+  String? getRelatedControllingFunction(dynamic value);
 
-  FunctionConfig(this.getRelatedControllingFunction, this.getIcon, this.displayValue);
+  Icon? getIcon(dynamic value);
+
+  Widget? displayValue(dynamic value);
+
+  dynamic getConfiguredValue();
+
+  Widget? build(BuildContext context, [dynamic value]);
+}
+
+class FunctionConfigDefault implements FunctionConfig {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
+  final AppState _state;
+  final String _functionId;
+
+  final List<Widget> _fields = [];
+  dynamic _result;
+
+  FunctionConfigDefault(this._state, this._functionId);
+
+  @override
+  Widget? build(BuildContext context, [dynamic value]) {
+    final characteristic = _state.nestedFunctions[_functionId]?.concept.base_characteristic;
+    if (characteristic == null) {
+      return null;
+    }
+    _result = {};
+    _fields.clear();
+    _walkTree(context, "", characteristic, value ?? characteristic.value);
+
+    return Column(
+      children: _fields,
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value) {
+    switch (characteristic.type) {
+      case ContentVariable.FLOAT:
+        _fields.add(const Divider());
+        if (characteristic.min_value != null && characteristic.max_value != null) {
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Row(children: [
+                Expanded(
+                    child: PlatformSlider(
+                      onChanged: (double newValue) {
+                        _insertValueIntoResult(newValue, path);
+                        setState(() => value = newValue);
+                      },
+                      max: characteristic.max_value!,
+                      min: characteristic.min_value!,
+                      value: value is double ? value : characteristic.min_value!,
+                    )),
+                Text(value?.toString() ?? characteristic.min_value!.toString()),
+              ]);
+            },
+          ));
+        } else {
+          _fields.add(defaultTextFormField(characteristic, value, path, (value) {
+            double doubleValue = 0;
+            try {
+              doubleValue = double.parse(value ?? "");
+            } catch (e) {
+              return "no decimal value";
+            }
+            if (characteristic.min_value != null && doubleValue < characteristic.min_value!) {
+              return "value smaller than " + characteristic.min_value.toString();
+            }
+            if (characteristic.max_value != null && doubleValue > characteristic.max_value!) {
+              return "value bigger than " + characteristic.max_value.toString();
+            }
+          }, (v) => double.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true, decimal: true)));
+        }
+        break;
+      case ContentVariable.INTEGER:
+        _fields.add(const Divider());
+        if (characteristic.min_value != null && characteristic.max_value != null) {
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Row(children: [
+                Expanded(
+                    child: PlatformSlider(
+                  onChanged: (double newValue) {
+                    _insertValueIntoResult(newValue.toInt(), path);
+                    setState(() => value = newValue.toInt());
+                  },
+                  max: characteristic.max_value!,
+                  min: characteristic.min_value!,
+                  value: value is int ? value.toDouble() : characteristic.min_value!,
+                )),
+                Text(value?.toString() ?? characteristic.min_value!.toInt().toString()),
+              ]);
+            },
+          ));
+        } else {
+          _fields.add(defaultTextFormField(characteristic, value, path, (value) {
+            if (value == null) {
+              return "no empty values";
+            }
+            if (value.contains(".") || value.contains(",")) {
+              return "no decimal numbers";
+            }
+            int intValue = 0;
+            try {
+              intValue = int.parse(value);
+            } catch (e) {
+              return "invalid number";
+            }
+            if (characteristic.min_value != null && intValue < characteristic.min_value!) {
+              return "value smaller than " + characteristic.min_value!.toInt().toString();
+            }
+            if (characteristic.max_value != null && intValue > characteristic.max_value!) {
+              return "value bigger than " + characteristic.max_value!.toInt().toString();
+            }
+          }, (v) => int.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true)));
+        }
+        break;
+      case ContentVariable.STRING:
+        _fields.add(const Divider());
+        _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
+        break;
+      case ContentVariable.BOOLEAN:
+        _fields.add(const Divider());
+        _fields.add(Row(children: [
+          Expanded(
+              child: Text(
+            characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : ""),
+            textAlign: TextAlign.left,
+          )),
+          StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return PlatformSwitch(
+                onChanged: (bool newValue) {
+                  _insertValueIntoResult(newValue, path);
+                  setState(() => value = newValue);
+                },
+                value: value,
+              );
+            },
+          ),
+        ]));
+        break;
+      case ContentVariable.STRUCTURE:
+        characteristic.sub_characteristics?.forEach((sub) {
+          var subPath = sub.name;
+          if (path.isNotEmpty) {
+            subPath = path + "." + subPath;
+          }
+          _walkTree(context, subPath, sub, value != null ? value[sub.name] : null);
+        });
+    }
+  }
+
+  _insertValueIntoResult(dynamic value, String path) {
+    if (path == "") {
+      _result = value;
+      return;
+    }
+    final pathParts = path.split(".");
+    var subResult = _result;
+    for (var i = 0; i < pathParts.length - 1; i++) {
+      if (subResult[pathParts[i]] == null) {
+        subResult[pathParts[i]] = {};
+      }
+      subResult = subResult[pathParts[i]];
+    }
+    subResult[pathParts[pathParts.length - 1]] = value;
+  }
+
+  @override
+  Widget? displayValue(value) {
+    return null;
+  }
+
+  @override
+  Icon? getIcon(value) {
+    return null;
+  }
+
+  @override
+  String? getRelatedControllingFunction(value) {
+    final conceptId = _state.nestedFunctions[_functionId]?.concept.id;
+    if (conceptId == null) {
+      return null;
+    }
+    final controllingFunctions =
+        _state.nestedFunctions.values.where((element) => element.isControlling() && element.concept.id == conceptId).toList(growable: false);
+    if (controllingFunctions.length == 1) {
+      return controllingFunctions[0].id;
+    }
+
+    return null;
+  }
+
+  @override
+  dynamic getConfiguredValue() {
+    return _result;
+  }
+
+  PlatformTextFormField defaultTextFormField(
+      Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator, dynamic Function(String?) parse,
+      [TextInputType? keyboardType]) {
+    return PlatformTextFormField(
+      hintText: characteristic.name,
+      initialValue: value?.toString(),
+      keyboardType: keyboardType,
+      autovalidateMode: AutovalidateMode.always,
+      validator: validator,
+      onChanged: (value) {
+        try {
+          _insertValueIntoResult(parse(value), path);
+        } catch (e) {
+          _logger.d("error parsing user input");
+        }
+      },
+      material: (_, __) => MaterialTextFormFieldData(
+        decoration: InputDecoration(
+          suffixText: characteristic.display_unit,
+          labelText: characteristic.name,
+        ),
+      ),
+      cupertino: (_, __) => CupertinoTextFormFieldData(
+        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")),
+      ),
+    );
+  }
 }

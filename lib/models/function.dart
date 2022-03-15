@@ -19,6 +19,8 @@ import 'package:mobile_app/models/concept.dart';
 
 part 'function.g.dart';
 
+const controllingFunctionPrefix = "urn:infai:ses:controlling-function";
+
 @JsonSerializable()
 class PlatformFunction {
   String id, name, concept_id, display_name;
@@ -36,6 +38,10 @@ class NestedFunction extends PlatformFunction {
   factory NestedFunction.fromJson(Map<String, dynamic> json) => _$NestedFunctionFromJson(json);
   @override
   Map<String, dynamic> toJson() => _$NestedFunctionToJson(this);
+
+  bool isControlling() {
+    return id.startsWith(controllingFunctionPrefix);
+  }
 
   bool hasInput() {
     return concept.base_characteristic != null && concept.base_characteristic!.type != "";

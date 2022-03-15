@@ -79,7 +79,7 @@ class DeviceInstance {
       if (states[i].isControlling) {
         continue;
       }
-      result.add(CommandCallback(DeviceCommand(states[i].functionId, id, states[i].serviceId), (value) {
+      result.add(CommandCallback(DeviceCommand(states[i].functionId, id, states[i].serviceId, states[i].aspectId), (value) {
         if (value is List && value.length == 1) {
           states[i].value = value[0];
         } else {

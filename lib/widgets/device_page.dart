@@ -106,7 +106,7 @@ class _DevicePageState extends State<DevicePage> {
 
         for (var element in device.states) {
           final function = _state.nestedFunctions[element.functionId];
-          final functionConfig = functionConfigs[element.functionId];
+          var functionConfig = functionConfigs[element.functionId];
 
           String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
           if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
@@ -145,42 +145,16 @@ class _DevicePageState extends State<DevicePage> {
                             if (element.transitioning) {
                               return; // avoid double presses
                             }
-                            element.transitioning = true;
-                            dynamic input;
-                            if (function.hasInput()) {
-                              // TODO get input via dialog
-                            }
-                            final List<DeviceCommandResponse> responses = [];
-                            if (!await DeviceCommandsService.runCommandsSecurely(
-                                context, _state, [element.toCommand(device.id, input)], responses)) {
-                              element.transitioning = false;
-                              _state.notifyListeners();
-                              return;
-                            }
-                            assert(responses.length == 1);
-                            if (responses[0].status_code != 200) {
-                              element.transitioning = false;
-                              _state.notifyListeners();
-                              const err = "Error running command";
-                              Toast.showErrorToast(context, err);
-                              _logger.e(err + ": " +responses[0].message.toString());
-                              return;
-                            }
-                            element.transitioning = false;
-
-                            // refresh changed measurements
                             final List<CommandCallback> commandCallbacks = [];
                             final List<int> transitioningStates = [];
-                            for (var i = 0; i <  device.states.length; i++) {
+                            for (var i = 0; i < device.states.length; i++) {
                               if (device.states[i].isControlling) {
                                 continue;
                               }
-                              final functionConfig = functionConfigs[device.states[i].functionId];
-                              if (functionConfig == null || functionConfig.getRelatedControllingFunction == null) {
-                                continue;
-                              }
-                              if (element.serviceGroupKey == device.states[i].serviceGroupKey && functionConfig.getRelatedControllingFunction!(device.states[i].value) == element.functionId) {
-                                device.states[i].transitioning = true;
+                              var measuringFunctionConfig = functionConfigs[device.states[i].functionId];
+                              measuringFunctionConfig ??= FunctionConfigDefault(_state, device.states[i].functionId);
+                              if (element.serviceGroupKey == device.states[i].serviceGroupKey &&
+                                  measuringFunctionConfig.getRelatedControllingFunction(device.states[i].value) == element.functionId) {
                                 transitioningStates.add(i);
                                 commandCallbacks.add(CommandCallback(device.states[i].toCommand(device.id), (value) {
                                   device.states[i].transitioning = false;
@@ -197,9 +171,65 @@ class _DevicePageState extends State<DevicePage> {
                                 }));
                               }
                             }
+
+                            dynamic input;
+                            if (function.hasInput()) {
+                              functionConfig ??= FunctionConfigDefault(_state, element.functionId);
+                              Widget? content = functionConfig!.build(context, transitioningStates.length == 1 ? device.states[transitioningStates[0]].value : null);
+                              if (content == null) {
+                                const err = "Function Config missing build()";
+                                Toast.showErrorToast(context, err, const Duration(milliseconds: 750));
+                                _logger.e(err + ": " + element.functionId);
+                                return;
+                              }
+                              input = await showPlatformDialog(
+                                context: context,
+                                builder: (_) => PlatformAlertDialog(
+                                  title: const Text('Configure'),
+                                  content: content,
+                                  actions: <Widget>[
+                                    PlatformDialogAction(
+                                      child: PlatformText('Cancel'),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                    PlatformDialogAction(
+                                        child: PlatformText('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
+                                  ],
+                                ),
+                              );
+                              if (input == null) {
+                                return; // canceled
+                              }
+                            }
+                            functionConfig = null; // ensure early release and no reuse
+                            element.transitioning = true;
+                            _state.notifyListeners();
+                            final List<DeviceCommandResponse> responses = [];
+                            if (!await DeviceCommandsService.runCommandsSecurely(context, _state, [element.toCommand(device.id, input)], responses)) {
+                              element.transitioning = false;
+                              _state.notifyListeners();
+                              return;
+                            }
+                            assert(responses.length == 1);
+                            if (responses[0].status_code != 200) {
+                              element.transitioning = false;
+                              _state.notifyListeners();
+                              const err = "Error running command";
+                              Toast.showErrorToast(context, err);
+                              _logger.e(err + ": " + responses[0].message.toString());
+                              return;
+                            }
+                            element.transitioning = false;
+                            _state.notifyListeners();
+
+                            // refresh changed measurements
+                            for (var i in transitioningStates) {
+                              device.states[i].transitioning = true;
+                            }
                             _state.notifyListeners();
                             responses.clear();
-                            if (!await DeviceCommandsService.runCommandsSecurely(context, state, commandCallbacks.map((e) => e.command).toList(growable: false), responses)) {
+                            if (!await DeviceCommandsService.runCommandsSecurely(
+                                context, state, commandCallbacks.map((e) => e.command).toList(growable: false), responses)) {
                               for (var i in transitioningStates) {
                                 device.states[i].transitioning = false;
                               }
@@ -223,8 +253,8 @@ class _DevicePageState extends State<DevicePage> {
                 title: Text(title),
                 trailing: element.transitioning
                     ? PlatformCircularProgressIndicator()
-                    : functionConfigs.containsKey(element.functionId) && functionConfigs[element.functionId]!.displayValue != null
-                        ? functionConfigs[element.functionId]!.displayValue!(element.value)
+                    : functionConfigs.containsKey(element.functionId)
+                        ? functionConfigs[element.functionId]!.displayValue(element.value)
                         : Text(element.value.toString() +
                             " " +
                             (_state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),

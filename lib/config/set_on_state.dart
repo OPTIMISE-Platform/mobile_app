@@ -14,17 +14,33 @@
  *  limitations under the License.
  */
 
-import 'package:json_annotation/json_annotation.dart';
+import 'package:flutter/material.dart';
+import 'package:mobile_app/config/function_config.dart';
 
-part 'device_command.g.dart';
+class FunctionConfigSetOnState implements FunctionConfig {
+  @override
+  Widget? build(BuildContext context, [dynamic value]) {
+    return null;
+  }
 
-@JsonSerializable()
-class DeviceCommand {
-  String function_id, device_id, service_id;
-  String? aspect_id;
-  dynamic input;
+  @override
+  Widget? displayValue(value) {
+    return null;
+  }
 
-  DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.input]);
-  factory DeviceCommand.fromJson(Map<String, dynamic> json) => _$DeviceCommandFromJson(json);
-  Map<String, dynamic> toJson() => _$DeviceCommandToJson(this);
+  @override
+  Icon? getIcon(value) {
+    return const Icon(Icons.power_outlined);
+  }
+
+  @override
+  String? getRelatedControllingFunction(value) {
+    return null;
+  }
+
+  @override
+  getConfiguredValue() {
+    return null;
+  }
+
 }
