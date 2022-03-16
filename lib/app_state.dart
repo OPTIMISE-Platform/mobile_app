@@ -19,6 +19,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
@@ -26,6 +27,7 @@ import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/functions.dart';
+import 'package:mobile_app/services/notifications.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
@@ -63,6 +65,10 @@ class AppState extends ChangeNotifier {
   int _deviceClassArrIndex = 0;
   int _classOffset = 0;
 
+  List<app.Notification> notifications = [];
+  final Mutex _notificationsMutex = Mutex();
+  bool _notificationInited = false;
+
   bool loggedIn() => Auth.tokenValid();
 
   bool loggingIn() => Auth.loggingIn();
@@ -80,8 +86,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return deviceClasses;
     }
-    for (var element
-        in (await DeviceClassesService.getDeviceClasses(context, this))) {
+    for (var element in (await DeviceClassesService.getDeviceClasses(context, this))) {
       deviceClasses[element.id] = element;
     }
     notifyListeners();
@@ -94,8 +99,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return deviceTypesPermSearch;
     }
-    for (var element
-        in (await DeviceTypesPermSearchService.getDeviceTypes(context, this))) {
+    for (var element in (await DeviceTypesPermSearchService.getDeviceTypes(context, this))) {
       deviceTypesPermSearch[element.id] = element;
     }
     notifyListeners();
@@ -108,8 +112,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return nestedFunctions;
     }
-    for (var element
-        in (await FunctionsService.getNestedFunctions(context, this))) {
+    for (var element in (await FunctionsService.getNestedFunctions(context, this))) {
       nestedFunctions[element.id] = element;
     }
     notifyListeners();
@@ -118,16 +121,14 @@ class AppState extends ChangeNotifier {
 
   updateTotalDevices(BuildContext context) async {
     _totalDevicesMutex.acquire();
-    final total =
-        await DevicesService.getTotalDevices(context, this, _deviceSearchText);
+    final total = await DevicesService.getTotalDevices(context, this, _deviceSearchText);
     if (total != totalDevices) {
       totalDevices = total;
       notifyListeners();
     }
   }
 
-  searchDevices(String query, BuildContext context,
-      [bool force = false]) async {
+  searchDevices(String query, BuildContext context, [bool force = false]) async {
     if (!force && query == _deviceSearchText) {
       return;
     }
@@ -146,8 +147,7 @@ class AppState extends ChangeNotifier {
     await searchDevices(_deviceSearchText, context, true);
   }
 
-  loadDevices(BuildContext context,
-      [int size = 50, bool skipMutex = false]) async {
+  loadDevices(BuildContext context, [int size = 50, bool skipMutex = false]) async {
     if (!skipMutex && _devicesMutex.isLocked) {
       return;
     }
@@ -160,14 +160,11 @@ class AppState extends ChangeNotifier {
     late final List<DeviceInstance> newDevices;
     try {
       List<String> deviceTypeIds = deviceTypesPermSearch.values
-          .where((element) =>
-              element.device_class_id ==
-              deviceClasses.keys.elementAt(_deviceClassArrIndex))
+          .where((element) => element.device_class_id == deviceClasses.keys.elementAt(_deviceClassArrIndex))
           .map((e) => e.id)
           .toList(growable: false);
 
-      newDevices = await DevicesService.getDevices(
-          context, this, size, _classOffset, _deviceSearchText, deviceTypeIds);
+      newDevices = await DevicesService.getDevices(context, this, size, _classOffset, _deviceSearchText, deviceTypeIds);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
@@ -183,8 +180,7 @@ class AppState extends ChangeNotifier {
     if (totalDevices < devices.length) {
       await updateTotalDevices(context); // when loadDevices called directly
     }
-    if (newDevices.length < size &&
-        deviceClasses.length - 1 > _deviceClassArrIndex) {
+    if (newDevices.length < size && deviceClasses.length - 1 > _deviceClassArrIndex) {
       _classOffset = 0;
       _deviceClassArrIndex++;
       loadDevices(context, size - newDevices.length, true);
@@ -212,20 +208,18 @@ class AppState extends ChangeNotifier {
     for (var element in devices) {
       await loadDeviceType(context, element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
-      commandCallbacks.addAll(element.getStateFillFunctions(
-          limitToFunctionIds));
+      commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
     }
     if (commandCallbacks.isEmpty) {
       return;
     }
     final List<DeviceCommandResponse> result;
     try {
-      result = await DeviceCommandsService.runCommands(context, this,
-          commandCallbacks.map((e) => e.command).toList(growable: false));
+      result = await DeviceCommandsService.runCommands(context, this, commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
       _logger.e("failed to loadAllStates: currently offline");
       rethrow;
-    } catch(e) {
+    } catch (e) {
       _logger.e("failed to loadAllStates: " + e.toString());
       rethrow;
     }
@@ -238,6 +232,54 @@ class AppState extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  loadNotifications(BuildContext context) async {
+    final locked = _notificationsMutex.isLocked;
+    _notificationsMutex.acquire();
+    if (locked) {
+      return notifications;
+    }
+    notifications.clear();
+
+    const limit = 10000;
+    int offset = 0;
+    app.NotificationResponse? response;
+    do {
+      response = await NotificationsService.getNotifications(context, this, limit, offset);
+      final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
+      tmp.addAll(notifications);
+      notifications = tmp;
+      offset += response?.notifications.length ?? 0;
+      notifyListeners();
+    } while (response != null && response.notifications.length == limit);
+
+    _notificationsMutex.release();
+  }
+
+  updateNotifications(BuildContext context, int index) async {
+    await NotificationsService.setNotification(context, this, notifications[index]);
+    notifyListeners();
+  }
+
+  deleteNotification(BuildContext context, int index) async {
+    await NotificationsService.deleteNotifications(context, this, [notifications[index].id]);
+    notifications.removeAt(index);
+    notifyListeners();
+  }
+
+  deleteAllNotifications(BuildContext context) async {
+    await NotificationsService.deleteNotifications(context, this, notifications.map((e) => e.id).toList(growable: false));
+    notifications.clear();
+    notifyListeners();
+  }
+
+  initNotifications(BuildContext context) {
+    if (_notificationInited) {
+      return;
+    }
+    _notificationInited = true;
+    loadNotifications(context);
   }
 
   @override

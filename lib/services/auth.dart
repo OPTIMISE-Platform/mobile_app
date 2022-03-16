@@ -43,16 +43,20 @@ class Auth {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
 
     if (connectivityResult != ConnectivityResult.none) {
-      _client = await OpenIdConnectClient.create(
-        discoveryDocumentUrl: (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
-            '/auth/realms/' +
-            (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
-            "/.well-known/openid-configuration",
-        clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
-        redirectUrl: kIsWeb
-            ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
-            : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
-      );
+      try {
+        _client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
+              '/auth/realms/' +
+              (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
+              "/.well-known/openid-configuration",
+          clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
+          redirectUrl: kIsWeb
+              ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
+              : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
+        );
+      } catch (e) {
+        _logger.e("Could not setup client: " + e.toString());
+      }
     } else {
       _logger.d("Postponing init(): Currently offline");
     }

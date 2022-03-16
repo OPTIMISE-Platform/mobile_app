@@ -14,9 +14,14 @@
  *  limitations under the License.
  */
 
+import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/widgets/settings.dart';
+import 'package:provider/provider.dart';
+
+import 'notification_list.dart';
 
 class MyAppBar {
   String _title = 'OPTIMISE';
@@ -27,6 +32,29 @@ class MyAppBar {
 
   static List<Widget> getDefaultActions(BuildContext context) {
     final List<Widget> actions = [
+      Consumer<AppState>(
+        builder: (_, state, __) {
+          state.initNotifications(context);
+          final unread = state.notifications.where((element) => !element.isRead).toList(growable: false).length;
+          return PlatformIconButton(
+            icon: Badge(
+              child: const Icon(Icons.notifications),
+              badgeContent: Text(unread.toString()),
+              showBadge: unread > 0,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                platformPageRoute(
+                  context: context,
+                  builder: (context) => const NotificationList(),
+                ),
+              );
+            },
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          );
+        },
+      ),
       PlatformIconButton(
         icon: Icon(PlatformIcons(context).settings),
         onPressed: () {
