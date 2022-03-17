@@ -35,6 +35,7 @@ class MyAppBar {
       Consumer<AppState>(
         builder: (_, state, __) {
           state.initNotifications(context);
+          state.checkMessageDisplay(context);
           final unread = state.notifications.where((element) => !element.isRead).toList(growable: false).length;
           return PlatformIconButton(
             icon: Badge(

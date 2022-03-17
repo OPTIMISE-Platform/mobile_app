@@ -25,7 +25,7 @@ import 'package:path_provider/path_provider.dart';
 
 class CacheHelper {
   static String bodyCacheIDBuilder(RequestOptions request) {
-    List<int> bytes = utf8.encode(request.uri.toString());
+    List<int> bytes = utf8.encode(request.method + request.uri.toString());
     if (request.data != null) {
       bytes = [...bytes, ...utf8.encode(request.data)];
     }

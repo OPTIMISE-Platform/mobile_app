@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'notification.g.dart';
@@ -25,6 +27,20 @@ class Notification {
 
   DateTime createdAt() {
     return DateTime.parse(created_at).toLocal();
+  }
+
+  show(BuildContext context) {
+    Future.delayed(const Duration(milliseconds: 100),
+      () => showPlatformDialog(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: Text(title, overflow: TextOverflow.ellipsis,),
+        content: Text(message),
+        actions: <Widget>[
+          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context)),
+        ],
+      ),
+    ));
   }
 
   Notification(this.created_at, this.message, this.userId, this.id, this.isRead, this.title);

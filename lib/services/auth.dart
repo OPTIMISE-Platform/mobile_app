@@ -21,6 +21,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
+import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
@@ -97,6 +98,7 @@ class Auth {
 
     if (token != null) {
       token.save();
+      await state.initMessaging();
       _logger.i('Logged in');
     } else {
       _logger.w("_token null");
@@ -114,6 +116,9 @@ class Auth {
       return;
     }
 
+    if (state.fcmToken != null) {
+        await FcmTokenService.deregisterFcmToken(state.fcmToken!);
+    }
     await _client?.logoutToken();
     await OpenIdIdentity.clear(); // remove saved token
 
@@ -124,8 +129,11 @@ class Auth {
     state.notifyListeners();
   }
 
-  static Future<Map<String, String>> getHeaders(BuildContext context, AppState state) async {
+  static Future<Map<String, String>> getHeaders(BuildContext? context, AppState? state) async {
     if (!tokenValid()) {
+      if (context == null || state == null) {
+        throw AuthException("Can't login without context and state");
+      }
       await login(context, state);
     }
     if (!tokenValid()) {

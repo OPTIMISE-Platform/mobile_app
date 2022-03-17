@@ -14,8 +14,13 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/function.dart';
@@ -26,8 +31,11 @@ import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/notifications.dart';
+import 'package:mobile_app/util/get_broadcast_channel.dart';
+import 'package:mobile_app/util/remote_message_encoder.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
@@ -36,12 +44,41 @@ import 'models/device_instance.dart';
 import 'models/device_type.dart';
 import 'widgets/toast.dart';
 
+const notificationUpdateType = "put notification";
+const notificationDeleteManyType = "delete notifications";
+const messageKey = "messages";
+
 class AppState extends ChangeNotifier {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  bool _metaInitialized = false;
+  static const storage = FlutterSecureStorage();
+
+  static final _messageMutex = Mutex();
+  static queueRemoteMessage(RemoteMessage message) async {
+    await _messageMutex.acquire();
+    _logger.d("Queuing message " + message.messageId.toString());
+
+    String? read = await storage.read(key: messageKey);
+    final List list;
+
+    if (read != null) {
+      list = json.decode(read);
+    } else {
+      list = [];
+    }
+
+    list.add(remoteMessageToMap(message));
+
+    await storage.write(key: messageKey, value: json.encode(list));
+    _messageMutex.release();
+  }
+
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  String? fcmToken;
+
+  bool _initialized = false;
 
   final Map<String, DeviceClass> deviceClasses = {};
   final Mutex _deviceClassesMutex = Mutex();
@@ -68,16 +105,33 @@ class AppState extends ChangeNotifier {
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
   bool _notificationInited = false;
+  String? _messageIdToDisplay;
 
   bool loggedIn() => Auth.tokenValid();
 
   bool loggingIn() => Auth.loggingIn();
 
-  initAllMeta(BuildContext context) async {
+  AppState() {
+    SystemChannels.lifecycle.setMessageHandler((msg) {
+      if (msg == AppLifecycleState.resumed.toString()) {
+        handleQueuedMessages();
+      }
+      return Future.value(null);
+    });
+    if (kIsWeb) { // receive broadcasts from service worker
+      getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
+        _handleRemoteMessageCommand(event.data["data"]);
+      });
+    }
+  }
+
+  init(BuildContext context) async {
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
     await loadDeviceClasses(context);
     await loadDeviceTypes(context);
     await loadNestedFunctions(context);
-    _metaInitialized = true;
+    await initMessaging();
+    _initialized = true;
   }
 
   loadDeviceClasses(BuildContext context) async {
@@ -153,8 +207,8 @@ class AppState extends ChangeNotifier {
     }
     if (!skipMutex) _devicesMutex.acquire();
 
-    if (!_metaInitialized) {
-      await initAllMeta(context);
+    if (!_initialized) {
+      await init(context);
     }
 
     late final List<DeviceInstance> newDevices;
@@ -234,13 +288,14 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  loadNotifications(BuildContext context) async {
+  loadNotifications(BuildContext? context) async {
     final locked = _notificationsMutex.isLocked;
     _notificationsMutex.acquire();
     if (locked) {
       return notifications;
     }
     notifications.clear();
+    await storage.delete(key: messageKey); // clean up any queued messages of previous instances
 
     const limit = 10000;
     int offset = 0;
@@ -253,7 +308,6 @@ class AppState extends ChangeNotifier {
       offset += response?.notifications.length ?? 0;
       notifyListeners();
     } while (response != null && response.notifications.length == limit);
-
     _notificationsMutex.release();
   }
 
@@ -263,15 +317,25 @@ class AppState extends ChangeNotifier {
   }
 
   deleteNotification(BuildContext context, int index) async {
-    await NotificationsService.deleteNotifications(context, this, [notifications[index].id]);
-    notifications.removeAt(index);
-    notifyListeners();
+    try {
+      await NotificationsService.deleteNotifications(context, this, [notifications[index].id]);
+    } catch (e) {
+      _logger.e(e.toString());
+      Toast.showErrorToast(context, "Could not delete notification");
+    }
+    // notifications.removeAt(index);
+    // notifyListeners(); Expect change propagation through FCM
   }
 
   deleteAllNotifications(BuildContext context) async {
-    await NotificationsService.deleteNotifications(context, this, notifications.map((e) => e.id).toList(growable: false));
-    notifications.clear();
-    notifyListeners();
+    try {
+      await NotificationsService.deleteNotifications(context, this, notifications.map((e) => e.id).toList(growable: false));
+    } catch (e) {
+      _logger.e(e.toString());
+      Toast.showErrorToast(context, "Could not delete notifications");
+    }
+    // notifications.clear();
+    // notifyListeners(); Expect change propagation through FCM
   }
 
   initNotifications(BuildContext context) {
@@ -280,6 +344,107 @@ class AppState extends ChangeNotifier {
     }
     _notificationInited = true;
     loadNotifications(context);
+  }
+
+  initMessaging() async {
+    await messaging.requestPermission();
+
+    FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
+
+    messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
+    fcmToken = await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
+    _handleFcmTokenRefresh(null);
+    _handleMessageInteraction(await messaging.getInitialMessage());
+  }
+
+  _handleMessageInteraction(RemoteMessage? message) {
+    if (message == null) {
+      return;
+    }
+    if (message.data["type"] != notificationUpdateType) {
+      return; //safety check
+    }
+    _messageIdToDisplay = app.Notification.fromJson(json.decode(message.data["payload"])).id;
+  }
+
+  _handleFcmTokenRefresh(String? oldToken) async {
+    if (oldToken != null) {
+      try {
+        await FcmTokenService.deregisterFcmToken(oldToken);
+      } catch (e) {
+        _logger.e("Could not deregister FCM: " + e.toString());
+      }
+    }
+
+    _logger.d("firebase token: " + fcmToken.toString());
+    if (fcmToken != null) {
+      try {
+        await FcmTokenService.registerFcmToken(fcmToken!);
+        messaging.subscribeToTopic("announcements");
+      } catch (e) {
+        _logger.e("Could not setup FCM: " + e.toString());
+      }
+    } else {
+      _logger.e("FCM token is null");
+    }
+  }
+
+  _handleRemoteMessage(RemoteMessage message) {
+    _handleRemoteMessageCommand(message.data);
+  }
+
+  _handleRemoteMessageCommand(dynamic data) {
+    switch (data["type"]) {
+      case notificationUpdateType:
+        final updatedNotification = app.Notification.fromJson(json.decode(data["payload"]));
+        final idx = notifications.indexWhere((element) => element.id == updatedNotification.id);
+        if (idx != -1) {
+          notifications[idx] = updatedNotification;
+        } else {
+          notifications.insert(0, updatedNotification);
+        }
+        notifyListeners();
+        break;
+      case notificationDeleteManyType:
+        List<dynamic> ids = json.decode(data["payload"]);
+        notifications.removeWhere((element) => ids.contains(element.id));
+        notifyListeners();
+        break;
+      default:
+        _logger.e("Got message of unknown type: " + data["type"]);
+    }
+  }
+
+  handleQueuedMessages() async {
+    await _messageMutex.acquire();
+
+    String? read = await storage.read(key: messageKey);
+    final List list;
+
+    if (read != null) {
+      list = json.decode(read);
+    } else {
+      list = [];
+    }
+
+    list.map((e) => RemoteMessage.fromMap(e)).forEach(_handleRemoteMessage);
+    await storage.delete(key: messageKey);
+    _messageMutex.release();
+  }
+
+  checkMessageDisplay(BuildContext context) async {
+    if (_messageIdToDisplay == null) {
+      return;
+    }
+      final idx = notifications.indexWhere((element) => element.id == _messageIdToDisplay);
+    if (idx == -1) {
+      return;
+    }
+    _messageIdToDisplay = null;
+    notifications[idx].show(context);
+    notifications[idx].isRead = true;
+    await updateNotifications(context, idx);
+    notifyListeners();
   }
 
   @override

@@ -63,14 +63,18 @@ class _SettingsState extends State<Settings> {
           Consumer<AppState>(
             builder: (context, state, child) => ListTile(
               title: const Text("Logout"),
-              onTap: () {
+              onTap: () async {
                 Navigator.push(
                     context,
                     platformPageRoute(
                       context: context,
                       builder: (context) => const PageSpinner("Logout"),
                     ));
-                Auth.logout(context, state);
+                try {
+                  await Auth.logout(context, state);
+                } catch (e) {
+                  Toast.showErrorToast(context, "Can't logout");
+                }
               },
             ),
           ),

@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,21 +28,32 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 import 'home.dart';
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  await AppState.queueRemoteMessage(message);
+}
 
 Future main() async {
   await dotenv.load(fileName: ".env");
   await Auth.init();
   await findSystemLocale();
   await initializeDateFormatting(Intl.systemLocale, null);
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(
       ChangeNotifierProvider(
         create: (context) => AppState(),
         child: const MyApp(),
       )
-  )
-  ;
+  );
 }
 
 class MyApp extends StatefulWidget {

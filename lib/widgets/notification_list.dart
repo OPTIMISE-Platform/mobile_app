@@ -35,6 +35,7 @@ class NotificationList extends StatelessWidget {
     appBar.setTitle("Notifications");
 
     return Consumer<AppState>(builder: (context, state, child) {
+      state.checkMessageDisplay(context);
       final List<Widget> appBarActions = [];
 
       if (kIsWeb) {
@@ -141,16 +142,7 @@ class NotificationList extends StatelessWidget {
                               state.notifications[i].isRead = true;
                               state.updateNotifications(context, i);
                             }
-                            showPlatformDialog(
-                              context: context,
-                              builder: (_) => PlatformAlertDialog(
-                                title: Text(state.notifications[i].title),
-                                content: Text(state.notifications[i].message),
-                                actions: <Widget>[
-                                  PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context)),
-                                ],
-                              ),
-                            );
+                            state.notifications[i].show(context);
                           })
                     ],
                   );

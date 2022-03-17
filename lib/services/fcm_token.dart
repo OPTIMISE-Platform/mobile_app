@@ -14,16 +14,11 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:http/http.dart' as http;
 
@@ -31,7 +26,7 @@ import 'package:http/http.dart' as http;
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
-class NotificationsService {
+class FcmTokenService {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -47,71 +42,54 @@ class NotificationsService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.refreshForceCache,
+      policy: CachePolicy.forceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
+      allowPostMethod: true,
     );
 
     _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<app.NotificationResponse?> getNotifications(BuildContext? context, AppState state, int limit, int offset) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
+  static registerFcmToken(String token) async {
+    final url = (dotenv.env["API_URL"] ?? 'localhost') +
+        '/notifications-v2/fcm-tokens/' + token;
 
-    final headers = await Auth.getHeaders(context, state);
+    var uri = Uri.parse(url);
+    if (url.startsWith("https://")) {
+      uri = uri.replace(scheme: "https");
+    }
+    final headers = await Auth.getHeaders(null, null);
     await initOptions();
-    final resp = await _dio!.get<Map<String, dynamic>>(uri,
-        options: Options(headers: headers));
+    final resp = await _dio!.post(url, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
+
     if (resp.statusCode == 304) {
-      _logger.d("Using cached notifications");
+      _logger.d("Not updating FCM token: Recently updated");
     }
-
-    if (resp.data == null) {
-      return null;
-    }
-
-    return app.NotificationResponse.fromJson(resp.data!);
   }
 
-  static Future setNotification(BuildContext context, AppState state, app.Notification notification) async {
+  static deregisterFcmToken(String token) async {
     final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications/' + notification.id;
+        '/notifications-v2/fcm-tokens/' + token;
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders(null, null);
 
-    final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
-
-
-    if (resp.statusCode > 201) {
+    final resp = await _client.delete(uri, headers: headers);
+    if (resp.statusCode > 204 && resp.statusCode != 404) { // dont have to delete what cant be found
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
-  }
-
-  static Future deleteNotifications(BuildContext context, AppState state, List<String> ids) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications';
-
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
-    final headers = await Auth.getHeaders(context, state);
-
-    final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
-
-
-    if (resp.statusCode > 204) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
-    }
+    await initOptions();
+    final key = _options!.keyBuilder(RequestOptions(path: url, method: 'POST'));
+    await _options?.store?.delete(key); // ensure token is resubmitted when registered again
   }
 }
+
