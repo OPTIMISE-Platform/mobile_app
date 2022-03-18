@@ -24,11 +24,10 @@ import 'package:provider/provider.dart';
 import 'notification_list.dart';
 
 class MyAppBar {
-  String _title = 'OPTIMISE';
+  final String _title;
 
-  setTitle(String newTitle) {
-    _title = newTitle;
-  }
+  const MyAppBar(this._title);
+
 
   static List<Widget> getDefaultActions(BuildContext context) {
     final List<Widget> actions = [

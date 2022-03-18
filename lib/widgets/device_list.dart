@@ -53,8 +53,7 @@ class _DeviceListState extends State<DeviceList> {
   Timer? _searchDebounce;
 
   _DeviceListState() {
-    _appBar = MyAppBar();
-    _appBar.setTitle("Devices");
+    _appBar = const MyAppBar("Devices");
   }
 
   _searchChanged(String search) {
@@ -225,7 +224,11 @@ class _DeviceListState extends State<DeviceList> {
                             context,
                             platformPageRoute(
                               context: context,
-                              builder: (context) => DevicePage(i),
+                              builder: (context) {
+                                final target = DevicePage(i);
+                                target.refresh(context, _state);
+                                return target;
+                              },
                             )),
                       ));
                       return Column(

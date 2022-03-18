@@ -89,7 +89,7 @@ class Auth {
     }
     final OpenIdIdentity? token;
     try {
-      token = await _client?.loginInteractive(context: context, title: "Login", popupHeight: 640, popupWidth: 480);
+      token = await _client?.loginInteractive(context: context, title: "", popupHeight: 640, popupWidth: 480);
     } catch (e) {
       _logger.e("Login failed: " + e.toString());
       _m.release();

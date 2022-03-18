@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -30,55 +29,39 @@ import '../models/device_instance.dart';
 import '../services/device_commands.dart';
 import '../theme.dart';
 
-class DevicePage extends StatefulWidget {
+class DevicePage extends StatelessWidget {
   final int _stateDeviceIndex;
 
   const DevicePage(this._stateDeviceIndex, {Key? key}) : super(key: key);
 
-  @override
-  State<DevicePage> createState() => _DevicePageState(_stateDeviceIndex);
-}
-
-class _DevicePageState extends State<DevicePage> {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  final int _stateDeviceIndex;
-
-  late final MyAppBar _appBar;
-  late AppState _state;
-  bool _initialized = false;
-
-  _DevicePageState(this._stateDeviceIndex) {
-    _appBar = MyAppBar();
-    _appBar.setTitle("Device Page");
-    _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
+  refresh(BuildContext context, AppState state) {
+    _refresh(context, state, true);
   }
 
-  _refresh(context) async {
-    for (var element in _state.devices[_stateDeviceIndex].states) {
+  _refresh(BuildContext context, AppState state, bool external) async {
+    for (var element in state.devices[_stateDeviceIndex].states) {
       if (!element.isControlling) {
         element.value = null;
         element.transitioning = true;
       }
     }
-    if (_initialized) _state.notifyListeners();
-    _state.loadStates(context, [_state.devices[_stateDeviceIndex]]);
-    _initialized = true;
+    if (!external) state.notifyListeners(); // not allowed when just building the widget
+    state.loadStates(context, [state.devices[_stateDeviceIndex]]);
   }
 
   @override
   Widget build(BuildContext context) {
+    _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
+
     return Consumer<AppState>(
       builder: (context, state, child) {
-        _state = state;
-        if (!_initialized) {
-          _refresh(context);
-        }
-        final device = _state.devices[_stateDeviceIndex];
+        final device = state.devices[_stateDeviceIndex];
         final connectionStatus = device.getConnectionStatus();
-        _appBar.setTitle(device.name);
+        final _appBar = MyAppBar(device.name);
         if (state.devices.isEmpty) {
           state.loadDevices(context);
         }
@@ -86,7 +69,7 @@ class _DevicePageState extends State<DevicePage> {
 
         if (kIsWeb) {
           appBarActions.add(PlatformIconButton(
-            onPressed: () => _refresh(context),
+            onPressed: () => _refresh(context, state, false),
             icon: const Icon(Icons.refresh),
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
@@ -105,7 +88,7 @@ class _DevicePageState extends State<DevicePage> {
         statusWidgets.add(const ListTile(title: Text("Status", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic))));
 
         for (var element in device.states) {
-          final function = _state.nestedFunctions[element.functionId];
+          final function = state.nestedFunctions[element.functionId];
           var functionConfig = functionConfigs[element.functionId];
 
           String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
@@ -152,7 +135,7 @@ class _DevicePageState extends State<DevicePage> {
                                 continue;
                               }
                               var measuringFunctionConfig = functionConfigs[device.states[i].functionId];
-                              measuringFunctionConfig ??= FunctionConfigDefault(_state, device.states[i].functionId);
+                              measuringFunctionConfig ??= FunctionConfigDefault(state, device.states[i].functionId);
                               if (element.serviceGroupKey == device.states[i].serviceGroupKey &&
                                   measuringFunctionConfig.getRelatedControllingFunction(device.states[i].value) == element.functionId) {
                                 transitioningStates.add(i);
@@ -174,8 +157,9 @@ class _DevicePageState extends State<DevicePage> {
 
                             dynamic input;
                             if (function.hasInput()) {
-                              functionConfig ??= FunctionConfigDefault(_state, element.functionId);
-                              Widget? content = functionConfig!.build(context, transitioningStates.length == 1 ? device.states[transitioningStates[0]].value : null);
+                              functionConfig ??= FunctionConfigDefault(state, element.functionId);
+                              Widget? content = functionConfig!
+                                  .build(context, transitioningStates.length == 1 ? device.states[transitioningStates[0]].value : null);
                               if (content == null) {
                                 const err = "Function Config missing build()";
                                 Toast.showErrorToast(context, err, const Duration(milliseconds: 750));
@@ -203,44 +187,44 @@ class _DevicePageState extends State<DevicePage> {
                             }
                             functionConfig = null; // ensure early release and no reuse
                             element.transitioning = true;
-                            _state.notifyListeners();
+                            state.notifyListeners();
                             final List<DeviceCommandResponse> responses = [];
-                            if (!await DeviceCommandsService.runCommandsSecurely(context, _state, [element.toCommand(device.id, input)], responses)) {
+                            if (!await DeviceCommandsService.runCommandsSecurely(context, state, [element.toCommand(device.id, input)], responses)) {
                               element.transitioning = false;
-                              _state.notifyListeners();
+                              state.notifyListeners();
                               return;
                             }
                             assert(responses.length == 1);
                             if (responses[0].status_code != 200) {
                               element.transitioning = false;
-                              _state.notifyListeners();
+                              state.notifyListeners();
                               const err = "Error running command";
                               Toast.showErrorToast(context, err);
                               _logger.e(err + ": " + responses[0].message.toString());
                               return;
                             }
                             element.transitioning = false;
-                            _state.notifyListeners();
+                            state.notifyListeners();
 
                             // refresh changed measurements
                             for (var i in transitioningStates) {
                               device.states[i].transitioning = true;
                             }
-                            _state.notifyListeners();
+                            state.notifyListeners();
                             responses.clear();
                             if (!await DeviceCommandsService.runCommandsSecurely(
                                 context, state, commandCallbacks.map((e) => e.command).toList(growable: false), responses)) {
                               for (var i in transitioningStates) {
                                 device.states[i].transitioning = false;
                               }
-                              _state.notifyListeners();
+                              state.notifyListeners();
                               return;
                             }
                             assert(responses.length == commandCallbacks.length);
                             for (var i = 0; i < responses.length; i++) {
                               commandCallbacks[i].callback(responses[i]);
                             }
-                            _state.notifyListeners();
+                            state.notifyListeners();
                           },
                         ),
                 ),
@@ -257,7 +241,7 @@ class _DevicePageState extends State<DevicePage> {
                         ? functionConfigs[element.functionId]!.displayValue(element.value)
                         : Text(element.value.toString() +
                             " " +
-                            (_state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
+                            (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
               ),
             ]));
           }
@@ -266,7 +250,7 @@ class _DevicePageState extends State<DevicePage> {
         return PlatformScaffold(
           appBar: _appBar.getAppBar(context, appBarActions),
           body: RefreshIndicator(
-            onRefresh: () => _refresh(context),
+            onRefresh: () => _refresh(context, state, false),
             child: Scrollbar(
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -278,13 +262,13 @@ class _DevicePageState extends State<DevicePage> {
                       height: MediaQuery.of(context).textScaleFactor * 48,
                       width: MediaQuery.of(context).textScaleFactor * 48,
                       decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                      child: _state.deviceClasses[_state.deviceTypes[device.device_type_id]?.device_class_id]?.imageWidget,
+                      child: state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.imageWidget,
                     ),
                     title: Text(
-                      _state.deviceClasses[_state.deviceTypes[device.device_type_id]?.device_class_id]?.name ?? "MISSING_DEVICE_CLASS_NAME",
+                      state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.name ?? "MISSING_DEVICE_CLASS_NAME",
                     ),
                     subtitle: Text(
-                      _state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME",
+                      state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME",
                     ),
                     trailing: connectionStatus == DeviceConnectionStatus.online
                         ? null

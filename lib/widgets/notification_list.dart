@@ -31,8 +31,7 @@ class NotificationList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appBar = MyAppBar();
-    appBar.setTitle("Notifications");
+    const appBar = MyAppBar("Notifications");
 
     return Consumer<AppState>(builder: (context, state, child) {
       state.checkMessageDisplay(context);

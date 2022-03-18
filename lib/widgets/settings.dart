@@ -26,23 +26,13 @@ import '../app_state.dart';
 import '../services/auth.dart';
 import '../theme.dart';
 
-class Settings extends StatefulWidget {
+class Settings extends StatelessWidget {
   const Settings({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _SettingsState();
-}
-
-class _SettingsState extends State<Settings> {
-  late final MyAppBar _appBar;
-
-  _SettingsState() {
-    _appBar = MyAppBar();
-    _appBar.setTitle("Settings");
-  }
-
-  @override
   Widget build(BuildContext context) {
+    const _appBar = MyAppBar("Settings");
+
     return PlatformScaffold(
       appBar: _appBar.getAppBar(context),
       body: ListView(

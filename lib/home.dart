@@ -24,27 +24,16 @@ import 'package:provider/provider.dart';
 import 'app_state.dart';
 import 'services/auth.dart';
 
-class Home extends StatefulWidget {
+class Home extends StatelessWidget {
+  static final _logger = Logger();
+
   const Home({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() {
-    return _HomeState();
-  }
-}
-
-class _HomeState extends State<Home> {
-  late final MyAppBar _appBar;
-  final _logger = Logger();
-
-  _HomeState() {
-    _logger.d("OPTIMISE App Homescreen loaded");
-    _appBar = MyAppBar();
-    _appBar.setTitle("Login");
-  }
-
-  @override
   Widget build(BuildContext context) {
+    _logger.d("OPTIMISE App Homescreen loaded");
+
+    const _appBar = MyAppBar("Login");
     return Consumer<AppState>(
       builder: (context, state, child) {
         return state.loggedIn()
