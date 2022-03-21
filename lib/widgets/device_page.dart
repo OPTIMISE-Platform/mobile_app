@@ -240,24 +240,30 @@ class DevicePage extends StatelessWidget {
         if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
-        if (controllingFunctions == null || controllingFunctions.isEmpty) {
+        Iterable<DeviceState>? controllingStates;
+        if (controllingFunctions != null) {
+          controllingStates = device.states.where((state) =>
+              state.isControlling &&
+              controllingFunctions.contains(state.functionId) &&
+              state.serviceGroupKey == element.serviceGroupKey &&
+              state.aspectId == element.aspectId);
+        }
+        if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
           widgets.add(Column(children: [
             widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
             ListTile(
               title: Text(title),
               trailing: element.transitioning
                   ? PlatformCircularProgressIndicator()
-                  : functionConfig.displayValue(element.value) ?? Text(element.value.toString() +
-                          " " +
-                          (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
+                  : functionConfig.displayValue(element.value) ??
+                      Text(
+                          element.value.toString() +
+                              " " +
+                              (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""),
+                          style: const TextStyle(fontStyle: FontStyle.italic)),
             ),
           ]));
         } else {
-          final controllingStates = device.states.where((state) =>
-              state.isControlling &&
-              controllingFunctions.contains(state.functionId) &&
-              state.serviceGroupKey == element.serviceGroupKey &&
-              state.aspectId == element.aspectId);
           markedControllingStates.addAll(controllingStates);
           widgets.add(Column(children: [
             widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
@@ -286,12 +292,12 @@ class DevicePage extends StatelessWidget {
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
                                 : () => _performAction(
-                              connectionStatus,
-                              context,
-                              element,
-                              device,
-                              state,
-                            ),
+                                      connectionStatus,
+                                      context,
+                                      element,
+                                      device,
+                                      state,
+                                    ),
                           )),
           ]));
         }
