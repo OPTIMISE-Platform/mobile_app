@@ -56,8 +56,8 @@ class DevicePage extends StatelessWidget {
   }
 
   _performAction(DeviceConnectionStatus connectionStatus, BuildContext context, DeviceState element, DeviceInstance device, AppState state) async {
-    if (connectionStatus != DeviceConnectionStatus.online) {
-      Toast.showWarningToast(context, "Device not online", const Duration(milliseconds: 750));
+    if (connectionStatus == DeviceConnectionStatus.offline) {
+      Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
       return;
     }
     FunctionConfig? functionConfig;
@@ -247,9 +247,7 @@ class DevicePage extends StatelessWidget {
               title: Text(title),
               trailing: element.transitioning
                   ? PlatformCircularProgressIndicator()
-                  : functionConfigs.containsKey(element.functionId)
-                      ? functionConfigs[element.functionId]!.displayValue(element.value)
-                      : Text(element.value.toString() +
+                  : functionConfig.displayValue(element.value) ?? Text(element.value.toString() +
                           " " +
                           (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
             ),
@@ -268,31 +266,26 @@ class DevicePage extends StatelessWidget {
                 trailing: element.transitioning
                     ? PlatformCircularProgressIndicator()
                     : functionConfig.getIcon(element.value) != null
-                        ? Container(
-                            width: MediaQuery.of(context).textScaleFactor * 50,
-                            margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
-                            decoration: element.transitioning
+                        ? IconButton(
+                            icon: functionConfig.getIcon(element.value)!,
+                            onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
-                                : BoxDecoration(
-                                    border: Border.all(color: Colors.grey),
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: connectionStatus == DeviceConnectionStatus.online ? null : Colors.grey,
-                                  ),
-                            child: IconButton(
-                              icon: functionConfig.getIcon(element.value)!,
-                              onPressed: () => _performAction(
-                                connectionStatus,
-                                context,
-                                element,
-                                device,
-                                state,
-                              ),
-                            ))
+                                : () => _performAction(
+                                      connectionStatus,
+                                      context,
+                                      element,
+                                      device,
+                                      state,
+                                    ),
+                          )
                         : PlatformTextButton(
-                            child: functionConfig.displayValue(element.value) ?? Text(element.value.toString() +
+                            child: functionConfig.displayValue(element.value) ??
+                                Text(element.value.toString() +
                                     " " +
                                     (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
-                            onPressed: () => _performAction(
+                            onPressed: connectionStatus == DeviceConnectionStatus.offline
+                                ? null
+                                : () => _performAction(
                               connectionStatus,
                               context,
                               element,
@@ -315,30 +308,21 @@ class DevicePage extends StatelessWidget {
           widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
           ListTile(
             title: Text(title),
-            trailing: Container(
-              width: MediaQuery.of(context).textScaleFactor * 50,
-              margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
-              decoration: element.transitioning
-                  ? null
-                  : BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(10),
-                      color: connectionStatus == DeviceConnectionStatus.online ? null : Colors.grey,
-                    ),
-              child: element.transitioning
-                  ? Center(child: PlatformCircularProgressIndicator())
-                  : IconButton(
-                      splashRadius: 25,
-                      icon: functionConfig?.getIcon(element.value) ?? const Icon(Icons.input),
-                      onPressed: () => _performAction(
-                        connectionStatus,
-                        context,
-                        element,
-                        device,
-                        state,
-                      ),
-                    ),
-            ),
+            trailing: element.transitioning
+                ? Center(child: PlatformCircularProgressIndicator())
+                : IconButton(
+                    splashRadius: 25,
+                    icon: functionConfig?.getIcon(element.value) ?? const Icon(Icons.input),
+                    onPressed: connectionStatus == DeviceConnectionStatus.offline
+                        ? null
+                        : () => _performAction(
+                              connectionStatus,
+                              context,
+                              element,
+                              device,
+                              state,
+                            ),
+                  ),
           ),
         ]));
       }
@@ -366,15 +350,9 @@ class DevicePage extends StatelessWidget {
                   subtitle: Text(
                     state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME",
                   ),
-                  trailing: connectionStatus == DeviceConnectionStatus.online
-                      ? null
-                      : Tooltip(
-                          message: connectionStatus == DeviceConnectionStatus.offline
-                              ? "Device is offline"
-                              : (connectionStatus == DeviceConnectionStatus.unknown ? "Device status unknown" : ""),
-                          child: connectionStatus == DeviceConnectionStatus.online
-                              ? null
-                              : Icon(PlatformIcons(context).error, color: MyTheme.warnColor)),
+                  trailing: connectionStatus == DeviceConnectionStatus.offline
+                      ? Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
+                      : null,
                 ),
                 Container(
                   padding: const EdgeInsets.only(left: 6, right: 6),

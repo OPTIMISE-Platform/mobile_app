@@ -113,13 +113,6 @@ class _DeviceListState extends State<DeviceList> {
                         trailingWidgets.add(Container(
                           width: MediaQuery.of(context).textScaleFactor * 50,
                           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
-                          decoration: element.transitioning || element.value == null
-                              ? null
-                              : BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: _state.devices[i].getConnectionStatus() == DeviceConnectionStatus.online ? null : Colors.grey,
-                                ),
                           child: element.transitioning || element.value == null
                               ? Center(child: PlatformCircularProgressIndicator())
                               : IconButton(
@@ -130,90 +123,90 @@ class _DeviceListState extends State<DeviceList> {
                                       ?.display_name,
                                   icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getIcon(element.value) ??
                                       const Icon(Icons.help_outline),
-                                  onPressed: () async {
-                                    if (_state.devices[i].getConnectionStatus() != DeviceConnectionStatus.online) {
-                                      Toast.showWarningToast(context, "Device not online", const Duration(milliseconds: 750));
-                                      return;
-                                    }
-                                    if (element.transitioning) {
-                                      return; // avoid double presses
-                                    }
-                                    final controllingFunction =
-                                        functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value);
-                                    if (controllingFunction == null) {
-                                      const err = "Could not find related controlling function";
-                                      Toast.showErrorToast(context, err);
-                                      _logger.e(err);
-                                      return;
-                                    }
-                                    final controllingStates = _state.devices[i].states.where((state) =>
-                                        state.isControlling &&
-                                        state.functionId == controllingFunction &&
-                                        state.serviceGroupKey == element.serviceGroupKey &&
-                                        state.aspectId == element.aspectId);
-                                    if (controllingStates.isEmpty) {
-                                      const err = "Found no controlling service, check device type!";
-                                      Toast.showErrorToast(context, err);
-                                      _logger.e(err);
-                                      return;
-                                    }
-                                    if (controllingStates.length > 1) {
-                                      const err = "Found more than one controlling service, check device type!";
-                                      Toast.showErrorToast(context, err);
-                                      _logger.e(err);
-                                      return;
-                                    }
-                                    element.transitioning = true;
-                                    _state.notifyListeners();
-                                    final List<DeviceCommandResponse> responses = [];
-                                    if (!await DeviceCommandsService.runCommandsSecurely(
-                                        context, _state, [controllingStates.first.toCommand(_state.devices[i].id)], responses)) {
-                                      element.transitioning = false;
-                                      _state.notifyListeners();
-                                      return;
-                                    }
-                                    assert(responses.length == 1);
-                                    if (responses[0].status_code != 200) {
-                                      final err = "Error running command: " + responses[0].message.toString();
-                                      Toast.showErrorToast(context, err);
-                                      _logger.e(err);
-                                      return;
-                                    }
-                                    responses.clear();
-                                    if (!await DeviceCommandsService.runCommandsSecurely(
-                                        context, _state, [element.toCommand(_state.devices[i].id)], responses)) {
-                                      element.transitioning = false;
-                                      _state.notifyListeners();
-                                      return;
-                                    }
-                                    assert(responses.length == 1);
-                                    if (responses[0].status_code != 200) {
-                                      final err = "Error running command: " + responses[0].message.toString();
-                                      Toast.showErrorToast(context, err);
-                                      element.transitioning = false;
-                                      _state.notifyListeners();
-                                      _logger.e(err);
-                                      return;
-                                    }
-                                    element.value = responses[0].message[0];
-                                    element.transitioning = false;
-                                    _state.notifyListeners();
-                                  },
+                                  onPressed: _state.devices[i].getConnectionStatus() == DeviceConnectionStatus.offline
+                                      ? null
+                                      : () async {
+                                          if (_state.devices[i].getConnectionStatus() == DeviceConnectionStatus.offline) {
+                                            Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
+                                            return;
+                                          }
+                                          if (element.transitioning) {
+                                            return; // avoid double presses
+                                          }
+                                          final controllingFunction =
+                                              functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value);
+                                          if (controllingFunction == null) {
+                                            const err = "Could not find related controlling function";
+                                            Toast.showErrorToast(context, err);
+                                            _logger.e(err);
+                                            return;
+                                          }
+                                          final controllingStates = _state.devices[i].states.where((state) =>
+                                              state.isControlling &&
+                                              state.functionId == controllingFunction &&
+                                              state.serviceGroupKey == element.serviceGroupKey &&
+                                              state.aspectId == element.aspectId);
+                                          if (controllingStates.isEmpty) {
+                                            const err = "Found no controlling service, check device type!";
+                                            Toast.showErrorToast(context, err);
+                                            _logger.e(err);
+                                            return;
+                                          }
+                                          if (controllingStates.length > 1) {
+                                            const err = "Found more than one controlling service, check device type!";
+                                            Toast.showErrorToast(context, err);
+                                            _logger.e(err);
+                                            return;
+                                          }
+                                          element.transitioning = true;
+                                          _state.notifyListeners();
+                                          final List<DeviceCommandResponse> responses = [];
+                                          if (!await DeviceCommandsService.runCommandsSecurely(
+                                              context, _state, [controllingStates.first.toCommand(_state.devices[i].id)], responses)) {
+                                            element.transitioning = false;
+                                            _state.notifyListeners();
+                                            return;
+                                          }
+                                          assert(responses.length == 1);
+                                          if (responses[0].status_code != 200) {
+                                            final err = "Error running command: " + responses[0].message.toString();
+                                            Toast.showErrorToast(context, err);
+                                            _logger.e(err);
+                                            return;
+                                          }
+                                          responses.clear();
+                                          if (!await DeviceCommandsService.runCommandsSecurely(
+                                              context, _state, [element.toCommand(_state.devices[i].id)], responses)) {
+                                            element.transitioning = false;
+                                            _state.notifyListeners();
+                                            return;
+                                          }
+                                          assert(responses.length == 1);
+                                          if (responses[0].status_code != 200) {
+                                            final err = "Error running command: " + responses[0].message.toString();
+                                            Toast.showErrorToast(context, err);
+                                            element.transitioning = false;
+                                            _state.notifyListeners();
+                                            _logger.e(err);
+                                            return;
+                                          }
+                                          element.value = responses[0].message[0];
+                                          element.transitioning = false;
+                                          _state.notifyListeners();
+                                        },
                                 ),
                         ));
                       });
 
                       final connectionStatus = _state.devices[i].getConnectionStatus();
                       columnWidgets.add(ListTile(
-                        leading: connectionStatus == DeviceConnectionStatus.online
-                            ? null
-                            : Tooltip(
-                                message: connectionStatus == DeviceConnectionStatus.offline
-                                    ? "Device is offline"
-                                    : (connectionStatus == DeviceConnectionStatus.unknown ? "Device status unknown" : ""),
-                                child: connectionStatus == DeviceConnectionStatus.online
-                                    ? null
-                                    : Icon(PlatformIcons(context).error, color: MyTheme.warnColor)),
+                        leading: connectionStatus == DeviceConnectionStatus.offline
+                            ? Tooltip(
+                                message: "Device is offline",
+                                child: connectionStatus == DeviceConnectionStatus.offline
+                                    ? Icon(PlatformIcons(context).error, color: MyTheme.warnColor)
+                                    : null)
+                            : null,
                         title: Text(_state.devices[i].name),
                         trailing: trailingWidgets.isEmpty
                             ? null
