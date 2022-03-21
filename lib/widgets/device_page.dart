@@ -32,6 +32,10 @@ import '../models/device_command_response.dart';
 import '../models/device_instance.dart';
 import '../services/device_commands.dart';
 import '../theme.dart';
+import '../util/keyed_list.dart';
+
+const int maxInt = (double.infinity is int) ? double.infinity as int : ~minInt;
+const int minInt = (double.infinity is int) ? -double.infinity as int : (-1 << 63);
 
 class DevicePage extends StatelessWidget {
   final int _stateDeviceIndex;
@@ -241,7 +245,7 @@ class DevicePage extends StatelessWidget {
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
-      List<Widget> widgets = [];
+      KeyedList<String, Widget> functionWidgets = KeyedList();
       final List<DeviceState> markedControllingStates = [];
 
       for (var element in device.states.where((element) => !element.isControlling)) {
@@ -265,8 +269,7 @@ class DevicePage extends StatelessWidget {
               state.aspectId == element.aspectId);
         }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
-          widgets.add(Column(children: [
-            widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
+          functionWidgets.insert(element.functionId,
             ListTile(
               onTap: () => _displayTimestamp(element, device, context),
               title: Text(title),
@@ -279,11 +282,10 @@ class DevicePage extends StatelessWidget {
                               (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""),
                           style: const TextStyle(fontStyle: FontStyle.italic)),
             ),
-          ]));
+          );
         } else {
           markedControllingStates.addAll(controllingStates);
-          widgets.add(Column(children: [
-            widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
+          functionWidgets.insert(element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, device, context),
                 title: Text(title),
@@ -317,7 +319,7 @@ class DevicePage extends StatelessWidget {
                                       state,
                                     ),
                           )),
-          ]));
+          );
         }
       }
 
@@ -328,8 +330,7 @@ class DevicePage extends StatelessWidget {
         String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
         if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
 
-        widgets.add(Column(children: [
-          widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
+        functionWidgets.insert(element.functionId,
           ListTile(
             title: Text(title),
             trailing: element.transitioning
@@ -348,7 +349,23 @@ class DevicePage extends StatelessWidget {
                             ),
                   ),
           ),
-        ]));
+        );
+      }
+
+      final List<Widget> widgets = [];
+      final list = functionWidgets.list();
+      list.sort((a, b) {
+        if (a.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+          return minInt;
+        }
+        if (b.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+          return maxInt;
+        }
+        return a.k.compareTo(b.k);
+      });
+      for (var element in list) {
+        widgets.add(const Divider());
+        widgets.add(element.t);
       }
 
       return PlatformScaffold(
@@ -382,7 +399,7 @@ class DevicePage extends StatelessWidget {
                   padding: const EdgeInsets.only(left: 6, right: 6),
                   child: const Divider(thickness: 2),
                 ),
-                ...widgets,
+                ...widgets.skip(1), // skip first divider
               ],
             ),
           ),
