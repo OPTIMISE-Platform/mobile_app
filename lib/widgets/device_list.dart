@@ -149,7 +149,8 @@ class _DeviceListState extends State<DeviceList> {
                                     final controllingStates = _state.devices[i].states.where((state) =>
                                         state.isControlling &&
                                         state.functionId == controllingFunction &&
-                                        state.serviceGroupKey == element.serviceGroupKey);
+                                        state.serviceGroupKey == element.serviceGroupKey &&
+                                        state.aspectId == element.aspectId);
                                     if (controllingStates.isEmpty) {
                                       const err = "Found no controlling service, check device type!";
                                       Toast.showErrorToast(context, err);

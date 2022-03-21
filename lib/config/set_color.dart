@@ -63,6 +63,11 @@ class FunctionConfigSetColor implements FunctionConfig {
   }
 
   @override
+  List<String>? getAllRelatedControllingFunctions() {
+    return null;
+  }
+
+  @override
   getConfiguredValue() {
     return {"r": _color.red, "g": _color.green, "b": _color.blue};
   }

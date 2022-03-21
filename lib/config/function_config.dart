@@ -42,6 +42,8 @@ final Map<String?, FunctionConfig> functionConfigs = {
 abstract class FunctionConfig {
   String? getRelatedControllingFunction(dynamic value);
 
+  List<String>? getAllRelatedControllingFunctions();
+
   Icon? getIcon(dynamic value);
 
   Widget? displayValue(dynamic value);
@@ -92,14 +94,14 @@ class FunctionConfigDefault implements FunctionConfig {
               return Row(children: [
                 Expanded(
                     child: PlatformSlider(
-                      onChanged: (double newValue) {
-                        _insertValueIntoResult(newValue, path);
-                        setState(() => value = newValue);
-                      },
-                      max: characteristic.max_value!,
-                      min: characteristic.min_value!,
-                      value: value is double ? value : characteristic.min_value!,
-                    )),
+                  onChanged: (double newValue) {
+                    _insertValueIntoResult(newValue, path);
+                    setState(() => value = newValue);
+                  },
+                  max: characteristic.max_value!,
+                  min: characteristic.min_value!,
+                  value: value is double ? value : characteristic.min_value!,
+                )),
                 Text(value?.toString() ?? characteristic.min_value!.toString()),
               ]);
             },
@@ -240,6 +242,19 @@ class FunctionConfigDefault implements FunctionConfig {
     }
 
     return null;
+  }
+
+  @override
+  List<String>? getAllRelatedControllingFunctions() {
+    final conceptId = _state.nestedFunctions[_functionId]?.concept.id;
+    if (conceptId == null) {
+      return null;
+    }
+    return _state.nestedFunctions.values
+        .where((element) => element.isControlling() && element.concept.id == conceptId)
+        .toList(growable: false)
+        .map((e) => e.id)
+        .toList(growable: false);
   }
 
   @override

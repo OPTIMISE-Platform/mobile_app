@@ -42,6 +42,11 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
   }
 
   @override
+  List<String>? getAllRelatedControllingFunctions() {
+    return null;
+  }
+
+  @override
   getConfiguredValue() {
     return null;
   }

@@ -38,12 +38,23 @@ class FunctionConfigGetColor implements FunctionConfig {
 
   @override
   Icon? getIcon(value) {
-   return null;
+    if (value is! Map<String, dynamic>) {
+      throw ArgumentException("value is not map: " + value.toString());
+    }
+    if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
+      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+    }
+    return Icon(Icons.palette, color: Color.fromARGB(255, value['r']!, value['g']!, value['b']!));
   }
 
   @override
   String? getRelatedControllingFunction(value) {
     return dotenv.env['FUNCTION_SET_COLOR'];
+  }
+
+  @override
+  List<String>? getAllRelatedControllingFunctions() {
+    return [dotenv.env['FUNCTION_SET_COLOR'] ?? ''];
   }
 
   @override

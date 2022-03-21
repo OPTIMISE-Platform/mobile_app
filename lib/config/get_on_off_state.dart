@@ -58,6 +58,11 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
   }
 
   @override
+  List<String>? getAllRelatedControllingFunctions() {
+    return [dotenv.env['FUNCTION_SET_OFF_STATE'] ?? '', dotenv.env['FUNCTION_SET_ON_STATE'] ?? ''];
+  }
+
+  @override
   getConfiguredValue() {
     return null;
   }
