@@ -15,6 +15,7 @@
  */
 
 import 'dart:convert';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -56,6 +57,7 @@ class AppState extends ChangeNotifier {
   static const storage = FlutterSecureStorage();
 
   static final _messageMutex = Mutex();
+
   static queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
     _logger.d("Queuing message " + message.messageId.toString());
@@ -118,7 +120,8 @@ class AppState extends ChangeNotifier {
       }
       return Future.value(null);
     });
-    if (kIsWeb) { // receive broadcasts from service worker
+    if (kIsWeb) {
+      // receive broadcasts from service worker
       getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
         _handleRemoteMessageCommand(event.data["data"]);
       });
@@ -300,15 +303,22 @@ class AppState extends ChangeNotifier {
     const limit = 10000;
     int offset = 0;
     app.NotificationResponse? response;
-    do {
-      response = await NotificationsService.getNotifications(context, this, limit, offset);
-      final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
-      tmp.addAll(notifications);
-      notifications = tmp;
-      offset += response?.notifications.length ?? 0;
-      notifyListeners();
-    } while (response != null && response.notifications.length == limit);
-    _notificationsMutex.release();
+    try {
+      do {
+        response = await NotificationsService.getNotifications(context, this, limit, offset);
+        final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
+        tmp.addAll(notifications);
+        notifications = tmp;
+        offset += response?.notifications.length ?? 0;
+        notifyListeners();
+      } while (response != null && response.notifications.length == limit);
+    } catch (e) {
+      const err = "Could not load notifications";
+      if (context != null) Toast.showErrorToast(context, err);
+      _logger.e(err + ": " + e.toString());
+    } finally {
+      _notificationsMutex.release();
+    }
   }
 
   updateNotifications(BuildContext context, int index) async {
@@ -436,7 +446,7 @@ class AppState extends ChangeNotifier {
     if (_messageIdToDisplay == null) {
       return;
     }
-      final idx = notifications.indexWhere((element) => element.id == _messageIdToDisplay);
+    final idx = notifications.indexWhere((element) => element.id == _messageIdToDisplay);
     if (idx == -1) {
       return;
     }

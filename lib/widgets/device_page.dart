@@ -16,9 +16,11 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/config/function_config.dart';
+import 'package:mobile_app/config/get_timestamp.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
@@ -207,6 +209,16 @@ class DevicePage extends StatelessWidget {
     state.notifyListeners();
   }
 
+  _displayTimestamp(DeviceState element, DeviceInstance device, BuildContext context) {
+    try {
+      final state = device.states.firstWhere((state) =>
+      !state.isControlling && state.serviceId == element.serviceId && state.aspectId == element.aspectId && state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
+      Toast.showInformationToast(context, FunctionConfigGetTimestamp().formatTimestamp(state.value), const Duration(milliseconds: 1000));
+    } catch(e) {
+      _logger.w("Could not display timestamp: " + e.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
@@ -233,6 +245,10 @@ class DevicePage extends StatelessWidget {
       final List<DeviceState> markedControllingStates = [];
 
       for (var element in device.states.where((element) => !element.isControlling)) {
+        if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
+          continue;
+        }
+
         final function = state.nestedFunctions[element.functionId];
         var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
 
@@ -252,6 +268,7 @@ class DevicePage extends StatelessWidget {
           widgets.add(Column(children: [
             widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
             ListTile(
+              onTap: () => _displayTimestamp(element, device, context),
               title: Text(title),
               trailing: element.transitioning
                   ? PlatformCircularProgressIndicator()
@@ -268,6 +285,7 @@ class DevicePage extends StatelessWidget {
           widgets.add(Column(children: [
             widgets.isEmpty ? const SizedBox.shrink() : const Divider(),
             ListTile(
+                onTap: () => _displayTimestamp(element, device, context),
                 title: Text(title),
                 trailing: element.transitioning
                     ? PlatformCircularProgressIndicator()

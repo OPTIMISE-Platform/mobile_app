@@ -28,7 +28,11 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
 
   @override
   Widget? displayValue(value) {
-    return Text(_format.format(DateTime.parse(value).toLocal()), style: const TextStyle(fontStyle: FontStyle.italic));
+    return Text(formatTimestamp(value), style: const TextStyle(fontStyle: FontStyle.italic));
+  }
+
+  String formatTimestamp(dynamic value) {
+    return _format.format(DateTime.parse(value).toLocal());
   }
 
   @override

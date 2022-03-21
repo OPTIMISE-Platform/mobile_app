@@ -74,4 +74,14 @@ class Toast {
       Text(text)];
     showToast(context, widgets, MyTheme.warnColor, duration);
   }
+
+  static showInformationToast(BuildContext context, String text, [Duration? duration]) {
+    List<Widget> widgets = [
+      Icon(PlatformIcons(context).info, color: Colors.black),
+      const SizedBox(
+        width: 12.0,
+      ),
+      Text(text)];
+    showToast(context, widgets, Colors.black12, duration);
+  }
 }
