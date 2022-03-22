@@ -216,9 +216,9 @@ class AppState extends ChangeNotifier {
       await init(context);
     }
 
-    final List<DeviceInstance> newDevices = [];
+    late final List<DeviceInstance> newDevices;
     try {
-      newDevices.addAll(await Future.wait(await DevicesService.getDevices(context, this, 50, _deviceOffset, _deviceSearchFilter)));
+      newDevices = await DevicesService.getDevices(context, this, 50, _deviceOffset, _deviceSearchFilter);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");

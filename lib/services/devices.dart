@@ -26,6 +26,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../models/attribute.dart';
 import '../models/device_search_filter.dart';
 import 'auth.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
@@ -59,7 +60,7 @@ class DevicesService {
       ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<Future<DeviceInstance>>> getDevices(BuildContext context, AppState state,
+  static Future<List<DeviceInstance>> getDevices(BuildContext context, AppState state,
   int limit, int offset, DeviceSearchFilter filter) async {
     final body = filter.toBody(limit, offset);
     _logger.d("Devices: " + body.toString());
@@ -82,9 +83,26 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    final instanceList = List<DeviceInstance>.generate(
+    return List<DeviceInstance>.generate(
         l.length, (index) => DeviceInstance.fromJson(l[index]));
-    return instanceList.map((e) => e.init()).toList(growable: false);
+  }
+
+  static Future<void> saveDevice(BuildContext context, AppState state, DeviceInstance device) async {
+    _logger.d("Saving device: " + device.id);
+
+    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/devices/' + device.id + "?update-only-same-origin-attributes=" + appOrigin;
+
+    final encoded = json.encode(device.toJson());
+
+    final headers = await Auth.getHeaders(context, state);
+    await initOptions();
+    final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
+
+    if (resp.statusCode == null || resp.statusCode! > 204) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return;
   }
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters

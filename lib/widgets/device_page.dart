@@ -31,6 +31,7 @@ import '../app_state.dart';
 import '../models/device_command_response.dart';
 import '../models/device_instance.dart';
 import '../services/device_commands.dart';
+import '../services/devices.dart';
 import '../theme.dart';
 import '../util/keyed_list.dart';
 
@@ -385,7 +386,8 @@ class DevicePage extends StatelessWidget {
       }
       trailingHeader.add(IconButton(icon: Icon(device.favorite ? PlatformIcons(context).favoriteSolid :
           PlatformIcons(context).favoriteOutline, color: device.favorite ? Colors.redAccent : null,), onPressed: () async {
-        await device.toggleFavorite(context);
+        device.toggleFavorite();
+        await DevicesService.saveDevice(context, state, device);
         state.notifyListeners();
       },));
 

@@ -18,11 +18,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'attribute.g.dart';
 
+const appOrigin = "optimise-mobile-app";
+
 @JsonSerializable()
 class Attribute {
   String key, value;
+  String? origin;
 
-  Attribute(this.key, this.value);
+  Attribute(this.key, this.value, this.origin);
   factory Attribute.fromJson(Map<String, dynamic> json) => _$AttributeFromJson(json);
   Map<String, dynamic> toJson() => _$AttributeToJson(this);
 }
