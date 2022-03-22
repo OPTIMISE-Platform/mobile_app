@@ -72,7 +72,7 @@ class MyAppBar {
     return actions;
   }
 
-  PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions]) {
+  PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions, Widget? leading]) {
     return PlatformAppBar(
       title: PlatformWidget(material: (_, __) => Text(_title), cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white))),
       cupertino: (_, __) => CupertinoNavigationBarData(
@@ -83,6 +83,7 @@ class MyAppBar {
       trailingActions: [
         ...trailingActions ?? [],
       ],
+      leading: leading,
     );
   }
 }

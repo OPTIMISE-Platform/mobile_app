@@ -26,6 +26,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../models/device_search_filter.dart';
 import 'auth.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 
@@ -59,34 +60,11 @@ class DevicesService {
   }
 
   static Future<List<DeviceInstance>> getDevices(BuildContext context, AppState state,
-  int limit, int offset, String search, [List<String>? byDeviceTypes]) async {
-    _logger.d("Devices '" +
-        search +
-        "' " +
-        offset.toString() +
-        "-" +
-        (offset + limit).toString() +
-        (byDeviceTypes != null ? (" types: " + byDeviceTypes.join(",")) : ""));
+  int limit, int offset, DeviceSearchFilter filter) async {
+    final body = filter.toBody(limit, offset);
+    _logger.d("Devices: " + body.toString());
 
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
-    final body = <String, dynamic>{
-      "resource": "devices",
-      "find": {
-        "limit": limit,
-        "offset": offset,
-        "sortBy": "name.asc",
-        "search": search,
-      }
-    };
-    if (byDeviceTypes != null && byDeviceTypes.isNotEmpty) {
-      body["find"]["filter"] = {
-        "condition": {
-          "feature": "features.device_type_id",
-          "operation": "any_value_in_feature",
-          "value": byDeviceTypes,
-        }
-      };
-    }
 
     final encoded = json.encode(body);
 
@@ -109,13 +87,13 @@ class DevicesService {
   }
 
   static Future<int> getTotalDevices(
-      BuildContext context, AppState state, String search) async {
+      BuildContext context, AppState state, DeviceSearchFilter filter) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
-    if (search.isNotEmpty) {
-      queryParameters["search"] = search;
+    if (filter.query.isNotEmpty) {
+      queryParameters["search"] = filter.query;
     }
     final headers = await Auth.getHeaders(context, state);
     await initOptions();

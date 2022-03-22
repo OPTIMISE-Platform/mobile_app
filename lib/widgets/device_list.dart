@@ -19,60 +19,43 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
-import 'package:mobile_app/config/function_config.dart';
-import 'package:mobile_app/models/device_class.dart';
-import 'package:mobile_app/models/device_command_response.dart';
-import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
-import 'package:mobile_app/widgets/device_page.dart';
-import 'package:mobile_app/widgets/toast.dart';
+import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
+import 'device_list_tabs/device_class.dart';
 
 class DeviceList extends StatefulWidget {
   const DeviceList({Key? key}) : super(key: key);
 
   @override
-  State<DeviceList> createState() => _DeviceListState();
+  State<DeviceList> createState() => DeviceListState();
 }
 
-class _DeviceListState extends State<DeviceList> {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
-  late final MyAppBar _appBar;
+class DeviceListState extends State<DeviceList> {
   late AppState _state;
   String _searchText = "";
   Timer? _searchDebounce;
+  int _bottomBarIndex = 0;
 
-  _DeviceListState() {
-    _appBar = const MyAppBar("Devices");
-  }
+  Function? onBackCallback;
+  String? customAppBarTitle;
+
+  DeviceListState() {}
 
   _searchChanged(String search) {
+    if (_searchText == search) {
+      return;
+    }
     _searchText = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      _state.searchDevices(search, context);
+      _state.searchDevices(DeviceSearchFilter(search), context);
     });
-  }
-
-  DeviceClass? _indexNeedsDeviceClassDivider(int i) {
-    if (i > _state.devices.length - 1) {
-      return null; // device not loaded yet
-    }
-    final deviceClassId = _state.deviceTypesPermSearch[_state.devices[i].device_type_id]?.device_class_id;
-    if (i == 0 || deviceClassId != _state.deviceTypesPermSearch[_state.devices[i - 1].device_type_id]?.device_class_id) {
-      return _state.deviceClasses[deviceClassId];
-    }
-    return null;
   }
 
   Widget _buildListWidget(String query) {
@@ -92,142 +75,13 @@ class _DeviceListState extends State<DeviceList> {
                       if (i >= _state.devices.length) {
                         _state.loadDevices(context);
                       }
-                      final DeviceClass? c = _indexNeedsDeviceClassDivider(i);
-                      List<Widget> columnWidgets = [const Divider()];
-                      if (c != null) {
-                        columnWidgets.add(ListTile(
-                          title: Text(
-                            c.name,
-                            style: const TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
-                          ),
-                        ));
-                        columnWidgets.add(const Divider());
-                      }
                       if (i > _state.devices.length - 1) {
                         return const SizedBox.shrink();
                       }
-                      final List<Widget> trailingWidgets = [];
-                      _state.devices[i].states
-                          .where((element) => !element.isControlling && element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'])
-                          .forEach((element) {
-                        trailingWidgets.add(Container(
-                          width: MediaQuery.of(context).textScaleFactor * 50,
-                          margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
-                          child: element.transitioning || element.value == null
-                              ? Center(child: PlatformCircularProgressIndicator())
-                              : IconButton(
-                                  splashRadius: 25,
-                                  tooltip: _state
-                                      .nestedFunctions[
-                                          functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value)]
-                                      ?.display_name,
-                                  icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getIcon(element.value) ??
-                                      const Icon(Icons.help_outline),
-                                  onPressed: _state.devices[i].getConnectionStatus() == DeviceConnectionStatus.offline
-                                      ? null
-                                      : () async {
-                                          if (_state.devices[i].getConnectionStatus() == DeviceConnectionStatus.offline) {
-                                            Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
-                                            return;
-                                          }
-                                          if (element.transitioning) {
-                                            return; // avoid double presses
-                                          }
-                                          final controllingFunction =
-                                              functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value);
-                                          if (controllingFunction == null) {
-                                            const err = "Could not find related controlling function";
-                                            Toast.showErrorToast(context, err);
-                                            _logger.e(err);
-                                            return;
-                                          }
-                                          final controllingStates = _state.devices[i].states.where((state) =>
-                                              state.isControlling &&
-                                              state.functionId == controllingFunction &&
-                                              state.serviceGroupKey == element.serviceGroupKey &&
-                                              state.aspectId == element.aspectId);
-                                          if (controllingStates.isEmpty) {
-                                            const err = "Found no controlling service, check device type!";
-                                            Toast.showErrorToast(context, err);
-                                            _logger.e(err);
-                                            return;
-                                          }
-                                          if (controllingStates.length > 1) {
-                                            const err = "Found more than one controlling service, check device type!";
-                                            Toast.showErrorToast(context, err);
-                                            _logger.e(err);
-                                            return;
-                                          }
-                                          element.transitioning = true;
-                                          _state.notifyListeners();
-                                          final List<DeviceCommandResponse> responses = [];
-                                          if (!await DeviceCommandsService.runCommandsSecurely(
-                                              context, _state, [controllingStates.first.toCommand(_state.devices[i].id)], responses)) {
-                                            element.transitioning = false;
-                                            _state.notifyListeners();
-                                            return;
-                                          }
-                                          assert(responses.length == 1);
-                                          if (responses[0].status_code != 200) {
-                                            final err = "Error running command: " + responses[0].message.toString();
-                                            Toast.showErrorToast(context, err);
-                                            _logger.e(err);
-                                            return;
-                                          }
-                                          responses.clear();
-                                          if (!await DeviceCommandsService.runCommandsSecurely(
-                                              context, _state, [element.toCommand(_state.devices[i].id)], responses)) {
-                                            element.transitioning = false;
-                                            _state.notifyListeners();
-                                            return;
-                                          }
-                                          assert(responses.length == 1);
-                                          if (responses[0].status_code != 200) {
-                                            final err = "Error running command: " + responses[0].message.toString();
-                                            Toast.showErrorToast(context, err);
-                                            element.transitioning = false;
-                                            _state.notifyListeners();
-                                            _logger.e(err);
-                                            return;
-                                          }
-                                          element.value = responses[0].message[0];
-                                          element.transitioning = false;
-                                          _state.notifyListeners();
-                                        },
-                                ),
-                        ));
-                      });
-
-                      final connectionStatus = _state.devices[i].getConnectionStatus();
-                      columnWidgets.add(ListTile(
-                        leading: connectionStatus == DeviceConnectionStatus.offline
-                            ? Tooltip(
-                                message: "Device is offline",
-                                child: connectionStatus == DeviceConnectionStatus.offline
-                                    ? Icon(PlatformIcons(context).error, color: MyTheme.warnColor)
-                                    : null)
-                            : null,
-                        title: Text(_state.devices[i].name),
-                        trailing: trailingWidgets.isEmpty
-                            ? null
-                            : Row(
-                                children: trailingWidgets,
-                                mainAxisSize: MainAxisSize.min, // limit size to needed
-                              ),
-                        onTap: () => Navigator.push(
-                            context,
-                            platformPageRoute(
-                              context: context,
-                              builder: (context) {
-                                final target = DevicePage(i);
-                                target.refresh(context, _state);
-                                return target;
-                              },
-                            )),
-                      ));
-                      return Column(
-                        children: columnWidgets,
-                      );
+                      return Column(children: [
+                        const Divider(),
+                        DeviceListItem(i),
+                      ]);
                     }),
       ),
     );
@@ -279,8 +133,14 @@ class _DeviceListState extends State<DeviceList> {
 
         actions.addAll(MyAppBar.getDefaultActions(context));
 
+        final appBar = MyAppBar(customAppBarTitle ?? "Devices");
+        Widget? leadingAction;
+        if (onBackCallback != null) {
+          leadingAction = IconButton(onPressed: () => onBackCallback!(), icon: Icon(PlatformIcons(context).back));
+        }
+
         return PlatformScaffold(
-          appBar: _appBar.getAppBar(context, actions),
+          appBar: appBar.getAppBar(context, actions, leadingAction),
           body: Column(children: [
             PlatformWidget(
                 cupertino: (_, __) => Container(
@@ -290,9 +150,64 @@ class _DeviceListState extends State<DeviceList> {
                     ),
                 material: (_, __) => const SizedBox.shrink()),
             Expanded(
-              child: _buildListWidget(_searchText),
+              child: [
+                _buildListWidget(_searchText),
+                const DeviceListByDeviceClass(),
+                Center(
+                    child: Row(children: const [
+                  Icon(
+                    Icons.error,
+                    color: MyTheme.errorColor,
+                  ),
+                  Text("not implemented")
+                ], mainAxisAlignment: MainAxisAlignment.center)),
+                Center(
+                    child: Row(children: const [
+                  Icon(
+                    Icons.error,
+                    color: MyTheme.errorColor,
+                  ),
+                  Text("not implemented")
+                ], mainAxisAlignment: MainAxisAlignment.center)),
+                Center(
+                    child: Row(children: const [
+                  Icon(
+                    Icons.error,
+                    color: MyTheme.errorColor,
+                  ),
+                  Text("not implemented")
+                ], mainAxisAlignment: MainAxisAlignment.center)),
+                Center(
+                    child: Row(children: const [
+                  Icon(
+                    Icons.error,
+                    color: MyTheme.errorColor,
+                  ),
+                  Text("not implemented")
+                ], mainAxisAlignment: MainAxisAlignment.center)),
+              ][_bottomBarIndex],
             ),
           ]),
+          bottomNavBar: _searchText != ""
+              ? null
+              : PlatformNavBar(
+                  items: [
+                      const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices", backgroundColor: MyTheme.appColor),
+                      const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes", backgroundColor: MyTheme.appColor),
+                      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations", backgroundColor: MyTheme.appColor),
+                      const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
+                      const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
+                      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).favoriteOutline), label: "Favorites", backgroundColor: MyTheme.appColor),
+                    ],
+                  currentIndex: _bottomBarIndex,
+                  itemChanged: (i) => setState(() {
+                        customAppBarTitle = null;
+                        onBackCallback = null;
+                        _bottomBarIndex = i;
+                        if (i == 0) {
+                          state.searchDevices(DeviceSearchFilter.empty(), context);
+                        }
+                      })),
         );
       },
     );

@@ -42,6 +42,7 @@ import 'package:mutex/mutex.dart';
 import 'models/device_class.dart';
 import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
+import 'models/device_search_filter.dart';
 import 'models/device_type.dart';
 import 'widgets/toast.dart';
 
@@ -93,16 +94,14 @@ class AppState extends ChangeNotifier {
   final Map<String, NestedFunction> nestedFunctions = {};
   final Mutex _nestedFunctionsMutex = Mutex();
 
-  String _deviceSearchText = '';
+  DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
 
   int totalDevices = -1;
   final Mutex _totalDevicesMutex = Mutex();
 
   final List<DeviceInstance> devices = <DeviceInstance>[];
   final Mutex _devicesMutex = Mutex();
-
-  int _deviceClassArrIndex = 0;
-  int _classOffset = 0;
+  bool _allDevicesLoaded = false;
 
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
@@ -178,37 +177,36 @@ class AppState extends ChangeNotifier {
 
   updateTotalDevices(BuildContext context) async {
     _totalDevicesMutex.acquire();
-    final total = await DevicesService.getTotalDevices(context, this, _deviceSearchText);
+    final total = await DevicesService.getTotalDevices(context, this, _deviceSearchFilter);
     if (total != totalDevices) {
       totalDevices = total;
       notifyListeners();
     }
   }
 
-  searchDevices(String query, BuildContext context, [bool force = false]) async {
-    if (!force && query == _deviceSearchText) {
+  searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false]) async {
+    if (!force && _deviceSearchFilter == filter) {
       return;
     }
-    _deviceClassArrIndex = 0;
-    _classOffset = 0;
+    _allDevicesLoaded = false;
     if (devices.isNotEmpty) {
       devices.clear();
       notifyListeners();
     }
-    _deviceSearchText = query;
+    _deviceSearchFilter = filter;
     updateTotalDevices(context);
     loadDevices(context);
   }
 
   refreshDevices(BuildContext context) async {
-    await searchDevices(_deviceSearchText, context, true);
+    await searchDevices(_deviceSearchFilter, context, true);
   }
 
-  loadDevices(BuildContext context, [int size = 50, bool skipMutex = false]) async {
-    if (!skipMutex && _devicesMutex.isLocked) {
+  loadDevices(BuildContext context) async {
+    if (_devicesMutex.isLocked || _allDevicesLoaded) {
       return;
     }
-    if (!skipMutex) _devicesMutex.acquire();
+    _devicesMutex.acquire();
 
     if (!_initialized) {
       await init(context);
@@ -216,33 +214,27 @@ class AppState extends ChangeNotifier {
 
     late final List<DeviceInstance> newDevices;
     try {
-      List<String> deviceTypeIds = deviceTypesPermSearch.values
-          .where((element) => element.device_class_id == deviceClasses.keys.elementAt(_deviceClassArrIndex))
-          .map((e) => e.id)
-          .toList(growable: false);
-
-      newDevices = await DevicesService.getDevices(context, this, size, _classOffset, _deviceSearchText, deviceTypeIds);
+        newDevices = await DevicesService.getDevices(context, this, 50, devices.length, _deviceSearchFilter);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
-      if (!skipMutex) _devicesMutex.release();
+      _devicesMutex.release();
       return;
     }
     devices.addAll(newDevices);
-    _classOffset += newDevices.length;
+    _allDevicesLoaded = newDevices.isEmpty;
     if (newDevices.isNotEmpty) {
-      notifyListeners();
       loadOnOffStates(context, newDevices); // no await => run in background
     }
     if (totalDevices < devices.length) {
       await updateTotalDevices(context); // when loadDevices called directly
     }
-    if (newDevices.length < size && deviceClasses.length - 1 > _deviceClassArrIndex) {
-      _classOffset = 0;
-      _deviceClassArrIndex++;
-      loadDevices(context, size - newDevices.length, true);
-    }
-    if (!skipMutex) _devicesMutex.release();
+    notifyListeners();
+    _devicesMutex.release();
+  }
+
+  bool loadingDevices() {
+    return _devicesMutex.isLocked;
   }
 
   loadDeviceType(BuildContext context, String id, [bool force = false]) async {
