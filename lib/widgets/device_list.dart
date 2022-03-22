@@ -24,6 +24,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
+import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
@@ -80,7 +81,7 @@ class DeviceListState extends State<DeviceList> {
                       }
                       return Column(children: [
                         const Divider(),
-                        DeviceListItem(i),
+                        DeviceListItem(i, null),
                       ]);
                     }),
       ),
@@ -177,14 +178,7 @@ class DeviceListState extends State<DeviceList> {
                   ),
                   Text("not implemented")
                 ], mainAxisAlignment: MainAxisAlignment.center)),
-                Center(
-                    child: Row(children: const [
-                  Icon(
-                    Icons.error,
-                    color: MyTheme.errorColor,
-                  ),
-                  Text("not implemented")
-                ], mainAxisAlignment: MainAxisAlignment.center)),
+                const DeviceListFavorites(),
               ][_bottomBarIndex],
             ),
           ]),
@@ -197,15 +191,24 @@ class DeviceListState extends State<DeviceList> {
                       BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations", backgroundColor: MyTheme.appColor),
                       const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
                       const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
-                      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).favoriteOutline), label: "Favorites", backgroundColor: MyTheme.appColor),
+                      BottomNavigationBarItem(
+                          icon: Icon(PlatformIcons(context).favoriteOutline), label: "Favorites", backgroundColor: MyTheme.appColor),
                     ],
                   currentIndex: _bottomBarIndex,
                   itemChanged: (i) => setState(() {
+                        if (_bottomBarIndex == i) {
+                          return;
+                        }
                         customAppBarTitle = null;
                         onBackCallback = null;
                         _bottomBarIndex = i;
-                        if (i == 0) {
-                          state.searchDevices(DeviceSearchFilter.empty(), context);
+                        switch (i) {
+                          case 0:
+                            state.searchDevices(DeviceSearchFilter.empty(), context);
+                            break;
+                          case 5:
+                            state.searchDevices(DeviceSearchFilter.empty(), context, true, (e) => e.favorite);
+                            break;
                         }
                       })),
         );

@@ -16,10 +16,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/config/function_config.dart';
-import 'package:mobile_app/exceptions/argument_exception.dart';
 
 class FunctionConfigGetColor implements FunctionConfig {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
   @override
   Widget? build(BuildContext context, [dynamic value]) {
     return null;
@@ -28,10 +31,12 @@ class FunctionConfigGetColor implements FunctionConfig {
   @override
   Widget? displayValue(value) {
     if (value is! Map<String, dynamic>) {
-      throw ArgumentException("value is not map: " + value.toString());
+      _logger.w("value is not map: " + value.toString());
+      return null;
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+      _logger.w("value does not contains keys r, b and g: " + value.toString());
+      return null;
     }
     return Icon(Icons.palette, color: Color.fromARGB(255, value['r']!, value['g']!, value['b']!));
   }
@@ -39,10 +44,11 @@ class FunctionConfigGetColor implements FunctionConfig {
   @override
   Icon? getIcon(value) {
     if (value is! Map<String, dynamic>) {
-      throw ArgumentException("value is not map: " + value.toString());
-    }
+      _logger.w("value is not map: " + value.toString());
+      return null;    }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+      _logger.w("value does not contains keys r, b and g: " + value.toString());
+      return null;
     }
     return Icon(Icons.palette, color: Color.fromARGB(255, value['r']!, value['g']!, value['b']!));
   }

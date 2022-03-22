@@ -216,9 +216,12 @@ class DevicePage extends StatelessWidget {
   _displayTimestamp(DeviceState element, DeviceInstance device, BuildContext context) {
     try {
       final state = device.states.firstWhere((state) =>
-      !state.isControlling && state.serviceId == element.serviceId && state.aspectId == element.aspectId && state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
+          !state.isControlling &&
+          state.serviceId == element.serviceId &&
+          state.aspectId == element.aspectId &&
+          state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
       Toast.showInformationToast(context, FunctionConfigGetTimestamp().formatTimestamp(state.value), const Duration(milliseconds: 1000));
-    } catch(e) {
+    } catch (e) {
       _logger.w("Could not display timestamp: " + e.toString());
     }
   }
@@ -228,6 +231,10 @@ class DevicePage extends StatelessWidget {
     _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
 
     return Consumer<AppState>(builder: (context, state, child) {
+      if (state.devices.length - 1 < _stateDeviceIndex) {
+        _logger.w("Device Page requested for device index that is not in AppState");
+        return const SizedBox.shrink();
+      }
       final device = state.devices[_stateDeviceIndex];
       final connectionStatus = device.getConnectionStatus();
       final _appBar = MyAppBar(device.name);
@@ -269,7 +276,8 @@ class DevicePage extends StatelessWidget {
               state.aspectId == element.aspectId);
         }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
-          functionWidgets.insert(element.functionId,
+          functionWidgets.insert(
+            element.functionId,
             ListTile(
               onTap: () => _displayTimestamp(element, device, context),
               title: Text(title),
@@ -285,7 +293,8 @@ class DevicePage extends StatelessWidget {
           );
         } else {
           markedControllingStates.addAll(controllingStates);
-          functionWidgets.insert(element.functionId,
+          functionWidgets.insert(
+            element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, device, context),
                 title: Text(title),
@@ -330,7 +339,8 @@ class DevicePage extends StatelessWidget {
         String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
         if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
 
-        functionWidgets.insert(element.functionId,
+        functionWidgets.insert(
+          element.functionId,
           ListTile(
             title: Text(title),
             trailing: element.transitioning
@@ -368,6 +378,17 @@ class DevicePage extends StatelessWidget {
         widgets.add(element.t);
       }
 
+      final List<Widget> trailingHeader = [];
+
+      if (connectionStatus == DeviceConnectionStatus.offline) {
+        trailingHeader.add(Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+      }
+      trailingHeader.add(IconButton(icon: Icon(device.favorite ? PlatformIcons(context).favoriteSolid :
+          PlatformIcons(context).favoriteOutline, color: device.favorite ? Colors.redAccent : null,), onPressed: () async {
+        await device.toggleFavorite(context);
+        state.notifyListeners();
+      },));
+
       return PlatformScaffold(
         appBar: _appBar.getAppBar(context, appBarActions),
         body: RefreshIndicator(
@@ -391,9 +412,7 @@ class DevicePage extends StatelessWidget {
                   subtitle: Text(
                     state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME",
                   ),
-                  trailing: connectionStatus == DeviceConnectionStatus.offline
-                      ? Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
-                      : null,
+                  trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
                 ),
                 Container(
                   padding: const EdgeInsets.only(left: 6, right: 6),

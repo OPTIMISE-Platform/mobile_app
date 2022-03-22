@@ -59,7 +59,7 @@ class DevicesService {
       ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<DeviceInstance>> getDevices(BuildContext context, AppState state,
+  static Future<List<Future<DeviceInstance>>> getDevices(BuildContext context, AppState state,
   int limit, int offset, DeviceSearchFilter filter) async {
     final body = filter.toBody(limit, offset);
     _logger.d("Devices: " + body.toString());
@@ -82,10 +82,12 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    return List<DeviceInstance>.generate(
+    final instanceList = List<DeviceInstance>.generate(
         l.length, (index) => DeviceInstance.fromJson(l[index]));
+    return instanceList.map((e) => e.init()).toList(growable: false);
   }
 
+  /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
   static Future<int> getTotalDevices(
       BuildContext context, AppState state, DeviceSearchFilter filter) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +

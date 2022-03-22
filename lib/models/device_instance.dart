@@ -14,6 +14,9 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/attribute.dart';
@@ -21,8 +24,11 @@ import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/models/service.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../exceptions/argument_exception.dart';
+import '../exceptions/not_ready_expcetion.dart';
+import '../widgets/toast.dart';
 import 'device_command.dart';
 
 part 'device_instance.g.dart';
@@ -33,8 +39,13 @@ enum DeviceConnectionStatus {
   unknown,
 }
 
+const hiveBoxName = "device-favorites.box";
+
 @JsonSerializable()
 class DeviceInstance {
+  @JsonKey(ignore: true)
+  static LazyBox<bool>? _hiveBox;
+
   String id, local_id, name, device_type_id, creator;
   List<Attribute>? attributes;
   Annotations? annotations;
@@ -43,8 +54,16 @@ class DeviceInstance {
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
 
+  @JsonKey(ignore: true)
+  bool? _favorite;
+
   DeviceInstance(this.id, this.local_id, this.name, this.attributes,
       this.device_type_id, this.annotations, this.shared, this.creator);
+
+  Future<DeviceInstance> init() async {
+    await _setupFavorite();
+    return this;
+  }
 
   factory DeviceInstance.fromJson(Map<String, dynamic> json) =>
       _$DeviceInstanceFromJson(json);
@@ -89,6 +108,51 @@ class DeviceInstance {
       }));
     }
     return result;
+  }
+  
+  _setupFavorite() async {
+    if (_favorite != null) {
+      return;
+    }
+
+    if (_hiveBox == null) {
+      if (!kIsWeb) {
+        Hive.init((await getApplicationDocumentsDirectory()).path + "/" + hiveBoxName);
+      }
+      _hiveBox = await Hive.openLazyBox<bool>(hiveBoxName);
+    }
+
+    _favorite = _hiveBox!.containsKey(id);
+  }
+
+  bool get favorite {
+    if (_favorite == null) {
+      throw NotReadyException("Did you await init()?");
+    }
+    return _favorite!;
+  }
+
+  setFavorite(BuildContext context, bool val) async {
+    if (val) {
+      _hiveBox!.put(id, true);
+    } else {
+      _hiveBox!.delete(id);
+    }
+    await _hiveBox!.flush();
+    int i = 0;
+    while (_hiveBox!.containsKey(id) != val && i < 100) {
+      await Future.delayed(const Duration(milliseconds: 10));
+      i++;
+    }
+    if (i == 100) {
+      Toast.showErrorToast(context, "Could not toggle favorite");
+      return;
+    }
+    _favorite =  _hiveBox!.containsKey(id);
+  }
+
+  toggleFavorite(BuildContext context) async {
+    await setFavorite(context, !favorite);
   }
 
   DeviceConnectionStatus getConnectionStatus() {

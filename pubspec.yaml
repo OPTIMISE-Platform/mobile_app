@@ -58,6 +58,7 @@ dependencies:
   badges: ^2.0.2
   firebase_core: ^1.13.1
   firebase_messaging: ^11.2.11
+  hive: ^2.1.0
 
 dev_dependencies:
   flutter_test:

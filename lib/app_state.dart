@@ -95,6 +95,7 @@ class AppState extends ChangeNotifier {
   final Mutex _nestedFunctionsMutex = Mutex();
 
   DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
+  bool Function(DeviceInstance device)? _localDeviceFilter;
 
   int totalDevices = -1;
   final Mutex _totalDevicesMutex = Mutex();
@@ -102,6 +103,7 @@ class AppState extends ChangeNotifier {
   final List<DeviceInstance> devices = <DeviceInstance>[];
   final Mutex _devicesMutex = Mutex();
   bool _allDevicesLoaded = false;
+  int _deviceOffset = 0;
 
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
@@ -184,8 +186,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false]) async {
-    if (!force && _deviceSearchFilter == filter) {
+  searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
+    if (!force && _deviceSearchFilter == filter && localFilter == _localDeviceFilter) {
       return;
     }
     _allDevicesLoaded = false;
@@ -194,12 +196,14 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     _deviceSearchFilter = filter;
+    _localDeviceFilter = localFilter;
+    _deviceOffset = 0;
     updateTotalDevices(context);
     loadDevices(context);
   }
 
   refreshDevices(BuildContext context) async {
-    await searchDevices(_deviceSearchFilter, context, true);
+    await searchDevices(_deviceSearchFilter, context, true, _localDeviceFilter);
   }
 
   loadDevices(BuildContext context) async {
@@ -212,21 +216,26 @@ class AppState extends ChangeNotifier {
       await init(context);
     }
 
-    late final List<DeviceInstance> newDevices;
+    final List<DeviceInstance> newDevices = [];
     try {
-        newDevices = await DevicesService.getDevices(context, this, 50, devices.length, _deviceSearchFilter);
+      newDevices.addAll(await Future.wait(await DevicesService.getDevices(context, this, 50, _deviceOffset, _deviceSearchFilter)));
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
       _devicesMutex.release();
       return;
     }
-    devices.addAll(newDevices);
+    if (_localDeviceFilter == null) {
+      devices.addAll(newDevices);
+    } else {
+      devices.addAll(newDevices.where(_localDeviceFilter!));
+    }
     _allDevicesLoaded = newDevices.isEmpty;
+    _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
       loadOnOffStates(context, newDevices); // no await => run in background
     }
-    if (totalDevices < devices.length) {
+    if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(context); // when loadDevices called directly
     }
     notifyListeners();
@@ -382,7 +391,7 @@ class AppState extends ChangeNotifier {
     if (fcmToken != null) {
       try {
         await FcmTokenService.registerFcmToken(fcmToken!);
-        messaging.subscribeToTopic("announcements");
+        if (!kIsWeb) messaging.subscribeToTopic("announcements");
       } catch (e) {
         _logger.e("Could not setup FCM: " + e.toString());
       }
@@ -447,6 +456,15 @@ class AppState extends ChangeNotifier {
     notifications[idx].isRead = true;
     await updateNotifications(context, idx);
     notifyListeners();
+  }
+
+  filterLocally() {
+    if (_localDeviceFilter != null) {
+      final tmp = devices.toList(growable: false);
+      devices.clear();
+      devices.addAll(tmp.where(_localDeviceFilter!));
+      notifyListeners();
+    }
   }
 
   @override

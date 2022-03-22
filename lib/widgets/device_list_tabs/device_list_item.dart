@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -36,8 +38,9 @@ class DeviceListItem extends StatelessWidget {
   );
 
   final int _stateDeviceIndex;
+  final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
 
-  const DeviceListItem(this._stateDeviceIndex, {Key? key}) : super(key: key);
+  const DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -145,16 +148,21 @@ class DeviceListItem extends StatelessWidget {
                 children: trailingWidgets,
                 mainAxisSize: MainAxisSize.min, // limit size to needed
               ),
-        onTap: () => Navigator.push(
-            context,
-            platformPageRoute(
-              context: context,
-              builder: (context) {
-                final target = DevicePage(_stateDeviceIndex);
-                target.refresh(context, state);
-                return target;
-              },
-            )),
+        onTap: () {
+          final future = Navigator.push(
+              context,
+              platformPageRoute(
+                context: context,
+                builder: (context) {
+                  final target = DevicePage(_stateDeviceIndex);
+                  target.refresh(context, state);
+                  return target;
+                },
+              ));
+          if (_poppedCallback != null) {
+            future.then(_poppedCallback!);
+          }
+        },
       ));
       return Column(
         children: columnWidgets,
