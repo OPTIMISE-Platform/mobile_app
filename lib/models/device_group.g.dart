@@ -29,9 +29,7 @@ DeviceGroup _$DeviceGroupFromJson(Map<String, dynamic> json) => DeviceGroup(
           .map((e) => DeviceGroupCriteria.fromJson(e as Map<String, dynamic>))
           .toList(),
       json['image'] as String,
-      (json['device_ids'] as List<dynamic>)
-          .map((e) => e as String)
-          .toList(),
+      (json['device_ids'] as List<dynamic>).map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$DeviceGroupToJson(DeviceGroup instance) =>

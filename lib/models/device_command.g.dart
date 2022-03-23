@@ -37,9 +37,9 @@ Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
     <String, dynamic>{
       'function_id': instance.function_id,
       'device_id': instance.device_id,
+      'group_id': instance.group_id,
+      'device_class_id': instance.device_class_id,
       'service_id': instance.service_id,
       'aspect_id': instance.aspect_id,
       'input': instance.input,
-      'group_id': instance.group_id,
-      'device_class_id': instance.device_class_id
     };
