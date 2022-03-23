@@ -372,7 +372,7 @@ class DevicePage extends StatelessWidget {
           ListTile(
             title: Text(title),
             trailing: element.transitioning
-                ? Center(child: PlatformCircularProgressIndicator())
+                ? PlatformCircularProgressIndicator()
                 : IconButton(
                     splashRadius: 25,
                     icon: functionConfig?.getIcon(element.value) ?? const Icon(Icons.input),
