@@ -82,7 +82,7 @@ class DeviceInstance {
       if (states[i].isControlling) {
         continue;
       }
-      result.add(CommandCallback(DeviceCommand(states[i].functionId, id, states[i].serviceId, states[i].aspectId), (value) {
+      result.add(CommandCallback(states[i].toCommand(), (value) {
         if (value is List && value.length == 1) {
           states[i].value = value[0];
         } else {
@@ -130,7 +130,7 @@ class DeviceInstance {
       Service service, ContentVariable contentVariable, bool isInput) async {
     if (contentVariable.function_id != null) {
       states.add(DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!,
-          contentVariable.aspect_id, isInput));
+          contentVariable.aspect_id, isInput, null, null, id));
     }
     contentVariable.sub_content_variables?.forEach(
         (element) => _addStateFromContentVariable(service, element, isInput));

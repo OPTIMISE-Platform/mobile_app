@@ -58,7 +58,8 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                                     height: MediaQuery.of(context).textScaleFactor * 48,
                                     width: MediaQuery.of(context).textScaleFactor * 48,
                                     decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                    child: deviceClasses[i].imageWidget,
+                                    child: Padding(
+                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8), child: deviceClasses[i].imageWidget),
                                   ),
                             onTap: () {
                               state.searchDevices(DeviceSearchFilter.fromClassIds("", [deviceClasses[i].id], state), context, true);

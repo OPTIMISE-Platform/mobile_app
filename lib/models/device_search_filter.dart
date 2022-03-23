@@ -16,11 +16,18 @@
 
 import 'package:mobile_app/app_state.dart';
 
+import '../exceptions/argument_exception.dart';
+
 class DeviceSearchFilter {
   final String query;
   final List<String>? deviceTypeIds;
+  final List<String>? deviceIds;
 
-  const DeviceSearchFilter(this.query, [this.deviceTypeIds]);
+  DeviceSearchFilter(this.query, [this.deviceTypeIds, this.deviceIds]) {
+    if (deviceTypeIds != null && deviceIds != null) {
+      throw ArgumentException("May only use one of deviceTypeIds or deviceIds");
+    }
+  }
 
   static DeviceSearchFilter fromClassIds(String query, List<String> deviceClassIds, AppState state) {
     final deviceTypeIds = state.deviceTypes.values.where((element) => deviceClassIds.contains(element.device_class_id)).map((e) => e.id).toList(growable: false);
@@ -28,7 +35,7 @@ class DeviceSearchFilter {
   }
 
   static DeviceSearchFilter empty() {
-    return const DeviceSearchFilter("");
+    return DeviceSearchFilter("");
   }
 
   Map<String, dynamic> toBody(int limit, int offset) {
@@ -48,6 +55,11 @@ class DeviceSearchFilter {
           "operation": "any_value_in_feature",
           "value": deviceTypeIds!.join(","),
         }
+      };
+    }
+    if (deviceIds != null) {
+      body["list_ids"] = {
+        "ids": deviceIds,
       };
     }
 

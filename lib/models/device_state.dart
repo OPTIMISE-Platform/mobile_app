@@ -19,13 +19,13 @@ import 'package:mobile_app/models/device_command.dart';
 
 class DeviceState {
   dynamic value;
-  String serviceId, functionId, serviceGroupKey;
+  String functionId;
   bool isControlling, transitioning = false;
-  String? aspectId;
+  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId;
 
-  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling);
+  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId, this.deviceId);
 
-  DeviceCommand toCommand(String deviceId, [dynamic value]) {
-    return DeviceCommand(functionId, deviceId, serviceId, aspectId, value);
+  DeviceCommand toCommand([dynamic value]) {
+    return DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value);
   }
 }

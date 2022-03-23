@@ -24,11 +24,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
@@ -104,6 +106,9 @@ class AppState extends ChangeNotifier {
   final Mutex _devicesMutex = Mutex();
   bool _allDevicesLoaded = false;
   int _deviceOffset = 0;
+
+  final List<DeviceGroup> deviceGroups = <DeviceGroup>[];
+  final Mutex _deviceGroupsMutex = Mutex();
 
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
@@ -198,8 +203,8 @@ class AppState extends ChangeNotifier {
     _deviceSearchFilter = filter;
     _localDeviceFilter = localFilter;
     _deviceOffset = 0;
-    updateTotalDevices(context);
-    loadDevices(context);
+    await updateTotalDevices(context);
+    await loadDevices(context);
   }
 
   refreshDevices(BuildContext context) async {
@@ -258,14 +263,18 @@ class AppState extends ChangeNotifier {
   }
 
   loadOnOffStates(BuildContext context, List<DeviceInstance> devices) async {
-    await loadStates(context, devices, [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
+    await loadStates(context, devices, deviceGroups, [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
   }
 
-  loadStates(BuildContext context, List<DeviceInstance> devices, [List<String>? limitToFunctionIds]) async {
+  loadStates(BuildContext context, List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
       await loadDeviceType(context, element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
+      commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
+    }
+    for (var element in groups) {
+      element.prepareStates(this);
       commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
     }
     if (commandCallbacks.isEmpty) {
@@ -275,10 +284,10 @@ class AppState extends ChangeNotifier {
     try {
       result = await DeviceCommandsService.runCommands(context, this, commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
-      _logger.e("failed to loadAllStates: currently offline");
+      _logger.e("failed to loadStates: currently offline");
       rethrow;
     } catch (e) {
-      _logger.e("failed to loadAllStates: " + e.toString());
+      _logger.e("failed to loadStates: " + e.toString());
       rethrow;
     }
     assert(result.length == commandCallbacks.length);
@@ -465,6 +474,25 @@ class AppState extends ChangeNotifier {
       devices.addAll(tmp.where(_localDeviceFilter!));
       notifyListeners();
     }
+  }
+
+  loadDeviceGroups(BuildContext context) async {
+    final locked = _deviceGroupsMutex.isLocked;
+    _deviceGroupsMutex.acquire();
+    if (locked) {
+      return;
+    }
+    deviceGroups.clear();
+    notifyListeners();
+
+    deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups(context, this)));
+    notifyListeners();
+
+    _deviceGroupsMutex.release();
+  }
+
+  bool loadingDeviceGroups() {
+    return _deviceGroupsMutex.isLocked;
   }
 
   @override

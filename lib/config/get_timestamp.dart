@@ -28,10 +28,24 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
 
   @override
   Widget? displayValue(value) {
+    if (value is List) {
+      final List<Text> children = [];
+      for (var element in value) {
+        children.add(Text(formatTimestamp(element), style: const TextStyle(fontStyle: FontStyle.italic)));
+      }
+      return Row(children: children);
+    }
     return Text(formatTimestamp(value), style: const TextStyle(fontStyle: FontStyle.italic));
   }
 
   String formatTimestamp(dynamic value) {
+    if (value is List) {
+      final List<String> children = [];
+      for (var element in value) {
+        children.add(formatTimestamp(element));
+      }
+      return children.join("\n");
+    }
     return _format.format(DateTime.parse(value).toLocal());
   }
 

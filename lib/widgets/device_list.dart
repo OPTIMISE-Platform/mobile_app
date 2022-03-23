@@ -23,6 +23,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
+import 'package:mobile_app/widgets/device_list_tabs/device_group.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
 import 'package:provider/provider.dart';
@@ -61,11 +62,14 @@ class DeviceListState extends State<DeviceList> {
 
   Widget _buildListWidget(String query) {
     _searchChanged(query);
+    if (_state.devices.isEmpty) {
+      _state.loadDevices(context);
+    }
     return RefreshIndicator(
       onRefresh: () => _state.refreshDevices(context),
       child: Scrollbar(
         child: _state.totalDevices == 0
-            ? const Center(child: Text("No devices"))
+            ? const Center(child: Text("No Devices"))
             : _state.totalDevices == -1
                 ? Center(child: PlatformCircularProgressIndicator())
                 : ListView.builder(
@@ -99,9 +103,6 @@ class DeviceListState extends State<DeviceList> {
     return Consumer<AppState>(
       builder: (context, state, child) {
         _state = state;
-        if (state.devices.isEmpty) {
-          state.loadDevices(context);
-        }
 
         List<Widget> actions = [
           PlatformWidget(
@@ -150,37 +151,28 @@ class DeviceListState extends State<DeviceList> {
                       padding: const EdgeInsets.all(16.0),
                     ),
                 material: (_, __) => const SizedBox.shrink()),
-            Expanded(
-              child: [
-                _buildListWidget(_searchText),
-                const DeviceListByDeviceClass(),
-                Center(
-                    child: Row(children: const [
-                  Icon(
-                    Icons.error,
-                    color: MyTheme.errorColor,
-                  ),
-                  Text("not implemented")
-                ], mainAxisAlignment: MainAxisAlignment.center)),
-                Center(
-                    child: Row(children: const [
-                  Icon(
-                    Icons.error,
-                    color: MyTheme.errorColor,
-                  ),
-                  Text("not implemented")
-                ], mainAxisAlignment: MainAxisAlignment.center)),
-                Center(
-                    child: Row(children: const [
-                  Icon(
-                    Icons.error,
-                    color: MyTheme.errorColor,
-                  ),
-                  Text("not implemented")
-                ], mainAxisAlignment: MainAxisAlignment.center)),
-                const DeviceListFavorites(),
-              ][_bottomBarIndex],
-            ),
+            Expanded(child: (() {
+              switch (_bottomBarIndex) {
+                case 0:
+                  return _buildListWidget(_searchText);
+                case 1:
+                  return const DeviceListByDeviceClass();
+                case 3:
+                  return const DeviceGroupList();
+                case 5:
+                  return const DeviceListFavorites();
+                default:
+                  return Center(
+                      child: Row(children: [
+                    const Icon(
+                      Icons.error,
+                      color: MyTheme.errorColor,
+                    ),
+                    SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
+                    const Text("not implemented")
+                  ], mainAxisAlignment: MainAxisAlignment.center));
+              }
+            })()),
           ]),
           bottomNavBar: _searchText != ""
               ? null
@@ -205,6 +197,9 @@ class DeviceListState extends State<DeviceList> {
                         switch (i) {
                           case 0:
                             state.searchDevices(DeviceSearchFilter.empty(), context);
+                            break;
+                          case 3:
+                            state.loadDeviceGroups(context);
                             break;
                           case 5:
                             state.searchDevices(DeviceSearchFilter.empty(), context, true, (e) => e.favorite);

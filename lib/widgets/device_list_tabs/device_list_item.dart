@@ -154,7 +154,7 @@ class DeviceListItem extends StatelessWidget {
               platformPageRoute(
                 context: context,
                 builder: (context) {
-                  final target = DevicePage(_stateDeviceIndex);
+                  final target = DevicePage(_stateDeviceIndex, null);
                   target.refresh(context, state);
                   return target;
                 },
