@@ -54,16 +54,14 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
                         const Divider(),
                         ListTile(
                             title: Text(state.deviceGroups[i].name),
-                            trailing: state.deviceGroups[i].imageWidget == null
-                                ? null
-                                : Container(
-                                    height: MediaQuery.of(context).textScaleFactor * 48,
-                                    width: MediaQuery.of(context).textScaleFactor * 48,
-                                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                    child: Padding(
-                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                        child: state.deviceGroups[i].imageWidget),
-                                  ),
+                            trailing: Container(
+                              height: MediaQuery.of(context).textScaleFactor * 48,
+                              width: MediaQuery.of(context).textScaleFactor * 48,
+                              decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                              child: Padding(
+                                  padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                  child: state.deviceGroups[i].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
+                            ),
                             onTap: () async {
                               await state.searchDevices(DeviceSearchFilter("", null, state.deviceGroups[i].device_ids), context);
                               Navigator.push(

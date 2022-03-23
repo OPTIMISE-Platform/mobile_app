@@ -52,15 +52,15 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                         const Divider(),
                         ListTile(
                             title: Text(deviceClasses[i].name),
-                            trailing: deviceClasses[i].imageWidget == null
-                                ? null
-                                : Container(
-                                    height: MediaQuery.of(context).textScaleFactor * 48,
-                                    width: MediaQuery.of(context).textScaleFactor * 48,
-                                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                    child: Padding(
-                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8), child: deviceClasses[i].imageWidget),
-                                  ),
+                            trailing: Container(
+                              height: MediaQuery.of(context).textScaleFactor * 48,
+                              width: MediaQuery.of(context).textScaleFactor * 48,
+                              decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                              child: Padding(
+                                padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                child: deviceClasses[i].imageWidget ?? const Icon(Icons.devices, color: Colors.white),
+                              ),
+                            ),
                             onTap: () {
                               state.searchDevices(DeviceSearchFilter.fromClassIds("", [deviceClasses[i].id], state), context, true);
                               final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
