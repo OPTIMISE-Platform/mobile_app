@@ -37,8 +37,6 @@ import '../services/devices.dart';
 import '../theme.dart';
 import '../util/keyed_list.dart';
 
-const int maxInt = (double.infinity is int) ? double.infinity as int : ~minInt;
-const int minInt = (double.infinity is int) ? -double.infinity as int : (-1 << 63);
 
 class DevicePage extends StatelessWidget {
   final int? _stateDeviceIndex;
@@ -137,8 +135,17 @@ class DevicePage extends StatelessWidget {
       }
       var measuringFunctionConfig = functionConfigs[states[i].functionId];
       measuringFunctionConfig ??= FunctionConfigDefault(state, states[i].functionId);
+
+      List<String>? refreshingMeasurementFunctionIds;
+      if (_stateDeviceGroupIndex != null) {
+        refreshingMeasurementFunctionIds = measuringFunctionConfig.getAllRelatedControllingFunctions();
+      } else {
+        refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
+      }
+      refreshingMeasurementFunctionIds ??= [];
+
       if (element.serviceGroupKey == states[i].serviceGroupKey &&
-          measuringFunctionConfig.getRelatedControllingFunction(states[i].value) == element.functionId) {
+          refreshingMeasurementFunctionIds.contains(element.functionId)) {
         transitioningStates.add(i);
         commandCallbacks.add(CommandCallback(states[i].toCommand(), (value) {
           states[i].transitioning = false;
@@ -235,6 +242,7 @@ class DevicePage extends StatelessWidget {
           !state.isControlling &&
           state.serviceId == element.serviceId &&
           state.aspectId == element.aspectId &&
+          state.deviceClassId == element.deviceClassId &&
           state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
       Toast.showInformationToast(context, FunctionConfigGetTimestamp().formatTimestamp(state.value), const Duration(milliseconds: 1000));
     } catch (e) {
@@ -393,11 +401,20 @@ class DevicePage extends StatelessWidget {
       final List<Widget> widgets = [];
       final list = functionWidgets.list();
       list.sort((a, b) {
+        if (a.k == b.k) {
+          return 0;
+        }
+        if (a.k == dotenv.env['FUNCTION_SET_ON_STATE'] || a.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
+          return -2;
+        }
+        if (b.k == dotenv.env['FUNCTION_SET_ON_STATE'] || b.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
+          return 2;
+        }
         if (a.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
-          return minInt;
+          return -1;
         }
         if (b.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
-          return maxInt;
+          return 1;
         }
         return a.k.compareTo(b.k);
       });

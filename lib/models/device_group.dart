@@ -105,8 +105,14 @@ class DeviceGroup {
         _logger.e("Function is unknown: " + criterion.function_id);
         continue;
       }
-      states.add(DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
-          criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null));
+      if (states.indexWhere((element) =>
+              element.functionId == criterion.function_id &&
+              element.aspectId == criterion.aspect_id &&
+              element.deviceClassId == criterion.device_class_id) ==
+          -1) {
+        states.add(DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
+            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null));
+      }
     }
   }
 

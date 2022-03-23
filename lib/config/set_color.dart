@@ -24,6 +24,7 @@ class FunctionConfigSetColor implements FunctionConfig {
 
   @override
   Widget? build(BuildContext context, [dynamic value]) {
+    if (value is List) value = value[0];
     _color = _getColor(value);
     return StatefulBuilder(builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
       ColorPicker(
@@ -82,6 +83,6 @@ class FunctionConfigSetColor implements FunctionConfig {
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
       throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
     }
-    return Color.fromARGB(255, value['r']!, value['g']!, value['b']!);
+    return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
   }
 }

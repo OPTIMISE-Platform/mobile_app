@@ -31,14 +31,17 @@ class FunctionConfigGetColor implements FunctionConfig {
   @override
   Widget? displayValue(value) {
     if (value is! Map<String, dynamic>) {
-      _logger.w("value is not map: " + value.toString());
+      if (value is List) {
+        return Row(children: value.map((e) => displayValue(e)!).toList(growable: false), mainAxisSize: MainAxisSize.min);
+      }
+      _logger.w("value is not map or list: " + value.toString());
       return null;
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
       _logger.w("value does not contains keys r, b and g: " + value.toString());
       return null;
     }
-    return Icon(Icons.palette, color: Color.fromARGB(255, value['r']!, value['g']!, value['b']!));
+    return Icon(Icons.palette, color: Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0));
   }
 
   @override

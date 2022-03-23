@@ -32,6 +32,10 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
     if (value is bool && !value) {
       return const Icon(Icons.power_off_outlined);
     }
+    if (value is List) {
+      return Row(children: value.map((e) => displayValue(e)!).toList(growable: false), mainAxisSize: MainAxisSize.min);
+    }
+
     return Text(value.toString());
   }
 
@@ -48,10 +52,10 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
 
   @override
   String? getRelatedControllingFunction(value) {
-    if (value is bool && value) {
+    if ((value is bool && value) || (value is List && !value.contains(false))) {
       return dotenv.env['FUNCTION_SET_OFF_STATE'];
     }
-    if (value is bool && !value) {
+    if ((value is bool && !value) || (value is List && !value.contains(true))) {
       return dotenv.env['FUNCTION_SET_ON_STATE'];
     }
     return null;

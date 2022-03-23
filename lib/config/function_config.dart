@@ -86,6 +86,7 @@ class FunctionConfigDefault implements FunctionConfig {
   _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value) {
     switch (characteristic.type) {
       case ContentVariable.FLOAT:
+        if (value is List) value = value[0];
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
@@ -124,6 +125,7 @@ class FunctionConfigDefault implements FunctionConfig {
         }
         break;
       case ContentVariable.INTEGER:
+        if (value is List) value = value[0];
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
@@ -168,10 +170,12 @@ class FunctionConfigDefault implements FunctionConfig {
         }
         break;
       case ContentVariable.STRING:
+        if (value is List) value = value[0];
         _fields.add(const Divider());
         _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
         break;
       case ContentVariable.BOOLEAN:
+        if (value is List) value = value[0];
         _fields.add(const Divider());
         _fields.add(Row(children: [
           Expanded(
