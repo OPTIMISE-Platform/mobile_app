@@ -21,6 +21,7 @@ import 'package:mobile_app/widgets/device_list_tabs/group_list_item.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
+import '../../theme.dart';
 
 class DeviceGroupList extends StatefulWidget {
   const DeviceGroupList({Key? key}) : super(key: key);
@@ -45,7 +46,7 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
                   child: Scrollbar(
                       child: ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: MyTheme.inset,
                     itemCount: state.deviceGroups.length,
                     itemBuilder: (context, i) {
                       return Column(children: [
@@ -61,7 +62,7 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
                         )
                       : const Center(child: Text("No Devices"))
                   : ListView.builder(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: MyTheme.inset,
                       itemCount: state.totalDevices,
                       itemBuilder: (_, i) {
                         if (i > state.devices.length - 1) {

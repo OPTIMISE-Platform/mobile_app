@@ -52,7 +52,7 @@ class NotificationList extends StatelessWidget {
               child: Scrollbar(
                   child: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16.0),
+                padding: MyTheme.inset,
                 itemCount: state.notifications.length,
                 itemBuilder: (BuildContext context, int i) {
                   return Column(
@@ -62,8 +62,8 @@ class NotificationList extends StatelessWidget {
                           title: Text(state.notifications[i].title),
                           subtitle: Text(_format.format(state.notifications[i].createdAt())),
                           leading: state.notifications[i].isRead
-                              ? /*const SizedBox.shrink()*/ null
-                              : const Icon(Icons.circle_notifications, color: MyTheme.warnColor),
+                              ? null
+                              : Column(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.circle_notifications, color: MyTheme.warnColor)]),
                           trailing: PlatformPopupMenu(
                             icon: Icon(PlatformIcons(context).ellipsis),
                             options: [

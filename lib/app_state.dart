@@ -155,7 +155,7 @@ class AppState extends ChangeNotifier {
 
   loadDeviceClasses(BuildContext context) async {
     final locked = _deviceClassesMutex.isLocked;
-    _deviceClassesMutex.acquire();
+    await _deviceClassesMutex.acquire();
     if (locked) {
       return deviceClasses;
     }
@@ -168,7 +168,7 @@ class AppState extends ChangeNotifier {
 
   loadDeviceTypes(BuildContext context) async {
     final locked = _deviceTypesPermSearchMutex.isLocked;
-    _deviceTypesPermSearchMutex.acquire();
+    await _deviceTypesPermSearchMutex.acquire();
     if (locked) {
       return deviceTypesPermSearch;
     }
@@ -181,7 +181,7 @@ class AppState extends ChangeNotifier {
 
   loadNestedFunctions(BuildContext context) async {
     final locked = _nestedFunctionsMutex.isLocked;
-    _nestedFunctionsMutex.acquire();
+    await _nestedFunctionsMutex.acquire();
     if (locked) {
       return nestedFunctions;
     }
@@ -193,12 +193,13 @@ class AppState extends ChangeNotifier {
   }
 
   updateTotalDevices(BuildContext context) async {
-    _totalDevicesMutex.acquire();
+    await _totalDevicesMutex.acquire();
     final total = await DevicesService.getTotalDevices(context, this, _deviceSearchFilter);
     if (total != totalDevices) {
       totalDevices = total;
       notifyListeners();
     }
+    _totalDevicesMutex.release();
   }
 
   Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
@@ -221,22 +222,30 @@ class AppState extends ChangeNotifier {
     await searchDevices(_deviceSearchFilter, context, true, _localDeviceFilter);
   }
 
-  loadDevices(BuildContext context) async {
-    if (_devicesMutex.isLocked || _allDevicesLoaded) {
+  loadDevices(BuildContext context, [int? offset]) async {
+    if (_allDevicesLoaded) {
       return;
     }
-    _devicesMutex.acquire();
+    await _devicesMutex.acquire();
+
+    if(_allDevicesLoaded || (offset != null && offset < devices.length)) {
+      _devicesMutex.release();
+      notifyListeners(); // missing loadingDevices() change otheriwse
+      return;
+    }
 
     if (!_initialized) {
       await init(context);
     }
 
     late final List<DeviceInstance> newDevices;
+    const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(context, this, 50, _deviceOffset, _deviceSearchFilter);
+      newDevices = await DevicesService.getDevices(context, this, limit, _deviceOffset, _deviceSearchFilter);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
+      notifyListeners(); // missing loadingDevices() change otheriwse
       _devicesMutex.release();
       return;
     }
@@ -245,7 +254,7 @@ class AppState extends ChangeNotifier {
     } else {
       devices.addAll(newDevices.where(_localDeviceFilter!));
     }
-    _allDevicesLoaded = newDevices.isEmpty;
+    _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
       loadOnOffStates(context, newDevices); // no await => run in background
@@ -253,8 +262,8 @@ class AppState extends ChangeNotifier {
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(context); // when loadDevices called directly
     }
-    notifyListeners();
     _devicesMutex.release();
+    notifyListeners();
   }
 
   bool loadingDevices() {
@@ -313,7 +322,7 @@ class AppState extends ChangeNotifier {
 
   loadNotifications(BuildContext? context) async {
     final locked = _notificationsMutex.isLocked;
-    _notificationsMutex.acquire();
+    await _notificationsMutex.acquire();
     if (locked) {
       return notifications;
     }
@@ -488,7 +497,7 @@ class AppState extends ChangeNotifier {
 
   loadDeviceGroups(BuildContext context) async {
     final locked = _deviceGroupsMutex.isLocked;
-    _deviceGroupsMutex.acquire();
+    await _deviceGroupsMutex.acquire();
     if (locked) {
       return;
     }
@@ -507,7 +516,7 @@ class AppState extends ChangeNotifier {
 
   loadLocations(BuildContext context) async {
     final locked = _locationsMutex.isLocked;
-    _locationsMutex.acquire();
+    await _locationsMutex.acquire();
     if (locked) {
       return;
     }
@@ -526,7 +535,7 @@ class AppState extends ChangeNotifier {
 
   loadNetworks(BuildContext context) async {
     final locked = _networksMutex.isLocked;
-    _networksMutex.acquire();
+    await _networksMutex.acquire();
     if (locked) {
       return;
     }

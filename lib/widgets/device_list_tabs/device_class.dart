@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../models/device_search_filter.dart';
+import '../../theme.dart';
 import '../device_list.dart';
 
 class DeviceListByDeviceClass extends StatefulWidget {
@@ -41,11 +42,11 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
 
       return Scrollbar(
         child: state.deviceClasses.isEmpty
-            ? PlatformCircularProgressIndicator()
+            ? Center(child: PlatformCircularProgressIndicator())
             : _selected == null
                 ? ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: MyTheme.inset,
                     itemCount: deviceClasses.length,
                     itemBuilder: (context, i) {
                       return Column(children: [
@@ -89,10 +90,11 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                           )
                         : const Center(child: Text("No Devices"))
                     : ListView.builder(
-                        padding: const EdgeInsets.all(16.0),
+                        padding: MyTheme.inset,
                         itemCount: state.totalDevices,
                         itemBuilder: (_, i) {
-                          if (i > state.devices.length - 1) {
+                          if (i >= state.devices.length) {
+                            state.loadDevices(context);
                             return const SizedBox.shrink();
                           }
                           return Column(

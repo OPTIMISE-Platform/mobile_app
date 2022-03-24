@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/widgets/util/favorize_button.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
@@ -142,9 +143,9 @@ class DeviceListItem extends StatelessWidget {
             : null,
         title: Text(device.name),
         trailing: trailingWidgets.isEmpty
-            ? null
+            ? FavorizeButton(_stateDeviceIndex)
             : Row(
-                children: trailingWidgets,
+                children: [...trailingWidgets, const VerticalDivider(), FavorizeButton(_stateDeviceIndex)],
                 mainAxisSize: MainAxisSize.min, // limit size to needed
               ),
         onTap: () {

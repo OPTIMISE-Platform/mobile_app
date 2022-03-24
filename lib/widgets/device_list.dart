@@ -45,6 +45,7 @@ class DeviceListState extends State<DeviceList> {
   String _searchText = "";
   Timer? _searchDebounce;
   int _bottomBarIndex = 0;
+  bool _initialized = false;
 
   Function? onBackCallback;
   String? customAppBarTitle;
@@ -76,7 +77,7 @@ class DeviceListState extends State<DeviceList> {
                 ? Center(child: PlatformCircularProgressIndicator())
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
+                    padding: MyTheme.inset,
                     itemCount: _state.totalDevices,
                     itemBuilder: (context, i) {
                       if (i >= _state.devices.length) {
@@ -94,6 +95,35 @@ class DeviceListState extends State<DeviceList> {
     );
   }
 
+  _switchBottomBar(int i, AppState state, bool force) {
+    setState(() {
+      if (_bottomBarIndex == i && !force) {
+        return;
+      }
+      customAppBarTitle = null;
+      onBackCallback = null;
+      _bottomBarIndex = i;
+      switch (i) {
+        case 5:
+          state.searchDevices(DeviceSearchFilter.empty(), context);
+          break;
+        case 2:
+          state.loadLocations(context);
+          state.loadDeviceGroups(context);
+          break;
+        case 3:
+          state.loadDeviceGroups(context);
+          break;
+        case 4:
+          state.loadNetworks(context);
+          break;
+        case 0:
+          state.searchDevices(DeviceSearchFilter.empty(), context, true, (e) => e.favorite);
+          break;
+      }
+    });
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -105,6 +135,12 @@ class DeviceListState extends State<DeviceList> {
     return Consumer<AppState>(
       builder: (context, state, child) {
         _state = state;
+        if (!_initialized) {
+          WidgetsBinding.instance?.addPostFrameCallback((_) {
+            _switchBottomBar(_bottomBarIndex, state, true);
+          });
+          _initialized = true;
+        }
 
         List<Widget> actions = [
           PlatformWidget(
@@ -150,12 +186,12 @@ class DeviceListState extends State<DeviceList> {
                 cupertino: (_, __) => Container(
                       child: CupertinoSearchTextField(
                           onChanged: (query) => _searchChanged(query), style: const TextStyle(color: Colors.black), itemColor: Colors.black),
-                      padding: const EdgeInsets.all(16.0),
+                      padding: MyTheme.inset,
                     ),
                 material: (_, __) => const SizedBox.shrink()),
             Expanded(child: (() {
               switch (_bottomBarIndex) {
-                case 0:
+                case 5:
                   return _buildListWidget(_searchText);
                 case 2:
                   return const DeviceListByLocation();
@@ -165,7 +201,7 @@ class DeviceListState extends State<DeviceList> {
                   return const DeviceGroupList();
                 case 4:
                   return const DeviceListByNetwork();
-                case 5:
+                case 0:
                   return const DeviceListFavorites();
                 default:
                   return Center(
@@ -182,43 +218,14 @@ class DeviceListState extends State<DeviceList> {
           ]),
           bottomNavBar: _searchText != ""
               ? null
-              : PlatformNavBar(
-                  items: [
-                      const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices", backgroundColor: MyTheme.appColor),
-                      const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes", backgroundColor: MyTheme.appColor),
-                      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations", backgroundColor: MyTheme.appColor),
-                      const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
-                      const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
-                      BottomNavigationBarItem(
-                          icon: Icon(PlatformIcons(context).favoriteOutline), label: "Favorites", backgroundColor: MyTheme.appColor),
-                    ],
-                  currentIndex: _bottomBarIndex,
-                  itemChanged: (i) => setState(() {
-                        if (_bottomBarIndex == i) {
-                          return;
-                        }
-                        customAppBarTitle = null;
-                        onBackCallback = null;
-                        _bottomBarIndex = i;
-                        switch (i) {
-                          case 0:
-                            state.searchDevices(DeviceSearchFilter.empty(), context);
-                            break;
-                          case 2:
-                            state.loadLocations(context);
-                            state.loadDeviceGroups(context);
-                            break;
-                          case 3:
-                            state.loadDeviceGroups(context);
-                            break;
-                          case 4:
-                            state.loadNetworks(context);
-                            break;
-                          case 5:
-                            state.searchDevices(DeviceSearchFilter.empty(), context, true, (e) => e.favorite);
-                            break;
-                        }
-                      })),
+              : PlatformNavBar(items: [
+                  const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites", backgroundColor: MyTheme.appColor),
+                  const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes", backgroundColor: MyTheme.appColor),
+                  BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations", backgroundColor: MyTheme.appColor),
+                  const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
+                  const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
+                  const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices", backgroundColor: MyTheme.appColor),
+                ], currentIndex: _bottomBarIndex, itemChanged: (i) => _switchBottomBar(i, state, false)),
         );
       },
     );

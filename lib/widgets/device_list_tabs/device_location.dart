@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../models/device_search_filter.dart';
+import '../../theme.dart';
 import '../device_list.dart';
 
 class DeviceListByLocation extends StatefulWidget {
@@ -55,7 +56,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                     onRefresh: () => state.loadLocations(context),
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.all(16.0),
+                      padding: MyTheme.inset,
                       itemCount: state.locations.length,
                       itemBuilder: (context, i) {
                         return Column(children: [
@@ -114,7 +115,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                               .then((_) => setState(() => _loading = false));
                         },
                         child: ListView.builder(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: MyTheme.inset,
                           itemCount: state.totalDevices + matchingGroups.length,
                           itemBuilder: (_, i) {
                             if (i > state.devices.length + matchingGroups.length - 1) {

@@ -27,6 +27,8 @@ class MyTheme {
   static const Color errorColor = Colors.redAccent;
   static const Color successColor = Colors.greenAccent;
 
+  static const EdgeInsets inset = EdgeInsets.all(12.0);
+
   static ThemeData materialTheme = ThemeData(
     cupertinoOverrideTheme: cupertinoTheme,
     primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
@@ -43,7 +45,7 @@ class MyTheme {
     }),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        padding: MaterialStateProperty.all(const EdgeInsets.all(16.0)),
+        padding: MaterialStateProperty.all(MyTheme.inset),
         foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
       ),
     ),

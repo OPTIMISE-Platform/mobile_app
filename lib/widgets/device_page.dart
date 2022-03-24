@@ -27,16 +27,15 @@ import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:mobile_app/widgets/util/expandable_text.dart';
+import 'package:mobile_app/widgets/util/favorize_button.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
 import '../models/device_command_response.dart';
 import '../models/device_instance.dart';
 import '../services/device_commands.dart';
-import '../services/devices.dart';
 import '../theme.dart';
 import '../util/keyed_list.dart';
-
 
 class DevicePage extends StatelessWidget {
   final int? _stateDeviceIndex;
@@ -144,8 +143,7 @@ class DevicePage extends StatelessWidget {
       }
       refreshingMeasurementFunctionIds ??= [];
 
-      if (element.serviceGroupKey == states[i].serviceGroupKey &&
-          refreshingMeasurementFunctionIds.contains(element.functionId)) {
+      if (element.serviceGroupKey == states[i].serviceGroupKey && refreshingMeasurementFunctionIds.contains(element.functionId)) {
         transitioningStates.add(i);
         commandCallbacks.add(CommandCallback(states[i].toCommand(), (value) {
           states[i].transitioning = false;
@@ -255,7 +253,8 @@ class DevicePage extends StatelessWidget {
     _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
 
     return Consumer<AppState>(builder: (context, state, child) {
-      if (state.loadingDevices() || (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {
+      if (state.loadingDevices() ||
+          (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {
         return Center(child: PlatformCircularProgressIndicator());
       }
 
@@ -433,17 +432,7 @@ class DevicePage extends StatelessWidget {
         trailingHeader.add(Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
-        trailingHeader.add(IconButton(
-          icon: Icon(
-            device.favorite ? PlatformIcons(context).favoriteSolid : PlatformIcons(context).favoriteOutline,
-            color: device.favorite ? Colors.redAccent : null,
-          ),
-          onPressed: () async {
-            device.toggleFavorite();
-            await DevicesService.saveDevice(context, state, device);
-            state.notifyListeners();
-          },
-        ));
+        trailingHeader.add(FavorizeButton(_stateDeviceIndex!));
       }
 
       return PlatformScaffold(
@@ -453,7 +442,7 @@ class DevicePage extends StatelessWidget {
           child: Scrollbar(
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16.0),
+              padding: MyTheme.inset,
               children: [
                 ListTile(
                   // header

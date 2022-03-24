@@ -21,6 +21,7 @@ import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
+import '../../theme.dart';
 
 class DeviceListFavorites extends StatelessWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);
@@ -28,6 +29,9 @@ class DeviceListFavorites extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
+      if (state.devices.isEmpty) {
+        state.loadDevices(context);
+      }
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
@@ -36,12 +40,13 @@ class DeviceListFavorites extends StatelessWidget {
                     ? Center(
                         child: PlatformCircularProgressIndicator(),
                       )
-                    : const Center(child: Text("No Devices"))
+                    : const Center(child: Text("No Favorites")) // TODO add button to switch to devices
                 : ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: MyTheme.inset,
                     itemCount: state.totalDevices,
                     itemBuilder: (_, i) {
                       if (i > state.devices.length - 1) {
+                        state.loadDevices(context, i);
                         return const SizedBox.shrink();
                       }
                       return Column(
