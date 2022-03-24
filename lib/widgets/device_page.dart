@@ -255,13 +255,17 @@ class DevicePage extends StatelessWidget {
     _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
 
     return Consumer<AppState>(builder: (context, state, child) {
+      if (state.loadingDevices() || (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {
+        return Center(child: PlatformCircularProgressIndicator());
+      }
+
       if (_stateDeviceIndex != null && state.devices.length - 1 < _stateDeviceIndex!) {
         _logger.w("Device Page requested for device index that is not in AppState");
-        return const SizedBox.shrink();
+        return Center(child: PlatformCircularProgressIndicator());
       }
       if (_stateDeviceGroupIndex != null && state.deviceGroups.length - 1 < _stateDeviceGroupIndex!) {
         _logger.w("Device Page requested for device group index that is not in AppState");
-        return const SizedBox.shrink();
+        return Center(child: PlatformCircularProgressIndicator());
       }
       final device = _stateDeviceIndex == null ? null : state.devices[_stateDeviceIndex!];
       final deviceGroup = _stateDeviceGroupIndex == null ? null : state.deviceGroups[_stateDeviceGroupIndex!];

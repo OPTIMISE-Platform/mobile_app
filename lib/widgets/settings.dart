@@ -46,7 +46,7 @@ class Settings extends StatelessWidget {
             title: const Text("Clear Cache"),
             onTap: () {
               CacheHelper.clearCache();
-              Toast.showConfirmationToast(context, "Cache cleared");
+              Toast.showConfirmationToast(context, "Cache cleared, please restart App");
             },
           ),
           const Divider(),

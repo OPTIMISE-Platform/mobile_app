@@ -26,6 +26,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -36,6 +37,7 @@ import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
+import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/util/get_broadcast_channel.dart';
 import 'package:mobile_app/util/remote_message_encoder.dart';
@@ -109,6 +111,9 @@ class AppState extends ChangeNotifier {
 
   final List<DeviceGroup> deviceGroups = <DeviceGroup>[];
   final Mutex _deviceGroupsMutex = Mutex();
+
+  final List<Location> locations = <Location>[];
+  final Mutex _locationsMutex = Mutex();
 
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
@@ -191,7 +196,7 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
+  Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
     if (!force && _deviceSearchFilter == filter && localFilter == _localDeviceFilter) {
       return;
     }
@@ -493,6 +498,25 @@ class AppState extends ChangeNotifier {
 
   bool loadingDeviceGroups() {
     return _deviceGroupsMutex.isLocked;
+  }
+
+  loadLocations(BuildContext context) async {
+    final locked = _locationsMutex.isLocked;
+    _locationsMutex.acquire();
+    if (locked) {
+      return;
+    }
+    locations.clear();
+    notifyListeners();
+
+    locations.addAll(await Future.wait(await LocationService.getLocations(context, this)));
+    notifyListeners();
+
+    _locationsMutex.release();
+  }
+
+  bool loadingLocations() {
+    return _locationsMutex.isLocked;
   }
 
   @override

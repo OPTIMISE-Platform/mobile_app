@@ -14,15 +14,13 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
+import 'package:mobile_app/widgets/device_list_tabs/group_list_item.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
-import '../device_page.dart';
 
 class DeviceGroupList extends StatefulWidget {
   const DeviceGroupList({Key? key}) : super(key: key);
@@ -52,29 +50,7 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
                     itemBuilder: (context, i) {
                       return Column(children: [
                         const Divider(),
-                        ListTile(
-                            title: Text(state.deviceGroups[i].name),
-                            trailing: Container(
-                              height: MediaQuery.of(context).textScaleFactor * 48,
-                              width: MediaQuery.of(context).textScaleFactor * 48,
-                              decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                              child: Padding(
-                                  padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                  child: state.deviceGroups[i].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
-                            ),
-                            onTap: () async {
-                              await state.searchDevices(DeviceSearchFilter("", null, state.deviceGroups[i].device_ids), context);
-                              Navigator.push(
-                                  context,
-                                  platformPageRoute(
-                                    context: context,
-                                    builder: (context) {
-                                      final target = DevicePage(null, i);
-                                      target.refresh(context, state);
-                                      return target;
-                                    },
-                                  ));
-                            })
+                        GroupListItem(i, null),
                       ]);
                     },
                   )))

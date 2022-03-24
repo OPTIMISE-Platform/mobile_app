@@ -25,6 +25,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_group.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
+import 'package:mobile_app/widgets/device_list_tabs/device_location.dart';
 import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
 import 'package:provider/provider.dart';
 
@@ -135,7 +136,7 @@ class DeviceListState extends State<DeviceList> {
 
         actions.addAll(MyAppBar.getDefaultActions(context));
 
-        final appBar = MyAppBar(customAppBarTitle ?? "Devices");
+        final appBar = MyAppBar(customAppBarTitle ?? "OPTIMISE");
         Widget? leadingAction;
         if (onBackCallback != null) {
           leadingAction = IconButton(onPressed: () => onBackCallback!(), icon: Icon(PlatformIcons(context).back));
@@ -155,6 +156,8 @@ class DeviceListState extends State<DeviceList> {
               switch (_bottomBarIndex) {
                 case 0:
                   return _buildListWidget(_searchText);
+                case 2:
+                  return const DeviceListByLocation();
                 case 1:
                   return const DeviceListByDeviceClass();
                 case 3:
@@ -197,6 +200,10 @@ class DeviceListState extends State<DeviceList> {
                         switch (i) {
                           case 0:
                             state.searchDevices(DeviceSearchFilter.empty(), context);
+                            break;
+                          case 2:
+                            state.loadLocations(context);
+                            state.loadDeviceGroups(context);
                             break;
                           case 3:
                             state.loadDeviceGroups(context);
