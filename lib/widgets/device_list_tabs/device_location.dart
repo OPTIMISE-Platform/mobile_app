@@ -73,11 +73,11 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                               ),
                               subtitle: Text(state.locations[i].device_ids.length.toString() +
                                   " Device" +
-                                  (state.locations[i].device_ids.length > 1 ? "s" : "") +
+                                  (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
                                   ", " +
                                   state.locations[i].device_group_ids.length.toString() +
                                   " Group" +
-                                  (state.locations[i].device_group_ids.length > 1 ? "s" : "")),
+                                  (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
                               onTap: () {
                                 _loading = true;
                                 state

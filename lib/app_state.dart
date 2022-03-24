@@ -27,6 +27,7 @@ import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/location.dart';
+import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -38,6 +39,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/util/get_broadcast_channel.dart';
 import 'package:mobile_app/util/remote_message_encoder.dart';
@@ -114,6 +116,9 @@ class AppState extends ChangeNotifier {
 
   final List<Location> locations = <Location>[];
   final Mutex _locationsMutex = Mutex();
+
+  final List<Network> networks = [];
+  final Mutex _networksMutex = Mutex();
 
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
@@ -517,6 +522,25 @@ class AppState extends ChangeNotifier {
 
   bool loadingLocations() {
     return _locationsMutex.isLocked;
+  }
+
+  loadNetworks(BuildContext context) async {
+    final locked = _networksMutex.isLocked;
+    _networksMutex.acquire();
+    if (locked) {
+      return;
+    }
+    networks.clear();
+    notifyListeners();
+
+    networks.addAll(await NetworksService.getNetworks(context, this));
+    notifyListeners();
+
+    _networksMutex.release();
+  }
+
+  bool loadingNetworks() {
+    return _networksMutex.isLocked;
   }
 
   @override

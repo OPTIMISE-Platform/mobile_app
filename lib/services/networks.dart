@@ -21,13 +21,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
+import '../models/network.dart';
 import 'auth.dart';
 
-class DeviceClassesService {
+class NetworksService {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -41,7 +41,7 @@ class DeviceClassesService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
+      policy: CachePolicy.refreshForceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
@@ -49,10 +49,10 @@ class DeviceClassesService {
     );
   }
 
-  static Future<List<DeviceClass>> getDeviceClasses(BuildContext context, AppState state,
+  static Future<List<Network>> getNetworks(BuildContext context, AppState state,
       [List<String>? ids]) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/resources/device-classes?limit=9999';
+        '/permissions/query/v3/resources/hubs?limit=9999';
     final Map<String, String> queryParameters = {};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
@@ -71,7 +71,7 @@ class DeviceClassesService {
     }
 
     final l = resp.data ?? [];
-    return List<DeviceClass>.generate(
-        l.length, (index) => DeviceClass.fromJson(l[index]));
+    return List<Network>.generate(
+        l.length, (index) => Network.fromJson(l[index]));
   }
 }

@@ -22,15 +22,20 @@ class DeviceSearchFilter {
   final String query;
   final List<String>? deviceTypeIds;
   final List<String>? deviceIds;
+  final String? networkId;
 
-  DeviceSearchFilter(this.query, [this.deviceTypeIds, this.deviceIds]) {
+  DeviceSearchFilter(this.query, [this.deviceTypeIds, this.deviceIds, this.networkId]) {
     if (deviceTypeIds != null && deviceIds != null) {
       throw ArgumentException("May only use one of deviceTypeIds or deviceIds");
+    }
+    if (networkId != null && (query.isNotEmpty || deviceTypeIds != null || deviceIds != null)) {
+      throw ArgumentException("May not use networkId with other filters");
     }
   }
 
   static DeviceSearchFilter fromClassIds(String query, List<String> deviceClassIds, AppState state) {
-    final deviceTypeIds = state.deviceTypes.values.where((element) => deviceClassIds.contains(element.device_class_id)).map((e) => e.id).toList(growable: false);
+    final deviceTypeIds = state.deviceTypes.values.where((element) => deviceClassIds.contains(element.device_class_id)).map((e) => e.id).toList(
+        growable: false);
     return DeviceSearchFilter(query, deviceTypeIds);
   }
 
@@ -68,7 +73,9 @@ class DeviceSearchFilter {
 
   @override
   int get hashCode {
-    return toBody(0, 0).toString().hashCode;
+    return (toBody(0, 0)
+        .toString() + networkId.toString())
+        .hashCode;
   }
 
   @override

@@ -26,6 +26,7 @@ import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_group.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_location.dart';
+import 'package:mobile_app/widgets/device_list_tabs/device_networks.dart';
 import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
 import 'package:provider/provider.dart';
 
@@ -162,6 +163,8 @@ class DeviceListState extends State<DeviceList> {
                   return const DeviceListByDeviceClass();
                 case 3:
                   return const DeviceGroupList();
+                case 4:
+                  return const DeviceListByNetwork();
                 case 5:
                   return const DeviceListFavorites();
                 default:
@@ -207,6 +210,9 @@ class DeviceListState extends State<DeviceList> {
                             break;
                           case 3:
                             state.loadDeviceGroups(context);
+                            break;
+                          case 4:
+                            state.loadNetworks(context);
                             break;
                           case 5:
                             state.searchDevices(DeviceSearchFilter.empty(), context, true, (e) => e.favorite);

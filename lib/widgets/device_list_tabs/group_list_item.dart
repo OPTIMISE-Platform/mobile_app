@@ -36,19 +36,15 @@ class GroupListItem extends StatelessWidget {
     return Consumer<AppState>(builder: (context, state, child) {
       return ListTile(
           title: Text(state.deviceGroups[_stateGroupIndex].name),
-          subtitle: Text(state.deviceGroups[_stateGroupIndex].device_ids.length.toString()  + " Device" + (state.deviceGroups[_stateGroupIndex].device_ids.length > 1 ? "s" : "")),
+          subtitle: Text(state.deviceGroups[_stateGroupIndex].device_ids.length.toString() +
+              " Device" +
+              (state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : "")),
           trailing: Container(
-            height: MediaQuery
-                .of(context)
-                .textScaleFactor * 48,
-            width: MediaQuery
-                .of(context)
-                .textScaleFactor * 48,
+            height: MediaQuery.of(context).textScaleFactor * 48,
+            width: MediaQuery.of(context).textScaleFactor * 48,
             decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
             child: Padding(
-                padding: EdgeInsets.all(MediaQuery
-                    .of(context)
-                    .textScaleFactor * 8),
+                padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
                 child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
           ),
           onTap: () {

@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -137,9 +136,9 @@ class DeviceListItem extends StatelessWidget {
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
         leading: connectionStatus == DeviceConnectionStatus.offline
-            ? Tooltip(
+            ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [Tooltip(
                 message: "Device is offline",
-                child: connectionStatus == DeviceConnectionStatus.offline ? Icon(PlatformIcons(context).error, color: MyTheme.warnColor) : null)
+                child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))])
             : null,
         title: Text(device.name),
         trailing: trailingWidgets.isEmpty
