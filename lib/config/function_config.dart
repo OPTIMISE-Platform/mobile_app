@@ -27,6 +27,7 @@ import 'package:mobile_app/config/set_on_state.dart';
 import '../app_state.dart';
 import '../models/characteristic.dart';
 import '../models/content_variable.dart';
+import '../util/math_list.dart';
 import 'get_color.dart';
 import 'get_on_off_state.dart';
 
@@ -39,14 +40,22 @@ final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp(),
 };
 
+String formatValue(dynamic value) {
+  return (value is List
+      ? value.every((e) => e == value[0])
+      ? value[0].toString()
+      : value[0] is num
+      ? minList(value).toString() + " - " + maxList(value).toString()
+      : "-"
+      : value.toString());
+}
+
 abstract class FunctionConfig {
   String? getRelatedControllingFunction(dynamic value);
 
   List<String>? getAllRelatedControllingFunctions();
 
-  Icon? getIcon(dynamic value);
-
-  Widget? displayValue(dynamic value);
+  Widget? displayValue(dynamic value, BuildContext context);
 
   dynamic getConfiguredValue();
 
@@ -224,12 +233,7 @@ class FunctionConfigDefault implements FunctionConfig {
   }
 
   @override
-  Widget? displayValue(value) {
-    return null;
-  }
-
-  @override
-  Icon? getIcon(value) {
+  Widget? displayValue(value, BuildContext context) {
     return null;
   }
 

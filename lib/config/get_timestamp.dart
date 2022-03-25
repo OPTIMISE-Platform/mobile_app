@@ -27,7 +27,7 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
   }
 
   @override
-  Widget? displayValue(value) {
+  Widget? displayValue(value, BuildContext context) {
     if (value is List) {
       final List<Text> children = [];
       for (var element in value) {
@@ -47,11 +47,6 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
       return children.join("\n");
     }
     return _format.format(DateTime.parse(value).toLocal());
-  }
-
-  @override
-  Icon? getIcon(value) {
-    return null;
   }
 
   @override

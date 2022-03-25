@@ -337,18 +337,20 @@ class DevicePage extends StatelessWidget {
           functionWidgets.insert(
             element.functionId,
             ListTile(
-              onTap: () => _displayTimestamp(element, states, context),
-              title: Text(getTitle(element, state)),
-              subtitle: subtitle.isEmpty ? null : Text(subtitle),
-              trailing: element.transitioning
-                  ? PlatformCircularProgressIndicator()
-                  : functionConfig.displayValue(element.value) ??
-                      Text(
-                          element.value.toString() +
-                              " " +
-                              (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""),
-                          style: const TextStyle(fontStyle: FontStyle.italic)),
-            ),
+                onTap: () => _displayTimestamp(element, states, context),
+                title: Text(getTitle(element, state)),
+                subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                trailing: Container(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: element.transitioning
+                      ? PlatformCircularProgressIndicator()
+                      : functionConfig.displayValue(element.value, context) ??
+                          Text(
+                              formatValue(element.value) +
+                                  " " +
+                                  (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""),
+                              style: const TextStyle(fontStyle: FontStyle.italic)),
+                )),
           );
         } else {
           markedControllingStates.addAll(controllingStates);
@@ -359,10 +361,11 @@ class DevicePage extends StatelessWidget {
                 title: Text(getTitle(element, state)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
-                    ? PlatformCircularProgressIndicator()
-                    : functionConfig.getIcon(element.value) != null
-                        ? IconButton(
-                            icon: functionConfig.getIcon(element.value)!,
+                    ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
+                    : functionConfig.displayValue(element.value, context) != null
+                        ? PlatformIconButton(
+                            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                            icon: functionConfig.displayValue(element.value, context)!,
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
                                 : () => _performAction(
@@ -374,8 +377,8 @@ class DevicePage extends StatelessWidget {
                                     ),
                           )
                         : PlatformTextButton(
-                            child: functionConfig.displayValue(element.value) ??
-                                Text(element.value.toString() +
+                            child: functionConfig.displayValue(element.value, context) ??
+                                Text(formatValue(element.value) +
                                     " " +
                                     (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
@@ -402,10 +405,11 @@ class DevicePage extends StatelessWidget {
             title: Text(getTitle(element, state)),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
-                ? PlatformCircularProgressIndicator()
-                : IconButton(
-                    splashRadius: 25,
-                    icon: functionConfig?.getIcon(element.value) ?? const Icon(Icons.input),
+                ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
+                : PlatformIconButton(
+                    cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                    material: (_, __) => MaterialIconButtonData(splashRadius: 25),
+                    icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
                     onPressed: connectionStatus == DeviceConnectionStatus.offline
                         ? null
                         : () => _performAction(
@@ -482,7 +486,7 @@ class DevicePage extends StatelessWidget {
                         : "Device Group",
                   ),
                   subtitle: device != null
-                      ? Text(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME")
+                      ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
                       : ExpandableText(state.devices.map((e) => e.name).join("\n"), 3),
                   trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
                 ),

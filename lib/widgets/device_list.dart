@@ -253,11 +253,12 @@ class DevicesSearchDelegate extends SearchDelegate {
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return IconButton(
+    return PlatformIconButton(
         onPressed: () {
           _onReturn();
           close(context, null);
         },
+        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         icon: const Icon(Icons.arrow_back));
   }
 

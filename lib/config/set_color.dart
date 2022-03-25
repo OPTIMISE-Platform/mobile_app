@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/config/function_config.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
 
@@ -26,35 +27,31 @@ class FunctionConfigSetColor implements FunctionConfig {
   Widget? build(BuildContext context, [dynamic value]) {
     if (value is List) value = value[0];
     _color = _getColor(value);
-    return StatefulBuilder(builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
-      ColorPicker(
-        pickerColor: _color,
-        onColorChanged: (color) {
-          _color = color;
-        },
-        enableAlpha: false,
-        displayThumbColor: false,
-        portraitOnly: false,
-        paletteType: PaletteType.hueWheel,
-        labelTypes: [],
-      ),
-      Row(children: [
-        IconButton(icon: const Icon(Icons.square), onPressed: () => setState(() => _color = Colors.red), color: Colors.red),
-        IconButton(icon: const Icon(Icons.square), onPressed: () => setState(() => _color = Colors.green), color: Colors.green),
-        IconButton(icon: const Icon(Icons.square), onPressed: () => setState(() => _color = Colors.blue), color: Colors.blue),
-        IconButton(icon: const Icon(Icons.square), onPressed: () => setState(() => _color = Colors.white), color: Colors.black12),
-        IconButton(icon: const Icon(Icons.square), onPressed: () => setState(() => _color = const Color.fromARGB(255, 253, 244, 220)), color: const Color.fromARGB(255, 253, 244, 220)),
-      ], mainAxisAlignment: MainAxisAlignment.center)
-    ]));
+    return StatefulBuilder(
+        builder: (context, setState) => Column(mainAxisSize: MainAxisSize.min, children: [
+              ColorPicker(
+                pickerColor: _color,
+                onColorChanged: (color) {
+                  _color = color;
+                },
+                enableAlpha: false,
+                displayThumbColor: false,
+                portraitOnly: false,
+                paletteType: PaletteType.hueWheel,
+                labelTypes: [],
+              ),
+              Row(children: [
+                _getQuickButton(Colors.red, setState),
+                _getQuickButton(Colors.green, setState),
+                _getQuickButton(Colors.blue, setState),
+                _getQuickButton(Colors.white, setState),
+                _getQuickButton(const Color.fromARGB(255, 253, 244, 220), setState),
+              ], mainAxisAlignment: MainAxisAlignment.center)
+            ]));
   }
 
   @override
-  Widget? displayValue(value) {
-    return null;
-  }
-
-  @override
-  Icon? getIcon(value) {
+  Widget? displayValue(value, BuildContext context) {
     return const Icon(Icons.palette);
   }
 
@@ -84,5 +81,22 @@ class FunctionConfigSetColor implements FunctionConfig {
       throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
     }
     return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
+  }
+
+  Widget _getQuickButton(Color c, void Function(void Function()) setState) {
+    return PlatformIconButton(
+      icon: Stack(
+        alignment: AlignmentDirectional.center,
+        children: [
+          Icon(
+            Icons.square,
+            color: c,
+          ),
+          const Icon(Icons.square_outlined, color: Colors.grey),
+        ],
+      ),
+      onPressed: () => setState(() => _color = c),
+      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+    );
   }
 }

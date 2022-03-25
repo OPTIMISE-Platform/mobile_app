@@ -14,33 +14,28 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/material.dart';
-import 'package:mobile_app/config/function_config.dart';
-
-class FunctionConfigSetOnState implements FunctionConfig {
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
+num minList(List<dynamic> l) {
+  num m = l[0];
+  for (var i = 0; i < l.length; i++) {
+    if (l[i] is! num) {
+      continue;
+    }
+    if (l[i] < m) {
+      m = l[i];
+    }
   }
+  return m;
+}
 
-  @override
-  Widget? displayValue(value, BuildContext context) {
-    return const Icon(Icons.power_outlined);
+num maxList(List<dynamic> l) {
+  num m = l[0];
+  for (var i = 0; i < l.length; i++) {
+    if (l[i] is! num) {
+      continue;
+    }
+    if (l[i] > m) {
+      m = l[i];
+    }
   }
-
-  @override
-  String? getRelatedControllingFunction(value) {
-    return null;
-  }
-
-  @override
-  List<String>? getAllRelatedControllingFunctions() {
-    return null;
-  }
-
-  @override
-  getConfiguredValue() {
-    return null;
-  }
-
+  return m;
 }

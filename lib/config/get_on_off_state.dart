@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/config/function_config.dart';
 
 class FunctionConfigGetOnOffState implements FunctionConfig {
@@ -25,7 +26,7 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
   }
 
   @override
-  Widget? displayValue(value) {
+  Widget? displayValue(value, BuildContext context) {
     if (value is bool && value) {
       return const Icon(Icons.power_outlined);
     }
@@ -33,21 +34,13 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
       return const Icon(Icons.power_off_outlined);
     }
     if (value is List) {
-      return Row(children: value.map((e) => displayValue(e)!).toList(growable: false), mainAxisSize: MainAxisSize.min);
+      if (value.every((element) => element == value[0])) {
+        return displayValue(value[0], context);
+      }
+      return Icon(PlatformIcons(context).remove);
     }
 
     return Text(value.toString());
-  }
-
-  @override
-  Icon? getIcon(value) {
-    if (value is bool && value) {
-      return const Icon(Icons.power_outlined);
-    }
-    if (value is bool && !value) {
-      return const Icon(Icons.power_off_outlined);
-    }
-    return null;
   }
 
   @override

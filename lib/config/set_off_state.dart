@@ -24,12 +24,7 @@ class FunctionConfigSetOffState implements FunctionConfig {
   }
 
   @override
-  Widget? displayValue(value) {
-    return null;
-  }
-
-  @override
-  Icon? getIcon(value) {
+  Widget? displayValue(value, BuildContext context) {
     return const Icon(Icons.power_off_outlined);
   }
 

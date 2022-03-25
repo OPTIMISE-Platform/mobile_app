@@ -53,12 +53,14 @@ class DeviceListItem extends StatelessWidget {
           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
           child: element.transitioning || element.value == null
               ? Center(child: PlatformCircularProgressIndicator())
-              : IconButton(
-                  splashRadius: 25,
-                  tooltip: state
-                      .nestedFunctions[functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value)]
-                      ?.display_name,
-                  icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getIcon(element.value) ?? const Icon(Icons.help_outline),
+              : PlatformIconButton(
+                  cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                  material: (_, __) => MaterialIconButtonData(
+                      splashRadius: 25,
+                      tooltip: state
+                          .nestedFunctions[functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(element.value)]
+                          ?.display_name),
+                  icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.displayValue(element.value, context) ?? const Icon(Icons.help_outline),
                   onPressed: device.getConnectionStatus() == DeviceConnectionStatus.offline
                       ? null
                       : () async {
@@ -137,9 +139,9 @@ class DeviceListItem extends StatelessWidget {
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
         leading: connectionStatus == DeviceConnectionStatus.offline
-            ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [Tooltip(
-                message: "Device is offline",
-                child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))])
+            ? Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))])
             : null,
         title: Text(device.name),
         trailing: trailingWidgets.isEmpty

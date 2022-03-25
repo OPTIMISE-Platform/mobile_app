@@ -27,7 +27,8 @@ class MyTheme {
   static const Color errorColor = Colors.redAccent;
   static const Color successColor = Colors.greenAccent;
 
-  static const EdgeInsets inset = EdgeInsets.all(12.0);
+  static const double insetSize = 12.0;
+  static const EdgeInsets inset = EdgeInsets.all(insetSize);
 
   static ThemeData materialTheme = ThemeData(
     cupertinoOverrideTheme: cupertinoTheme,

@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
@@ -29,7 +29,8 @@ class FavorizeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
-      return IconButton(
+      return PlatformIconButton(
+        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         icon: Stack(
           alignment: AlignmentDirectional.center,
           children: [
@@ -40,7 +41,7 @@ class FavorizeButton extends StatelessWidget {
               size: MediaQuery.textScaleFactorOf(context) * 15,
             )
                 : const SizedBox.shrink(),
-            const Icon(Icons.star_border),
+            const Icon(Icons.star_border, color: Colors.grey),
           ],
         ),
         onPressed: () async {
