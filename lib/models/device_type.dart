@@ -16,6 +16,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/service_group.dart';
 
 import 'service.dart';
 
@@ -25,9 +26,10 @@ part 'device_type.g.dart';
 class DeviceType {
   String id, name, description, device_class_id;
   List<Service> services;
+  List<ServiceGroup>? service_groups;
 
   DeviceType(
-      this.id, this.name, this.description, this.device_class_id, this.services);
+      this.id, this.name, this.description, this.device_class_id, this.services, this.service_groups);
 
   factory DeviceType.fromJson(Map<String, dynamic> json) =>
       _$DeviceTypeFromJson(json);

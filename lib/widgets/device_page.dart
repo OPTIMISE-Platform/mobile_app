@@ -248,6 +248,29 @@ class DevicePage extends StatelessWidget {
     }
   }
 
+  String getTitle(DeviceState element, AppState state) {
+    final function = state.nestedFunctions[element.functionId];
+    String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
+    if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
+    return title;
+  }
+
+  String getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device, AppState state) {
+    String subtitle = "";
+    if (states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
+      subtitle += (state.aspects[element.aspectId]?.name ?? "MISSING_ASPECT_NAME");
+    }
+    if (device != null &&
+        element.serviceGroupKey != null &&
+        element.serviceGroupKey != "" &&
+        states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId == element.aspectId)) {
+      if (subtitle.isNotEmpty) subtitle += ", ";
+      subtitle += (state.deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
+          "MISSING_SERVICE_GROUP_NAME");
+    }
+    return subtitle;
+  }
+
   @override
   Widget build(BuildContext context) {
     _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
@@ -298,12 +321,8 @@ class DevicePage extends StatelessWidget {
         if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
           continue;
         }
-
-        final function = state.nestedFunctions[element.functionId];
+        final subtitle = getSubtitle(element, states, device, state);
         var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
-
-        String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
-        if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
         Iterable<DeviceState>? controllingStates;
@@ -319,7 +338,8 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
               onTap: () => _displayTimestamp(element, states, context),
-              title: Text(title),
+              title: Text(getTitle(element, state)),
+              subtitle: subtitle.isEmpty ? null : Text(subtitle),
               trailing: element.transitioning
                   ? PlatformCircularProgressIndicator()
                   : functionConfig.displayValue(element.value) ??
@@ -336,7 +356,8 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                title: Text(title),
+                title: Text(getTitle(element, state)),
+                subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
                     ? PlatformCircularProgressIndicator()
                     : functionConfig.getIcon(element.value) != null
@@ -372,16 +393,14 @@ class DevicePage extends StatelessWidget {
       }
 
       for (var element in states.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
-        final function = state.nestedFunctions[element.functionId];
         var functionConfig = functionConfigs[element.functionId];
-
-        String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
-        if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
+        final subtitle = getSubtitle(element, states, device, state);
 
         functionWidgets.insert(
           element.functionId,
           ListTile(
-            title: Text(title),
+            title: Text(getTitle(element, state)),
+            subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
                 ? PlatformCircularProgressIndicator()
                 : IconButton(

@@ -24,11 +24,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
+import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
+import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
@@ -120,6 +122,9 @@ class AppState extends ChangeNotifier {
   final List<Network> networks = [];
   final Mutex _networksMutex = Mutex();
 
+  final Map<String, Aspect> aspects = {};
+  final Mutex _aspectsMutex = Mutex();
+
   List<app.Notification> notifications = [];
   final Mutex _notificationsMutex = Mutex();
   bool _notificationInited = false;
@@ -149,6 +154,7 @@ class AppState extends ChangeNotifier {
     await loadDeviceClasses(context);
     await loadDeviceTypes(context);
     await loadNestedFunctions(context);
+    await loadAspects(context);
     await initMessaging();
     _initialized = true;
   }
@@ -550,6 +556,19 @@ class AppState extends ChangeNotifier {
 
   bool loadingNetworks() {
     return _networksMutex.isLocked;
+  }
+
+  loadAspects(BuildContext context) async {
+    final locked = _aspectsMutex.isLocked;
+    await _aspectsMutex.acquire();
+    if (locked) {
+      return aspects;
+    }
+    for (var element in (await AspectsService.getAspects(context, this))) {
+      aspects[element.id] = element;
+    }
+    notifyListeners();
+    _aspectsMutex.release();
   }
 
   @override
