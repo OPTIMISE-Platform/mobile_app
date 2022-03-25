@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
@@ -22,6 +21,7 @@ import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
 import '../../theme.dart';
+import '../device_list.dart';
 
 class DeviceListFavorites extends StatelessWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);
@@ -36,11 +36,16 @@ class DeviceListFavorites extends StatelessWidget {
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
             child: state.devices.isEmpty
-                ? state.loadingDevices()
-                    ? Center(
-                        child: PlatformCircularProgressIndicator(),
-                      )
-                    : const Center(child: Text("No Favorites")) // TODO add button to switch to devices
+                ? Center(
+                    child: state.loadingDevices()
+                        ? PlatformCircularProgressIndicator()
+                        : PlatformElevatedButton(
+                            child: const Text("Add Favorites"),
+                            onPressed: () {
+                              final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                              parentState?.switchBottomBar(5, state, true);
+                            },
+                          ))
                 : ListView.builder(
                     padding: MyTheme.inset,
                     itemCount: state.totalDevices,

@@ -95,11 +95,11 @@ class DeviceListState extends State<DeviceList> {
     );
   }
 
-  _switchBottomBar(int i, AppState state, bool force) {
+  switchBottomBar(int i, AppState state, bool force) {
+    if (_bottomBarIndex == i && !force) {
+      return;
+    }
     setState(() {
-      if (_bottomBarIndex == i && !force) {
-        return;
-      }
       customAppBarTitle = null;
       onBackCallback = null;
       _bottomBarIndex = i;
@@ -137,7 +137,7 @@ class DeviceListState extends State<DeviceList> {
         _state = state;
         if (!_initialized) {
           WidgetsBinding.instance?.addPostFrameCallback((_) {
-            _switchBottomBar(_bottomBarIndex, state, true);
+            switchBottomBar(_bottomBarIndex, state, true);
           });
           _initialized = true;
         }
@@ -216,6 +216,8 @@ class DeviceListState extends State<DeviceList> {
               }
             })()),
           ]),
+          cupertino: (context, _) => CupertinoPageScaffoldData(controller: CupertinoTabController(initialIndex: _bottomBarIndex)),
+          // if not used, changes to _bottomBarIndex are not reflected visually
           bottomNavBar: _searchText != ""
               ? null
               : PlatformNavBar(items: [
@@ -225,7 +227,7 @@ class DeviceListState extends State<DeviceList> {
                   const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
                   const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
                   const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices", backgroundColor: MyTheme.appColor),
-                ], currentIndex: _bottomBarIndex, itemChanged: (i) => _switchBottomBar(i, state, false)),
+                ], currentIndex: _bottomBarIndex, itemChanged: (i) => switchBottomBar(i, state, false)),
         );
       },
     );
