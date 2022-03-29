@@ -15,9 +15,11 @@
  */
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 
 typedef ThemeStyle = String;
 
@@ -50,25 +52,36 @@ class MyTheme {
         foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
       ),
     ),
-    
   );
 
-  static CupertinoThemeData cupertinoTheme =  const CupertinoThemeData(
+  static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
       primaryColor: Color(0xFF32b8ba),
       primaryContrastingColor: Colors.white,
       barBackgroundColor: Colors.black,
       scaffoldBackgroundColor: Colors.white);
 
-  static CupertinoAppData cupertinoAppData = CupertinoAppData(
-      theme: cupertinoTheme);
+  static CupertinoAppData cupertinoAppData = CupertinoAppData(theme: cupertinoTheme);
 
-  static const _storage = FlutterSecureStorage();
-  static const _storageKeyTheme =  "theme";
-  static const ThemeStyle themeMaterial =  "material";
-  static const ThemeStyle themeCupertino =  "cupertino";
+  static const _hiveBoxName = "theme.box";
+  static const _storageKeyTheme = "theme";
+  static const ThemeStyle themeMaterial = "material";
+  static const ThemeStyle themeCupertino = "cupertino";
+  static late LazyBox<ThemeStyle> _hiveBox;
 
-  static loadTheme(BuildContext context) async {
-    await selectTheme(context, await _storage.read(key: _storageKeyTheme));
+  static TargetPlatform? initialPlatform;
+
+  static loadTheme() async {
+    if (!kIsWeb) {
+      Hive.init((await getApplicationDocumentsDirectory()).path + "/" + _hiveBoxName);
+    }
+
+    _hiveBox = await Hive.openLazyBox<ThemeStyle>(_hiveBoxName);
+    final val = await _hiveBox.get(_storageKeyTheme);
+    if (val == themeMaterial) {
+      initialPlatform = TargetPlatform.android;
+    } else if (val == themeCupertino) {
+      initialPlatform = TargetPlatform.iOS;
+    }
   }
 
   static toggleTheme(BuildContext context) async {
@@ -76,25 +89,29 @@ class MyTheme {
     if (p == null) {
       return;
     }
-    isMaterial(context)
-        ? await selectTheme(context, themeCupertino)
-        : await selectTheme(context, themeMaterial);
+    isMaterial(context) ? await selectTheme(context, themeCupertino) : await selectTheme(context, themeMaterial);
   }
 
   static selectTheme(BuildContext context, ThemeStyle? theme) async {
     final p = PlatformProvider.of(context);
     switch (theme) {
       case themeMaterial:
+        do {
+          await _hiveBox.put(_storageKeyTheme, theme!);
+        } while (await _hiveBox.get(_storageKeyTheme) != theme);
         p?.changeToMaterialPlatform();
-        await _storage.write(key: _storageKeyTheme, value: theme);
         break;
       case themeCupertino:
+        do {
+          await _hiveBox.put(_storageKeyTheme, theme!);
+        } while (await _hiveBox.get(_storageKeyTheme) != theme);
         p?.changeToCupertinoPlatform();
-        await _storage.write(key: _storageKeyTheme, value: theme);
         break;
       default:
+        do {
+          await _hiveBox.delete(_storageKeyTheme);
+        } while (_hiveBox.containsKey(_storageKeyTheme));
         p?.changeToAutoDetectPlatform();
-        await _storage.delete(key: _storageKeyTheme);
     }
   }
 }

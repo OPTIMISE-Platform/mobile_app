@@ -40,6 +40,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future main() async {
   await dotenv.load(fileName: ".env");
+  await MyTheme.loadTheme();
   await Auth.init();
   await findSystemLocale();
   await initializeDateFormatting(Intl.systemLocale, null);
@@ -72,6 +73,7 @@ class _MyAppState extends State<MyApp> {
     return Theme(
       data: MyTheme.materialTheme,
       child: PlatformProvider(
+        initialPlatform: MyTheme.initialPlatform,
         settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
         builder: (context) => PlatformApp(
           localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
