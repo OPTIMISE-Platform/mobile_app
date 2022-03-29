@@ -16,6 +16,7 @@
 
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
@@ -28,6 +29,7 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:http/http.dart' as http;
 
 
+import '../exceptions/no_network_exception.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
@@ -58,6 +60,9 @@ class NotificationsService {
   }
 
   static Future<app.NotificationResponse?> getNotifications(BuildContext? context, AppState state, int limit, int offset) async {
+    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
+
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
 

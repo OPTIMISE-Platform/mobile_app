@@ -25,6 +25,7 @@ import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
+import '../widgets/toast.dart';
 import 'cache_helper.dart';
 
 const storageKeyToken = "auth/token";
@@ -37,12 +38,13 @@ class Auth {
 
   static OpenIdConnectClient? _client;
 
+  static bool _loggedIn = false;
+
   static Future<void> init() async {
     if (_initialized()) {
       return;
     }
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
-
     if (connectivityResult != ConnectivityResult.none) {
       try {
         _client = await OpenIdConnectClient.create(
@@ -54,6 +56,7 @@ class Auth {
           redirectUrl: kIsWeb
               ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
               : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
+          scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
         );
       } catch (e) {
         _logger.e("Could not setup client: " + e.toString());
@@ -63,8 +66,9 @@ class Auth {
     }
     final token = await OpenIdIdentity.load();
     if (token != null) {
+      _loggedIn = true;
       _logger.d("Using token from storage");
-      if (!tokenValid()) {
+      if (_client != null && !tokenValid()) {
         _logger.d("But token is expired");
       }
     }
@@ -75,37 +79,44 @@ class Auth {
   }
 
   static Future<void> login(BuildContext context, AppState state) async {
-    await _m.acquire();
-    if (!_initialized()) {
-      await init();
-    }
+    await _m.protect(() async {
+      state.notifyListeners();
 
-    if (tokenValid()) {
-      _logger.d("Old token still valid");
-      return;
-    }
-    if (await _client!.refresh(raiseEvents: false)) {
+      if (!_initialized()) {
+        await init();
+        if (_client == null) {
+          Toast.showErrorToast(context, "Can't login, are you online?");
+          return;
+        }
+      }
+
+      if (tokenValid()) {
+        _logger.d("Old token still valid");
+        return;
+      }
+      if (await _client!.refresh (raiseEvents: false)
+      ) {
       _logger.d("refreshed token");
-    }
-    final OpenIdIdentity? token;
-    try {
+      }
+      final OpenIdIdentity? token;
+      try {
       token = await _client?.loginInteractive(context: context, title: "", popupHeight: 640, popupWidth: 480);
-    } catch (e) {
+      } catch (e) {
       _logger.e("Login failed: " + e.toString());
-      _m.release();
       return;
-    }
+      }
 
-    if (token != null) {
+      if (token != null) {
       token.save();
       await state.initMessaging();
       _logger.i('Logged in');
-    } else {
+      _loggedIn = true;
+      } else {
       _logger.w("_token null");
-    }
-    _m.release();
+      }
+      return;
+    });
     state.notifyListeners();
-    return;
   }
 
   static logout(BuildContext context, AppState state) async {
@@ -123,6 +134,7 @@ class Auth {
     await OpenIdIdentity.clear(); // remove saved token
 
     _logger.d("logout");
+    _loggedIn = false;
     CacheHelper.clearCache();
     state.refreshDevices(context);
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -139,14 +151,25 @@ class Auth {
     if (!tokenValid()) {
       throw AuthException("login error: token is null");
     }
-    return {"Authorization": "Bearer " + _client!.identity!.accessToken};
+    return {"Authorization": "Bearer " + await getToken()};
   }
 
   static bool tokenValid() {
-    return _client?.identity != null && _client!.identity!.expiresAt.isAfter(DateTime.now());
+    return _loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
   }
 
   static bool loggingIn() {
     return _m.isLocked;
+  }
+
+  static Future<String> getToken() async {
+    if (_client != null) {
+      return _client!.identity!.accessToken;
+    }
+    final token = await OpenIdIdentity.load();
+    if (token != null) {
+      return token.accessToken;
+    }
+    return "";
   }
 }

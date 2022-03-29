@@ -208,7 +208,8 @@ class AppState extends ChangeNotifier {
     _totalDevicesMutex.release();
   }
 
-  Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
+  Future searchDevices(DeviceSearchFilter filter, BuildContext context,
+      [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
     if (!force && _deviceSearchFilter == filter && localFilter == _localDeviceFilter) {
       return;
     }
@@ -234,7 +235,7 @@ class AppState extends ChangeNotifier {
     }
     await _devicesMutex.acquire();
 
-    if(_allDevicesLoaded || (offset != null && offset < devices.length)) {
+    if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
       _devicesMutex.release();
       notifyListeners(); // missing loadingDevices() change otheriwse
       return;
@@ -251,7 +252,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
-      notifyListeners(); // missing loadingDevices() change otheriwse
+      notifyListeners(); // missing loadingDevices() change otherwise
       _devicesMutex.release();
       return;
     }
@@ -346,7 +347,12 @@ class AppState extends ChangeNotifier {
     app.NotificationResponse? response;
     try {
       do {
-        response = await NotificationsService.getNotifications(context, this, limit, offset);
+        try {
+          response = await NotificationsService.getNotifications(context, this, limit, offset);
+        } catch (e) {
+          _logger.e("Could not load notifications: " + e.toString());
+          return;
+        }
         final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
         tmp.addAll(notifications);
         notifications = tmp;
