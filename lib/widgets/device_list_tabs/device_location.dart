@@ -40,10 +40,13 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
+      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+
       final List<int> matchingGroups = [];
       if (_selected != null) {
         for (var i = 0; i < state.deviceGroups.length; i++) {
-          if (state.locations[_selected!].device_group_ids.contains(state.deviceGroups[i].id)) {
+          if (state.locations.length > _selected! && state.locations[_selected!].device_group_ids.contains(state.deviceGroups[i].id) &&
+              (parentState?.filter.deviceGroupIds == null || parentState!.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
             matchingGroups.add(i);
           }
         }
@@ -81,17 +84,24 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                                   (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
                               onTap: () {
                                 _loading = true;
+                                parentState?.filter.locationIds = [state.locations[i].id];
                                 state
-                                    .searchDevices(DeviceSearchFilter("", null, state.locations[i].device_ids), context)
+                                    .searchDevices(
+                                        parentState?.filter ??
+                                            DeviceSearchFilter(
+                                              "",
+                                              null, null, null, [state.locations[i].id]
+                                            ),
+                                        context)
                                     .then((_) => setState(() => _loading = false));
-                                final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
                                 parentState?.setState(() {
                                   parentState.onBackCallback = () {
                                     parentState.setState(() {
                                       parentState.customAppBarTitle = null;
                                       parentState.onBackCallback = null;
                                     });
-                                    state.searchDevices(DeviceSearchFilter("", null, state.locations[i].device_ids), context);
+                                    parentState.filter.locationIds = [state.locations[i].id];
+                                    state.searchDevices(parentState.filter, context);
                                     setState(() => _selected = null);
                                   };
                                   parentState.customAppBarTitle = state.locations[i].name;
@@ -110,8 +120,10 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                     : RefreshIndicator(
                         onRefresh: () async {
                           _loading = true;
+                          parentState?.filter.locationIds = [state.locations[_selected!].id];
                           state
-                              .searchDevices(DeviceSearchFilter("", null, state.locations[_selected!].device_ids), context, true)
+                              .searchDevices(
+                                  parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]), context, true)
                               .then((_) => setState(() => _loading = false));
                         },
                         child: ListView.builder(
@@ -129,8 +141,11 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                             return Column(
                               children: [
                                 const Divider(),
-                                GroupListItem(matchingGroups.elementAt(i - state.devices.length),
-                                    (_) => state.searchDevices(DeviceSearchFilter("", null, state.locations[_selected!].device_ids), context))
+                                GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                                  parentState?.filter.locationIds = [state.locations[_selected!].id];
+                                  state.searchDevices(
+                                      parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, state.locations[_selected!].device_ids), context);
+                                })
                               ],
                             );
                           },

@@ -66,17 +66,11 @@ class DevicesService {
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
 
-    if (filter.networkId != null) {
-      _logger.d("Devices by network " + filter.networkId!);
-      final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/api-aggregator/hubs/' + filter.networkId! + "/devices?limit=" + limit.toString() + "&offset=" + offset.toString() + "&sort=name.asc";
-      resp = await _dio!.get<List<dynamic>?>(uri, options: Options(headers: headers));
-    } else {
-      final body = filter.toBody(limit, offset);
-      _logger.d("Devices: " + body.toString());
-      final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
-      final encoded = json.encode(body);
-      resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
-    }
+    final body = filter.toBody(limit, offset, state);
+    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
+    final encoded = json.encode(body);
+    _logger.d("Devices: " + encoded);
+    resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
 
 
     if (resp.statusCode == null || resp.statusCode! > 304) {

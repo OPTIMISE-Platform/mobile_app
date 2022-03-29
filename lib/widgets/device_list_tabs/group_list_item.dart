@@ -48,7 +48,7 @@ class GroupListItem extends StatelessWidget {
                 child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
           ),
           onTap: () {
-            state.searchDevices(DeviceSearchFilter("", null, state.deviceGroups[_stateGroupIndex].device_ids), context);
+            state.searchDevices(DeviceSearchFilter("", null, null, null, [state.deviceGroups[_stateGroupIndex].id]), context);
             final future = Navigator.push(
                 context,
                 platformPageRoute(

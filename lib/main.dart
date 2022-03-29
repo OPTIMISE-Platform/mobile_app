@@ -49,10 +49,11 @@ Future main() async {
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   runApp(
+    RootRestorationScope(restorationId: "root", child:
       ChangeNotifierProvider(
         create: (context) => AppState(),
         child: const MyApp(),
-      )
+      ))
   );
 }
 

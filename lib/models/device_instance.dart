@@ -82,6 +82,7 @@ class DeviceInstance {
       if (states[i].isControlling) {
         continue;
       }
+      states[i].transitioning = true;
       result.add(CommandCallback(states[i].toCommand(), (value) {
         if (value is List && value.length == 1) {
           states[i].value = value[0];

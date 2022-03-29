@@ -63,8 +63,9 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                               ),
                             ),
                             onTap: () {
-                              state.searchDevices(DeviceSearchFilter.fromClassIds("", [deviceClasses[i].id], state), context, true);
                               final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                              parentState?.filter.deviceClassIds = [deviceClasses[i].id];
+                              state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
                               parentState?.setState(() {
                                 parentState.onBackCallback = () {
                                   parentState.setState(() {

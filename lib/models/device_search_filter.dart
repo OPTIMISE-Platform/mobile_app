@@ -16,34 +16,52 @@
 
 import 'package:mobile_app/app_state.dart';
 
-import '../exceptions/argument_exception.dart';
-
 class DeviceSearchFilter {
-  final String query;
-  final List<String>? deviceTypeIds;
-  final List<String>? deviceIds;
-  final String? networkId;
+  String query;
+  List<String>? deviceClassIds;
+  List<String>? deviceIds;
+  List<String>? deviceGroupIds;
+  List<String>? locationIds;
 
-  DeviceSearchFilter(this.query, [this.deviceTypeIds, this.deviceIds, this.networkId]) {
-    if (deviceTypeIds != null && deviceIds != null) {
-      throw ArgumentException("May only use one of deviceTypeIds or deviceIds");
-    }
-    if (networkId != null && (query.isNotEmpty || deviceTypeIds != null || deviceIds != null)) {
-      throw ArgumentException("May not use networkId with other filters");
-    }
-  }
+  List<String>? networkIds;
 
-  static DeviceSearchFilter fromClassIds(String query, List<String> deviceClassIds, AppState state) {
-    final deviceTypeIds = state.deviceTypes.values.where((element) => deviceClassIds.contains(element.device_class_id)).map((e) => e.id).toList(
-        growable: false);
-    return DeviceSearchFilter(query, deviceTypeIds);
-  }
+  DeviceSearchFilter(this.query, [this.deviceClassIds, this.deviceIds, this.networkIds, this.deviceGroupIds, this.locationIds]);
 
   static DeviceSearchFilter empty() {
     return DeviceSearchFilter("");
   }
 
-  Map<String, dynamic> toBody(int limit, int offset) {
+  DeviceSearchFilter clone() {
+    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds);
+  }
+
+  List<String> _add(List<String>? l, String id) {
+    l ??= [];
+    if (!l.contains(id)) l.add(id);
+    return l;
+  }
+
+  List<String>? _remove(List<String>? l, String id) {
+    l?.remove(id);
+    if (l != null && l.isEmpty) {
+      l = null;
+    }
+    return l;
+  }
+
+  addDeviceClass(String id) => deviceClassIds = _add(deviceClassIds, id);
+  removeDeviceClass(String id) => deviceClassIds = _remove(deviceClassIds, id);
+
+  addDeviceGroup(String id) => deviceGroupIds = _add(deviceGroupIds, id);
+  removeDeviceGroup(String id) => deviceGroupIds = _remove(deviceGroupIds, id);
+
+  addLocation(String id) => locationIds = _add(locationIds, id);
+  removeLocation(String id) => locationIds = _remove(locationIds, id);
+
+  addNetwork(String id) => networkIds = _add(networkIds, id);
+  removeNetwork(String id) => networkIds = _remove(networkIds, id);
+
+  Map<String, dynamic> toBody(int limit, int offset, AppState state) {
     final body = <String, dynamic>{
       "resource": "devices",
       "find": {
@@ -53,18 +71,72 @@ class DeviceSearchFilter {
         "search": query,
       }
     };
-    if (deviceTypeIds != null) {
-      body["find"]["filter"] = {
+    List<Map<String, dynamic>> conditions = [];
+
+    if (deviceClassIds != null) {
+      final deviceTypeIds = state.deviceTypesPermSearch.values
+          .where((element) => deviceClassIds!.contains(element.device_class_id) == true)
+          .map((e) => e.id)
+          .toList(growable: false);
+      conditions.add({
         "condition": {
           "feature": "features.device_type_id",
           "operation": "any_value_in_feature",
-          "value": deviceTypeIds!.join(","),
+          "value": deviceTypeIds.join(","),
         }
-      };
+      });
     }
+    List<String>? allDeviceIds;
+
     if (deviceIds != null) {
-      body["list_ids"] = {
-        "ids": deviceIds,
+      allDeviceIds = deviceIds;
+    }
+
+    if (deviceGroupIds != null) {
+      final List<String> devicesInGroups = [];
+      state.deviceGroups.where((element) => deviceGroupIds!.contains(element.id)).forEach((group) => devicesInGroups.addAll(group.device_ids));
+      if (allDeviceIds == null) {
+        allDeviceIds = devicesInGroups;
+      } else {
+        allDeviceIds = allDeviceIds.where((element) => devicesInGroups.contains(element)).toList();
+      }
+    }
+
+    if (locationIds != null) {
+      final List<String> deviceInLocations = [];
+      state.locations.where((element) => locationIds!.contains(element.id)).forEach((location) => deviceInLocations.addAll(location.device_ids));
+      if (allDeviceIds == null) {
+        allDeviceIds = deviceInLocations;
+      } else {
+        allDeviceIds = allDeviceIds.where((element) => deviceInLocations.contains(element)).toList();
+      }
+    }
+
+    if (allDeviceIds != null) {
+      conditions.add({
+        "condition": {
+          "feature": "id",
+          "operation": "any_value_in_feature",
+          "value": allDeviceIds.join(","),
+        }
+      });
+    }
+
+    if (networkIds != null) {
+      final List<String> localIds = [];
+      state.networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
+      conditions.add({
+        "condition": {
+          "feature": "features.local_id",
+          "operation": "any_value_in_feature",
+          "value": localIds.join(","),
+        }
+      });
+    }
+
+    if (conditions.isNotEmpty) {
+      body["find"]["filter"] = {
+        "and": conditions,
       };
     }
 
@@ -72,10 +144,13 @@ class DeviceSearchFilter {
   }
 
   @override
+  String toString() {
+    return (query + deviceClassIds.toString() + deviceIds.toString() + networkIds.toString() + deviceGroupIds.toString());
+  }
+
+  @override
   int get hashCode {
-    return (toBody(0, 0)
-        .toString() + networkId.toString())
-        .hashCode;
+    return toString().hashCode;
   }
 
   @override
@@ -85,5 +160,4 @@ class DeviceSearchFilter {
     }
     return hashCode == other.hashCode;
   }
-
 }

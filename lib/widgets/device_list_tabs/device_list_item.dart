@@ -51,8 +51,9 @@ class DeviceListItem extends StatelessWidget {
         trailingWidgets.add(Container(
           width: MediaQuery.of(context).textScaleFactor * 50,
           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
-          child: element.transitioning || element.value == null
+          child: element.transitioning
               ? Center(child: PlatformCircularProgressIndicator())
+          : element.value == null ? Center(child: Icon(PlatformIcons(context).error, color: MyTheme.errorColor))
               : PlatformIconButton(
                   cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
                   material: (_, __) => MaterialIconButtonData(

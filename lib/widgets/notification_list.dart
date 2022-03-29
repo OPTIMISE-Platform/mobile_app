@@ -63,7 +63,9 @@ class NotificationList extends StatelessWidget {
                           subtitle: Text(_format.format(state.notifications[i].createdAt())),
                           leading: state.notifications[i].isRead
                               ? null
-                              : Column(mainAxisAlignment: MainAxisAlignment.center, children: const [Icon(Icons.circle_notifications, color: MyTheme.warnColor)]),
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [Icon(Icons.circle_notifications, color: MyTheme.warnColor)]),
                           trailing: PlatformPopupMenu(
                             icon: Icon(PlatformIcons(context).ellipsis),
                             options: [

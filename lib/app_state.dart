@@ -217,7 +217,7 @@ class AppState extends ChangeNotifier {
       devices.clear();
       notifyListeners();
     }
-    _deviceSearchFilter = filter;
+    _deviceSearchFilter = filter.clone();
     _localDeviceFilter = localFilter;
     _deviceOffset = 0;
     await updateTotalDevices(context);
@@ -305,15 +305,21 @@ class AppState extends ChangeNotifier {
     if (commandCallbacks.isEmpty) {
       return;
     }
-    final List<DeviceCommandResponse> result;
+    List<DeviceCommandResponse> result;
     try {
       result = await DeviceCommandsService.runCommands(context, this, commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
       _logger.e("failed to loadStates: currently offline");
-      rethrow;
+      result = [];
+      for (var _ in commandCallbacks) {
+        result.add(DeviceCommandResponse(200, null));
+      }
     } catch (e) {
       _logger.e("failed to loadStates: " + e.toString());
-      rethrow;
+      result = [];
+      for (var _ in commandCallbacks) {
+        result.add(DeviceCommandResponse(200, null));
+      }
     }
     assert(result.length == commandCallbacks.length);
     for (var i = 0; i < commandCallbacks.length; i++) {
@@ -573,7 +579,6 @@ class AppState extends ChangeNotifier {
 
   @override
   void notifyListeners() {
-    _logger.d("notifying listeners");
     super.notifyListeners();
   }
 }

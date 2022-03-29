@@ -67,8 +67,8 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
                                 ? null
                                 : () {
                                     _loading = true;
-                                    state.searchDevices(DeviceSearchFilter("", null, null, state.networks[i].id), context, true).then((_) => setState(() => _loading = true));
                                     final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                                    state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]), context, true).then((_) => setState(() => _loading = true));
                                     parentState?.setState(() {
                                       parentState.onBackCallback = () {
                                         parentState.setState(() {
