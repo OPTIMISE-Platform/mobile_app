@@ -21,7 +21,6 @@ import 'dart:typed_data';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
-import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -29,15 +28,13 @@ import '../exceptions/no_network_exception.dart';
 
 class AppUpdater {
   static final _client = http.Client();
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
 
   late final updateSupported = _updateSupported();
 
   late int currentBuild;
   late int latestBuild;
   late int downloadSize;
+  late DateTime updateDate;
 
   late String updateUrl;
   late String localFile;
@@ -75,6 +72,7 @@ class AppUpdater {
       final asset = (decoded["assets"] as List<dynamic>).firstWhere((element) => element["name"] == "app-release.apk");
       updateUrl = asset["browser_download_url"];
       downloadSize = asset["size"];
+      updateDate = DateTime.parse(asset["updated_at"]);
       return true;
     }
 

@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
@@ -30,6 +31,7 @@ import '../services/auth.dart';
 import '../theme.dart';
 
 class Settings extends StatelessWidget {
+  static final _format = DateFormat.yMd().add_jms();
   const Settings({Key? key}) : super(key: key);
 
   @override
@@ -100,6 +102,7 @@ class Settings extends StatelessWidget {
                           children: [
                             Text("Current Build: " + appUpdater.currentBuild.toString()),
                             Text("Latest Build: " + appUpdater.latestBuild.toString()),
+                            Text("Uploaded: " + _format.format(appUpdater.updateDate)),
                             Text("Download size: " + (appUpdater.downloadSize / 1000000.0).toStringAsFixed(1) + " MB"),
                           ],
                         ),
@@ -119,7 +122,7 @@ class Settings extends StatelessWidget {
               await showPlatformDialog(
                   context: context,
                   builder: (context) => PlatformAlertDialog(
-                        title: const Text("Downloading Update..."),
+                        title: const Text("Downloading..."),
                         content: StreamBuilder<double>(
                             stream: stream,
                             initialData: 0,
