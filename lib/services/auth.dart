@@ -94,25 +94,24 @@ class Auth {
         _logger.d("Old token still valid");
         return;
       }
-      if (await _client!.refresh (raiseEvents: false)
-      ) {
-      _logger.d("refreshed token");
+      if (await _client!.refresh(raiseEvents: false)) {
+        _logger.d("refreshed token");
       }
       final OpenIdIdentity? token;
       try {
-      token = await _client?.loginInteractive(context: context, title: "", popupHeight: 640, popupWidth: 480);
+        token = await _client?.loginInteractive(context: context, title: "", popupHeight: 640, popupWidth: 480);
       } catch (e) {
-      _logger.e("Login failed: " + e.toString());
-      return;
+        _logger.e("Login failed: " + e.toString());
+        return;
       }
 
       if (token != null) {
-      token.save();
-      await state.initMessaging();
-      _logger.i('Logged in');
-      _loggedIn = true;
+        token.save();
+        _logger.i('Logged in');
+        _loggedIn = true;
+        await state.initMessaging();
       } else {
-      _logger.w("_token null");
+        _logger.w("_token null");
       }
       return;
     });
@@ -128,7 +127,7 @@ class Auth {
     }
 
     if (state.fcmToken != null) {
-        await FcmTokenService.deregisterFcmToken(state.fcmToken!);
+      await FcmTokenService.deregisterFcmToken(state.fcmToken!);
     }
     await _client?.logoutToken();
     await OpenIdIdentity.clear(); // remove saved token
