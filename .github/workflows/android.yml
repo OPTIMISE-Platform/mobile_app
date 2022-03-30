@@ -27,6 +27,7 @@ jobs:
           echo '${{ secrets.DOT_ENV }}' > .env
           v=$(grep -Po 'version: \K.*' pubspec.yaml)
           echo "VERSION=$v" >> .env
+          echo "DISTRIBUTOR=github" >> .env
           echo "VERSION=$v" >> $GITHUB_ENV
       - run: flutter build apk
       - uses: "marvinpinto/action-automatic-releases@latest"
