@@ -43,10 +43,10 @@ final Map<String?, FunctionConfig> functionConfigs = {
 String formatValue(dynamic value) {
   return (value is List
       ? value.every((e) => e == value[0])
-      ? value[0].toString()
-      : value[0] is num
-      ? minList(value).toString() + " - " + maxList(value).toString()
-      : "-"
+          ? value[0].toString()
+          : value[0] is num
+              ? minList(value).toString() + " - " + maxList(value).toString()
+              : "-"
       : value.toString());
 }
 
@@ -101,18 +101,19 @@ class FunctionConfigDefault implements FunctionConfig {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              return Row(children: [
-                Expanded(
+              return Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                    width: MediaQuery.of(context).size.width,
                     child: PlatformSlider(
-                  onChanged: (double newValue) {
-                    _insertValueIntoResult(newValue, path);
-                    setState(() => value = newValue);
-                  },
-                  max: characteristic.max_value!,
-                  min: characteristic.min_value!,
-                  value: value is double ? value : characteristic.min_value!,
-                )),
-                Text(value?.toString() ?? characteristic.min_value!.toString()),
+                      onChanged: (double newValue) {
+                        _insertValueIntoResult(newValue, path);
+                        setState(() => value = newValue);
+                      },
+                      max: characteristic.max_value!,
+                      min: characteristic.min_value!,
+                      value: value is double ? value : characteristic.min_value!,
+                    )),
+                Text(value is double ? (value as double).toStringAsFixed(2) : value?.toString() ?? characteristic.min_value!.toString()),
               ]);
             },
           ));
@@ -140,17 +141,18 @@ class FunctionConfigDefault implements FunctionConfig {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              return Row(children: [
-                Expanded(
+              return Column(mainAxisSize: MainAxisSize.min, children: [
+                SizedBox(
+                    width: MediaQuery.of(context).size.width,
                     child: PlatformSlider(
-                  onChanged: (double newValue) {
-                    _insertValueIntoResult(newValue.toInt(), path);
-                    setState(() => value = newValue.toInt());
-                  },
-                  max: characteristic.max_value!,
-                  min: characteristic.min_value!,
-                  value: value is int ? value.toDouble() : characteristic.min_value!,
-                )),
+                      onChanged: (double newValue) {
+                        _insertValueIntoResult(newValue.toInt(), path);
+                        setState(() => value = newValue.toInt());
+                      },
+                      max: characteristic.max_value!,
+                      min: characteristic.min_value!,
+                      value: value is int ? value.toDouble() : characteristic.min_value!,
+                    )),
                 Text(value?.toString() ?? characteristic.min_value!.toInt().toString()),
               ]);
             },
