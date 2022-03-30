@@ -66,7 +66,7 @@ class AppUpdater {
     }
     final decoded = (json.decode(utf8.decode(resp.bodyBytes)) as List<dynamic>)[0] as Map<String, dynamic>;
     latestBuild = int.parse((decoded["tag_name"] as String).split("+")[1]);
-    currentBuild = int.parse(dotenv.env["version"]!.split("+")[1]);
+    currentBuild = int.parse(dotenv.env["VERSION"]!.split("+")[1]);
 
     if (latestBuild > currentBuild) {
       final asset = (decoded["assets"] as List<dynamic>).firstWhere((element) => element["name"] == "app-release.apk");
