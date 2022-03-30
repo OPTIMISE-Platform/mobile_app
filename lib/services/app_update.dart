@@ -42,7 +42,7 @@ class AppUpdater {
   AppUpdater();
 
   bool _updateSupported() {
-    if (Platform.isAndroid && dotenv.env["DISTRIBUTOR"] == "github" && dotenv.env["GITHUB_REPO"] != null && dotenv.env["version"] != null) {
+    if (Platform.isAndroid && dotenv.env["DISTRIBUTOR"] == "github" && dotenv.env["GITHUB_REPO"] != null && dotenv.env["VERSION"] != null) {
       return true;
     }
     return false;
