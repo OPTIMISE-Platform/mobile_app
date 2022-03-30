@@ -21,6 +21,7 @@ import 'dart:typed_data';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -28,6 +29,9 @@ import '../exceptions/no_network_exception.dart';
 
 class AppUpdater {
   static final _client = http.Client();
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
 
   late final updateSupported = _updateSupported();
 
@@ -39,7 +43,19 @@ class AppUpdater {
   late String updateUrl;
   late String localFile;
 
-  AppUpdater();
+  AppUpdater() {}
+
+  static cleanup() async {
+    final f = (await getApplicationSupportDirectory()).path + '/update.apk';
+    final file = File(f);
+    if (await file.exists()) {
+      try {
+        await file.delete(recursive: true);
+      } catch (e) {
+        _logger.e("Can't cleanup update file " + e.toString());
+      }
+    }
+  }
 
   bool _updateSupported() {
     if (Platform.isAndroid && dotenv.env["DISTRIBUTOR"] == "github" && dotenv.env["GITHUB_REPO"] != null && dotenv.env["VERSION"] != null) {
@@ -93,7 +109,7 @@ class AppUpdater {
     int downloaded = 0;
     double percentage = 0;
 
-    await for(final r in resp.asStream()) {
+    await for (final r in resp.asStream()) {
       if (r.statusCode != 200) {
         throw UnexpectedStatusCodeException(r.statusCode);
       }

@@ -24,6 +24,7 @@ import 'package:intl/intl.dart';
 import "package:intl/intl_standalone.dart"
 if (dart.library.html) "package:intl/intl_browser.dart";
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
@@ -70,6 +71,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    AppUpdater.cleanup();
     return Theme(
       data: MyTheme.materialTheme,
       child: PlatformProvider(
