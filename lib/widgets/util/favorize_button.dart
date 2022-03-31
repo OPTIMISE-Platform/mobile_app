@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
@@ -24,25 +25,29 @@ import '../../services/devices.dart';
 class FavorizeButton extends StatelessWidget {
   final int _stateDeviceIndex;
 
-  const FavorizeButton(this. _stateDeviceIndex, {Key? key}) : super(key: key);
+  const FavorizeButton(this._stateDeviceIndex, {Key? key}) : super(key: key);
+
+  bool get _border {
+    return !(MyTheme.isDarkMode && MyTheme.currentTheme == MyTheme.themeMaterial);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
+      final List<Widget> children = [];
+      if (state.devices[_stateDeviceIndex].favorite) {
+        children.add(Icon(
+          Icons.star,
+          color: Colors.yellow,
+          size: _border ? MediaQuery.textScaleFactorOf(context) * 15 : null,
+        ));
+      }
+      if (!state.devices[_stateDeviceIndex].favorite || _border) children.add(const Icon(Icons.star_border, color: Colors.grey));
       return PlatformIconButton(
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         icon: Stack(
           alignment: AlignmentDirectional.center,
-          children: [
-            state.devices[_stateDeviceIndex].favorite
-                ? Icon(
-              Icons.star,
-              color: Colors.yellow,
-              size: MediaQuery.textScaleFactorOf(context) * 15,
-            )
-                : const SizedBox.shrink(),
-            const Icon(Icons.star_border, color: Colors.grey),
-          ],
+          children: children,
         ),
         onPressed: () async {
           state.devices[_stateDeviceIndex].toggleFavorite();

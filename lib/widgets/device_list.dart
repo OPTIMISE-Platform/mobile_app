@@ -20,7 +20,6 @@ import 'package:badges/badges.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
@@ -180,13 +179,14 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
   PlatformNavBar _buildBottom(BuildContext context, AppState state) {
     return PlatformNavBar(items: [
-      const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites", backgroundColor: MyTheme.appColor),
-      const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes", backgroundColor: MyTheme.appColor),
-      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations", backgroundColor: MyTheme.appColor),
-      const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups", backgroundColor: MyTheme.appColor),
-      const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks", backgroundColor: MyTheme.appColor),
-      const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices", backgroundColor: MyTheme.appColor),
-    ], currentIndex: _bottomBarIndex, itemChanged: (i) => switchBottomBar(i, state, false));
+      const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
+      const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
+      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
+      const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
+      const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
+      const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
+    ], currentIndex: _bottomBarIndex, itemChanged: (i) => switchBottomBar(i, state, false),
+    material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
   }
 
   @override
@@ -449,7 +449,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                 showBadge: filterCount > 0,
               ),
               cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-              material: (_, __) => MaterialIconButtonData(disabledColor: Colors.black),
+              material: (_, __) => MaterialIconButtonData(disabledColor: MyTheme.textColor),
             ),
             cupertino: (context, _) => CupertinoPopupMenuData(
                 title: const Text("Select Filters"),
@@ -475,8 +475,8 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                 cupertino: _bottomBarIndex != tabGroups ? (_, __) => Container(
                       child: CupertinoSearchTextField(
                         onChanged: (query) => _searchChanged(query, state),
-                        style: const TextStyle(color: Colors.black),
-                        itemColor: Colors.black,
+                        style: TextStyle(color: MyTheme.textColor),
+                        itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
                         restorationId: "cupertino-device-search",
                         controller: _cupertinoSearchController.value,
                       ),

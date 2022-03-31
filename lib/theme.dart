@@ -14,9 +14,12 @@
  *  limitations under the License.
  */
 
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
@@ -54,13 +57,51 @@ class MyTheme {
     ),
   );
 
-  static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
-      primaryColor: Color(0xFF32b8ba),
-      primaryContrastingColor: Colors.white,
-      barBackgroundColor: Colors.black,
-      scaffoldBackgroundColor: Colors.white);
+  static ThemeData materialDarkTheme = ThemeData(
+    cupertinoOverrideTheme: cupertinoTheme,
+    primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
+      50: Color.fromRGBO(50, 184, 186, 0.1),
+      100: Color.fromRGBO(50, 184, 186, 0.2),
+      200: Color.fromRGBO(50, 184, 186, 0.3),
+      300: Color.fromRGBO(50, 184, 186, 0.4),
+      400: Color.fromRGBO(50, 184, 186, 0.5),
+      500: Color.fromRGBO(50, 184, 186, 0.6),
+      600: Color.fromRGBO(50, 184, 186, 0.7),
+      700: Color.fromRGBO(50, 184, 186, 0.8),
+      800: Color.fromRGBO(50, 184, 186, 0.9),
+      900: Color.fromRGBO(50, 184, 186, 1),
+    }),
+    brightness: Brightness.dark,
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: ButtonStyle(
+        padding: MaterialStateProperty.all(MyTheme.inset),
+        foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
+      ),
+    ),
+  );
 
-  static CupertinoAppData cupertinoAppData = CupertinoAppData(theme: cupertinoTheme);
+  static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
+    primaryColor: Color(0xFF32b8ba),
+    brightness: Brightness.light,
+  );
+
+  static CupertinoAppData cupertinoAppData =
+      CupertinoAppData(theme: cupertinoTheme);
+
+  static TextStyle? get textStyle {
+    if (SchedulerBinding.instance!.window.platformBrightness == Brightness.dark) {
+      return currentTheme == themeMaterial ? materialDarkTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
+    }
+    return currentTheme == themeMaterial ? materialTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
+  }
+
+  static Color? get textColor {
+    return textStyle?.color;
+  }
+
+  static bool get isDarkMode {
+    return SchedulerBinding.instance!.window.platformBrightness == Brightness.dark;
+  }
 
   static const _hiveBoxName = "theme.box";
   static const _storageKeyTheme = "theme";
@@ -68,7 +109,8 @@ class MyTheme {
   static const ThemeStyle themeCupertino = "cupertino";
   static late LazyBox<ThemeStyle> _hiveBox;
 
-  static TargetPlatform? initialPlatform;
+  static late TargetPlatform initialPlatform;
+  static ThemeStyle currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
 
   static loadTheme() async {
     if (!kIsWeb) {
@@ -79,8 +121,10 @@ class MyTheme {
     final val = await _hiveBox.get(_storageKeyTheme);
     if (val == themeMaterial) {
       initialPlatform = TargetPlatform.android;
+      currentTheme = themeMaterial;
     } else if (val == themeCupertino) {
       initialPlatform = TargetPlatform.iOS;
+      currentTheme = themeCupertino;
     }
   }
 
@@ -99,18 +143,21 @@ class MyTheme {
         do {
           await _hiveBox.put(_storageKeyTheme, theme!);
         } while (await _hiveBox.get(_storageKeyTheme) != theme);
+        currentTheme = themeMaterial;
         p?.changeToMaterialPlatform();
         break;
       case themeCupertino:
         do {
           await _hiveBox.put(_storageKeyTheme, theme!);
         } while (await _hiveBox.get(_storageKeyTheme) != theme);
+        currentTheme = themeCupertino;
         p?.changeToCupertinoPlatform();
         break;
       default:
         do {
           await _hiveBox.delete(_storageKeyTheme);
         } while (_hiveBox.containsKey(_storageKeyTheme));
+        currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
         p?.changeToAutoDetectPlatform();
     }
   }
