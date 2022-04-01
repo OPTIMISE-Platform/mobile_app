@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/main.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
@@ -32,6 +33,7 @@ import '../theme.dart';
 
 class Settings extends StatelessWidget {
   static final _format = DateFormat.yMd().add_jms();
+
   const Settings({Key? key}) : super(key: key);
 
   @override
@@ -46,31 +48,53 @@ class Settings extends StatelessWidget {
       const Divider(),
       ListTile(
         title: const Text("Clear Cache"),
-        onTap: () {
-          CacheHelper.clearCache();
+        onTap: () async {
+          await CacheHelper.clearCache();
           Toast.showConfirmationToast(context, "Cache cleared, please restart App");
         },
       ),
-      const Divider(),
-      Consumer<AppState>(
-        builder: (context, state, child) => ListTile(
-          title: const Text("Logout"),
-          onTap: () async {
-            Navigator.push(
-                context,
-                platformPageRoute(
-                  context: context,
-                  builder: (context) => const PageSpinner("Logout"),
-                ));
-            try {
-              await Auth.logout(context, state);
-            } catch (e) {
-              Toast.showErrorToast(context, "Can't logout");
-            }
-          },
-        ),
-      ),
     ];
+
+    if (MyTheme.canChangeColorTheme) {
+      children.addAll([
+        const Divider(),
+        ListTile(
+          title: const Text("Choose Color"),
+          onTap: () => showPlatformDialog(
+              context: context,
+              builder: (context) => PlatformAlertDialog(
+                    title: const Text("Choose Color"),
+                    actions: [
+                      PlatformDialogAction(
+                        child: PlatformText('Cancel'),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      PlatformDialogAction(
+                          child: PlatformText('System Default'),
+                          onPressed: () async {
+                            await MyTheme.selectThemeColor(null);
+                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                            Navigator.pop(context);
+                          }),
+                      PlatformDialogAction(
+                          child: PlatformText('Dark'),
+                          onPressed: () async {
+                            await MyTheme.selectThemeColor(dark);
+                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                            Navigator.pop(context);
+                          }),
+                      PlatformDialogAction(
+                          child: PlatformText('Light'),
+                          onPressed: () async {
+                            await MyTheme.selectThemeColor(light);
+                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                            Navigator.pop(context);
+                          })
+                    ],
+                  )),
+        )
+      ]);
+    }
 
     if (appUpdater.updateSupported) {
       children.addAll([
@@ -139,6 +163,28 @@ class Settings extends StatelessWidget {
         ),
       ]);
     }
+
+    children.addAll([
+      const Divider(),
+      Consumer<AppState>(
+        builder: (context, state, child) => ListTile(
+          title: const Text("Logout"),
+          onTap: () async {
+            Navigator.push(
+                context,
+                platformPageRoute(
+                  context: context,
+                  builder: (context) => const PageSpinner("Logout"),
+                ));
+            try {
+              await Auth.logout(context, state);
+            } catch (e) {
+              Toast.showErrorToast(context, "Can't logout");
+            }
+          },
+        ),
+      )
+    ]);
 
     return PlatformScaffold(
       appBar: appBar.getAppBar(context),

@@ -26,6 +26,14 @@ import 'package:path_provider/path_provider.dart';
 
 typedef ThemeStyle = String;
 
+const ThemeStyle themeMaterial = "material";
+const ThemeStyle themeCupertino = "cupertino";
+
+typedef ThemeColor = String;
+
+const ThemeColor dark = "dark";
+const ThemeColor light = "light";
+
 class MyTheme {
   static const Color appColor = Color.fromRGBO(50, 184, 186, 1);
   static const Color warnColor = Colors.deepOrange;
@@ -85,11 +93,10 @@ class MyTheme {
     brightness: Brightness.light,
   );
 
-  static CupertinoAppData cupertinoAppData =
-      CupertinoAppData(theme: cupertinoTheme);
+  static CupertinoAppData cupertinoAppData = CupertinoAppData(theme: cupertinoTheme);
 
   static TextStyle? get textStyle {
-    if (SchedulerBinding.instance!.window.platformBrightness == Brightness.dark) {
+    if (isDarkMode) {
       return currentTheme == themeMaterial ? materialDarkTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
     }
     return currentTheme == themeMaterial ? materialTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
@@ -100,17 +107,17 @@ class MyTheme {
   }
 
   static bool get isDarkMode {
-    return SchedulerBinding.instance!.window.platformBrightness == Brightness.dark;
+    return currentColor == dark;
   }
 
   static const _hiveBoxName = "theme.box";
   static const _storageKeyTheme = "theme";
-  static const ThemeStyle themeMaterial = "material";
-  static const ThemeStyle themeCupertino = "cupertino";
+  static const _storageKeyColor = "color";
   static late LazyBox<ThemeStyle> _hiveBox;
 
-  static late TargetPlatform initialPlatform;
+  static TargetPlatform initialPlatform = Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
   static ThemeStyle currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
+  static ThemeStyle currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
 
   static loadTheme() async {
     if (!kIsWeb) {
@@ -118,15 +125,20 @@ class MyTheme {
     }
 
     _hiveBox = await Hive.openLazyBox<ThemeStyle>(_hiveBoxName);
-    final val = await _hiveBox.get(_storageKeyTheme);
+    var val = await _hiveBox.get(_storageKeyTheme);
     if (val == themeMaterial) {
       initialPlatform = TargetPlatform.android;
       currentTheme = themeMaterial;
     } else if (val == themeCupertino) {
       initialPlatform = TargetPlatform.iOS;
       currentTheme = themeCupertino;
-    } else {
-      initialPlatform = Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
+    }
+
+    val = await _hiveBox.get(_storageKeyColor);
+    if (val == dark) {
+      currentColor = dark;
+    } else if (val == light) {
+      currentColor = light;
     }
   }
 
@@ -162,5 +174,26 @@ class MyTheme {
         currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
         p?.changeToAutoDetectPlatform();
     }
+  }
+
+  static selectThemeColor(ThemeColor? theme) async {
+    switch (theme) {
+      case dark:
+      case light:
+        do {
+          await _hiveBox.put(_storageKeyColor, theme!);
+        } while (await _hiveBox.get(_storageKeyColor) != theme);
+        currentColor = theme;
+        break;
+      default:
+        do {
+          await _hiveBox.delete(_storageKeyColor);
+        } while (_hiveBox.containsKey(_storageKeyColor));
+        currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
+    }
+  }
+
+  static bool get canChangeColorTheme {
+    return currentTheme == themeMaterial;
   }
 }

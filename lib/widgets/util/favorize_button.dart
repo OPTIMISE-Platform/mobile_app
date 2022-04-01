@@ -28,7 +28,7 @@ class FavorizeButton extends StatelessWidget {
   const FavorizeButton(this._stateDeviceIndex, {Key? key}) : super(key: key);
 
   bool get _border {
-    return !(MyTheme.isDarkMode && MyTheme.currentTheme == MyTheme.themeMaterial);
+    return !(MyTheme.isDarkMode && MyTheme.currentTheme == themeMaterial);
   }
 
   @override

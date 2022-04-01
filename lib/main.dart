@@ -63,16 +63,25 @@ class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _MyAppState();
+  State<StatefulWidget> createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  _MyAppState();
+class MyAppState extends State<MyApp> {
+  Key key = UniqueKey();
+
+  MyAppState();
+
+  void restartApp() {
+    setState(() {
+      key = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     AppUpdater.cleanup();
     return Theme(
+      key: key,
       data: MyTheme.materialTheme,
       child: PlatformProvider(
         initialPlatform: MyTheme.initialPlatform,
@@ -85,8 +94,7 @@ class _MyAppState extends State<MyApp> {
           ],
           home: const Home(),
           material: (_, __) => MaterialAppData(
-            theme: MyTheme.materialTheme,
-            darkTheme: MyTheme.materialDarkTheme,
+            theme: MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme,
           ),
           cupertino: (_, __) => MyTheme.cupertinoAppData,
         ),
