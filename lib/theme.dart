@@ -125,6 +125,8 @@ class MyTheme {
     } else if (val == themeCupertino) {
       initialPlatform = TargetPlatform.iOS;
       currentTheme = themeCupertino;
+    } else {
+      initialPlatform = Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
     }
   }
 
