@@ -103,7 +103,6 @@ class AppState extends ChangeNotifier {
   final Mutex _nestedFunctionsMutex = Mutex();
 
   DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
-  bool Function(DeviceInstance device)? _localDeviceFilter;
 
   int totalDevices = -1;
   final Mutex _totalDevicesMutex = Mutex();
@@ -209,8 +208,8 @@ class AppState extends ChangeNotifier {
   }
 
   Future searchDevices(DeviceSearchFilter filter, BuildContext context,
-      [bool force = false, bool Function(DeviceInstance device)? localFilter]) async {
-    if (!force && _deviceSearchFilter == filter && localFilter == _localDeviceFilter) {
+      [bool force = false]) async {
+    if (!force && _deviceSearchFilter == filter) {
       return;
     }
     _allDevicesLoaded = false;
@@ -219,14 +218,13 @@ class AppState extends ChangeNotifier {
       notifyListeners();
     }
     _deviceSearchFilter = filter.clone();
-    _localDeviceFilter = localFilter;
     _deviceOffset = 0;
     await updateTotalDevices(context);
     await loadDevices(context);
   }
 
   refreshDevices(BuildContext context) async {
-    await searchDevices(_deviceSearchFilter, context, true, _localDeviceFilter);
+    await searchDevices(_deviceSearchFilter, context, true);
   }
 
   loadDevices(BuildContext context, [int? offset]) async {
@@ -256,11 +254,7 @@ class AppState extends ChangeNotifier {
       _devicesMutex.release();
       return;
     }
-    if (_localDeviceFilter == null) {
-      devices.addAll(newDevices);
-    } else {
-      devices.addAll(newDevices.where(_localDeviceFilter!));
-    }
+    devices.addAll(newDevices);
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
@@ -502,15 +496,6 @@ class AppState extends ChangeNotifier {
     notifications[idx].isRead = true;
     await updateNotifications(context, idx);
     notifyListeners();
-  }
-
-  filterLocally() {
-    if (_localDeviceFilter != null) {
-      final tmp = devices.toList(growable: false);
-      devices.clear();
-      devices.addAll(tmp.where(_localDeviceFilter!));
-      notifyListeners();
-    }
   }
 
   loadDeviceGroups(BuildContext context) async {

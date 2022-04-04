@@ -55,7 +55,7 @@ class DeviceListFavorites extends StatelessWidget {
                         return const SizedBox.shrink();
                       }
                       return Column(
-                        children: [const Divider(), DeviceListItem(i, (_) => state.filterLocally())],
+                        children: [const Divider(), DeviceListItem(i, null)],
                       );
                     },
                   ),

@@ -117,8 +117,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
         // dont overwrite on force
         customAppBarTitle = null;
         onBackCallback = null;
-        _bottomBarIndex = i;
-        switch (i) {
+        switch (_bottomBarIndex) {
           case tabLocations:
             filter.locationIds = null;
             break;
@@ -131,7 +130,11 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           case tabClasses:
             filter.deviceClassIds = null;
             break;
+          case tabFavorites:
+            filter.favorites = null;
+            break;
         }
+        _bottomBarIndex = i;
       }
       switch (i) {
         case tabDevices:
@@ -147,7 +150,8 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           state.searchDevices(filter, context);
           break;
         case tabFavorites:
-          state.searchDevices(filter, context, true, (e) => e.favorite);
+          filter.favorites = true;
+          state.searchDevices(filter, context);
           break;
         case tabClasses:
           state.searchDevices(filter, context);
@@ -160,6 +164,9 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
         (filter.deviceGroupIds ?? []).length +
         (filter.networkIds ?? []).length +
         (filter.deviceClassIds ?? []).length;
+    if (filter.favorites == true && _bottomBarIndex != tabFavorites) {
+      count++;
+    }
     switch (_bottomBarIndex) {
       case tabLocations:
         count -= (filter.locationIds ?? []).length;
@@ -178,15 +185,18 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
   }
 
   PlatformNavBar _buildBottom(BuildContext context, AppState state) {
-    return PlatformNavBar(items: [
-      const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
-      const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
-      BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
-      const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
-      const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
-      const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
-    ], currentIndex: _bottomBarIndex, itemChanged: (i) => switchBottomBar(i, state, false),
-    material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
+    return PlatformNavBar(
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
+          const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
+          BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
+          const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
+          const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
+          const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
+        ],
+        currentIndex: _bottomBarIndex,
+        itemChanged: (i) => switchBottomBar(i, state, false),
+        material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
   }
 
   @override
@@ -421,6 +431,15 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                     )));
           }
 
+          if (_bottomBarIndex != tabFavorites) {
+            filterActions.add(PopupMenuOption(
+                label: (filter.favorites == true ? '✓ ' : '') + 'Favorites',
+                onTap: (_) => setState(() {
+                      filter.favorites = filter.favorites == true ? null : true;
+                      switchBottomBar(_bottomBarIndex, state, true);
+                    })));
+          }
+
           final filterCount = _filterCount();
           if (filterCount > 0) {
             filterActions.add(PopupMenuOption(
@@ -436,6 +455,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                   if (_bottomBarIndex != tabGroups) filter.deviceGroupIds = null;
                   if (_bottomBarIndex != tabNetworks) filter.networkIds = null;
                   if (_bottomBarIndex != tabClasses) filter.deviceClassIds = null;
+                  if (_bottomBarIndex != tabFavorites) filter.favorites = null;
                   switchBottomBar(_bottomBarIndex, state, true);
                 }));
           }
@@ -472,17 +492,19 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           appBar: appBar.getAppBar(context, actions, leadingAction),
           body: Column(children: [
             PlatformWidget(
-                cupertino: _bottomBarIndex != tabGroups ? (_, __) => Container(
-                      child: CupertinoSearchTextField(
-                        onChanged: (query) => _searchChanged(query, state),
-                        style: TextStyle(color: MyTheme.textColor),
-                        itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-                        restorationId: "cupertino-device-search",
-                        controller: _cupertinoSearchController.value,
-                      ),
-                      padding: MyTheme.inset,
-                    ) : null,
-               ),
+              cupertino: _bottomBarIndex != tabGroups
+                  ? (_, __) => Container(
+                        child: CupertinoSearchTextField(
+                          onChanged: (query) => _searchChanged(query, state),
+                          style: TextStyle(color: MyTheme.textColor),
+                          itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
+                          restorationId: "cupertino-device-search",
+                          controller: _cupertinoSearchController.value,
+                        ),
+                        padding: MyTheme.inset,
+                      )
+                  : null,
+            ),
             Expanded(child: (() {
               switch (_bottomBarIndex) {
                 case tabDevices:

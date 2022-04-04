@@ -16,23 +16,25 @@
 
 import 'package:mobile_app/app_state.dart';
 
+import 'device_instance.dart';
+
 class DeviceSearchFilter {
   String query;
   List<String>? deviceClassIds;
   List<String>? deviceIds;
   List<String>? deviceGroupIds;
   List<String>? locationIds;
-
   List<String>? networkIds;
+  bool? favorites;
 
-  DeviceSearchFilter(this.query, [this.deviceClassIds, this.deviceIds, this.networkIds, this.deviceGroupIds, this.locationIds]);
+  DeviceSearchFilter(this.query, [this.deviceClassIds, this.deviceIds, this.networkIds, this.deviceGroupIds, this.locationIds, this.favorites]);
 
   static DeviceSearchFilter empty() {
     return DeviceSearchFilter("");
   }
 
   DeviceSearchFilter clone() {
-    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds);
+    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds, favorites);
   }
 
   List<String> _add(List<String>? l, String id) {
@@ -134,6 +136,16 @@ class DeviceSearchFilter {
       });
     }
 
+    if (favorites == true) {
+      conditions.add({
+        "condition": {
+          "feature": "features.attributes.key",
+          "operation": "==",
+          "value": attributeFavorite,
+        }
+      });
+    }
+
     if (conditions.isNotEmpty) {
       body["find"]["filter"] = {
         "and": conditions,
@@ -145,7 +157,7 @@ class DeviceSearchFilter {
 
   @override
   String toString() {
-    return (query + deviceClassIds.toString() + deviceIds.toString() + networkIds.toString() + deviceGroupIds.toString());
+    return (query + deviceClassIds.toString() + deviceIds.toString() + networkIds.toString() + deviceGroupIds.toString() + favorites.toString());
   }
 
   @override
