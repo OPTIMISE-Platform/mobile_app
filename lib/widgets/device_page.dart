@@ -276,6 +276,9 @@ class DevicePage extends StatelessWidget {
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.loadingDevices() ||
           (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {
+        if (!state.loadingDevices()) {
+          state.loadDevices(context); //ensure all devices get loaded
+        }
         return Center(child: PlatformCircularProgressIndicator());
       }
 

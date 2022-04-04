@@ -235,7 +235,7 @@ class AppState extends ChangeNotifier {
 
     if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
       _devicesMutex.release();
-      notifyListeners(); // missing loadingDevices() change otheriwse
+      notifyListeners(); // missing loadingDevices() change otherwise
       return;
     }
 
