@@ -73,6 +73,13 @@ class DeviceSearchFilter {
         "search": query,
       }
     };
+    if (offset > 0) {
+      body["find"]["after"] = {
+        "sort_field_value": state.devices[offset-1].name,
+        "id": state.devices[offset-1].id,
+      };
+    }
+
     List<Map<String, dynamic>> conditions = [];
 
     List<String>? allDeviceIds;
