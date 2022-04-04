@@ -273,8 +273,6 @@ class DevicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    _logger.d("Device Page opened for index " + _stateDeviceIndex.toString());
-
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.loadingDevices() ||
           (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {

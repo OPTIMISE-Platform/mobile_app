@@ -41,7 +41,7 @@ class DeviceClassesService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
+      policy: CachePolicy.refreshForceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
@@ -49,19 +49,15 @@ class DeviceClassesService {
     );
   }
 
-  static Future<List<DeviceClass>> getDeviceClasses(BuildContext context, AppState state,
-      [List<String>? ids]) async {
+  static Future<List<DeviceClass>> getDeviceClasses(BuildContext context, AppState state) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/resources/device-classes?limit=9999';
+        '/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
-    if (ids != null && ids.isNotEmpty) {
-      queryParameters["ids"] = ids.join(",");
-    }
 
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<List<dynamic>?>(uri,
+    final resp = await dio.get<Map<String, dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
@@ -69,9 +65,16 @@ class DeviceClassesService {
     if (resp.statusCode == 304) {
       _logger.d("Using cached device classes");
     }
+    if (resp.data == null) return [];
 
-    final l = resp.data ?? [];
-    return List<DeviceClass>.generate(
+    final l = resp.data!["device-classes"];
+    final deviceClasses = List<DeviceClass>.generate(
         l.length, (index) => DeviceClass.fromJson(l[index]));
+    for (var element in deviceClasses) {
+      for (var s in (resp.data!["used-devices"][element.id] as List<dynamic>)) {
+        element.deviceIds.add(s as String);
+      }
+    }
+    return deviceClasses;
   }
 }

@@ -75,23 +75,22 @@ class DeviceSearchFilter {
     };
     List<Map<String, dynamic>> conditions = [];
 
-    if (deviceClassIds != null) {
-      final deviceTypeIds = state.deviceTypesPermSearch.values
-          .where((element) => deviceClassIds!.contains(element.device_class_id) == true)
-          .map((e) => e.id)
-          .toList(growable: false);
-      conditions.add({
-        "condition": {
-          "feature": "features.device_type_id",
-          "operation": "any_value_in_feature",
-          "value": deviceTypeIds.join(","),
-        }
-      });
-    }
     List<String>? allDeviceIds;
 
     if (deviceIds != null) {
       allDeviceIds = deviceIds;
+    }
+
+    if (deviceClassIds != null) {
+      final List<String> deviceIds = [];
+      for (var e in deviceClassIds!) {
+        deviceIds.addAll(state.deviceClasses[e]?.deviceIds ?? []);
+      }
+      if (allDeviceIds == null) {
+        allDeviceIds = deviceIds;
+      } else {
+        allDeviceIds = allDeviceIds.where((element) => deviceIds.contains(element)).toList();
+      }
     }
 
     if (deviceGroupIds != null) {

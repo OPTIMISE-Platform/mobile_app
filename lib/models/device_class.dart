@@ -36,6 +36,9 @@ class DeviceClass {
   @JsonKey(ignore: true)
   Widget? imageWidget;
 
+  @JsonKey(ignore: true)
+  List<String> deviceIds = [];
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );

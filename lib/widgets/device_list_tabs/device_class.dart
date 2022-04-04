@@ -53,6 +53,9 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                         const Divider(),
                         ListTile(
                             title: Text(deviceClasses[i].name),
+                            subtitle: Text(deviceClasses[i].deviceIds.length.toString() +
+                                " Device" +
+                                (deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : "")),
                             trailing: Container(
                               height: MediaQuery.of(context).textScaleFactor * 48,
                               width: MediaQuery.of(context).textScaleFactor * 48,
