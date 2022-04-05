@@ -47,7 +47,7 @@ class Toast {
 
   static showErrorToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).error, color: Colors.black),
+      Icon(PlatformIcons(context).error, color: MyTheme.isDarkMode ? null : Colors.black),
       const SizedBox(
         width: 12.0,
       ),
@@ -57,7 +57,7 @@ class Toast {
 
   static showConfirmationToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).checkMark, color: Colors.black),
+      Icon(PlatformIcons(context).checkMark, color: MyTheme.isDarkMode ? null : Colors.black),
       const SizedBox(
         width: 12.0,
       ),
@@ -67,7 +67,7 @@ class Toast {
 
   static showWarningToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).error, color: Colors.black),
+      Icon(PlatformIcons(context).error, color: MyTheme.isDarkMode ? null : Colors.black),
       const SizedBox(
         width: 12.0,
       ),
@@ -77,11 +77,11 @@ class Toast {
 
   static showInformationToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
-      Icon(PlatformIcons(context).info, color: Colors.black),
+      Icon(PlatformIcons(context).info, color: MyTheme.isDarkMode ? null : Colors.black),
       const SizedBox(
         width: 12.0,
       ),
       Text(text)];
-    showToast(context, widgets, Colors.black12, duration);
+    showToast(context, widgets, MyTheme.isDarkMode ? const Color(0x80FFFFFF) : Colors.black26, duration);
   }
 }
