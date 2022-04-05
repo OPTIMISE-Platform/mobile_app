@@ -77,7 +77,7 @@ class DeviceGroupsService {
     return groups.map((e) => e.initImage()).toList(growable: false);
   }
 
-  static Future<void> saveDeviceGroup(BuildContext context, AppState state, DeviceGroup group) async {
+  static Future<DeviceGroup> saveDeviceGroup(BuildContext context, AppState state, DeviceGroup group) async {
     _logger.d("Saving device group: " + group.id);
 
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
@@ -86,12 +86,12 @@ class DeviceGroupsService {
 
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
-    final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
+    final resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
 
     if (resp.statusCode == null || resp.statusCode! > 204) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
 
-    return;
+    return DeviceGroup.fromJson(resp.data!);
   }
 }
