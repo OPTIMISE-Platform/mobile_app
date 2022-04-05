@@ -63,7 +63,7 @@ class AppState extends ChangeNotifier {
     printer: SimplePrinter(),
   );
 
-  static const storage = FlutterSecureStorage();
+  static const _storage = FlutterSecureStorage();
 
   static final _messageMutex = Mutex();
 
@@ -71,7 +71,7 @@ class AppState extends ChangeNotifier {
     await _messageMutex.acquire();
     _logger.d("Queuing message " + message.messageId.toString());
 
-    String? read = await storage.read(key: messageKey);
+    String? read = await _storage.read(key: messageKey);
     final List list;
 
     if (read != null) {
@@ -82,7 +82,7 @@ class AppState extends ChangeNotifier {
 
     list.add(remoteMessageToMap(message));
 
-    await storage.write(key: messageKey, value: json.encode(list));
+    await _storage.write(key: messageKey, value: json.encode(list));
     _messageMutex.release();
   }
 
@@ -337,7 +337,7 @@ class AppState extends ChangeNotifier {
       return notifications;
     }
     notifications.clear();
-    await storage.delete(key: messageKey); // clean up any queued messages of previous instances
+    await _storage.delete(key: messageKey); // clean up any queued messages of previous instances
 
     const limit = 10000;
     int offset = 0;
@@ -472,7 +472,7 @@ class AppState extends ChangeNotifier {
   handleQueuedMessages() async {
     await _messageMutex.acquire();
 
-    String? read = await storage.read(key: messageKey);
+    String? read = await _storage.read(key: messageKey);
     final List list;
 
     if (read != null) {
@@ -482,7 +482,7 @@ class AppState extends ChangeNotifier {
     }
 
     list.map((e) => RemoteMessage.fromMap(e)).forEach(_handleRemoteMessage);
-    await storage.delete(key: messageKey);
+    await _storage.delete(key: messageKey);
     _messageMutex.release();
   }
 
@@ -569,6 +569,35 @@ class AppState extends ChangeNotifier {
     }
     notifyListeners();
     _aspectsMutex.release();
+  }
+  
+  onLogout() async {
+    await _storage.delete(key: messageKey);
+    _initialized = false;
+    deviceClasses.clear();
+
+    deviceTypesPermSearch.clear();
+    deviceTypes.clear();
+
+    nestedFunctions.clear();
+    _deviceSearchFilter = DeviceSearchFilter.empty();
+    totalDevices = -1;
+
+    devices.clear();
+    _allDevicesLoaded = false;
+    _deviceOffset = 0;
+
+    deviceGroups.clear();
+
+    locations.clear();
+
+    networks.clear();
+
+    aspects.clear();
+
+    notifications.clear();
+    _notificationInited = false;
+    _messageIdToDisplay = null;
   }
 
   @override

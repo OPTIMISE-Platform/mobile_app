@@ -131,6 +131,7 @@ class Auth {
     }
     await _client?.logoutToken();
     await OpenIdIdentity.clear(); // remove saved token
+    await state.onLogout();
 
     _logger.d("logout");
     _loggedIn = false;
