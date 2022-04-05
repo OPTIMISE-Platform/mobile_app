@@ -82,6 +82,6 @@ class Toast {
         width: 12.0,
       ),
       Text(text)];
-    showToast(context, widgets, MyTheme.isDarkMode ? const Color(0x80FFFFFF) : Colors.black26, duration);
+    showToast(context, widgets, MyTheme.isDarkMode ? const Color(0xFF808080) : Colors.grey, duration);
   }
 }
