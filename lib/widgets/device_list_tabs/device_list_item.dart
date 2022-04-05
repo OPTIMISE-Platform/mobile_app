@@ -146,9 +146,9 @@ class DeviceListItem extends StatelessWidget {
             : null,
         title: Text(device.name),
         trailing: trailingWidgets.isEmpty
-            ? FavorizeButton(_stateDeviceIndex)
+            ? FavorizeButton(_stateDeviceIndex, null)
             : Row(
-                children: [...trailingWidgets, const VerticalDivider(), FavorizeButton(_stateDeviceIndex)],
+                children: [...trailingWidgets, const VerticalDivider(), FavorizeButton(_stateDeviceIndex, null)],
                 mainAxisSize: MainAxisSize.min, // limit size to needed
               ),
         onTap: () {

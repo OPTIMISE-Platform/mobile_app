@@ -28,6 +28,7 @@ import 'package:mobile_app/models/function.dart';
 
 import '../services/cache_helper.dart';
 import '../util/base64_response_decoder.dart';
+import 'attribute.dart';
 import 'device_instance.dart';
 import 'device_state.dart';
 
@@ -38,6 +39,7 @@ class DeviceGroup {
   String id, name, image;
   List<DeviceGroupCriteria> criteria;
   List<String> device_ids;
+  List<Attribute>? attributes;
 
   @JsonKey(ignore: true)
   Widget? imageWidget;
@@ -85,7 +87,7 @@ class DeviceGroup {
     return this;
   }
 
-  DeviceGroup(this.id, this.name, this.criteria, this.image, this.device_ids);
+  DeviceGroup(this.id, this.name, this.criteria, this.image, this.device_ids, this.attributes);
 
   factory DeviceGroup.fromJson(Map<String, dynamic> json) {
     final c = _$DeviceGroupFromJson(json);
@@ -135,6 +137,27 @@ class DeviceGroup {
       }));
     }
     return result;
+  }
+
+  bool get favorite {
+    final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
+    return i != null && i != -1;
+  }
+
+  setFavorite(bool val) {
+    if (val) {
+      attributes ??= [];
+      attributes!.add(Attribute(attributeFavorite, "true", appOrigin));
+    } else {
+      final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
+      if (i != null && i != -1) {
+        attributes!.removeAt(i);
+      }
+    }
+  }
+
+  toggleFavorite() {
+    setFavorite(!favorite);
   }
 }
 

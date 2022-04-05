@@ -16,16 +16,23 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
+import '../../exceptions/argument_exception.dart';
 import '../../services/devices.dart';
 
 class FavorizeButton extends StatelessWidget {
-  final int _stateDeviceIndex;
+  final int? _stateDeviceIndex;
+  final int? _stateDeviceGroupIndex;
 
-  const FavorizeButton(this._stateDeviceIndex, {Key? key}) : super(key: key);
+  FavorizeButton(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key) {
+    if ((_stateDeviceIndex == null && _stateDeviceGroupIndex == null) || (_stateDeviceIndex != null && _stateDeviceGroupIndex != null)) {
+      throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
+    }
+  }
 
   bool get _border {
     return !(MyTheme.isDarkMode && MyTheme.currentTheme == themeMaterial);
@@ -35,14 +42,17 @@ class FavorizeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
       final List<Widget> children = [];
-      if (state.devices[_stateDeviceIndex].favorite) {
+      if (_stateDeviceIndex != null ? state.devices[_stateDeviceIndex!].favorite : state.deviceGroups[_stateDeviceGroupIndex!].favorite) {
         children.add(Icon(
           Icons.star,
           color: Colors.yellow,
           size: _border ? MediaQuery.textScaleFactorOf(context) * 15 : null,
         ));
       }
-      if (!state.devices[_stateDeviceIndex].favorite || _border) children.add(const Icon(Icons.star_border, color: Colors.grey));
+      if ((_stateDeviceIndex != null ? !state.devices[_stateDeviceIndex!].favorite : !state.deviceGroups[_stateDeviceGroupIndex!].favorite) ||
+          _border) {
+        children.add(const Icon(Icons.star_border, color: Colors.grey));
+      }
       return PlatformIconButton(
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         icon: Stack(
@@ -50,8 +60,13 @@ class FavorizeButton extends StatelessWidget {
           children: children,
         ),
         onPressed: () async {
-          state.devices[_stateDeviceIndex].toggleFavorite();
-          await DevicesService.saveDevice(context, state, state.devices[_stateDeviceIndex]);
+          if (_stateDeviceIndex != null) {
+            state.devices[_stateDeviceIndex!].toggleFavorite();
+            await DevicesService.saveDevice(context, state, state.devices[_stateDeviceIndex!]);
+          } else {
+            state.deviceGroups[_stateDeviceGroupIndex!].toggleFavorite();
+            await DeviceGroupsService.saveDeviceGroup(context, state, state.deviceGroups[_stateDeviceGroupIndex!]);
+          }
           state.notifyListeners();
         },
       );

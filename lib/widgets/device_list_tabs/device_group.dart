@@ -56,7 +56,7 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
                     },
                   )))
               : state.devices.isEmpty
-                  ? state.loadingDevices()
+                  ? state.loadingDevices
                       ? Center(
                           child: PlatformCircularProgressIndicator(),
                         )

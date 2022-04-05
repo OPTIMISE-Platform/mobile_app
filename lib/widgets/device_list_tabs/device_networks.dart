@@ -90,7 +90,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
                     },
                   )
                 : state.devices.isEmpty
-                    ? state.loadingDevices() || _loading
+                    ? state.loadingDevices || _loading
                         ? Center(
                             child: PlatformCircularProgressIndicator(),
                           )

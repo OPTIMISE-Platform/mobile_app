@@ -267,8 +267,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool loadingDevices() {
+  bool get loadingDevices {
     return _devicesMutex.isLocked;
+  }
+  bool get allDevicesLoaded {
+    return _allDevicesLoaded;
   }
 
   loadDeviceType(BuildContext context, String id, [bool force = false]) async {

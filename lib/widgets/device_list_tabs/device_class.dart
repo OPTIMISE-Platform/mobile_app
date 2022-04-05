@@ -56,7 +56,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                             subtitle: Text(deviceClasses[i].deviceIds.length.toString() +
                                 " Device" +
                                 (deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : "")),
-                            trailing: Container(
+                            leading: Container(
                               height: MediaQuery.of(context).textScaleFactor * 48,
                               width: MediaQuery.of(context).textScaleFactor * 48,
                               decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
@@ -88,7 +88,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                     },
                   )
                 : state.devices.isEmpty
-                    ? state.loadingDevices()
+                    ? state.loadingDevices
                         ? Center(
                             child: PlatformCircularProgressIndicator(),
                           )

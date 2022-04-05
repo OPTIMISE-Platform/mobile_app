@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
@@ -25,6 +27,7 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
+import '../models/attribute.dart';
 import 'auth.dart';
 
 class DeviceGroupsService {
@@ -33,6 +36,7 @@ class DeviceGroupsService {
   );
 
   static CacheOptions? _options;
+  static late final Dio? _dio;
 
   static initOptions() async {
     if (_options != null) {
@@ -47,6 +51,7 @@ class DeviceGroupsService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
+    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups(BuildContext context, AppState state) async {
@@ -57,8 +62,7 @@ class DeviceGroupsService {
 
     final headers = await Auth.getHeaders(context, state);
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<List<dynamic>?>(uri,
+    final resp = await _dio!.get<List<dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
@@ -71,5 +75,23 @@ class DeviceGroupsService {
     final groups = List<DeviceGroup>.generate(
         l.length, (index) => DeviceGroup.fromJson(l[index]));
     return groups.map((e) => e.initImage()).toList(growable: false);
+  }
+
+  static Future<void> saveDeviceGroup(BuildContext context, AppState state, DeviceGroup group) async {
+    _logger.d("Saving device group: " + group.id);
+
+    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
+
+    final encoded = json.encode(group.toJson());
+
+    final headers = await Auth.getHeaders(context, state);
+    await initOptions();
+    final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
+
+    if (resp.statusCode == null || resp.statusCode! > 204) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return;
   }
 }

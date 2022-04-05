@@ -274,9 +274,10 @@ class DevicePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      if (state.loadingDevices() ||
-          (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) {
-        if (!state.loadingDevices()) {
+      if ((state.loadingDevices ||
+              (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) &&
+          !state.allDevicesLoaded) {
+        if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
         }
         return Center(child: PlatformCircularProgressIndicator());
@@ -456,7 +457,9 @@ class DevicePage extends StatelessWidget {
         trailingHeader.add(Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
-        trailingHeader.add(FavorizeButton(_stateDeviceIndex!));
+        trailingHeader.add(FavorizeButton(_stateDeviceIndex!, null));
+      } else {
+        trailingHeader.add(FavorizeButton(null, _stateDeviceGroupIndex));
       }
 
       return PlatformScaffold(

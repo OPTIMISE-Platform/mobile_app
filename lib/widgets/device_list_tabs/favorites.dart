@@ -22,6 +22,7 @@ import 'package:provider/provider.dart';
 import '../../app_state.dart';
 import '../../theme.dart';
 import '../device_list.dart';
+import 'group_list_item.dart';
 
 class DeviceListFavorites extends StatelessWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);
@@ -32,12 +33,18 @@ class DeviceListFavorites extends StatelessWidget {
       if (state.devices.isEmpty) {
         state.loadDevices(context);
       }
+      final List<int> matchingGroups = [];
+      for (var i = 0; i < state.deviceGroups.length; i++) {
+        if (state.deviceGroups[i].favorite) {
+          matchingGroups.add(i);
+        }
+      }
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
             child: state.devices.isEmpty
                 ? Center(
-                    child: state.loadingDevices()
+                    child: state.loadingDevices
                         ? PlatformCircularProgressIndicator()
                         : PlatformElevatedButton(
                             child: const Text("Add Favorites"),
@@ -48,14 +55,18 @@ class DeviceListFavorites extends StatelessWidget {
                           ))
                 : ListView.builder(
                     padding: MyTheme.inset,
-                    itemCount: state.totalDevices,
+                    itemCount: state.totalDevices + matchingGroups.length,
                     itemBuilder: (_, i) {
-                      if (i > state.devices.length - 1) {
-                        state.loadDevices(context, i);
+                      if (i > state.devices.length + matchingGroups.length - 1) {
                         return const SizedBox.shrink();
                       }
+                      if (i < state.devices.length) {
+                        return Column(
+                          children: [const Divider(), DeviceListItem(i, null)],
+                        );
+                      }
                       return Column(
-                        children: [const Divider(), DeviceListItem(i, null)],
+                        children: [const Divider(), GroupListItem(matchingGroups.elementAt(i - state.devices.length), null)],
                       );
                     },
                   ),

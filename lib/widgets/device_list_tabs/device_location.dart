@@ -66,7 +66,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                           const Divider(),
                           ListTile(
                               title: Text(state.locations[i].name),
-                              trailing: Container(
+                              leading: Container(
                                 height: MediaQuery.of(context).textScaleFactor * 48,
                                 width: MediaQuery.of(context).textScaleFactor * 48,
                                 decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
@@ -113,7 +113,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                         ]);
                       },
                     ))
-                : state.loadingDevices() || state.loadingDeviceGroups() || _loading
+                : state.loadingDevices || state.loadingDeviceGroups() || _loading
                     ? Center(
                         child: PlatformCircularProgressIndicator(),
                       )
