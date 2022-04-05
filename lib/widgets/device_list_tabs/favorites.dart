@@ -42,7 +42,7 @@ class DeviceListFavorites extends StatelessWidget {
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
-            child: state.devices.isEmpty
+            child: state.devices.isEmpty && matchingGroups.isEmpty
                 ? Center(
                     child: state.loadingDevices
                         ? PlatformCircularProgressIndicator()

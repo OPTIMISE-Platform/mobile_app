@@ -33,7 +33,7 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
     if (value is bool && !value) {
       return const Icon(Icons.power_off_outlined);
     }
-    if (value is List) {
+    if (value is List && value.isNotEmpty) {
       if (value.every((element) => element == value[0])) {
         return displayValue(value[0], context);
       }

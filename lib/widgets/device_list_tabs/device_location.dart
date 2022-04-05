@@ -45,111 +45,113 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
       final List<int> matchingGroups = [];
       if (_selected != null) {
         for (var i = 0; i < state.deviceGroups.length; i++) {
-          if (state.locations.length > _selected! && state.locations[_selected!].device_group_ids.contains(state.deviceGroups[i].id) &&
+          if (state.locations.length > _selected! &&
+              state.locations[_selected!].device_group_ids.contains(state.deviceGroups[i].id) &&
               (parentState?.filter.deviceGroupIds == null || parentState!.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
             matchingGroups.add(i);
           }
         }
       }
       return Scrollbar(
-        child: state.locations.isEmpty
+        child: state.loadingLocations()
             ? Center(child: PlatformCircularProgressIndicator())
-            : _selected == null
-                ? RefreshIndicator(
-                    onRefresh: () => state.loadLocations(context),
-                    child: ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: MyTheme.inset,
-                      itemCount: state.locations.length,
-                      itemBuilder: (context, i) {
-                        return Column(children: [
-                          const Divider(),
-                          ListTile(
-                              title: Text(state.locations[i].name),
-                              leading: Container(
-                                height: MediaQuery.of(context).textScaleFactor * 48,
-                                width: MediaQuery.of(context).textScaleFactor * 48,
-                                decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                child: Padding(
-                                  padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                  child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
-                                ),
-                              ),
-                              subtitle: Text(state.locations[i].device_ids.length.toString() +
-                                  " Device" +
-                                  (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
-                                  ", " +
-                                  state.locations[i].device_group_ids.length.toString() +
-                                  " Group" +
-                                  (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
-                              onTap: () {
-                                _loading = true;
-                                parentState?.filter.locationIds = [state.locations[i].id];
-                                state
-                                    .searchDevices(
-                                        parentState?.filter ??
-                                            DeviceSearchFilter(
-                                              "",
-                                              null, null, null, [state.locations[i].id]
-                                            ),
-                                        context)
-                                    .then((_) => setState(() => _loading = false));
-                                parentState?.setState(() {
-                                  parentState.onBackCallback = () {
-                                    parentState.setState(() {
-                                      parentState.customAppBarTitle = null;
-                                      parentState.onBackCallback = null;
-                                    });
-                                    parentState.filter.locationIds = [state.locations[i].id];
-                                    state.searchDevices(parentState.filter, context);
-                                    setState(() => _selected = null);
-                                  };
-                                  parentState.customAppBarTitle = state.locations[i].name;
-                                });
-                                setState(() {
-                                  _selected = i;
-                                });
-                              })
-                        ]);
-                      },
-                    ))
-                : state.loadingDevices || state.loadingDeviceGroups() || _loading
-                    ? Center(
-                        child: PlatformCircularProgressIndicator(),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          _loading = true;
-                          parentState?.filter.locationIds = [state.locations[_selected!].id];
-                          state
-                              .searchDevices(
-                                  parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]), context, true)
-                              .then((_) => setState(() => _loading = false));
-                        },
+            : state.locations.isEmpty
+                ? const Center(child: Text("No Locations"))
+                : _selected == null
+                    ? RefreshIndicator(
+                        onRefresh: () => state.loadLocations(context),
                         child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: MyTheme.inset,
-                          itemCount: state.totalDevices + matchingGroups.length,
-                          itemBuilder: (_, i) {
-                            if (i > state.devices.length + matchingGroups.length - 1) {
-                              return const SizedBox.shrink();
-                            }
-                            if (i < state.devices.length) {
-                              return Column(
-                                children: [const Divider(), DeviceListItem(i, null)],
-                              );
-                            }
-                            return Column(
-                              children: [
-                                const Divider(),
-                                GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                                  parentState?.filter.locationIds = [state.locations[_selected!].id];
-                                  state.searchDevices(
-                                      parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, state.locations[_selected!].device_ids), context);
-                                })
-                              ],
-                            );
+                          itemCount: state.locations.length,
+                          itemBuilder: (context, i) {
+                            return Column(children: [
+                              const Divider(),
+                              ListTile(
+                                  title: Text(state.locations[i].name),
+                                  leading: Container(
+                                    height: MediaQuery.of(context).textScaleFactor * 48,
+                                    width: MediaQuery.of(context).textScaleFactor * 48,
+                                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                    child: Padding(
+                                      padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                      child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
+                                    ),
+                                  ),
+                                  subtitle: Text(state.locations[i].device_ids.length.toString() +
+                                      " Device" +
+                                      (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
+                                      ", " +
+                                      state.locations[i].device_group_ids.length.toString() +
+                                      " Group" +
+                                      (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
+                                  onTap: () {
+                                    _loading = true;
+                                    parentState?.filter.locationIds = [state.locations[i].id];
+                                    state
+                                        .searchDevices(
+                                            parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context)
+                                        .then((_) => setState(() => _loading = false));
+                                    parentState?.setState(() {
+                                      parentState.onBackCallback = () {
+                                        parentState.setState(() {
+                                          parentState.customAppBarTitle = null;
+                                          parentState.onBackCallback = null;
+                                        });
+                                        parentState.filter.locationIds = [state.locations[i].id];
+                                        state.searchDevices(parentState.filter, context);
+                                        setState(() => _selected = null);
+                                      };
+                                      parentState.customAppBarTitle = state.locations[i].name;
+                                    });
+                                    setState(() {
+                                      _selected = i;
+                                    });
+                                  })
+                            ]);
                           },
-                        )),
+                        ))
+                    : state.loadingDevices || state.loadingDeviceGroups() || _loading
+                        ? Center(
+                            child: PlatformCircularProgressIndicator(),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () async {
+                              _loading = true;
+                              parentState?.filter.locationIds = [state.locations[_selected!].id];
+                              state
+                                  .searchDevices(
+                                      parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]),
+                                      context,
+                                      true)
+                                  .then((_) => setState(() => _loading = false));
+                            },
+                            child: ListView.builder(
+                              padding: MyTheme.inset,
+                              itemCount: state.totalDevices + matchingGroups.length,
+                              itemBuilder: (_, i) {
+                                if (i > state.devices.length + matchingGroups.length - 1) {
+                                  return const SizedBox.shrink();
+                                }
+                                if (i < state.devices.length) {
+                                  return Column(
+                                    children: [const Divider(), DeviceListItem(i, null)],
+                                  );
+                                }
+                                return Column(
+                                  children: [
+                                    const Divider(),
+                                    GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                                      parentState?.filter.locationIds = [state.locations[_selected!].id];
+                                      state.searchDevices(
+                                          parentState?.filter ??
+                                              DeviceSearchFilter("", null, null, null, null, state.locations[_selected!].device_ids),
+                                          context);
+                                    })
+                                  ],
+                                );
+                              },
+                            )),
       );
     });
   }

@@ -41,72 +41,77 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       return Scrollbar(
-        child: state.networks.isEmpty || state.loadingNetworks()
+        child: state.loadingNetworks()
             ? Center(child: PlatformCircularProgressIndicator())
-            : _selected == null
-                ? ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: MyTheme.inset,
-                    itemCount: state.networks.length,
-                    itemBuilder: (context, i) {
-                      return Column(children: [
-                        const Divider(),
-                        ListTile(
-                            title: Text(state.networks[i].name),
-                            leading: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline
-                                ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                    Tooltip(message: "Network is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
-                                  ])
-                                : null,
-                            subtitle: Text((state.networks[i].device_local_ids ?? []).length.toString() +
-                                " Device" +
-                                ((state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1
-                                    ? "s"
-                                    : "")),
-                            onTap: (state.networks[i].device_local_ids ?? []).isEmpty
-                                ? null
-                                : () {
-                                    _loading = true;
-                                    final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
-                                    parentState?.filter.addNetwork(state.networks[i].id);
-                                    state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]), context, true).then((_) => setState(() => _loading = true));
-                                    parentState?.setState(() {
-                                      parentState.onBackCallback = () {
-                                        parentState.setState(() {
-                                          parentState.filter.networkIds = null;
-                                          parentState.customAppBarTitle = null;
-                                          parentState.onBackCallback = null;
-                                        });
-                                        setState(() => _selected = null);
-                                      };
-                                      parentState.customAppBarTitle = state.networks[i].name;
-
-                                      setState(() {
-                                        _selected = i;
-                                      });
-                                    });
-                                  })
-                      ]);
-                    },
-                  )
-                : state.devices.isEmpty
-                    ? state.loadingDevices || _loading
-                        ? Center(
-                            child: PlatformCircularProgressIndicator(),
-                          )
-                        : const Center(child: Text("No Devices"))
-                    : ListView.builder(
+            : state.networks.isEmpty
+                ? Center(child: Text("No Networks"))
+                : _selected == null
+                    ? ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
                         padding: MyTheme.inset,
-                        itemCount: state.totalDevices,
-                        itemBuilder: (_, i) {
-                          if (i > state.devices.length - 1) {
-                            return const SizedBox.shrink();
-                          }
-                          return Column(
-                            children: [const Divider(), DeviceListItem(i, null)],
-                          );
+                        itemCount: state.networks.length,
+                        itemBuilder: (context, i) {
+                          return Column(children: [
+                            const Divider(),
+                            ListTile(
+                                title: Text(state.networks[i].name),
+                                leading: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline
+                                    ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                        Tooltip(message: "Network is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
+                                      ])
+                                    : null,
+                                subtitle: Text((state.networks[i].device_local_ids ?? []).length.toString() +
+                                    " Device" +
+                                    ((state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1
+                                        ? "s"
+                                        : "")),
+                                onTap: (state.networks[i].device_local_ids ?? []).isEmpty
+                                    ? null
+                                    : () {
+                                        _loading = true;
+                                        final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                                        parentState?.filter.addNetwork(state.networks[i].id);
+                                        state
+                                            .searchDevices(
+                                                parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]), context, true)
+                                            .then((_) => setState(() => _loading = true));
+                                        parentState?.setState(() {
+                                          parentState.onBackCallback = () {
+                                            parentState.setState(() {
+                                              parentState.filter.networkIds = null;
+                                              parentState.customAppBarTitle = null;
+                                              parentState.onBackCallback = null;
+                                            });
+                                            setState(() => _selected = null);
+                                          };
+                                          parentState.customAppBarTitle = state.networks[i].name;
+
+                                          setState(() {
+                                            _selected = i;
+                                          });
+                                        });
+                                      })
+                          ]);
                         },
-                      ),
+                      )
+                    : state.devices.isEmpty
+                        ? state.loadingDevices || _loading
+                            ? Center(
+                                child: PlatformCircularProgressIndicator(),
+                              )
+                            : const Center(child: Text("No Devices"))
+                        : ListView.builder(
+                            padding: MyTheme.inset,
+                            itemCount: state.totalDevices,
+                            itemBuilder: (_, i) {
+                              if (i > state.devices.length - 1) {
+                                return const SizedBox.shrink();
+                              }
+                              return Column(
+                                children: [const Divider(), DeviceListItem(i, null)],
+                              );
+                            },
+                          ),
       );
     });
   }

@@ -41,7 +41,7 @@ final Map<String?, FunctionConfig> functionConfigs = {
 };
 
 String formatValue(dynamic value) {
-  return (value is List
+  return (value is List && value.isNotEmpty
       ? value.every((e) => e == value[0])
           ? value[0].toString()
           : value[0] is num
