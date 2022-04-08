@@ -16,6 +16,7 @@
 
 import 'dart:async';
 
+import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -58,7 +59,9 @@ class DeviceListItem extends StatelessWidget {
                       child: Tooltip(
                           message: "Status unknown",
                           triggerMode: TooltipTriggerMode.tap,
-                          child: Icon(PlatformIcons(context).error, color: MyTheme.errorColor)))
+                          child: Icon(
+                            PlatformIcons(context).remove,
+                          )))
                   : PlatformIconButton(
                       cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
                       material: (_, __) => MaterialIconButtonData(
@@ -145,15 +148,17 @@ class DeviceListItem extends StatelessWidget {
       final connectionStatus = device.getConnectionStatus();
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
-        leading: connectionStatus == DeviceConnectionStatus.offline && trailingWidgets.isEmpty
-            ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Tooltip(
-                    message: "Device is offline",
-                    triggerMode: TooltipTriggerMode.tap,
-                    child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
-              ])
-            : null,
-        title: Text(device.name),
+        title: Container(
+            alignment: Alignment.centerLeft,
+            child: Badge(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: MyTheme.insetSize),
+              position: BadgePosition.topEnd(),
+              child: Text(device.name),
+              badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
+              showBadge: connectionStatus == DeviceConnectionStatus.offline,
+              badgeColor: Colors.transparent,
+            )),
         trailing: trailingWidgets.isEmpty
             ? FavorizeButton(_stateDeviceIndex, null)
             : Row(
