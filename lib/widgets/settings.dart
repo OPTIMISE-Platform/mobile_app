@@ -126,7 +126,7 @@ class Settings extends StatelessWidget {
                           children: [
                             Text("Current Build: " + appUpdater.currentBuild.toString()),
                             Text("Latest Build: " + appUpdater.latestBuild.toString()),
-                            Text("Uploaded: " + _format.format(appUpdater.updateDate)),
+                            Text("Uploaded: " + _format.format(appUpdater.updateDate.toLocal())),
                             Text("Download size: " + (appUpdater.downloadSize / 1000000.0).toStringAsFixed(1) + " MB"),
                           ],
                         ),
