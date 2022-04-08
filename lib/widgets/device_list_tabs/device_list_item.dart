@@ -53,7 +53,7 @@ class DeviceListItem extends StatelessWidget {
           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
           child: element.transitioning
               ? Center(child: PlatformCircularProgressIndicator())
-          : element.value == null ? Center(child: Icon(PlatformIcons(context).error, color: MyTheme.errorColor))
+          : element.value == null ? Center(child: Tooltip(message: "Status unknown", child: Icon(PlatformIcons(context).error, color: MyTheme.errorColor)))
               : PlatformIconButton(
                   cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
                   material: (_, __) => MaterialIconButtonData(
