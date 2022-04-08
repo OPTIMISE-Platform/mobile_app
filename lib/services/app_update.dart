@@ -19,6 +19,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
@@ -46,6 +47,7 @@ class AppUpdater {
   AppUpdater() {}
 
   static cleanup() async {
+    if (kIsWeb) return;
     final f = (await getApplicationSupportDirectory()).path + '/update.apk';
     final file = File(f);
     if (await file.exists()) {

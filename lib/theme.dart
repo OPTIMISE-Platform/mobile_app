@@ -115,8 +115,8 @@ class MyTheme {
   static const _storageKeyColor = "color";
   static late LazyBox<ThemeStyle> _hiveBox;
 
-  static TargetPlatform initialPlatform = Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
-  static ThemeStyle currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
+  static TargetPlatform initialPlatform = kIsWeb ? TargetPlatform.android : Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
+  static ThemeStyle currentTheme = kIsWeb ? themeMaterial : Platform.isIOS ? themeCupertino : themeMaterial;
   static ThemeStyle currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
 
   static loadTheme() async {
