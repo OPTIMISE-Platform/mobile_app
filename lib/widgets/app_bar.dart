@@ -35,7 +35,10 @@ class MyAppBar {
         builder: (_, state, __) {
           state.initNotifications(context);
           state.checkMessageDisplay(context);
-          final unread = state.notifications.where((element) => !element.isRead).toList(growable: false).length;
+          final unread = state.notifications
+              .where((element) => !element.isRead)
+              .toList(growable: false)
+              .length;
           return PlatformIconButton(
             icon: Badge(
               child: const Icon(Icons.notifications),
@@ -74,12 +77,14 @@ class MyAppBar {
 
   PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions, Widget? leading]) {
     return PlatformAppBar(
-      title: PlatformWidget(material: (_, __) => Text(_title), cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white))),
-      cupertino: (_, __) => CupertinoNavigationBarData(
-        // Issue with cupertino where a bar with no transparency
-        // will push the list down. Adding some alpha value fixes it (in a hacky way)
-        backgroundColor: Colors.black,
-      ),
+      title: PlatformWidget(material: (_, __) => Text(_title, overflow: TextOverflow.fade),
+          cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white), overflow: TextOverflow.fade)),
+      cupertino: (_, __) =>
+          CupertinoNavigationBarData(
+            // Issue with cupertino where a bar with no transparency
+            // will push the list down. Adding some alpha value fixes it (in a hacky way)
+            backgroundColor: Colors.black,
+          ),
       trailingActions: [
         ...trailingActions ?? [],
       ],
