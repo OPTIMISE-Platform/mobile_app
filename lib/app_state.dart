@@ -292,6 +292,7 @@ class AppState extends ChangeNotifier {
   loadStates(BuildContext context, List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
+      if (element.getConnectionStatus() != DeviceConnectionStatus.online) continue;
       await loadDeviceType(context, element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
       commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
