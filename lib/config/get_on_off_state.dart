@@ -40,7 +40,7 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
       return Icon(PlatformIcons(context).remove);
     }
 
-    return Text(value.toString());
+    return null;
   }
 
   @override

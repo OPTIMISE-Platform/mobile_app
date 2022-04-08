@@ -47,7 +47,7 @@ String formatValue(dynamic value) {
           : value[0] is num
               ? minList(value).toString() + " - " + maxList(value).toString()
               : "-"
-      : value.toString());
+      : value == null ? "-" : value.toString());
 }
 
 abstract class FunctionConfig {
