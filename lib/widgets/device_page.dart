@@ -454,7 +454,7 @@ class DevicePage extends StatelessWidget {
       final List<Widget> trailingHeader = [];
 
       if (connectionStatus == DeviceConnectionStatus.offline) {
-        trailingHeader.add(Tooltip(message: "Device is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+        trailingHeader.add(Tooltip(message: "Device is offline", triggerMode: TooltipTriggerMode.tap,child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
         trailingHeader.add(FavorizeButton(_stateDeviceIndex!, null));
