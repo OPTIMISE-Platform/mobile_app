@@ -258,7 +258,7 @@ class AppState extends ChangeNotifier {
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
-      loadOnOffStates(context, newDevices); // no await => run in background
+      loadStates(context, newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']); // no await => run in background
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(context); // when loadDevices called directly
@@ -283,10 +283,6 @@ class AppState extends ChangeNotifier {
       return;
     }
     deviceTypes[id] = t;
-  }
-
-  loadOnOffStates(BuildContext context, List<DeviceInstance> devices) async {
-    await loadStates(context, devices, deviceGroups, [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
   }
 
   loadStates(BuildContext context, List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
