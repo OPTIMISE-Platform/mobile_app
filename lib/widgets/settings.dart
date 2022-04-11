@@ -142,22 +142,29 @@ class Settings extends StatelessWidget {
                 return;
               }
               final stream = appUpdater.downloadUpdate().asBroadcastStream();
-              stream.listen(null, onDone: () => Navigator.pop(context));
+              stream.listen(null, onDone: () => OpenFile.open(appUpdater.localFile));
               await showPlatformDialog(
-                  context: context,
-                  builder: (context) => PlatformAlertDialog(
-                        title: const Text("Downloading..."),
-                        content: StreamBuilder<double>(
-                            stream: stream,
-                            initialData: 0,
-                            builder: (context, snapshot) {
-                              return Column(mainAxisSize: MainAxisSize.min, children: [
-                                LinearProgressIndicator(value: snapshot.data! / 100),
-                                Text(snapshot.data!.toStringAsFixed(2) + " %"),
-                              ]);
-                            }),
-                      ));
-              OpenFile.open(appUpdater.localFile);
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                  title: const Text("Update"),
+                  content: StreamBuilder<double>(
+                      stream: stream,
+                      initialData: 0,
+                      builder: (context, snapshot) {
+                        return Column(mainAxisSize: MainAxisSize.min, children: [
+                          LinearProgressIndicator(value: snapshot.data! / 100),
+                          Text(snapshot.data!.toStringAsFixed(2) + " %"),
+                        ]);
+                      }),
+                  actions: [
+                    StreamBuilder<double>(
+                        stream: stream,
+                        initialData: 0,
+                        builder: (context, snapshot) => PlatformDialogAction(
+                            child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'), onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
+                  ],
+                ),
+              );
             }
           },
         ),
