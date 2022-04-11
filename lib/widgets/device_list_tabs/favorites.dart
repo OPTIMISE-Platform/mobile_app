@@ -39,6 +39,7 @@ class DeviceListFavorites extends StatelessWidget {
           matchingGroups.add(i);
         }
       }
+      state.devices.removeWhere((element) => !element.favorite);
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
