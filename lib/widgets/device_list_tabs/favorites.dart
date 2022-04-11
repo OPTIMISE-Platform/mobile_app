@@ -66,7 +66,12 @@ class DeviceListFavorites extends StatelessWidget {
                         );
                       }
                       return Column(
-                        children: [const Divider(), GroupListItem(matchingGroups.elementAt(i - state.devices.length), null)],
+                        children: [const Divider(), GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                          final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                          if (parentState == null) return;
+                          parentState.filter.deviceGroupIds = null;
+                          state.searchDevices(parentState.filter, context);
+                        })],
                       );
                     },
                   ),
