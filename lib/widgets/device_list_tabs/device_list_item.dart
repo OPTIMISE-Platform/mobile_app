@@ -158,6 +158,7 @@ class DeviceListItem extends StatelessWidget {
               badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
               showBadge: connectionStatus == DeviceConnectionStatus.offline,
               badgeColor: Colors.transparent,
+              elevation: 0,
             )),
         trailing: trailingWidgets.isEmpty
             ? FavorizeButton(_stateDeviceIndex, null)

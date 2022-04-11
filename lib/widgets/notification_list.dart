@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
+import 'package:badges/badges.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -23,15 +23,25 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/notification.dart' as app;
 import '../app_state.dart';
 
-class NotificationList extends StatelessWidget {
+class NotificationList extends StatefulWidget {
   const NotificationList({Key? key}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _NotificationListState();
+}
+
+class _NotificationListState extends State<NotificationList> {
   static final _format = DateFormat.yMd().add_jms();
+
+  final Set<app.Notification> _selected = {};
+  bool _selectionMode = false;
 
   @override
   Widget build(BuildContext context) {
-    const appBar = MyAppBar("Notifications");
+    final appBar = MyAppBar(_selectionMode ? _selected.length.toString() : "Notifications");
 
     return Consumer<AppState>(builder: (context, state, child) {
       state.checkMessageDisplay(context);
@@ -45,110 +55,171 @@ class NotificationList extends StatelessWidget {
         ));
       }
 
+      if (_selectionMode) {
+        appBarActions.addAll([
+          PlatformIconButton(
+            onPressed: () => setState(() {
+              _selected.clear();
+              _selectionMode = false;
+            }),
+            icon: Icon(PlatformIcons(context).clear),
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ),
+          PlatformIconButton(
+            onPressed: () => setState(() => _selected.addAll(state.notifications)),
+            icon: Icon(PlatformIcons(context).addCircledOutline),
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ),
+          PlatformIconButton(
+            onPressed: () async {
+              final List<Future> futures = [];
+              for (var element in _selected) {
+                if (!element.isRead) {
+                  element.isRead = true;
+                  futures.add(state.updateNotifications(context, state.notifications.indexOf(element)));
+                }
+              }
+              await Future.wait(futures);
+              setState(() {
+                _selected.clear();
+                _selectionMode = false;
+              });
+            },
+            icon: const Icon(Icons.mark_email_read),
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ),
+          PlatformIconButton(
+            onPressed: () async {
+              final List<Future> futures = [];
+              for (var element in _selected) {
+                if (element.isRead) {
+                  element.isRead = false;
+                  futures.add(state.updateNotifications(context, state.notifications.indexOf(element)));
+                }
+              }
+              await Future.wait(futures);
+              setState(() {
+                _selected.clear();
+                _selectionMode = false;
+              });
+            },
+            icon: const Icon(Icons.mark_email_unread),
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ),
+          PlatformIconButton(
+            onPressed: () async {
+              final confirmed = await showPlatformDialog(
+                context: context,
+                builder: (_) => PlatformAlertDialog(
+                  title: const Text('Confirmation'),
+                  content: const Text("Do you want to permanently delete selected notifications?"),
+                  actions: <Widget>[
+                    PlatformDialogAction(
+                      child: PlatformText('Cancel'),
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                    PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true)),
+                  ],
+                ),
+              );
+              if (confirmed is bool && confirmed) {
+                final List<Future> futures = [];
+                for (var element in _selected) {
+                  futures.add(state.deleteNotification(context, state.notifications.indexOf(element)));
+                }
+                await Future.wait(futures);
+                setState(() {
+                  _selected.clear();
+                  _selectionMode = false;
+                });
+              }
+            },
+            icon: Icon(PlatformIcons(context).delete),
+            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ),
+        ]);
+      }
+
       return PlatformScaffold(
           appBar: appBar.getAppBar(context, appBarActions),
           body: RefreshIndicator(
               onRefresh: () => state.loadNotifications(context),
               child: Scrollbar(
-                  child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: MyTheme.inset,
-                itemCount: state.notifications.length,
-                itemBuilder: (BuildContext context, int i) {
-                  return Column(
-                    children: [
-                      const Divider(),
-                      ListTile(
-                          title: Text(state.notifications[i].title),
-                          subtitle: Text(_format.format(state.notifications[i].createdAt())),
-                          leading: state.notifications[i].isRead
-                              ? null
-                              : Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [Icon(Icons.circle_notifications, color: MyTheme.warnColor)]),
-                          trailing: PlatformPopupMenu(
-                            icon: Icon(PlatformIcons(context).ellipsis),
-                            options: [
-                              PopupMenuOption(
-                                  label: 'Delete',
-                                  onTap: (_) async {
-                                    final confirmed = await showPlatformDialog(
-                                      context: context,
-                                      builder: (_) => PlatformAlertDialog(
-                                        title: const Text('Confirmation'),
-                                        content: const Text("Do you want to permanently delete this notification?"),
-                                        actions: <Widget>[
-                                          PlatformDialogAction(
-                                            child: PlatformText('Cancel'),
-                                            onPressed: () => Navigator.pop(context, false),
-                                          ),
-                                          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true)),
-                                        ],
+                  child: state.notifications.isEmpty
+                      ? const Center(child: Text("No Notifications"))
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: MyTheme.inset,
+                          itemCount: state.notifications.length,
+                          itemBuilder: (BuildContext context, int i) {
+                            return Column(
+                              children: [
+                                const Divider(),
+                                Dismissible(
+                                    background: Container(
+                                      alignment: Alignment.centerRight,
+                                      padding: MyTheme.inset,
+                                      color: MyTheme.warnColor,
+                                      child: Icon(
+                                        PlatformIcons(context).delete,
+                                        color: Colors.white,
                                       ),
-                                    );
-                                    if (confirmed is bool && confirmed) {
-                                      await state.deleteNotification(context, i);
-                                    }
-                                  },
-                                  cupertino: (_, __) => CupertinoPopupMenuOptionData(isDestructiveAction: true)),
-                              PopupMenuOption(
-                                  label: 'Delete All',
-                                  onTap: (_) async {
-                                    final confirmed = await showPlatformDialog(
-                                      context: context,
-                                      builder: (_) => PlatformAlertDialog(
-                                        title: const Text('Confirmation'),
-                                        content: const Text("Do you want to permanently delete all notifications?"),
-                                        actions: <Widget>[
-                                          PlatformDialogAction(
-                                            child: PlatformText('Cancel'),
-                                            onPressed: () => Navigator.pop(context, false),
-                                          ),
-                                          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true)),
-                                        ],
-                                      ),
-                                    );
-                                    if (confirmed is bool && confirmed) {
-                                      await state.deleteAllNotifications(context);
-                                    }
-                                  },
-                                  cupertino: (_, __) => CupertinoPopupMenuOptionData(isDestructiveAction: true)),
-                              PopupMenuOption(
-                                label: 'Toggle Read',
-                                onTap: (_) async {
-                                  state.notifications[i].isRead = !state.notifications[i].isRead;
-                                  await state.updateNotifications(context, i);
-                                },
-                              ),
-                              PopupMenuOption(
-                                label: 'Mark all Read',
-                                onTap: (_) async {
-                                  for (var i = 0; i < state.notifications.length; i++) {
-                                    if (!state.notifications[i].isRead) {
-                                      state.notifications[i].isRead = true;
-                                      await state.updateNotifications(context, i);
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                            cupertino: (_, __) => CupertinoPopupMenuData(
-                                cancelButtonData: CupertinoPopupMenuCancelButtonData(
-                              child: const Text('Close'),
-                              onPressed: () => {},
-                            )),
-                          ),
-                          onTap: () {
-                            if (!state.notifications[i].isRead) {
-                              state.notifications[i].isRead = true;
-                              state.updateNotifications(context, i);
-                            }
-                            state.notifications[i].show(context);
-                          })
-                    ],
-                  );
-                },
-              ))));
+                                    ),
+                                    direction: DismissDirection.endToStart,
+                                    onDismissed: (_) => state.deleteNotification(context, i),
+                                    key: ValueKey<String>(state.notifications[i].id),
+                                    child: ListTile(
+                                      leading: !_selectionMode
+                                          ? null
+                                          : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                              Icon(
+                                                _selected.contains(state.notifications[i])
+                                                    ? PlatformIcons(context).checkMarkCircledSolid
+                                                    : Icons.circle_outlined,
+                                                color: MyTheme.appColor,
+                                              )
+                                            ]),
+                                      title: Container(
+                                          alignment: Alignment.centerLeft,
+                                          child: Badge(
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.only(left: MyTheme.insetSize),
+                                            position: BadgePosition.topEnd(),
+                                            child: Text(state.notifications[i].title),
+                                            badgeContent: const Icon(Icons.circle_notifications, size: 16, color: MyTheme.warnColor),
+                                            showBadge: !state.notifications[i].isRead,
+                                            badgeColor: Colors.transparent,
+                                            elevation: 0,
+                                          )),
+                                      subtitle: Text(_format.format(state.notifications[i].createdAt())),
+                                      onTap: () {
+                                        if (_selectionMode) {
+                                          setState(() {
+                                            _selected.contains(state.notifications[i])
+                                                ? _selected.remove(state.notifications[i])
+                                                : _selected.add(state.notifications[i]);
+                                          });
+                                        } else {
+                                          if (!state.notifications[i].isRead) {
+                                            state.notifications[i].isRead = true;
+                                            state.updateNotifications(context, i);
+                                          }
+                                          state.notifications[i].show(context);
+                                        }
+                                      },
+                                      onLongPress: _selectionMode
+                                          ? null
+                                          : () {
+                                              setState(() {
+                                                _selectionMode = true;
+                                                _selected.add(state.notifications[i]);
+                                              });
+                                            },
+                                    ))
+                              ],
+                            );
+                          },
+                        ))));
     });
   }
 }

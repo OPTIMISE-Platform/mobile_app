@@ -50,7 +50,7 @@ class MyAppBar {
                 context,
                 platformPageRoute(
                   context: context,
-                  builder: (context) => const NotificationList(),
+                  builder: (context) => NotificationList(),
                 ),
               );
             },
