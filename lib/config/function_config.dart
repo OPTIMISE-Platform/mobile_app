@@ -30,6 +30,7 @@ import '../models/content_variable.dart';
 import '../util/math_list.dart';
 import 'get_color.dart';
 import 'get_on_off_state.dart';
+import 'get_temperature.dart';
 
 final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfigGetOnOffState(),
@@ -38,6 +39,7 @@ final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor(),
   dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor(),
   dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp(),
+  dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature(),
 };
 
 String formatValue(dynamic value) {
