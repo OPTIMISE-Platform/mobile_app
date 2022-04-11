@@ -136,7 +136,6 @@ class Auth {
     _logger.d("logout");
     _loggedIn = false;
     CacheHelper.clearCache();
-    state.refreshDevices(context);
     Navigator.of(context).popUntil((route) => route.isFirst);
     state.notifyListeners();
   }
