@@ -39,6 +39,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       final deviceClasses = state.deviceClasses.values.toList(growable: false);
+      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
 
       return Scrollbar(
         child: state.deviceClasses.isEmpty
@@ -66,14 +67,15 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                               ),
                             ),
                             onTap: () {
-                              final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
                               parentState?.filter.deviceClassIds = [deviceClasses[i].id];
                               state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
                               parentState?.setState(() {
+                                parentState.hideSearch = false;
                                 parentState.onBackCallback = () {
                                   parentState.setState(() {
                                     parentState.customAppBarTitle = null;
                                     parentState.onBackCallback = null;
+                                    parentState.hideSearch = true;
                                   });
                                   setState(() => _selected = null);
                                 };

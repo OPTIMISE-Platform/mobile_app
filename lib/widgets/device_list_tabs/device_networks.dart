@@ -40,6 +40,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
+      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
       return Scrollbar(
         child: state.loadingNetworks()
             ? Center(child: PlatformCircularProgressIndicator())
@@ -69,18 +70,19 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
                                     ? null
                                     : () {
                                         _loading = true;
-                                        final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
                                         parentState?.filter.addNetwork(state.networks[i].id);
                                         state
                                             .searchDevices(
                                                 parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]), context, true)
                                             .then((_) => setState(() => _loading = true));
                                         parentState?.setState(() {
+                                          parentState.hideSearch = false;
                                           parentState.onBackCallback = () {
                                             parentState.setState(() {
                                               parentState.filter.networkIds = null;
                                               parentState.customAppBarTitle = null;
                                               parentState.onBackCallback = null;
+                                              parentState.hideSearch = true;
                                             });
                                             setState(() => _selected = null);
                                           };

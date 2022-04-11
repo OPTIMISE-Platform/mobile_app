@@ -58,6 +58,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
   Function? onBackCallback;
   String? customAppBarTitle;
+  bool hideSearch = false;
 
   final _cupertinoSearchController = RestorableTextEditingController();
 
@@ -138,22 +139,28 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
       }
       switch (i) {
         case tabDevices:
+          hideSearch = false;
           state.searchDevices(filter, context);
           break;
         case tabLocations:
+          hideSearch = true;
           state.searchDevices(filter, context);
           break;
         case tabGroups:
+          hideSearch = true;
           state.searchDevices(filter, context);
           break;
         case tabNetworks:
+          hideSearch = true;
           state.searchDevices(filter, context);
           break;
         case tabFavorites:
+          hideSearch = false;
           filter.favorites = true;
           state.searchDevices(filter, context);
           break;
         case tabClasses:
+          hideSearch = true;
           state.searchDevices(filter, context);
       }
     });
@@ -221,7 +228,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
         }
 
         List<Widget> actions = [];
-        if (_bottomBarIndex != tabGroups) {
+        if (!hideSearch) {
           actions.add(PlatformWidget(
             material: (context, __) => PlatformIconButton(
                 icon: Icon(PlatformIcons(context).search),
@@ -492,7 +499,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           appBar: appBar.getAppBar(context, actions, leadingAction),
           body: Column(children: [
             PlatformWidget(
-              cupertino: _bottomBarIndex != tabGroups
+              cupertino: !hideSearch
                   ? (_, __) => Container(
                         child: CupertinoSearchTextField(
                           onChanged: (query) => _searchChanged(query, state),

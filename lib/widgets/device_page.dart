@@ -52,7 +52,9 @@ class DevicePage extends StatelessWidget {
   );
 
   refresh(BuildContext context, AppState state) {
-    _refresh(context, state, true);
+    WidgetsBinding.instance?.addPostFrameCallback((_) async {
+      await _refresh(context, state, true);
+    });
   }
 
   _refresh(BuildContext context, AppState state, bool external) async {

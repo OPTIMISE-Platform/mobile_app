@@ -93,10 +93,12 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                                             parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context)
                                         .then((_) => setState(() => _loading = false));
                                     parentState?.setState(() {
+                                      parentState.hideSearch = false;
                                       parentState.onBackCallback = () {
                                         parentState.setState(() {
                                           parentState.customAppBarTitle = null;
                                           parentState.onBackCallback = null;
+                                          parentState.hideSearch = true;
                                         });
                                         parentState.filter.locationIds = [state.locations[i].id];
                                         state.searchDevices(parentState.filter, context);
