@@ -21,7 +21,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 
@@ -37,7 +36,7 @@ class DeviceCommandsService {
   );
 
 
-  static Future<List<DeviceCommandResponse>> runCommands(BuildContext context, AppState state, List<DeviceCommand> commands) async {
+  static Future<List<DeviceCommandResponse>> runCommands(List<DeviceCommand> commands) async {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
 
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
@@ -47,7 +46,7 @@ class DeviceCommandsService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
 
     final resp = await _client.post(uri, headers: headers, body: json.encode(commands));
 
@@ -61,9 +60,9 @@ class DeviceCommandsService {
   }
 
   /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
-  static Future<bool> runCommandsSecurely(BuildContext context, AppState state, List<DeviceCommand> commands, List<DeviceCommandResponse> responses) async {
+  static Future<bool> runCommandsSecurely(BuildContext context, List<DeviceCommand> commands, List<DeviceCommandResponse> responses) async {
     try {
-      responses.addAll(await DeviceCommandsService.runCommands(context, state, commands));
+      responses.addAll(await DeviceCommandsService.runCommands(commands));
     } on NoNetworkException {
       const err = "You are offline";
       Toast.showErrorToast(context, err);

@@ -17,10 +17,8 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
@@ -49,10 +47,10 @@ class AspectsService {
     );
   }
 
-  static Future<List<Aspect>> getAspects(BuildContext context, AppState state) async {
+  static Future<List<Aspect>> getAspects() async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-repository/aspects';
 
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));

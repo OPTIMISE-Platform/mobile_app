@@ -78,7 +78,7 @@ class Auth {
     return _client != null;
   }
 
-  static Future<void> login(BuildContext context, AppState state) async {
+  static Future<void> login(BuildContext context, AppState state, String user, String pw) async {
     await _m.protect(() async {
       state.notifyListeners();
 
@@ -99,10 +99,10 @@ class Auth {
       }
       final OpenIdIdentity? token;
       try {
-        token = await _client?.loginInteractive(context: context, title: "", popupHeight: 640, popupWidth: 480);
+        token = await _client?.loginWithPassword(userName: user, password: pw, prompts: ["none"]);
       } catch (e) {
         _logger.e("Login failed: " + e.toString());
-        return;
+        rethrow;
       }
 
       if (token != null) {
@@ -112,6 +112,7 @@ class Auth {
         await state.initMessaging();
       } else {
         _logger.w("_token null");
+        throw AuthException("token null");
       }
       return;
     });
@@ -140,15 +141,9 @@ class Auth {
     state.notifyListeners();
   }
 
-  static Future<Map<String, String>> getHeaders(BuildContext? context, AppState? state) async {
+  static Future<Map<String, String>> getHeaders() async {
     if (!tokenValid()) {
-      if (context == null || state == null) {
-        throw AuthException("Can't login without context and state");
-      }
-      await login(context, state);
-    }
-    if (!tokenValid()) {
-      throw AuthException("login error: token is null");
+      throw AuthException("Not logged in");
     }
     return {"Authorization": "Bearer " + await getToken()};
   }

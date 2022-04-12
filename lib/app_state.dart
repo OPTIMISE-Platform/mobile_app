@@ -164,7 +164,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return deviceClasses;
     }
-    for (var element in (await DeviceClassesService.getDeviceClasses(context, this))) {
+    for (var element in (await DeviceClassesService.getDeviceClasses())) {
       deviceClasses[element.id] = element;
     }
     notifyListeners();
@@ -177,7 +177,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return deviceTypesPermSearch;
     }
-    for (var element in (await DeviceTypesPermSearchService.getDeviceTypes(context, this))) {
+    for (var element in (await DeviceTypesPermSearchService.getDeviceTypes())) {
       deviceTypesPermSearch[element.id] = element;
     }
     notifyListeners();
@@ -190,7 +190,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return nestedFunctions;
     }
-    for (var element in (await FunctionsService.getNestedFunctions(context, this))) {
+    for (var element in (await FunctionsService.getNestedFunctions())) {
       nestedFunctions[element.id] = element;
     }
     notifyListeners();
@@ -199,7 +199,7 @@ class AppState extends ChangeNotifier {
 
   updateTotalDevices(BuildContext context) async {
     await _totalDevicesMutex.acquire();
-    final total = await DevicesService.getTotalDevices(context, this, _deviceSearchFilter);
+    final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
     if (total != totalDevices) {
       totalDevices = total;
       notifyListeners();
@@ -246,7 +246,7 @@ class AppState extends ChangeNotifier {
     late final List<DeviceInstance> newDevices;
     const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(context, this, limit, _deviceOffset, _deviceSearchFilter);
+      newDevices = await DevicesService.getDevices(this, limit, _deviceOffset, _deviceSearchFilter);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
@@ -278,7 +278,7 @@ class AppState extends ChangeNotifier {
     if (!force && deviceTypes.containsKey(id)) {
       return;
     }
-    final t = await DeviceTypesService.getDeviceType(context, this, id);
+    final t = await DeviceTypesService.getDeviceType(id);
     if (t == null) {
       return;
     }
@@ -307,7 +307,7 @@ class AppState extends ChangeNotifier {
     }
     List<DeviceCommandResponse> result;
     try {
-      result = await DeviceCommandsService.runCommands(context, this, commandCallbacks.map((e) => e.command).toList(growable: false));
+      result = await DeviceCommandsService.runCommands(commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
       _logger.e("failed to loadStates: currently offline");
       result = [];
@@ -347,7 +347,7 @@ class AppState extends ChangeNotifier {
     try {
       do {
         try {
-          response = await NotificationsService.getNotifications(context, this, limit, offset);
+          response = await NotificationsService.getNotifications(limit, offset);
         } catch (e) {
           _logger.e("Could not load notifications: " + e.toString());
           return;
@@ -368,13 +368,13 @@ class AppState extends ChangeNotifier {
   }
 
   updateNotifications(BuildContext context, int index) async {
-    await NotificationsService.setNotification(context, this, notifications[index]);
+    await NotificationsService.setNotification(notifications[index]);
     notifyListeners();
   }
 
   deleteNotification(BuildContext context, int index) async {
     try {
-      await NotificationsService.deleteNotifications(context, this, [notifications[index].id]);
+      await NotificationsService.deleteNotifications([notifications[index].id]);
     } catch (e) {
       _logger.e(e.toString());
       Toast.showErrorToast(context, "Could not delete notification");
@@ -385,7 +385,7 @@ class AppState extends ChangeNotifier {
 
   deleteAllNotifications(BuildContext context) async {
     try {
-      await NotificationsService.deleteNotifications(context, this, notifications.map((e) => e.id).toList(growable: false));
+      await NotificationsService.deleteNotifications(notifications.map((e) => e.id).toList(growable: false));
     } catch (e) {
       _logger.e(e.toString());
       Toast.showErrorToast(context, "Could not delete notifications");
@@ -512,7 +512,7 @@ class AppState extends ChangeNotifier {
     deviceGroups.clear();
     notifyListeners();
 
-    deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups(context, this)));
+    deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups()));
     notifyListeners();
 
     _deviceGroupsMutex.release();
@@ -531,7 +531,7 @@ class AppState extends ChangeNotifier {
     locations.clear();
     notifyListeners();
 
-    locations.addAll(await Future.wait(await LocationService.getLocations(context, this)));
+    locations.addAll(await Future.wait(await LocationService.getLocations()));
     notifyListeners();
 
     _locationsMutex.release();
@@ -550,7 +550,7 @@ class AppState extends ChangeNotifier {
     networks.clear();
     notifyListeners();
 
-    networks.addAll(await NetworksService.getNetworks(context, this));
+    networks.addAll(await NetworksService.getNetworks());
     notifyListeners();
 
     _networksMutex.release();
@@ -566,7 +566,7 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return aspects;
     }
-    for (var element in (await AspectsService.getAspects(context, this))) {
+    for (var element in (await AspectsService.getAspects())) {
       aspects[element.id] = element;
     }
     notifyListeners();

@@ -28,49 +28,56 @@ class MyAppBar {
 
   const MyAppBar(this._title);
 
+  static Widget _notifications(BuildContext context) {
+    return Consumer<AppState>(
+      builder: (_, state, __) {
+        state.initNotifications(context);
+        state.checkMessageDisplay(context);
+        final unread = state.notifications
+            .where((element) => !element.isRead)
+            .toList(growable: false)
+            .length;
+        return PlatformIconButton(
+          icon: Badge(
+            child: const Icon(Icons.notifications),
+            badgeContent: Text(unread.toString()),
+            showBadge: unread > 0,
+          ),
+          onPressed: () {
+            Navigator.push(
+              context,
+              platformPageRoute(
+                context: context,
+                builder: (context) => NotificationList(),
+              ),
+            );
+          },
+          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+        );
+      },
+    );
+  }
+
+  static Widget settings(BuildContext context) {
+    return PlatformIconButton(
+      icon: Icon(PlatformIcons(context).settings),
+      onPressed: () {
+        Navigator.push(
+          context,
+          platformPageRoute(
+            context: context,
+            builder: (context) => const Settings(),
+          ),
+        );
+      },
+      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+    );
+  }
 
   static List<Widget> getDefaultActions(BuildContext context) {
     final List<Widget> actions = [
-      Consumer<AppState>(
-        builder: (_, state, __) {
-          state.initNotifications(context);
-          state.checkMessageDisplay(context);
-          final unread = state.notifications
-              .where((element) => !element.isRead)
-              .toList(growable: false)
-              .length;
-          return PlatformIconButton(
-            icon: Badge(
-              child: const Icon(Icons.notifications),
-              badgeContent: Text(unread.toString()),
-              showBadge: unread > 0,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                platformPageRoute(
-                  context: context,
-                  builder: (context) => NotificationList(),
-                ),
-              );
-            },
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-          );
-        },
-      ),
-      PlatformIconButton(
-        icon: Icon(PlatformIcons(context).settings),
-        onPressed: () {
-          Navigator.push(
-            context,
-            platformPageRoute(
-              context: context,
-              builder: (context) => const Settings(),
-            ),
-          );
-        },
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-      )
+      _notifications(context),
+      settings(context),
     ];
     return actions;
   }

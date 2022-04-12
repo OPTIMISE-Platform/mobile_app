@@ -62,10 +62,10 @@ class FavorizeButton extends StatelessWidget {
         onPressed: () async {
           if (_stateDeviceIndex != null) {
             state.devices[_stateDeviceIndex!].toggleFavorite();
-            await DevicesService.saveDevice(context, state, state.devices[_stateDeviceIndex!]);
+            await DevicesService.saveDevice(state.devices[_stateDeviceIndex!]);
           } else {
             state.deviceGroups[_stateDeviceGroupIndex!].toggleFavorite();
-            state.deviceGroups[_stateDeviceGroupIndex!] = await DeviceGroupsService.saveDeviceGroup(context, state, state.deviceGroups[_stateDeviceGroupIndex!]);
+            state.deviceGroups[_stateDeviceGroupIndex!] = await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[_stateDeviceGroupIndex!]);
           }
           state.notifyListeners();
         },

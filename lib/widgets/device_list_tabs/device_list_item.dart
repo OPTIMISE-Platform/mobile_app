@@ -109,8 +109,7 @@ class DeviceListItem extends StatelessWidget {
                               element.transitioning = true;
                               state.notifyListeners();
                               final List<DeviceCommandResponse> responses = [];
-                              if (!await DeviceCommandsService.runCommandsSecurely(
-                                  context, state, [controllingStates.first.toCommand()], responses)) {
+                              if (!await DeviceCommandsService.runCommandsSecurely(context, [controllingStates.first.toCommand()], responses)) {
                                 element.transitioning = false;
                                 state.notifyListeners();
                                 return;
@@ -123,7 +122,7 @@ class DeviceListItem extends StatelessWidget {
                                 return;
                               }
                               responses.clear();
-                              if (!await DeviceCommandsService.runCommandsSecurely(context, state, [element.toCommand()], responses)) {
+                              if (!await DeviceCommandsService.runCommandsSecurely(context, [element.toCommand()], responses)) {
                                 element.transitioning = false;
                                 state.notifyListeners();
                                 return;

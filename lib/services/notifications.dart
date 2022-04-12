@@ -20,14 +20,11 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/cache_helper.dart';
-import 'package:http/http.dart' as http;
-
 
 import '../exceptions/no_network_exception.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
@@ -59,14 +56,14 @@ class NotificationsService {
     _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<app.NotificationResponse?> getNotifications(BuildContext? context, AppState state, int limit, int offset) async {
+  static Future<app.NotificationResponse?> getNotifications(int limit, int offset) async {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
 
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final resp = await _dio!.get<Map<String, dynamic>>(uri,
         options: Options(headers: headers));
@@ -84,7 +81,7 @@ class NotificationsService {
     return app.NotificationResponse.fromJson(resp.data!);
   }
 
-  static Future setNotification(BuildContext context, AppState state, app.Notification notification) async {
+  static Future setNotification( app.Notification notification) async {
     final url = (dotenv.env["API_URL"] ?? 'localhost') +
         '/notifications-v2/notifications/' + notification.id;
 
@@ -92,7 +89,7 @@ class NotificationsService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
 
     final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
 
@@ -102,7 +99,7 @@ class NotificationsService {
     }
   }
 
-  static Future deleteNotifications(BuildContext context, AppState state, List<String> ids) async {
+  static Future deleteNotifications(List<String> ids) async {
     final url = (dotenv.env["API_URL"] ?? 'localhost') +
         '/notifications-v2/notifications';
 
@@ -110,7 +107,7 @@ class NotificationsService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
 
     final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
 

@@ -19,10 +19,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
@@ -54,13 +52,13 @@ class DeviceGroupsService {
     _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<Future<DeviceGroup>>> getDeviceGroups(BuildContext context, AppState state) async {
+  static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/permissions/query/v3/resources/device-groups';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final resp = await _dio!.get<List<dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
@@ -77,14 +75,14 @@ class DeviceGroupsService {
     return groups.map((e) => e.initImage()).toList(growable: false);
   }
 
-  static Future<DeviceGroup> saveDeviceGroup(BuildContext context, AppState state, DeviceGroup group) async {
+  static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group) async {
     _logger.d("Saving device group: " + group.id);
 
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
 
     final encoded = json.encode(group.toJson());
 
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
 

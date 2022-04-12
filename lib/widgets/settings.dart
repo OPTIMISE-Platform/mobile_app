@@ -161,7 +161,8 @@ class Settings extends StatelessWidget {
                         stream: stream,
                         initialData: 0,
                         builder: (context, snapshot) => PlatformDialogAction(
-                            child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'), onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
+                            child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'),
+                            onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
                   ],
                 ),
               );
@@ -171,33 +172,37 @@ class Settings extends StatelessWidget {
       ]);
     }
 
-    children.addAll([
-      const Divider(),
-      Consumer<AppState>(
-        builder: (context, state, child) => ListTile(
-          title: const Text("Logout"),
-          onTap: () async {
-            Navigator.push(
-                context,
-                platformPageRoute(
-                  context: context,
-                  builder: (context) => const PageSpinner("Logout"),
-                ));
-            try {
-              await Auth.logout(context, state);
-            } catch (e) {
-              Toast.showErrorToast(context, "Can't logout");
-            }
-          },
-        ),
-      )
-    ]);
+    return Consumer<AppState>(builder: (context, state, _) {
+      if (state.loggedIn()) {
+        children.addAll([
+          const Divider(),
+          Consumer<AppState>(
+            builder: (context, state, child) => ListTile(
+              title: const Text("Logout"),
+              onTap: () async {
+                Navigator.push(
+                    context,
+                    platformPageRoute(
+                      context: context,
+                      builder: (context) => const PageSpinner("Logout"),
+                    ));
+                try {
+                  await Auth.logout(context, state);
+                } catch (e) {
+                  Toast.showErrorToast(context, "Can't logout");
+                }
+              },
+            ),
+          )
+        ]);
+      }
 
-    return PlatformScaffold(
-      appBar: appBar.getAppBar(context),
-      body: ListView(
-        children: children,
-      ),
-    );
+      return PlatformScaffold(
+        appBar: appBar.getAppBar(context),
+        body: ListView(
+          children: children,
+        ),
+      );
+    });
   }
 }

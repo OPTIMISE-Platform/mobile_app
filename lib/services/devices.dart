@@ -19,17 +19,16 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import '../models/device_search_filter.dart';
 import 'auth.dart';
-import '../exceptions/unexpected_status_code_exception.dart';
 
 class DevicesService {
   static final _logger = Logger(
@@ -60,10 +59,10 @@ class DevicesService {
       ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<DeviceInstance>> getDevices(BuildContext context, AppState state,
+  static Future<List<DeviceInstance>> getDevices(AppState state,
   int limit, int offset, DeviceSearchFilter filter) async {
     late Response<List<dynamic>?> resp;
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
 
     final body = filter.toBody(limit, offset, state);
@@ -86,14 +85,14 @@ class DevicesService {
         l.length, (index) => DeviceInstance.fromJson(l[index]));
   }
 
-  static Future<void> saveDevice(BuildContext context, AppState state, DeviceInstance device) async {
+  static Future<void> saveDevice(DeviceInstance device) async {
     _logger.d("Saving device: " + device.id);
 
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/devices/' + device.id + "?update-only-same-origin-attributes=" + appOrigin;
 
     final encoded = json.encode(device.toJson());
 
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
 
@@ -105,8 +104,7 @@ class DevicesService {
   }
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
-  static Future<int> getTotalDevices(
-      BuildContext context, AppState state, DeviceSearchFilter filter) async {
+  static Future<int> getTotalDevices(DeviceSearchFilter filter) async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/permissions/query/v3/total/devices';
 
@@ -114,7 +112,7 @@ class DevicesService {
     if (filter.query.isNotEmpty) {
       queryParameters["search"] = filter.query;
     }
-    final headers = await Auth.getHeaders(context, state);
+    final headers = await Auth.getHeaders();
     await initOptions();
     final resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
 
