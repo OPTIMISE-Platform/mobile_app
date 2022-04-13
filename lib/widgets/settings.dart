@@ -14,7 +14,12 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/main.dart';
@@ -25,6 +30,7 @@ import 'package:mobile_app/widgets/page_spinner.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../app_state.dart';
 import '../exceptions/no_network_exception.dart';
@@ -173,6 +179,56 @@ class Settings extends StatelessWidget {
     }
 
     return Consumer<AppState>(builder: (context, state, _) {
+      children.addAll([
+        const Divider(),
+        ListTile(
+            title: const Text("Show Debug Information"),
+            onTap: () {
+              final txt = "Version: " +
+                  dotenv.env["VERSION"].toString() +
+                  "\n" +
+                  "Username: " +
+                  Auth.getUsername().toString() +
+                  "\n" +
+                  "FCM Token (SHA1): " +
+                  sha1.convert(utf8.encode(state.fcmToken ?? "")).toString();
+              showPlatformDialog(
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                  title: Row(children: [
+                    const Text("Debug"),
+                    const Spacer(),
+                    PlatformIconButton(
+                        icon: Icon(PlatformIcons(context).share),
+                        onPressed: () => Share.share("OPTIMISE Debug Information\n" + txt, subject: "OPTIMISE Debug Information"))
+                  ]),
+                  content: Text(
+                    txt,
+                    textAlign: TextAlign.left,
+                  ),
+                  actions: [
+                    PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              );
+            })
+      ]);
+
+      if (kDebugMode) {
+        children.addAll([
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.bug_report),
+            title: const Text("Delete FCM Token"),
+            onTap: () async {
+              await state.messaging.deleteToken();
+              await state.messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
+              Toast.showConfirmationToast(context, "OK");
+            },
+          ),
+        ]);
+      }
+
       if (state.loggedIn()) {
         children.addAll([
           const Divider(),

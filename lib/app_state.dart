@@ -88,6 +88,7 @@ class AppState extends ChangeNotifier {
 
   FirebaseMessaging messaging = FirebaseMessaging.instance;
   String? fcmToken;
+  final _fcmTokenMutex = Mutex();
 
   bool _initialized = false;
 
@@ -207,8 +208,7 @@ class AppState extends ChangeNotifier {
     _totalDevicesMutex.release();
   }
 
-  Future searchDevices(DeviceSearchFilter filter, BuildContext context,
-      [bool force = false]) async {
+  Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false]) async {
     if (!force && _deviceSearchFilter == filter) {
       return;
     }
@@ -270,6 +270,7 @@ class AppState extends ChangeNotifier {
   bool get loadingDevices {
     return _devicesMutex.isLocked;
   }
+
   bool get allDevicesLoaded {
     return _allDevicesLoaded;
   }
@@ -409,7 +410,11 @@ class AppState extends ChangeNotifier {
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
     fcmToken = await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
-    _handleFcmTokenRefresh(null);
+    if (fcmToken == null) {
+      _logger.e("fcmToken null");
+    } else {
+      _handleFcmTokenRefresh(fcmToken!);
+    }
     _handleMessageInteraction(await messaging.getInitialMessage());
   }
 
@@ -423,26 +428,33 @@ class AppState extends ChangeNotifier {
     _messageIdToDisplay = app.Notification.fromJson(json.decode(message.data["payload"])).id;
   }
 
-  _handleFcmTokenRefresh(String? oldToken) async {
-    if (oldToken != null) {
-      try {
-        await FcmTokenService.deregisterFcmToken(oldToken);
-      } catch (e) {
-        _logger.e("Could not deregister FCM: " + e.toString());
+  _handleFcmTokenRefresh(String token) async {
+    _fcmTokenMutex.protect(() async {
+      if (fcmToken == token) {
+        _logger.d("FCM token unchanged");
+        return;
       }
-    }
+      if (fcmToken != null) {
+        try {
+          await FcmTokenService.deregisterFcmToken(fcmToken!);
+        } catch (e) {
+          _logger.e("Could not deregister FCM: " + e.toString());
+        }
+      }
+      fcmToken = token;
 
-    _logger.d("firebase token: " + fcmToken.toString());
-    if (fcmToken != null) {
-      try {
-        await FcmTokenService.registerFcmToken(fcmToken!);
-        if (!kIsWeb) messaging.subscribeToTopic("announcements");
-      } catch (e) {
-        _logger.e("Could not setup FCM: " + e.toString());
+      _logger.d("firebase token: " + fcmToken.toString());
+      if (fcmToken != null) {
+        try {
+          await FcmTokenService.registerFcmToken(fcmToken!);
+          if (!kIsWeb) messaging.subscribeToTopic("announcements");
+        } catch (e) {
+          _logger.e("Could not setup FCM: " + e.toString());
+        }
+      } else {
+        _logger.e("FCM token is null");
       }
-    } else {
-      _logger.e("FCM token is null");
-    }
+    });
   }
 
   _handleRemoteMessage(RemoteMessage message) {
@@ -572,8 +584,10 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     _aspectsMutex.release();
   }
-  
+
   onLogout() async {
+    await messaging.deleteToken();
+    fcmToken = null;
     await _storage.delete(key: messageKey);
     _initialized = false;
     deviceClasses.clear();

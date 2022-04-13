@@ -130,13 +130,13 @@ class Auth {
     if (state.fcmToken != null) {
       await FcmTokenService.deregisterFcmToken(state.fcmToken!);
     }
+    await CacheHelper.clearCache();
+    await state.onLogout();
     await _client?.logoutToken();
     await OpenIdIdentity.clear(); // remove saved token
-    await state.onLogout();
 
     _logger.d("logout");
     _loggedIn = false;
-    CacheHelper.clearCache();
     Navigator.of(context).popUntil((route) => route.isFirst);
     state.notifyListeners();
   }
@@ -165,5 +165,9 @@ class Auth {
       return token.accessToken;
     }
     return "";
+  }
+
+  static String? getUsername() {
+    return _client?.identity?.userName;
   }
 }
