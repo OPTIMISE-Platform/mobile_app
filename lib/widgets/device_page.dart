@@ -222,7 +222,7 @@ class DevicePage extends StatelessWidget {
     // refresh changed measurements
     state.notifyListeners();
     responses.clear();
-    if (!await DeviceCommandsService.runCommandsSecurely(context, commandCallbacks.map((e) => e.command).toList(growable: false), responses)) {
+    if (!await DeviceCommandsService.runCommandsSecurely(context, commandCallbacks.map((e) => e.command).toList(growable: false), responses, false)) {
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }

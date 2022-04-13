@@ -35,13 +35,13 @@ class DeviceCommandsService {
     printer: SimplePrinter(),
   );
 
-
-  static Future<List<DeviceCommandResponse>> runCommands(List<DeviceCommand> commands) async {
+  static Future<List<DeviceCommandResponse>> runCommands(List<DeviceCommand> commands, [bool preferEventValue = true]) async {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
 
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
-    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/device-command/commands/batch?timeout=25s&prefer_event_value=true';
+    final url =
+        (dotenv.env["API_URL"] ?? 'localhost') + '/device-command/commands/batch?timeout=25s&prefer_event_value=' + preferEventValue.toString();
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
@@ -60,9 +60,10 @@ class DeviceCommandsService {
   }
 
   /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
-  static Future<bool> runCommandsSecurely(BuildContext context, List<DeviceCommand> commands, List<DeviceCommandResponse> responses) async {
+  static Future<bool> runCommandsSecurely(BuildContext context, List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
+      [bool preferEventValue = true]) async {
     try {
-      responses.addAll(await DeviceCommandsService.runCommands(commands));
+      responses.addAll(await DeviceCommandsService.runCommands(commands, preferEventValue));
     } on NoNetworkException {
       const err = "You are offline";
       Toast.showErrorToast(context, err);
