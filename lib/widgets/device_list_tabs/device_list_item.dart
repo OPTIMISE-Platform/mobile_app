@@ -153,7 +153,7 @@ class DeviceListItem extends StatelessWidget {
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: MyTheme.insetSize),
               position: BadgePosition.topEnd(),
-              child: Text(device.name),
+              child: Text(device.displayName),
               badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
               showBadge: connectionStatus == DeviceConnectionStatus.offline,
               badgeColor: Colors.transparent,

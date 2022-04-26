@@ -34,6 +34,7 @@ enum DeviceConnectionStatus {
 }
 
 const attributeFavorite = appOrigin + "/" + "favorite";
+const attributeNickname = appOrigin + "/" + "nickname";
 
 @JsonSerializable()
 class DeviceInstance {
@@ -41,12 +42,21 @@ class DeviceInstance {
   List<Attribute>? attributes;
   Annotations? annotations;
   bool shared;
+  @JsonKey(ignore: true)
+  String? _nickname;
 
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
 
   DeviceInstance(this.id, this.local_id, this.name, this.attributes,
-      this.device_type_id, this.annotations, this.shared, this.creator);
+      this.device_type_id, this.annotations, this.shared, this.creator) {
+    for (final attr in attributes ?? <Attribute>[]) {
+      if (attr.key == attributeNickname) {
+        _nickname = attr.value;
+        break;
+      }
+    }
+  }
 
 
   factory DeviceInstance.fromJson(Map<String, dynamic> json) =>
@@ -125,6 +135,19 @@ class DeviceInstance {
     } else {
       return DeviceConnectionStatus.offline;
     }
+  }
+
+  String get displayName => _nickname ?? name;
+
+  setNickname(String val) {
+      _nickname = val;
+      final i = attributes?.indexWhere((element) => element.key == attributeNickname);
+      if (i != null && i != -1) {
+        attributes![i].value = val;
+      } else {
+        attributes ??= [];
+        attributes!.add(Attribute(attributeNickname, val, appOrigin));
+      }
   }
 
   _addStateFromContentVariable(

@@ -34,6 +34,7 @@ import '../app_state.dart';
 import '../models/device_command_response.dart';
 import '../models/device_instance.dart';
 import '../services/device_commands.dart';
+import '../services/devices.dart';
 import '../theme.dart';
 import '../util/keyed_list.dart';
 
@@ -303,12 +304,46 @@ class DevicePage extends StatelessWidget {
       }
 
       final connectionStatus = device?.getConnectionStatus();
-      final _appBar = MyAppBar(device?.name ?? deviceGroup!.name);
+      final _appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
       if (state.devices.isEmpty) {
         state.loadDevices(context);
       }
       List<Widget> appBarActions = [];
 
+      if (device != null) {
+        appBarActions.add(PlatformIconButton(
+          onPressed: () async {
+            final oldName = device.displayName;
+            final newName = await showPlatformDialog(
+                context: context,
+                builder: (_) {
+                  final controller = TextEditingController(text: device.displayName);
+                  return PlatformAlertDialog(
+                    title: Text(
+                      "Rename " + device.displayName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    content: PlatformTextFormField(controller: controller),
+                    actions: <Widget>[
+                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                    ],
+                  );
+                });
+            if (newName == null) return;
+            device.setNickname(newName);
+            try {
+              await DevicesService.saveDevice(state.devices[_stateDeviceIndex!]);
+              state.notifyListeners();
+            } catch(e) {
+              Toast.showErrorToast(context, "Could not update device name");
+              device.setNickname(oldName);
+            }
+          },
+          icon: Icon(PlatformIcons(context).edit),
+          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+        ));
+      }
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
           onPressed: () => _refresh(context, state, false),
@@ -456,7 +491,8 @@ class DevicePage extends StatelessWidget {
       final List<Widget> trailingHeader = [];
 
       if (connectionStatus == DeviceConnectionStatus.offline) {
-        trailingHeader.add(Tooltip(message: "Device is offline", triggerMode: TooltipTriggerMode.tap,child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+        trailingHeader.add(Tooltip(
+            message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
         trailingHeader.add(FavorizeButton(_stateDeviceIndex!, null));
@@ -493,7 +529,7 @@ class DevicePage extends StatelessWidget {
                   ),
                   subtitle: device != null
                       ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
-                      : ExpandableText(state.devices.map((e) => e.name).join("\n"), 3),
+                      : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
                   trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
                 ),
                 Container(
