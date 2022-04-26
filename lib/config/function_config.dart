@@ -113,7 +113,7 @@ class FunctionConfigDefault implements FunctionConfig {
                       },
                       max: characteristic.max_value!,
                       min: characteristic.min_value!,
-                      value: value is double ? value : characteristic.min_value!,
+                      value: value is double ? value : value is int ? value.toDouble() : characteristic.min_value!,
                     )),
                 Text(value is double ? (value as double).toStringAsFixed(2) : value?.toString() ?? characteristic.min_value!.toString()),
               ]);
