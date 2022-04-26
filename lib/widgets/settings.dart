@@ -45,140 +45,141 @@ class Settings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const appBar = MyAppBar("Settings");
-    final appUpdater = AppUpdater();
-    final List<Widget> children = [
-      ListTile(
-        title: const Text("Switch Style"),
-        onTap: () => MyTheme.toggleTheme(context),
-      ),
-      const Divider(),
-      ListTile(
-        title: const Text("Clear Cache"),
-        onTap: () async {
-          await CacheHelper.clearCache();
-          Toast.showConfirmationToast(context, "Cache cleared, please restart App");
-        },
-      ),
-    ];
-
-    if (MyTheme.canChangeColorTheme) {
-      children.addAll([
-        const Divider(),
-        ListTile(
-          title: const Text("Choose Color"),
-          onTap: () => showPlatformDialog(
-              context: context,
-              builder: (context) => PlatformAlertDialog(
-                    title: const Text("Choose Color"),
-                    actions: [
-                      PlatformDialogAction(
-                        child: PlatformText('Cancel'),
-                        onPressed: () => Navigator.pop(context, false),
-                      ),
-                      PlatformDialogAction(
-                          child: PlatformText('System Default'),
-                          onPressed: () async {
-                            await MyTheme.selectThemeColor(null);
-                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                            Navigator.pop(context);
-                          }),
-                      PlatformDialogAction(
-                          child: PlatformText('Dark'),
-                          onPressed: () async {
-                            await MyTheme.selectThemeColor(dark);
-                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                            Navigator.pop(context);
-                          }),
-                      PlatformDialogAction(
-                          child: PlatformText('Light'),
-                          onPressed: () async {
-                            await MyTheme.selectThemeColor(light);
-                            (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                            Navigator.pop(context);
-                          })
-                    ],
-                  )),
-        )
-      ]);
-    }
-
-    if (appUpdater.updateSupported) {
-      children.addAll([
-        const Divider(),
-        ListTile(
-          title: const Text("Check Updates"),
-          onTap: () async {
-            late final bool updateAvailable;
-            try {
-              updateAvailable = await appUpdater.updateAvailable();
-            } on NoNetworkException {
-              Toast.showWarningToast(context, "Currently offline");
-              return;
-            } catch (e) {
-              Toast.showErrorToast(context, "Error checking for updates");
-              return;
-            }
-            if (!updateAvailable) {
-              Toast.showConfirmationToast(context, "Already up to date!");
-              return;
-            } else {
-              final proceed = await showPlatformDialog(
-                  context: context,
-                  builder: (context) => PlatformAlertDialog(
-                        title: const Text("Update now?"),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text("Current Build: " + appUpdater.currentBuild.toString()),
-                            Text("Latest Build: " + appUpdater.latestBuild.toString()),
-                            Text("Uploaded: " + _format.format(appUpdater.updateDate.toLocal())),
-                            Text("Download size: " + (appUpdater.downloadSize / 1000000.0).toStringAsFixed(1) + " MB"),
-                          ],
-                        ),
-                        actions: [
-                          PlatformDialogAction(
-                            child: PlatformText('Cancel'),
-                            onPressed: () => Navigator.pop(context, false),
-                          ),
-                          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true))
-                        ],
-                      ));
-              if (proceed != true) {
-                return;
-              }
-              final stream = appUpdater.downloadUpdate().asBroadcastStream();
-              stream.listen(null, onDone: () => OpenFile.open(appUpdater.localFile));
-              await showPlatformDialog(
-                context: context,
-                builder: (context) => PlatformAlertDialog(
-                  title: const Text("Update"),
-                  content: StreamBuilder<double>(
-                      stream: stream,
-                      initialData: 0,
-                      builder: (context, snapshot) {
-                        return Column(mainAxisSize: MainAxisSize.min, children: [
-                          LinearProgressIndicator(value: snapshot.data! / 100),
-                          Text(snapshot.data!.toStringAsFixed(2) + " %"),
-                        ]);
-                      }),
-                  actions: [
-                    StreamBuilder<double>(
-                        stream: stream,
-                        initialData: 0,
-                        builder: (context, snapshot) => PlatformDialogAction(
-                            child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'),
-                            onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
-                  ],
-                ),
-              );
-            }
-          },
-        ),
-      ]);
-    }
 
     return Consumer<AppState>(builder: (context, state, _) {
+      final appUpdater = AppUpdater();
+
+      final List<Widget> children = [
+        ListTile(
+          title: const Text("Switch Style"),
+          onTap: () => MyTheme.toggleTheme(context),
+        ),
+        const Divider(),
+        ListTile(
+          title: const Text("Clear Cache"),
+          onTap: () async {
+            await CacheHelper.clearCache();
+            Toast.showConfirmationToast(context, "Cache cleared, please restart App");
+          },
+        ),
+      ];
+
+      if (MyTheme.canChangeColorTheme) {
+        children.addAll([
+          const Divider(),
+          ListTile(
+            title: const Text("Choose Color"),
+            onTap: () => showPlatformDialog(
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                  title: const Text("Choose Color"),
+                  actions: [
+                    PlatformDialogAction(
+                      child: PlatformText('Cancel'),
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                    PlatformDialogAction(
+                        child: PlatformText('System Default'),
+                        onPressed: () async {
+                          await MyTheme.selectThemeColor(null);
+                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                          Navigator.pop(context);
+                        }),
+                    PlatformDialogAction(
+                        child: PlatformText('Dark'),
+                        onPressed: () async {
+                          await MyTheme.selectThemeColor(dark);
+                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                          Navigator.pop(context);
+                        }),
+                    PlatformDialogAction(
+                        child: PlatformText('Light'),
+                        onPressed: () async {
+                          await MyTheme.selectThemeColor(light);
+                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                          Navigator.pop(context);
+                        })
+                  ],
+                )),
+          )
+        ]);
+      }
+
+      if (appUpdater.updateSupported) {
+        children.addAll([
+          const Divider(),
+          ListTile(
+            title: const Text("Check Updates"),
+            onTap: () async {
+              late final bool updateAvailable;
+              try {
+                updateAvailable = await appUpdater.updateAvailable();
+              } on NoNetworkException {
+                Toast.showWarningToast(context, "Currently offline");
+                return;
+              } catch (e) {
+                Toast.showErrorToast(context, "Error checking for updates");
+                return;
+              }
+              if (!updateAvailable) {
+                Toast.showConfirmationToast(context, "Already up to date!");
+                return;
+              } else {
+                final proceed = await showPlatformDialog(
+                    context: context,
+                    builder: (context) => PlatformAlertDialog(
+                      title: const Text("Update now?"),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Current Build: " + appUpdater.currentBuild.toString()),
+                          Text("Latest Build: " + appUpdater.latestBuild.toString()),
+                          Text("Uploaded: " + _format.format(appUpdater.updateDate.toLocal())),
+                          Text("Download size: " + (appUpdater.downloadSize / 1000000.0).toStringAsFixed(1) + " MB"),
+                        ],
+                      ),
+                      actions: [
+                        PlatformDialogAction(
+                          child: PlatformText('Cancel'),
+                          onPressed: () => Navigator.pop(context, false),
+                        ),
+                        PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true))
+                      ],
+                    ));
+                if (proceed != true) {
+                  return;
+                }
+                final stream = appUpdater.downloadUpdate().asBroadcastStream();
+                stream.listen(null, onDone: () => OpenFile.open(appUpdater.localFile));
+                await showPlatformDialog(
+                  context: context,
+                  builder: (context) => PlatformAlertDialog(
+                    title: const Text("Update"),
+                    content: StreamBuilder<double>(
+                        stream: stream,
+                        initialData: 0,
+                        builder: (context, snapshot) {
+                          return Column(mainAxisSize: MainAxisSize.min, children: [
+                            LinearProgressIndicator(value: snapshot.data! / 100),
+                            Text(snapshot.data!.toStringAsFixed(2) + " %"),
+                          ]);
+                        }),
+                    actions: [
+                      StreamBuilder<double>(
+                          stream: stream,
+                          initialData: 0,
+                          builder: (context, snapshot) => PlatformDialogAction(
+                              child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'),
+                              onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
+                    ],
+                  ),
+                );
+              }
+            },
+          ),
+        ]);
+      }
       children.addAll([
         const Divider(),
         ListTile(
