@@ -45,7 +45,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
         child: state.loadingNetworks()
             ? Center(child: PlatformCircularProgressIndicator())
             : state.networks.isEmpty
-                ? Center(child: Text("No Networks"))
+                ? const Center(child: Text("No Networks"))
                 : _selected == null
                     ? ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),

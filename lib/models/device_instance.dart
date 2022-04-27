@@ -74,11 +74,11 @@ class DeviceInstance {
     for (final service in deviceType.services) {
       for (final output in service.outputs ?? []) {
         _addStateFromContentVariable(
-          service, output.content_variable, false);
+          service, output.content_variable, false, "");
       }
 
       for (final input in service.inputs ?? []) {
-        _addStateFromContentVariable(service, input.content_variable, true);
+        _addStateFromContentVariable(service, input.content_variable, true, "");
       }
     }
   }
@@ -151,13 +151,14 @@ class DeviceInstance {
   }
 
   _addStateFromContentVariable(
-      Service service, ContentVariable contentVariable, bool isInput) async {
+      Service service, ContentVariable contentVariable, bool isInput, String parentPath) async {
+    final path = parentPath + (parentPath.isEmpty ? "" : ".") + (contentVariable.name ?? "");
     if (contentVariable.function_id != null) {
       states.add(DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!,
-          contentVariable.aspect_id, isInput, null, null, id));
+          contentVariable.aspect_id, isInput, null, null, id, path));
     }
     contentVariable.sub_content_variables?.forEach(
-        (element) => _addStateFromContentVariable(service, element, isInput));
+        (element) => _addStateFromContentVariable(service, element, isInput, path));
   }
 }
 

@@ -113,7 +113,7 @@ class DeviceGroup {
               element.deviceClassId == criterion.device_class_id) ==
           -1) {
         states.add(DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
-            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null));
+            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null));
       }
     }
   }

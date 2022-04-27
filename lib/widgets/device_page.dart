@@ -25,6 +25,7 @@ import 'package:mobile_app/exceptions/argument_exception.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
+import 'package:mobile_app/widgets/chart.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:mobile_app/widgets/util/expandable_text.dart';
 import 'package:mobile_app/widgets/util/favorize_button.dart';
@@ -377,6 +378,10 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
+                onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+                  context: context,
+                  builder: (context) => Chart(element),
+                )),
                 title: Text(getTitle(element, state)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: Container(
@@ -397,6 +402,10 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
+                onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+                  context: context,
+                  builder: (context) => Chart(element),
+                )),
                 title: Text(getTitle(element, state)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
@@ -442,6 +451,10 @@ class DevicePage extends StatelessWidget {
           element.functionId,
           ListTile(
             title: Text(getTitle(element, state)),
+            onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+              context: context,
+              builder: (context) => Chart(element),
+            )),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
                 ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())

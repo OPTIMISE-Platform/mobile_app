@@ -21,9 +21,9 @@ class DeviceState {
   dynamic value;
   String functionId;
   bool isControlling, transitioning = false;
-  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId;
+  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path;
 
-  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId, this.deviceId);
+  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId, this.deviceId, this.path);
 
   DeviceCommand toCommand([dynamic value]) {
     return DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value);
