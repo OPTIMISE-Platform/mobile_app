@@ -46,7 +46,7 @@ dependencies:
   mutex: ^3.0.0
   openidconnect:
     git:
-      url: git://github.com/tahiti-web-design/openidconnect_flutter
+      url: https://github.com/tahiti-web-design/openidconnect_flutter
       path: openidconnect
       ref: feat/keycloak-logout-support
   connectivity_plus: ^2.2.1

@@ -42,14 +42,23 @@ final Map<String?, FunctionConfig> functionConfigs = {
   dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature(),
 };
 
+String roundNumbersString(dynamic value) {
+  const fractionDigits = 2;
+  if (value is num && fractionDigits >= 0) {
+    //toStringAsFixed to get a set number of fraction digits; regexp to remove trailing zeros
+    return value.toStringAsFixed(fractionDigits).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "");
+  }
+  return value.toString();
+}
+
 String formatValue(dynamic value) {
   return (value is List && value.isNotEmpty
       ? value.every((e) => e == value[0])
-          ? value[0].toString()
+          ? roundNumbersString(value[0])
           : value[0] is num
-              ? minList(value).toString() + " - " + maxList(value).toString()
+              ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
               : "-"
-      : value == null || (value is List && value.isEmpty) ? "-" : value.toString());
+      : value == null || (value is List && value.isEmpty) ? "-" : roundNumbersString(value));
 }
 
 abstract class FunctionConfig {

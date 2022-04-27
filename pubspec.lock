@@ -603,7 +603,7 @@ packages:
       path: openidconnect
       ref: "feat/keycloak-logout-support"
       resolved-ref: "0cdd528dfd81b0a3f5ba4ee30f82a589e209c8f9"
-      url: "git://github.com/tahiti-web-design/openidconnect_flutter"
+      url: "https://github.com/tahiti-web-design/openidconnect_flutter"
     source: git
     version: "1.0.21"
   openidconnect_platform_interface:
