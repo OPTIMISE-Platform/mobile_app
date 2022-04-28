@@ -81,8 +81,9 @@ class _ChartState extends State<Chart> {
       try {
         data = await DbQueryService.query(DbQuery(null, _state.deviceId, _state.serviceId, _getGroupTime(range), null, null, null,
             QueriesRequestElementTime(_getTime(range), null, null), [QueriesRequestElementColumn(_state.path!, _aggregation, null)], null));
-      } catch (_) {
+      } catch (e) {
         Toast.showErrorToast(context, "Could not load data");
+        _logger.e(e);
         if (_spots == null) Navigator.pop(context);
 
         setState(() {
@@ -256,7 +257,7 @@ class _ChartState extends State<Chart> {
         body: _spots == null
             ? Center(child: PlatformCircularProgressIndicator())
             : Container(
-                padding: MyTheme.inset,
+                padding: const EdgeInsets.only(left: MyTheme.insetSize, right: MyTheme.insetSize, top: MyTheme.insetSize),
                 child: LineChart(
                   LineChartData(
                     borderData: FlBorderData(show: false),
@@ -288,7 +289,7 @@ class _ChartState extends State<Chart> {
                                 return const SizedBox.shrink();
                               }
                               final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                              return Text(_range < 4 ? _HHMMformat.format(dt) : _EHHMMformat.format(dt));
+                              return Center(child: Text(_range < 4 ? _HHMMformat.format(dt) : _EHHMMformat.format(dt)));
                             }),
                       ),
                       leftTitles: AxisTitles(
@@ -303,6 +304,7 @@ class _ChartState extends State<Chart> {
                             }),
                       ),
                     ),
+                    lineTouchData: LineTouchData(touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
                   ),
                   swapAnimationDuration: const Duration(milliseconds: 400),
                 )));

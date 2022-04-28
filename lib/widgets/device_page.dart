@@ -378,7 +378,7 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+                onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
                   context: context,
                   builder: (context) => Chart(element),
                 )),
@@ -402,7 +402,7 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+                onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
                   context: context,
                   builder: (context) => Chart(element),
                 )),
@@ -451,7 +451,7 @@ class DevicePage extends StatelessWidget {
           element.functionId,
           ListTile(
             title: Text(getTitle(element, state)),
-            onLongPress: device == null ? null : () =>  Navigator.push(context,  platformPageRoute(
+            onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
               context: context,
               builder: (context) => Chart(element),
             )),
