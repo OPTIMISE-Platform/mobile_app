@@ -17,10 +17,8 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/attribute.dart';
-import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
-import 'package:mobile_app/models/service.dart';
 
 import '../exceptions/argument_exception.dart';
 import 'device_command.dart';
@@ -71,16 +69,7 @@ class DeviceInstance {
     if (deviceType.id != device_type_id) {
       throw ArgumentException("device type has wrong id");
     }
-    for (final service in deviceType.services) {
-      for (final output in service.outputs ?? []) {
-        _addStateFromContentVariable(
-          service, output.content_variable, false, "");
-      }
-
-      for (final input in service.inputs ?? []) {
-        _addStateFromContentVariable(service, input.content_variable, true, "");
-      }
-    }
+    states.addAll(StateHelper.getStates(deviceType, id));
   }
 
   List<CommandCallback> getStateFillFunctions([List<String>? limitToFunctionIds]) {
@@ -148,17 +137,6 @@ class DeviceInstance {
         attributes ??= [];
         attributes!.add(Attribute(attributeNickname, val, appOrigin));
       }
-  }
-
-  _addStateFromContentVariable(
-      Service service, ContentVariable contentVariable, bool isInput, String parentPath) async {
-    final path = parentPath + (parentPath.isEmpty ? "" : ".") + (contentVariable.name ?? "");
-    if (contentVariable.function_id != null) {
-      states.add(DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!,
-          contentVariable.aspect_id, isInput, null, null, id, path));
-    }
-    contentVariable.sub_content_variables?.forEach(
-        (element) => _addStateFromContentVariable(service, element, isInput, path));
   }
 }
 
