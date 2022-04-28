@@ -21,8 +21,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:hive/hive.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:mobile_app/services/settings.dart';
+
 
 typedef ThemeStyle = String;
 
@@ -110,22 +110,13 @@ class MyTheme {
     return currentColor == dark;
   }
 
-  static const _hiveBoxName = "theme.box";
-  static const _storageKeyTheme = "theme";
-  static const _storageKeyColor = "color";
-  static late LazyBox<ThemeStyle> _hiveBox;
 
   static TargetPlatform initialPlatform = kIsWeb ? TargetPlatform.android : Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
   static ThemeStyle currentTheme = kIsWeb ? themeMaterial : Platform.isIOS ? themeCupertino : themeMaterial;
   static ThemeStyle currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
 
   static loadTheme() async {
-    if (!kIsWeb) {
-      Hive.init((await getApplicationDocumentsDirectory()).path + "/" + _hiveBoxName);
-    }
-
-    _hiveBox = await Hive.openLazyBox<ThemeStyle>(_hiveBoxName);
-    var val = await _hiveBox.get(_storageKeyTheme);
+    var val = Settings.getTheme();
     if (val == themeMaterial) {
       initialPlatform = TargetPlatform.android;
       currentTheme = themeMaterial;
@@ -134,7 +125,7 @@ class MyTheme {
       currentTheme = themeCupertino;
     }
 
-    val = await _hiveBox.get(_storageKeyColor);
+    val = Settings.getThemeColor();
     if (val == dark) {
       currentColor = dark;
     } else if (val == light) {
@@ -154,23 +145,17 @@ class MyTheme {
     final p = PlatformProvider.of(context);
     switch (theme) {
       case themeMaterial:
-        do {
-          await _hiveBox.put(_storageKeyTheme, theme!);
-        } while (await _hiveBox.get(_storageKeyTheme) != theme);
+        await Settings.setTheme(theme!);
         currentTheme = themeMaterial;
         p?.changeToMaterialPlatform();
         break;
       case themeCupertino:
-        do {
-          await _hiveBox.put(_storageKeyTheme, theme!);
-        } while (await _hiveBox.get(_storageKeyTheme) != theme);
+        await Settings.setTheme(theme!);
         currentTheme = themeCupertino;
         p?.changeToCupertinoPlatform();
         break;
       default:
-        do {
-          await _hiveBox.delete(_storageKeyTheme);
-        } while (_hiveBox.containsKey(_storageKeyTheme));
+        await Settings.resetTheme();
         currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
         p?.changeToAutoDetectPlatform();
     }
@@ -180,15 +165,11 @@ class MyTheme {
     switch (theme) {
       case dark:
       case light:
-        do {
-          await _hiveBox.put(_storageKeyColor, theme!);
-        } while (await _hiveBox.get(_storageKeyColor) != theme);
+        await Settings.setThemeColor(theme!);
         currentColor = theme;
         break;
       default:
-        do {
-          await _hiveBox.delete(_storageKeyColor);
-        } while (_hiveBox.containsKey(_storageKeyColor));
+        await Settings.resetThemeColor();
         currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
     }
   }

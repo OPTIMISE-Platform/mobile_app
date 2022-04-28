@@ -23,6 +23,7 @@ import 'package:mobile_app/config/get_timestamp.dart';
 import 'package:mobile_app/config/set_color.dart';
 import 'package:mobile_app/config/set_off_state.dart';
 import 'package:mobile_app/config/set_on_state.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../app_state.dart';
 import '../models/characteristic.dart';
@@ -43,7 +44,7 @@ final Map<String?, FunctionConfig> functionConfigs = {
 };
 
 String roundNumbersString(dynamic value) {
-  const fractionDigits = 2;
+  int fractionDigits = Settings.getDisplayedFractionDigits();
   if (value is num && fractionDigits >= 0) {
     //toStringAsFixed to get a set number of fraction digits; regexp to remove trailing zeros
     return value.toStringAsFixed(fractionDigits).replaceAll(RegExp(r"([.]*0+)(?!.*\d)"), "");

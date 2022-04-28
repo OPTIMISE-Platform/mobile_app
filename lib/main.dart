@@ -26,6 +26,7 @@ if (dart.library.html) "package:intl/intl_browser.dart";
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -41,6 +42,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future main() async {
   await dotenv.load(fileName: ".env");
+  await Settings.init();
   await MyTheme.loadTheme();
   await Auth.init();
   await findSystemLocale();

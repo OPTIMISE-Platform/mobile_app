@@ -32,13 +32,18 @@ import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:numberpicker/numberpicker.dart';
+
 import '../app_state.dart';
 import '../exceptions/no_network_exception.dart';
 import '../services/auth.dart';
 import '../theme.dart';
 
+import 'package:mobile_app/services/settings.dart' as settingsService;
+
 class Settings extends StatelessWidget {
   static final _format = DateFormat.yMd().add_jms();
+
 
   const Settings({Key? key}) : super(key: key);
 
@@ -53,6 +58,14 @@ class Settings extends StatelessWidget {
         ListTile(
           title: const Text("Switch Style"),
           onTap: () => MyTheme.toggleTheme(context),
+        ),
+        const Divider(),
+        ListTile(
+          title: const Text("Set Displayed Fraction Digits"),
+          onTap: () => showPlatformDialog(
+            context: context,
+            builder: displayedFractionsDigitSelectDialog,
+          )
         ),
         const Divider(),
         ListTile(
@@ -262,4 +275,27 @@ class Settings extends StatelessWidget {
       );
     });
   }
+}
+
+StatefulBuilder displayedFractionsDigitSelectDialog(context) {
+  var currentDisplayedFractionDigitsSetting = settingsService.Settings.getDisplayedFractionDigits();
+  return StatefulBuilder(
+      builder: (context, setState) => PlatformAlertDialog(
+          actions: [
+            PlatformDialogAction(child: const Text("OK"), onPressed: () => Navigator.pop(context)),
+          ],
+          content: NumberPicker(
+              value: currentDisplayedFractionDigitsSetting,
+              minValue: -1,
+              maxValue: 21,
+              step: 1,
+              textMapper: (input) => input == "-1" ? "∞" : input,
+              //axis: Axis.horizontal,
+              onChanged: (value) => setState(() {
+                currentDisplayedFractionDigitsSetting = value;
+                settingsService.Settings.setDisplayedFractionDigits(value);
+              })
+          )
+    ),
+  );
 }

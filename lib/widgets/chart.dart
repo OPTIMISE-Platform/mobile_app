@@ -38,6 +38,7 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:mutex/mutex.dart';
@@ -93,11 +94,12 @@ class _ChartState extends State<Chart> {
       }
       final List<FlSpot> newSpots = [];
       _allValuesEqual = true;
+      int fractionDigits = Settings.getDisplayedFractionDigits();
       for (final point in data) {
         if (point.length == 2 && point[0] != null && point[1] is num) {
           double val = point[1] is int ? point[1].toDouble() : point[1] as double;
           if (val.isNaN) continue;
-          val = double.parse(val.toStringAsFixed(2));
+          val = double.parse(val.toStringAsFixed(fractionDigits));
           if (newSpots.isNotEmpty && _allValuesEqual) {
             _allValuesEqual = val == newSpots.first.y;
           }
