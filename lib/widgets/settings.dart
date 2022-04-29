@@ -64,7 +64,7 @@ class Settings extends StatelessWidget {
           title: const Text("Set Displayed Fraction Digits"),
           onTap: () => showPlatformDialog(
             context: context,
-            builder: displayedFractionsDigitSelectDialog,
+            builder: getDisplayedFractionsDigitSelectDialog(state),
           )
         ),
         const Divider(),
@@ -277,9 +277,10 @@ class Settings extends StatelessWidget {
   }
 }
 
-StatefulBuilder displayedFractionsDigitSelectDialog(context) {
-  var currentDisplayedFractionDigitsSetting = settingsService.Settings.getDisplayedFractionDigits();
-  return StatefulBuilder(
+StatefulBuilder Function(BuildContext context) getDisplayedFractionsDigitSelectDialog(AppState state) {
+  return (context) {
+    var currentDisplayedFractionDigitsSetting = settingsService.Settings.getDisplayedFractionDigits();
+    return StatefulBuilder(
       builder: (context, setState) => PlatformAlertDialog(
           actions: [
             PlatformDialogAction(child: const Text("OK"), onPressed: () => Navigator.pop(context)),
@@ -294,8 +295,10 @@ StatefulBuilder displayedFractionsDigitSelectDialog(context) {
               onChanged: (value) => setState(() {
                 currentDisplayedFractionDigitsSetting = value;
                 settingsService.Settings.setDisplayedFractionDigits(value);
+                state.notifyListeners();
               })
           )
-    ),
-  );
+      ),
+    );
+  };
 }
