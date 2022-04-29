@@ -165,11 +165,17 @@ class AppState extends ChangeNotifier {
     if (locked) {
       return deviceClasses;
     }
+    deviceClasses.clear();
+    notifyListeners();
     for (var element in (await DeviceClassesService.getDeviceClasses())) {
       deviceClasses[element.id] = element;
     }
     notifyListeners();
     _deviceClassesMutex.release();
+  }
+
+  bool get loadingDeviceClasses {
+    return _deviceClassesMutex.isLocked;
   }
 
   loadDeviceTypes(BuildContext context) async {
@@ -215,8 +221,8 @@ class AppState extends ChangeNotifier {
     _allDevicesLoaded = false;
     if (devices.isNotEmpty) {
       devices.clear();
-      notifyListeners();
     }
+    notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
     await updateTotalDevices(context);

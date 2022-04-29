@@ -85,10 +85,28 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
     return RefreshIndicator(
       onRefresh: () => _state.refreshDevices(context),
       child: Scrollbar(
-        child: _state.totalDevices == 0
-            ? const Center(child: Text("No Devices"))
-            : _state.totalDevices == -1
-                ? Center(child: PlatformCircularProgressIndicator())
+        child: _state.loadingDevices
+            ? Center(child: PlatformCircularProgressIndicator())
+            : _state.devices.isEmpty
+                ? LayoutBuilder(
+                    builder: (context, constraint) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                          child: IntrinsicHeight(
+                            child: Column(
+                              children: const [
+                                Expanded(
+                                  child: Center(child: Text("No Devices")),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  )
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: MyTheme.inset,

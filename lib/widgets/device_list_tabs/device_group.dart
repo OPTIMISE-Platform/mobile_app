@@ -36,25 +36,43 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      return state.deviceGroups.isEmpty
-          ? state.loadingDeviceGroups()
-              ? Center(child: PlatformCircularProgressIndicator())
-              : const Center(child: Text("No Groups"))
+      return state.loadingDeviceGroups()
+          ? Center(child: PlatformCircularProgressIndicator())
           : _selected == null
               ? RefreshIndicator(
                   onRefresh: () => state.loadDeviceGroups(context),
-                  child: Scrollbar(
-                      child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: MyTheme.inset,
-                    itemCount: state.deviceGroups.length,
-                    itemBuilder: (context, i) {
-                      return Column(children: [
-                        const Divider(),
-                        GroupListItem(i, null),
-                      ]);
-                    },
-                  )))
+                  child: state.deviceGroups.isEmpty
+                      ? LayoutBuilder(
+                          builder: (context, constraint) {
+                            return SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                child: IntrinsicHeight(
+                                  child: Column(
+                                    children: const [
+                                      Expanded(
+                                        child: Center(child: Text("No Groups")),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        )
+                      : Scrollbar(
+                          child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: MyTheme.inset,
+                          itemCount: state.deviceGroups.length,
+                          itemBuilder: (context, i) {
+                            return Column(children: [
+                              const Divider(),
+                              GroupListItem(i, null),
+                            ]);
+                          },
+                        )))
               : state.devices.isEmpty
                   ? state.loadingDevices
                       ? Center(

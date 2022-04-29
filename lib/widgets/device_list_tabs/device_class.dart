@@ -42,53 +42,75 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
       final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
 
       return Scrollbar(
-        child: state.deviceClasses.isEmpty
+        child: state.loadingDeviceClasses
             ? Center(child: PlatformCircularProgressIndicator())
             : _selected == null
-                ? ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: MyTheme.inset,
-                    itemCount: deviceClasses.length,
-                    itemBuilder: (context, i) {
-                      return Column(children: [
-                        const Divider(),
-                        ListTile(
-                            title: Text(deviceClasses[i].name),
-                            subtitle: Text(deviceClasses[i].deviceIds.length.toString() +
-                                " Device" +
-                                (deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : "")),
-                            leading: Container(
-                              height: MediaQuery.of(context).textScaleFactor * 48,
-                              width: MediaQuery.of(context).textScaleFactor * 48,
-                              decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                              child: Padding(
-                                padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                child: deviceClasses[i].imageWidget ?? const Icon(Icons.devices, color: Colors.white),
-                              ),
-                            ),
-                            onTap: () {
-                              parentState?.filter.deviceClassIds = [deviceClasses[i].id];
-                              state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
-                              parentState?.setState(() {
-                                parentState.hideSearch = false;
-                                parentState.onBackCallback = () {
-                                  parentState.setState(() {
-                                    parentState.customAppBarTitle = null;
-                                    parentState.onBackCallback = null;
-                                    parentState.hideSearch = true;
-                                  });
-                                  setState(() => _selected = null);
-                                };
-                                parentState.customAppBarTitle = deviceClasses[i].name;
+                ? RefreshIndicator(
+                    onRefresh: () => state.loadDeviceClasses(context),
+                    child: state.deviceClasses.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraint) {
+                              return SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      children: const [
+                                        Expanded(
+                                          child: Center(child: Text("No Classes")),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: MyTheme.inset,
+                            itemCount: deviceClasses.length,
+                            itemBuilder: (context, i) {
+                              return Column(children: [
+                                const Divider(),
+                                ListTile(
+                                    title: Text(deviceClasses[i].name),
+                                    subtitle: Text(deviceClasses[i].deviceIds.length.toString() +
+                                        " Device" +
+                                        (deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : "")),
+                                    leading: Container(
+                                      height: MediaQuery.of(context).textScaleFactor * 48,
+                                      width: MediaQuery.of(context).textScaleFactor * 48,
+                                      decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                        child: deviceClasses[i].imageWidget ?? const Icon(Icons.devices, color: Colors.white),
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      parentState?.filter.deviceClassIds = [deviceClasses[i].id];
+                                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
+                                      parentState?.setState(() {
+                                        parentState.hideSearch = false;
+                                        parentState.onBackCallback = () {
+                                          parentState.setState(() {
+                                            parentState.customAppBarTitle = null;
+                                            parentState.onBackCallback = null;
+                                            parentState.hideSearch = true;
+                                          });
+                                          setState(() => _selected = null);
+                                        };
+                                        parentState.customAppBarTitle = deviceClasses[i].name;
 
-                                setState(() {
-                                  _selected = i;
-                                });
-                              });
-                            })
-                      ]);
-                    },
-                  )
+                                        setState(() {
+                                          _selected = i;
+                                        });
+                                      });
+                                    })
+                              ]);
+                            },
+                          ))
                 : state.devices.isEmpty
                     ? state.loadingDevices
                         ? Center(

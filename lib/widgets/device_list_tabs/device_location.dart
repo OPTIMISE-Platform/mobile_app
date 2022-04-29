@@ -54,99 +54,114 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
       return Scrollbar(
         child: state.loadingLocations()
             ? Center(child: PlatformCircularProgressIndicator())
-            : state.locations.isEmpty
-                ? const Center(child: Text("No Locations"))
-                : _selected == null
-                    ? RefreshIndicator(
-                        onRefresh: () => state.loadLocations(context),
-                        child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: MyTheme.inset,
-                          itemCount: state.locations.length,
-                          itemBuilder: (context, i) {
-                            return Column(children: [
-                              const Divider(),
-                              ListTile(
-                                  title: Text(state.locations[i].name),
-                                  leading: Container(
-                                    height: MediaQuery.of(context).textScaleFactor * 48,
-                                    width: MediaQuery.of(context).textScaleFactor * 48,
-                                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                      child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
+            : _selected == null
+                ? RefreshIndicator(
+                    onRefresh: () => state.loadLocations(context),
+                    child: state.locations.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraint) {
+                              return SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      children: const [
+                                        Expanded(
+                                          child: Center(child: Text("No Locations")),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  subtitle: Text(state.locations[i].device_ids.length.toString() +
-                                      " Device" +
-                                      (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
-                                      ", " +
-                                      state.locations[i].device_group_ids.length.toString() +
-                                      " Group" +
-                                      (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
-                                  onTap: () {
-                                    parentState?.filter.locationIds = [state.locations[i].id];
-                                    state.searchDevices(
-                                        parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context);
-                                    parentState?.setState(() {
-                                      parentState.hideSearch = false;
-                                      parentState.onBackCallback = () {
-                                        parentState.setState(() {
-                                          parentState.customAppBarTitle = null;
-                                          parentState.onBackCallback = null;
-                                          parentState.hideSearch = true;
-                                        });
-                                        parentState.filter.locationIds = [state.locations[i].id];
-                                        state.searchDevices(parentState.filter, context);
-                                        setState(() => _selected = null);
-                                      };
-                                      parentState.customAppBarTitle = state.locations[i].name;
-                                    });
-                                    setState(() {
-                                      _selected = i;
-                                    });
-                                  })
-                            ]);
-                          },
-                        ))
-                    : state.loadingDevices || state.loadingDeviceGroups()
-                        ? Center(
-                            child: PlatformCircularProgressIndicator(),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () async {
-                              parentState?.filter.locationIds = [state.locations[_selected!].id];
-                              state.searchDevices(
-                                  parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]),
-                                  context,
-                                  true);
+                                ),
+                              );
                             },
-                            child: ListView.builder(
-                              padding: MyTheme.inset,
-                              itemCount: state.totalDevices + matchingGroups.length,
-                              itemBuilder: (_, i) {
-                                if (i > state.devices.length + matchingGroups.length - 1) {
-                                  return const SizedBox.shrink();
-                                }
-                                if (i < state.devices.length) {
-                                  return Column(
-                                    children: [const Divider(), DeviceListItem(i, null)],
-                                  );
-                                }
-                                return Column(
-                                  children: [
-                                    const Divider(),
-                                    GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                                      parentState?.filter.locationIds = [state.locations[_selected!].id];
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: MyTheme.inset,
+                            itemCount: state.locations.length,
+                            itemBuilder: (context, i) {
+                              return Column(children: [
+                                const Divider(),
+                                ListTile(
+                                    title: Text(state.locations[i].name),
+                                    leading: Container(
+                                      height: MediaQuery.of(context).textScaleFactor * 48,
+                                      width: MediaQuery.of(context).textScaleFactor * 48,
+                                      decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                        child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
+                                      ),
+                                    ),
+                                    subtitle: Text(state.locations[i].device_ids.length.toString() +
+                                        " Device" +
+                                        (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
+                                        ", " +
+                                        state.locations[i].device_group_ids.length.toString() +
+                                        " Group" +
+                                        (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
+                                    onTap: () {
+                                      parentState?.filter.locationIds = [state.locations[i].id];
                                       state.searchDevices(
-                                          parentState?.filter ??
-                                              DeviceSearchFilter("", null, null, null, null, state.locations[_selected!].device_ids),
-                                          context);
+                                          parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context);
+                                      parentState?.setState(() {
+                                        parentState.hideSearch = false;
+                                        parentState.onBackCallback = () {
+                                          parentState.setState(() {
+                                            parentState.customAppBarTitle = null;
+                                            parentState.onBackCallback = null;
+                                            parentState.hideSearch = true;
+                                          });
+                                          parentState.filter.locationIds = [state.locations[i].id];
+                                          state.searchDevices(parentState.filter, context);
+                                          setState(() => _selected = null);
+                                        };
+                                        parentState.customAppBarTitle = state.locations[i].name;
+                                      });
+                                      setState(() {
+                                        _selected = i;
+                                      });
                                     })
-                                  ],
-                                );
-                              },
-                            )),
+                              ]);
+                            },
+                          ))
+                : state.loadingDevices || state.loadingDeviceGroups()
+                    ? Center(
+                        child: PlatformCircularProgressIndicator(),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          parentState?.filter.locationIds = [state.locations[_selected!].id];
+                          state.searchDevices(
+                              parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]), context, true);
+                        },
+                        child: ListView.builder(
+                          padding: MyTheme.inset,
+                          itemCount: state.totalDevices + matchingGroups.length,
+                          itemBuilder: (_, i) {
+                            if (i > state.devices.length + matchingGroups.length - 1) {
+                              return const SizedBox.shrink();
+                            }
+                            if (i < state.devices.length) {
+                              return Column(
+                                children: [const Divider(), DeviceListItem(i, null)],
+                              );
+                            }
+                            return Column(
+                              children: [
+                                const Divider(),
+                                GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                                  parentState?.filter.locationIds = [state.locations[_selected!].id];
+                                  state.searchDevices(
+                                      parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, state.locations[_selected!].device_ids),
+                                      context);
+                                })
+                              ],
+                            );
+                          },
+                        )),
       );
     });
   }

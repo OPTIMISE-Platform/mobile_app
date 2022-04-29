@@ -47,11 +47,29 @@ class DeviceListFavorites extends StatelessWidget {
                 ? Center(
                     child: state.loadingDevices
                         ? PlatformCircularProgressIndicator()
-                        : PlatformElevatedButton(
-                            child: const Text("Add Favorites"),
-                            onPressed: () {
-                              final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
-                              parentState?.switchBottomBar(5, state, true);
+                        : LayoutBuilder(
+                            builder: (context, constraint) {
+                              return SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      children: [
+                                        Expanded(
+                                            child: Center(
+                                                child: PlatformElevatedButton(
+                                          child: const Text("Add Favorites"),
+                                          onPressed: () {
+                                            final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                                            parentState?.switchBottomBar(5, state, true);
+                                          },
+                                        ))),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
                             },
                           ))
                 : ListView.builder(
@@ -67,12 +85,15 @@ class DeviceListFavorites extends StatelessWidget {
                         );
                       }
                       return Column(
-                        children: [const Divider(), GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                          final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
-                          if (parentState == null) return;
-                          parentState.filter.deviceGroupIds = null;
-                          state.searchDevices(parentState.filter, context);
-                        })],
+                        children: [
+                          const Divider(),
+                          GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                            final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                            if (parentState == null) return;
+                            parentState.filter.deviceGroupIds = null;
+                            state.searchDevices(parentState.filter, context);
+                          })
+                        ],
                       );
                     },
                   ),

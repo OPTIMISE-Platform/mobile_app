@@ -66,6 +66,7 @@ class DeviceClassesService {
     if (resp.data == null) return [];
 
     final l = resp.data!["device-classes"];
+    if (l == null) return [];
     final deviceClasses = List<DeviceClass>.generate(
         l.length, (index) => DeviceClass.fromJson(l[index]));
     for (var element in deviceClasses) {
