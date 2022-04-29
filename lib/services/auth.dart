@@ -143,7 +143,14 @@ class Auth {
 
   static Future<Map<String, String>> getHeaders() async {
     if (!tokenValid()) {
-      throw AuthException("Not logged in");
+      if (_client?.hasTokenExpired == true) {
+        await _client?.refresh();
+        if (!tokenValid()) {
+          throw AuthException("Not logged in");
+        }
+      } else {
+        throw AuthException("Not logged in");
+      }
     }
     return {"Authorization": "Bearer " + await getToken()};
   }
