@@ -163,7 +163,7 @@ class DeviceSearchFilter {
 
   @override
   String toString() {
-    return (query + deviceClassIds.toString() + deviceIds.toString() + networkIds.toString() + deviceGroupIds.toString() + favorites.toString());
+    return (query + deviceClassIds.toString() + deviceIds.toString() + networkIds.toString() + deviceGroupIds.toString() + favorites.toString() + locationIds.toString());
   }
 
   @override

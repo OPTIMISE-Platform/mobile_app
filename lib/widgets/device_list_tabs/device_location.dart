@@ -35,7 +35,6 @@ class DeviceListByLocation extends StatefulWidget {
 
 class _DeviceListByLocationState extends State<DeviceListByLocation> {
   int? _selected;
-  bool _loading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -86,12 +85,9 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                                       " Group" +
                                       (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
                                   onTap: () {
-                                    _loading = true;
                                     parentState?.filter.locationIds = [state.locations[i].id];
-                                    state
-                                        .searchDevices(
-                                            parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context)
-                                        .then((_) => setState(() => _loading = false));
+                                    state.searchDevices(
+                                        parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context);
                                     parentState?.setState(() {
                                       parentState.hideSearch = false;
                                       parentState.onBackCallback = () {
@@ -113,20 +109,17 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                             ]);
                           },
                         ))
-                    : state.loadingDevices || state.loadingDeviceGroups() || _loading
+                    : state.loadingDevices || state.loadingDeviceGroups()
                         ? Center(
                             child: PlatformCircularProgressIndicator(),
                           )
                         : RefreshIndicator(
                             onRefresh: () async {
-                              _loading = true;
                               parentState?.filter.locationIds = [state.locations[_selected!].id];
-                              state
-                                  .searchDevices(
-                                      parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]),
-                                      context,
-                                      true)
-                                  .then((_) => setState(() => _loading = false));
+                              state.searchDevices(
+                                  parentState?.filter ?? DeviceSearchFilter("", null, null, null, null, [state.locations[_selected!].id]),
+                                  context,
+                                  true);
                             },
                             child: ListView.builder(
                               padding: MyTheme.inset,
