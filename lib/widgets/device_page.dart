@@ -32,6 +32,7 @@ import 'package:mobile_app/widgets/util/favorize_button.dart';
 import 'package:provider/provider.dart';
 
 import '../app_state.dart';
+import '../models/aspect.dart';
 import '../models/device_command_response.dart';
 import '../models/device_instance.dart';
 import '../services/device_commands.dart';
@@ -252,17 +253,17 @@ class DevicePage extends StatelessWidget {
     }
   }
 
-  String getTitle(DeviceState element, AppState state) {
+  String _getTitle(DeviceState element, AppState state) {
     final function = state.nestedFunctions[element.functionId];
     String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
     if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
     return title;
   }
 
-  String getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device, AppState state) {
+  String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device, AppState state) {
     String subtitle = "";
     if (states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
-      subtitle += (state.aspects[element.aspectId]?.name ?? "MISSING_ASPECT_NAME");
+      subtitle += _findAspect(state.aspects.values, element.aspectId)?.name ?? "MISSING_ASPECT_NAME";
     }
     if (device != null &&
         element.serviceGroupKey != null &&
@@ -273,6 +274,24 @@ class DevicePage extends StatelessWidget {
           "MISSING_SERVICE_GROUP_NAME");
     }
     return subtitle;
+  }
+
+  Aspect? _findAspect(Iterable<Aspect> aspects, String? id) {
+    if (id == null) {
+      return null;
+    }
+    for (final a in aspects) {
+      if (a.id == id) {
+        return a;
+      }
+      if (a.sub_aspects != null) {
+        final sub = _findAspect(a.sub_aspects!, id);
+        if (sub != null) {
+          return sub;
+        }
+      }
+    }
+    return null;
   }
 
   @override
@@ -361,7 +380,7 @@ class DevicePage extends StatelessWidget {
         if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
           continue;
         }
-        final subtitle = getSubtitle(element, states, device, state);
+        final subtitle = _getSubtitle(element, states, device, state);
         var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
@@ -382,7 +401,7 @@ class DevicePage extends StatelessWidget {
                   context: context,
                   builder: (context) => Chart(element),
                 )),
-                title: Text(getTitle(element, state)),
+                title: Text(_getTitle(element, state)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: Container(
                   padding: const EdgeInsets.only(right: 12),
@@ -406,7 +425,7 @@ class DevicePage extends StatelessWidget {
                   context: context,
                   builder: (context) => Chart(element),
                 )),
-                title: Text(getTitle(element, state)),
+                title: Text(_getTitle(element, state)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
                     ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
@@ -445,12 +464,12 @@ class DevicePage extends StatelessWidget {
 
       for (var element in states.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
         var functionConfig = functionConfigs[element.functionId];
-        final subtitle = getSubtitle(element, states, device, state);
+        final subtitle = _getSubtitle(element, states, device, state);
 
         functionWidgets.insert(
           element.functionId,
           ListTile(
-            title: Text(getTitle(element, state)),
+            title: Text(_getTitle(element, state)),
             onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
               context: context,
               builder: (context) => Chart(element),
