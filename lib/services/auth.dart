@@ -69,7 +69,12 @@ class Auth {
       _loggedIn = true;
       _logger.d("Using token from storage");
       if (_client != null && !tokenValid()) {
-        _logger.d("But token is expired");
+        _logger.d("But token is invalid");
+        if (_client?.hasTokenExpired == true) {
+          _logger.d("Token is expired, attempting refresh");
+          final ok = await _client?.refresh();
+          _logger.d("Refresh was ok? " + ok.toString());
+        }
       }
     }
   }
@@ -144,8 +149,8 @@ class Auth {
   static Future<Map<String, String>> getHeaders() async {
     if (!tokenValid()) {
       if (_client?.hasTokenExpired == true) {
-        await _client?.refresh();
-        if (!tokenValid()) {
+        final ok = await _client?.refresh();
+        if (ok == null || !ok || !tokenValid()) {
           throw AuthException("Not logged in");
         }
       } else {
