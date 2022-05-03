@@ -130,9 +130,9 @@ class AppState extends ChangeNotifier {
   bool _notificationInited = false;
   String? _messageIdToDisplay;
 
-  bool loggedIn() => Auth.tokenValid();
+  bool get loggedIn => Auth.tokenValid;
 
-  bool loggingIn() => Auth.loggingIn();
+  bool get loggingIn => Auth.loggingIn;
 
   AppState() {
     SystemChannels.lifecycle.setMessageHandler((msg) {

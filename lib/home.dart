@@ -44,6 +44,7 @@ class _HomeState extends State<Home> {
   String _user = "";
   String _pw = "";
   bool _pwHidden = true;
+  bool _loginChecked = false;
 
   _login(AppState state) async {
     if (_user.isEmpty || _pw.isEmpty) return;
@@ -84,16 +85,29 @@ class _HomeState extends State<Home> {
         icon: Icon(_pwHidden ? Icons.visibility : Icons.visibility_off), onPressed: () => setState(() => _pwHidden = !_pwHidden));
   }
 
+  _checklogin() async {
+    await Auth.refreshToken();
+    setState(() {
+      _loginChecked = true;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checklogin();
+  }
+
   @override
   Widget build(BuildContext context) {
     const _appBar = MyAppBar("Login");
     return Consumer<AppState>(
       builder: (context, state, child) {
-        return state.loggedIn()
+        return state.loggedIn
             ? const DeviceList()
             : PlatformScaffold(
                 appBar: _appBar.getAppBar(context, [MyAppBar.settings(context)]),
-                body: state.loggingIn()
+                body: state.loggingIn || !_loginChecked
                     ? Center(child: PlatformCircularProgressIndicator())
                     : Container(
                         padding: MyTheme.inset * 3,

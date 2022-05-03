@@ -58,6 +58,9 @@ class Auth {
               : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
           scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
         );
+        _client?.changes.listen((event) {
+          _logger.d(event.type.toString() + ": " + event.message.toString());
+        });
       } catch (e) {
         _logger.e("Could not setup client: " + e.toString());
       }
@@ -68,7 +71,7 @@ class Auth {
     if (token != null) {
       _loggedIn = true;
       _logger.d("Using token from storage");
-      if (_client != null && !tokenValid()) {
+      if (_client != null && !tokenValid) {
         _logger.d("But token is invalid");
         if (_client?.hasTokenExpired == true) {
           _logger.d("Token is expired, attempting refresh");
@@ -95,7 +98,7 @@ class Auth {
         }
       }
 
-      if (tokenValid()) {
+      if (tokenValid) {
         _logger.d("Old token still valid");
         return;
       }
@@ -147,26 +150,25 @@ class Auth {
   }
 
   static Future<Map<String, String>> getHeaders() async {
-    if (!tokenValid()) {
-      if (_client?.hasTokenExpired == true) {
-        final ok = await _client?.refresh();
-        if (ok == null || !ok || !tokenValid()) {
-          throw AuthException("Not logged in");
-        }
-      } else {
-        throw AuthException("Not logged in");
-      }
+    if (!tokenValid) {
+      throw AuthException("Not logged in");
     }
     return {"Authorization": "Bearer " + await getToken()};
   }
 
-  static bool tokenValid() {
-    return _loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
+  static Future<bool> refreshToken() async {
+    if (tokenValid) return true;
+    if (_client != null && _client!.identity != null && _client!.hasTokenExpired == true) {
+      final ok = await _client!.refresh();
+      return ok && tokenValid;
+    }
+    return false;
   }
 
-  static bool loggingIn() {
-    return _m.isLocked;
-  }
+  static bool get tokenValid =>
+      _loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
+
+  static bool get loggingIn => _m.isLocked;
 
   static Future<String> getToken() async {
     if (_client != null) {

@@ -243,7 +243,7 @@ class Settings extends StatelessWidget {
         ]);
       }
 
-      if (state.loggedIn()) {
+      if (state.loggedIn) {
         children.addAll([
           const Divider(),
           Consumer<AppState>(
