@@ -71,4 +71,49 @@ class LocationService {
         l.length, (index) => Location.fromJson(l[index]));
     return locations.map((e) => e.initImage()).toList(growable: false);
   }
+
+  static Future<Location> saveLocation(Location location) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
+        '/device-manager/locations/' + location.id;
+
+    final headers = await Auth.getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.put<dynamic?>(uri, options: Options(headers: headers), data: location.toJson());
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return Location.fromJson(resp.data).initImage();
+  }
+
+  static Future<Location> createLocation(String name) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
+        '/device-manager/locations/';
+
+    final headers = await Auth.getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return Location.fromJson(resp.data).initImage();
+  }
+
+  static Future<void> deleteLocation(String id) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
+        '/device-manager/locations/' + id;
+
+    final headers = await Auth.getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.delete(uri, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return;
+  }
 }

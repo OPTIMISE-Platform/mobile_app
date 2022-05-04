@@ -17,6 +17,7 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
@@ -151,7 +152,8 @@ class Auth {
 
   static Future<Map<String, String>> getHeaders() async {
     if (!tokenValid) {
-      throw AuthException("Not logged in");
+      await refreshToken();
+      if (!tokenValid) throw AuthException("Not logged in");
     }
     return {"Authorization": "Bearer " + await getToken()};
   }

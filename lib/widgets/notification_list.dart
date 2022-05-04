@@ -118,7 +118,10 @@ class _NotificationListState extends State<NotificationList> {
                       child: PlatformText('Cancel'),
                       onPressed: () => Navigator.pop(context, false),
                     ),
-                    PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true)),
+                    PlatformDialogAction(
+                        child: PlatformText('OK'),
+                        cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                        onPressed: () => Navigator.pop(context, true)),
                   ],
                 ),
               );

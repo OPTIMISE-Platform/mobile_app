@@ -60,6 +60,18 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
   String? customAppBarTitle;
   bool hideSearch = false;
 
+  bool _showFab = false;
+  final StreamController _fabPressedController = StreamController();
+  Stream? _fabPressedControllerStream;
+
+  Stream get fabPressed {
+    if (_fabPressedControllerStream != null) {
+      return _fabPressedControllerStream!;
+    }
+    _fabPressedControllerStream = _fabPressedController.stream.asBroadcastStream();
+    return _fabPressedControllerStream!;
+  }
+
   final _cupertinoSearchController = RestorableTextEditingController();
 
   DeviceListState() {}
@@ -159,27 +171,33 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
         case tabDevices:
           hideSearch = false;
           state.searchDevices(filter, context);
+          _showFab = false;
           break;
         case tabLocations:
           hideSearch = true;
           state.searchDevices(filter, context);
+          _showFab = true;
           break;
         case tabGroups:
           hideSearch = true;
           state.searchDevices(filter, context);
+          _showFab = false;
           break;
         case tabNetworks:
           hideSearch = true;
           state.searchDevices(filter, context);
+          _showFab = false;
           break;
         case tabFavorites:
           hideSearch = false;
           filter.favorites = true;
           state.searchDevices(filter, context);
+          _showFab = false;
           break;
         case tabClasses:
           hideSearch = true;
           state.searchDevices(filter, context);
+          _showFab = false;
       }
     });
   }
@@ -227,6 +245,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _fabPressedController.close();
     super.dispose();
   }
 
@@ -250,22 +269,20 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           actions.add(PlatformWidget(
             material: (context, __) => PlatformIconButton(
                 icon: Icon(PlatformIcons(context).search),
-                onPressed: () {
+                onPressed: () async {
                   _searchClosed = false;
-                  showSearch(
+                  await showSearch(
                       context: context,
                       delegate: DevicesSearchDelegate(
                         (query) {
                           _searchChanged(query, state);
                           return _buildListWidget();
                         },
-                        () {
-                          _searchClosed = true;
-                          _searchDebounce?.cancel();
-                          _searchChanged("", state);
-                        },
                         (q) => _searchChanged(q, state),
                       ));
+                  _searchClosed = true;
+                  _searchDebounce?.cancel();
+                  _searchChanged("", state);
                 }),
             cupertino: (_, __) => const SizedBox.shrink(),
           ));
@@ -513,54 +530,64 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           leadingAction = IconButton(onPressed: () => onBackCallback!(), icon: Icon(PlatformIcons(context).back));
         }
 
-        return PlatformScaffold(
-          appBar: appBar.getAppBar(context, actions, leadingAction),
-          body: Column(children: [
-            PlatformWidget(
-              cupertino: !hideSearch
-                  ? (_, __) => Container(
-                        child: CupertinoSearchTextField(
-                          onChanged: (query) => _searchChanged(query, state),
-                          style: TextStyle(color: MyTheme.textColor),
-                          itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-                          restorationId: "cupertino-device-search",
-                          controller: _cupertinoSearchController.value,
+        return Scaffold(
+            floatingActionButton: _showFab
+                ? Container(
+                    margin: const EdgeInsets.only(bottom: 55),
+                    child: FloatingActionButton(
+                      onPressed: () => _fabPressedController.add(null),
+                      backgroundColor: MyTheme.appColor,
+                      child: Icon(Icons.add, color: MyTheme.textColor),
+                    ))
+                : null,
+            body: PlatformScaffold(
+              appBar: appBar.getAppBar(context, actions, leadingAction),
+              body: Column(children: [
+                PlatformWidget(
+                  cupertino: !hideSearch
+                      ? (_, __) => Container(
+                            child: CupertinoSearchTextField(
+                              onChanged: (query) => _searchChanged(query, state),
+                              style: TextStyle(color: MyTheme.textColor),
+                              itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
+                              restorationId: "cupertino-device-search",
+                              controller: _cupertinoSearchController.value,
+                            ),
+                            padding: MyTheme.inset,
+                          )
+                      : null,
+                ),
+                Expanded(child: (() {
+                  switch (_bottomBarIndex) {
+                    case tabDevices:
+                      return _buildListWidget();
+                    case tabLocations:
+                      return DeviceListByLocation();
+                    case tabClasses:
+                      return const DeviceListByDeviceClass();
+                    case tabGroups:
+                      return const DeviceGroupList();
+                    case tabNetworks:
+                      return const DeviceListByNetwork();
+                    case tabFavorites:
+                      return const DeviceListFavorites();
+                    default:
+                      return Center(
+                          child: Row(children: [
+                        const Icon(
+                          Icons.error,
+                          color: MyTheme.errorColor,
                         ),
-                        padding: MyTheme.inset,
-                      )
-                  : null,
-            ),
-            Expanded(child: (() {
-              switch (_bottomBarIndex) {
-                case tabDevices:
-                  return _buildListWidget();
-                case tabLocations:
-                  return const DeviceListByLocation();
-                case tabClasses:
-                  return const DeviceListByDeviceClass();
-                case tabGroups:
-                  return const DeviceGroupList();
-                case tabNetworks:
-                  return const DeviceListByNetwork();
-                case tabFavorites:
-                  return const DeviceListFavorites();
-                default:
-                  return Center(
-                      child: Row(children: [
-                    const Icon(
-                      Icons.error,
-                      color: MyTheme.errorColor,
-                    ),
-                    SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
-                    const Text("not implemented")
-                  ], mainAxisAlignment: MainAxisAlignment.center));
-              }
-            })()),
-          ]),
-          cupertino: (context, _) => CupertinoPageScaffoldData(controller: CupertinoTabController(initialIndex: _bottomBarIndex)),
-          // if not used, changes to _bottomBarIndex are not reflected visually
-          bottomNavBar: _buildBottom(context, state),
-        );
+                        SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
+                        const Text("not implemented")
+                      ], mainAxisAlignment: MainAxisAlignment.center));
+                  }
+                })()),
+              ]),
+              cupertino: (context, _) => CupertinoPageScaffoldData(controller: CupertinoTabController(initialIndex: _bottomBarIndex)),
+              // if not used, changes to _bottomBarIndex are not reflected visually
+              bottomNavBar: _buildBottom(context, state),
+            ));
       },
     );
   }
@@ -576,11 +603,10 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
 class DevicesSearchDelegate extends SearchDelegate {
   final Widget Function(String query) _resultBuilder;
-  final void Function() _onReturn;
   final void Function(String query) _onChanged;
   late final Consumer<AppState> _consumer;
 
-  DevicesSearchDelegate(this._resultBuilder, this._onReturn, this._onChanged) {
+  DevicesSearchDelegate(this._resultBuilder, this._onChanged) {
     _consumer = Consumer<AppState>(builder: (state, __, ___) {
       return _resultBuilder(query);
     });
@@ -595,7 +621,6 @@ class DevicesSearchDelegate extends SearchDelegate {
   Widget? buildLeading(BuildContext context) {
     return PlatformIconButton(
         onPressed: () {
-          _onReturn();
           close(context, null);
         },
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
