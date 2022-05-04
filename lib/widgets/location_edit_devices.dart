@@ -89,7 +89,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
                     color: MyTheme.appColor,
                   )
                 ]),
-                title: Text(_state.devices[i].name),
+                title: Text(_state.devices[i].displayName),
                 onTap: () => setState(() {
                   _selected.contains(_state.devices[i].id) ? _selected.remove(_state.devices[i].id) : _selected.add(_state.devices[i].id);
                   _state.notifyListeners();
