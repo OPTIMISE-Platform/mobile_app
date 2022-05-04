@@ -19,6 +19,7 @@ import 'package:json_annotation/json_annotation.dart';
 part 'attribute.g.dart';
 
 const appOrigin = "optimise-mobile-app";
+const sharedOrigin = "shared";
 
 @JsonSerializable()
 class Attribute {

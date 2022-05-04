@@ -32,7 +32,7 @@ enum DeviceConnectionStatus {
 }
 
 const attributeFavorite = appOrigin + "/" + "favorite";
-const attributeNickname = appOrigin + "/" + "nickname";
+const attributeNickname = sharedOrigin + "/" + "nickname";
 
 @JsonSerializable()
 class DeviceInstance {
@@ -135,7 +135,7 @@ class DeviceInstance {
         attributes![i].value = val;
       } else {
         attributes ??= [];
-        attributes!.add(Attribute(attributeNickname, val, appOrigin));
+        attributes!.add(Attribute(attributeNickname, val, sharedOrigin));
       }
   }
 }
