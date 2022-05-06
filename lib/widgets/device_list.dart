@@ -21,6 +21,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
@@ -31,7 +32,6 @@ import 'package:mobile_app/widgets/device_list_tabs/device_networks.dart';
 import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
 import 'device_list_tabs/device_class.dart';
 
 class DeviceList extends StatefulWidget {
@@ -49,7 +49,6 @@ const tabNetworks = 4;
 const tabDevices = 5;
 
 class DeviceListState extends State<DeviceList> with RestorationMixin {
-  late AppState _state;
   Timer? _searchDebounce;
   int _bottomBarIndex = 0;
   bool _initialized = false;
@@ -76,7 +75,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
   DeviceListState() {}
 
-  _searchChanged(String search, AppState state) {
+  _searchChanged(String search) {
     if (filter.query == search) {
       return;
     }
@@ -86,20 +85,17 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
     filter.query = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      switchBottomBar(_bottomBarIndex, state, true);
+      switchBottomBar(_bottomBarIndex, true);
     });
   }
 
   Widget _buildListWidget() {
-    if (_state.devices.isEmpty) {
-      _state.loadDevices(context);
-    }
     return RefreshIndicator(
-      onRefresh: () => _state.refreshDevices(context),
+      onRefresh: () => AppState().refreshDevices(context),
       child: Scrollbar(
-        child: _state.loadingDevices
+        child: AppState().loadingDevices
             ? Center(child: PlatformCircularProgressIndicator())
-            : _state.devices.isEmpty
+            : AppState().devices.isEmpty
                 ? LayoutBuilder(
                     builder: (context, constraint) {
                       return SingleChildScrollView(
@@ -122,12 +118,12 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                 : ListView.builder(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: MyTheme.inset,
-                    itemCount: _state.totalDevices,
+                    itemCount: AppState().totalDevices,
                     itemBuilder: (context, i) {
-                      if (i >= _state.devices.length) {
-                        _state.loadDevices(context);
+                      if (i >= AppState().devices.length) {
+                        AppState().loadDevices(context);
                       }
-                      if (i > _state.devices.length - 1) {
+                      if (i > AppState().devices.length - 1) {
                         return const SizedBox.shrink();
                       }
                       return Column(children: [
@@ -139,7 +135,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
     );
   }
 
-  switchBottomBar(int i, AppState state, bool force) {
+  switchBottomBar(int i, bool force) {
     if (_bottomBarIndex == i && !force) {
       return;
     }
@@ -170,33 +166,33 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
       switch (i) {
         case tabDevices:
           hideSearch = false;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = false;
           break;
         case tabLocations:
           hideSearch = true;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = true;
           break;
         case tabGroups:
           hideSearch = true;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = false;
           break;
         case tabNetworks:
           hideSearch = true;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = false;
           break;
         case tabFavorites:
           hideSearch = false;
           filter.favorites = true;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = false;
           break;
         case tabClasses:
           hideSearch = true;
-          state.searchDevices(filter, context);
+          AppState().searchDevices(filter, context);
           _showFab = false;
       }
     });
@@ -227,7 +223,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
     return count;
   }
 
-  PlatformNavBar _buildBottom(BuildContext context, AppState state) {
+  PlatformNavBar _buildBottom(BuildContext context) {
     return PlatformNavBar(
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
@@ -238,8 +234,16 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
           const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
         ],
         currentIndex: _bottomBarIndex,
-        itemChanged: (i) => switchBottomBar(i, state, false),
+        itemChanged: (i) => switchBottomBar(i, false),
         material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (AppState().devices.isEmpty) {
+      AppState().loadDevices(context);
+    }
   }
 
   @override
@@ -253,13 +257,12 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, state, child) {
-        _state = state;
         if (!_initialized) {
           WidgetsBinding.instance?.addPostFrameCallback((_) {
             state.loadDeviceGroups(context);
             state.loadNetworks(context);
             state.loadLocations(context);
-            switchBottomBar(_bottomBarIndex, state, true);
+            switchBottomBar(_bottomBarIndex,  true);
           });
           _initialized = true;
         }
@@ -275,14 +278,14 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                       context: context,
                       delegate: DevicesSearchDelegate(
                         (query) {
-                          _searchChanged(query, state);
+                          _searchChanged(query);
                           return _buildListWidget();
                         },
-                        (q) => _searchChanged(q, state),
+                        (q) => _searchChanged(q),
                       ));
                   _searchClosed = true;
                   _searchDebounce?.cancel();
-                  _searchChanged("", state);
+                  _searchChanged("");
                 }),
             cupertino: (_, __) => const SizedBox.shrink(),
           ));
@@ -290,7 +293,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
         if (kIsWeb) {
           actions.add(PlatformIconButton(
-            onPressed: () => _state.refreshDevices(context),
+            onPressed: () => AppState().refreshDevices(context),
             icon: const Icon(Icons.refresh),
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
@@ -332,7 +335,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                           PlatformDialogAction(
                             child: const Text("OK"),
                             onPressed: () {
-                              switchBottomBar(_bottomBarIndex, state, true);
+                              switchBottomBar(_bottomBarIndex, true);
                               Navigator.pop(context);
                             },
                           ),
@@ -376,7 +379,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                           PlatformDialogAction(
                             child: const Text("OK"),
                             onPressed: () {
-                              switchBottomBar(_bottomBarIndex, state, true);
+                              switchBottomBar(_bottomBarIndex, true);
                               Navigator.pop(context);
                             },
                           ),
@@ -420,7 +423,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                           PlatformDialogAction(
                             child: const Text("OK"),
                             onPressed: () {
-                              switchBottomBar(_bottomBarIndex, state, true);
+                              switchBottomBar(_bottomBarIndex, true);
                               Navigator.pop(context);
                             },
                           ),
@@ -464,7 +467,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                           PlatformDialogAction(
                             child: const Text("OK"),
                             onPressed: () {
-                              switchBottomBar(_bottomBarIndex, state, true);
+                              switchBottomBar(_bottomBarIndex, true);
                               Navigator.pop(context);
                             },
                           ),
@@ -478,7 +481,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                 label: (filter.favorites == true ? '✓ ' : '') + 'Favorites',
                 onTap: (_) => setState(() {
                       filter.favorites = filter.favorites == true ? null : true;
-                      switchBottomBar(_bottomBarIndex, state, true);
+                      switchBottomBar(_bottomBarIndex, true);
                     })));
           }
 
@@ -498,7 +501,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                   if (_bottomBarIndex != tabNetworks) filter.networkIds = null;
                   if (_bottomBarIndex != tabClasses) filter.deviceClassIds = null;
                   if (_bottomBarIndex != tabFavorites) filter.favorites = null;
-                  switchBottomBar(_bottomBarIndex, state, true);
+                  switchBottomBar(_bottomBarIndex, true);
                 }));
           }
 
@@ -547,7 +550,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                   cupertino: !hideSearch
                       ? (_, __) => Container(
                             child: CupertinoSearchTextField(
-                              onChanged: (query) => _searchChanged(query, state),
+                              onChanged: (query) => _searchChanged(query),
                               style: TextStyle(color: MyTheme.textColor),
                               itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
                               restorationId: "cupertino-device-search",
@@ -562,7 +565,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                     case tabDevices:
                       return _buildListWidget();
                     case tabLocations:
-                      return DeviceListByLocation();
+                      return const DeviceListByLocation();
                     case tabClasses:
                       return const DeviceListByDeviceClass();
                     case tabGroups:
@@ -586,7 +589,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
               ]),
               cupertino: (context, _) => CupertinoPageScaffoldData(controller: CupertinoTabController(initialIndex: _bottomBarIndex)),
               // if not used, changes to _bottomBarIndex are not reflected visually
-              bottomNavBar: _buildBottom(context, state),
+              bottomNavBar: _buildBottom(context),
             ));
       },
     );

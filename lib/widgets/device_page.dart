@@ -54,18 +54,18 @@ class DevicePage extends StatelessWidget {
     printer: SimplePrinter(),
   );
 
-  refresh(BuildContext context, AppState state) {
+  refresh(BuildContext context) {
     WidgetsBinding.instance?.addPostFrameCallback((_) async {
-      await _refresh(context, state, true);
+      await _refresh(context, true);
     });
   }
 
-  _refresh(BuildContext context, AppState state, bool external) async {
+  _refresh(BuildContext context, bool external) async {
     late final List<DeviceState> states;
     if (_stateDeviceIndex != null) {
-      states = state.devices[_stateDeviceIndex!].states;
+      states = AppState().devices[_stateDeviceIndex!].states;
     } else {
-      states = state.deviceGroups[_stateDeviceGroupIndex!].states;
+      states = AppState().deviceGroups[_stateDeviceGroupIndex!].states;
     }
     for (var element in states) {
       if (!element.isControlling) {
@@ -73,13 +73,13 @@ class DevicePage extends StatelessWidget {
         element.transitioning = true;
       }
     }
-    if (!external) state.notifyListeners(); // not allowed when just building the widget
-    state.loadStates(context, _stateDeviceIndex == null ? [] : [state.devices[_stateDeviceIndex!]],
-        _stateDeviceGroupIndex == null ? [] : [state.deviceGroups[_stateDeviceGroupIndex!]]);
+    if (!external) AppState().notifyListeners(); // not allowed when just building the widget
+    AppState().loadStates(context, _stateDeviceIndex == null ? [] : [AppState().devices[_stateDeviceIndex!]],
+        _stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[_stateDeviceGroupIndex!]]);
   }
 
   _performAction(
-      DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states, AppState state) async {
+      DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
     if (connectionStatus == DeviceConnectionStatus.offline) {
       Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
       return;
@@ -87,8 +87,8 @@ class DevicePage extends StatelessWidget {
     FunctionConfig? functionConfig;
     NestedFunction? function;
     if (!element.isControlling) {
-      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
-      function = state.nestedFunctions[functionConfig.getRelatedControllingFunction(element.value)];
+      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
+      function = AppState().nestedFunctions[functionConfig.getRelatedControllingFunction(element.value)];
 
       final controllingFunction = functionConfig.getRelatedControllingFunction(element.value);
       if (controllingFunction == null) {
@@ -115,10 +115,10 @@ class DevicePage extends StatelessWidget {
         return;
       }
       element = controllingStates.first;
-      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
+      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
     } else {
-      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
-      function = state.nestedFunctions[element.functionId];
+      functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
+      function = AppState().nestedFunctions[element.functionId];
     }
 
     if (function == null) {
@@ -138,7 +138,7 @@ class DevicePage extends StatelessWidget {
         continue;
       }
       var measuringFunctionConfig = functionConfigs[states[i].functionId];
-      measuringFunctionConfig ??= FunctionConfigDefault(state, states[i].functionId);
+      measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
 
       List<String>? refreshingMeasurementFunctionIds;
       if (_stateDeviceGroupIndex != null) {
@@ -197,14 +197,14 @@ class DevicePage extends StatelessWidget {
     for (var i in transitioningStates) {
       states[i].transitioning = true;
     }
-    state.notifyListeners();
+    AppState().notifyListeners();
     final List<DeviceCommandResponse> responses = [];
     if (!await DeviceCommandsService.runCommandsSecurely(context, [element.toCommand(input)], responses)) {
       element.transitioning = false;
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      state.notifyListeners();
+      AppState().notifyListeners();
       return;
     }
     assert(responses.length == 1);
@@ -213,30 +213,30 @@ class DevicePage extends StatelessWidget {
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      state.notifyListeners();
+      AppState().notifyListeners();
       const err = "Error running command";
       Toast.showErrorToast(context, err);
       _logger.e(err + ": " + responses[0].message.toString());
       return;
     }
     element.transitioning = false;
-    state.notifyListeners();
+    AppState().notifyListeners();
 
     // refresh changed measurements
-    state.notifyListeners();
+    AppState().notifyListeners();
     responses.clear();
     if (!await DeviceCommandsService.runCommandsSecurely(context, commandCallbacks.map((e) => e.command).toList(growable: false), responses, false)) {
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      state.notifyListeners();
+      AppState().notifyListeners();
       return;
     }
     assert(responses.length == commandCallbacks.length);
     for (var i = 0; i < responses.length; i++) {
       commandCallbacks[i].callback(responses[i]);
     }
-    state.notifyListeners();
+    AppState().notifyListeners();
   }
 
   _displayTimestamp(DeviceState element, List<DeviceState> states, BuildContext context) {
@@ -253,24 +253,24 @@ class DevicePage extends StatelessWidget {
     }
   }
 
-  String _getTitle(DeviceState element, AppState state) {
-    final function = state.nestedFunctions[element.functionId];
+  String _getTitle(DeviceState element) {
+    final function = AppState().nestedFunctions[element.functionId];
     String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
     if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
     return title;
   }
 
-  String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device, AppState state) {
+  String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device) {
     String subtitle = "";
     if (states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
-      subtitle += _findAspect(state.aspects.values, element.aspectId)?.name ?? "MISSING_ASPECT_NAME";
+      subtitle += _findAspect(AppState().aspects.values, element.aspectId)?.name ?? "MISSING_ASPECT_NAME";
     }
     if (device != null &&
         element.serviceGroupKey != null &&
         element.serviceGroupKey != "" &&
         states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId == element.aspectId)) {
       if (subtitle.isNotEmpty) subtitle += ", ";
-      subtitle += (state.deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
+      subtitle += (AppState().deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
           "MISSING_SERVICE_GROUP_NAME");
     }
     return subtitle;
@@ -366,7 +366,7 @@ class DevicePage extends StatelessWidget {
       }
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
-          onPressed: () => _refresh(context, state, false),
+          onPressed: () => _refresh(context, false),
           icon: const Icon(Icons.refresh),
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
@@ -380,8 +380,8 @@ class DevicePage extends StatelessWidget {
         if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
           continue;
         }
-        final subtitle = _getSubtitle(element, states, device, state);
-        var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(state, element.functionId);
+        final subtitle = _getSubtitle(element, states, device);
+        var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
         Iterable<DeviceState>? controllingStates;
@@ -397,11 +397,11 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
+                onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
                   context: context,
                   builder: (context) => Chart(element),
                 )),
-                title: Text(_getTitle(element, state)),
+                title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: Container(
                   padding: const EdgeInsets.only(right: 12),
@@ -421,11 +421,11 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
+                onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
                   context: context,
                   builder: (context) => Chart(element),
                 )),
-                title: Text(_getTitle(element, state)),
+                title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
                     ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
@@ -440,7 +440,6 @@ class DevicePage extends StatelessWidget {
                                       context,
                                       element,
                                       states,
-                                      state,
                                     ),
                           )
                         : PlatformTextButton(
@@ -455,7 +454,6 @@ class DevicePage extends StatelessWidget {
                                       context,
                                       element,
                                       states,
-                                      state,
                                     ),
                           )),
           );
@@ -464,13 +462,13 @@ class DevicePage extends StatelessWidget {
 
       for (var element in states.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
         var functionConfig = functionConfigs[element.functionId];
-        final subtitle = _getSubtitle(element, states, device, state);
+        final subtitle = _getSubtitle(element, states, device);
 
         functionWidgets.insert(
           element.functionId,
           ListTile(
-            title: Text(_getTitle(element, state)),
-            onLongPress: device == null || !(element.value is num) ? null : () =>  Navigator.push(context,  platformPageRoute(
+            title: Text(_getTitle(element)),
+            onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
               context: context,
               builder: (context) => Chart(element),
             )),
@@ -488,7 +486,6 @@ class DevicePage extends StatelessWidget {
                               context,
                               element,
                               states,
-                              state,
                             ),
                   ),
           ),
@@ -535,7 +532,7 @@ class DevicePage extends StatelessWidget {
       return PlatformScaffold(
         appBar: _appBar.getAppBar(context, appBarActions),
         body: RefreshIndicator(
-          onRefresh: () => _refresh(context, state, false),
+          onRefresh: () => _refresh(context,  false),
           child: Scrollbar(
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),

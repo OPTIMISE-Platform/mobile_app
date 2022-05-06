@@ -96,13 +96,13 @@ class DeviceGroup {
 
   Map<String, dynamic> toJson() => _$DeviceGroupToJson(this);
 
-  prepareStates(AppState state) {
+  prepareStates() {
     if (states.isNotEmpty) {
       // only once
       return;
     }
     for (final criterion in criteria) {
-      final f = state.nestedFunctions[criterion.function_id];
+      final f = AppState().nestedFunctions[criterion.function_id];
       if (f == null) {
         _logger.e("Function is unknown: " + criterion.function_id);
         continue;

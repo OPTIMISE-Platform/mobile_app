@@ -48,12 +48,11 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
   bool _searchClosed = false;
   bool _delegateOpen = false;
 
-  late AppState _state;
   DeviceSearchFilter filter = DeviceSearchFilter("");
 
   final _cupertinoSearchController = RestorableTextEditingController();
 
-  _searchChanged(String search, AppState state) {
+  _searchChanged(String search) {
     if (filter.query == search) {
       return;
     }
@@ -63,7 +62,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
     filter.query = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      _state.searchDevices(filter, context);
+      AppState().searchDevices(filter, context);
     });
   }
 
@@ -71,12 +70,12 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
     return Stack(children: [
       ListView.builder(
         padding: MyTheme.inset,
-        itemCount: _state.totalDevices,
+        itemCount: AppState().totalDevices,
         itemBuilder: (_, i) {
-          if (i >= _state.devices.length) {
-            _state.loadDevices(context);
+          if (i >= AppState().devices.length) {
+            AppState().loadDevices(context);
           }
-          if (i > _state.devices.length - 1) {
+          if (i > AppState().devices.length - 1) {
             return const SizedBox.shrink();
           }
           return Column(
@@ -85,14 +84,14 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
               ListTile(
                 leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(
-                    _selected.contains(_state.devices[i].id) ? PlatformIcons(context).checkMarkCircledSolid : Icons.circle_outlined,
+                    _selected.contains(AppState().devices[i].id) ? PlatformIcons(context).checkMarkCircledSolid : Icons.circle_outlined,
                     color: MyTheme.appColor,
                   )
                 ]),
-                title: Text(_state.devices[i].displayName),
+                title: Text(AppState().devices[i].displayName),
                 onTap: () => setState(() {
-                  _selected.contains(_state.devices[i].id) ? _selected.remove(_state.devices[i].id) : _selected.add(_state.devices[i].id);
-                  _state.notifyListeners();
+                  _selected.contains(AppState().devices[i].id) ? _selected.remove(AppState().devices[i].id) : _selected.add(AppState().devices[i].id);
+                  AppState().notifyListeners();
                 }),
               ),
             ],
@@ -110,9 +109,9 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
   Widget _fab() {
     return FloatingActionButton.extended(
       onPressed: () async {
-        _state.locations[widget._stateLocationIndex].device_ids = _selected.toList();
-        await LocationService.saveLocation(_state.locations[widget._stateLocationIndex]);
-        _state.notifyListeners();
+        AppState().locations[widget._stateLocationIndex].device_ids = _selected.toList();
+        await LocationService.saveLocation(AppState().locations[widget._stateLocationIndex]);
+        AppState().notifyListeners();
         if (_delegateOpen) Navigator.pop(context, true);
         Navigator.pop(context);
       },
@@ -131,7 +130,6 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      _state = state;
       if (state.locations.length - 1 < widget._stateLocationIndex) {
         widget._logger.w("LocationEditDevices requested for location index that is not in AppState");
         return Center(child: PlatformCircularProgressIndicator());
@@ -160,15 +158,15 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
                       context: context,
                       delegate: DevicesSearchDelegate(
                         (query) {
-                          _searchChanged(query, state);
+                          _searchChanged(query);
                           return _buildListWidget();
                         },
-                        (q) => _searchChanged(q, state),
+                        (q) => _searchChanged(q),
                       ));
                   _searchClosed = true;
                   _delegateOpen = false;
                   _searchDebounce?.cancel();
-                  if (willCloseThis != true) _searchChanged("", state);
+                  if (willCloseThis != true) _searchChanged("");
                 }),
             cupertino: (_, __) => const SizedBox.shrink(),
           ),
@@ -182,7 +180,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
                 PlatformWidget(
                   cupertino: (_, __) => Container(
                     child: CupertinoSearchTextField(
-                      onChanged: (query) => _searchChanged(query, state),
+                      onChanged: (query) => _searchChanged(query),
                       style: TextStyle(color: MyTheme.textColor),
                       itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
                       restorationId: "cupertino-device-search",

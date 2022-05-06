@@ -25,73 +25,97 @@ import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
+import 'package:http/http.dart' as http;
 
 import '../widgets/toast.dart';
 import 'cache_helper.dart';
 
-const storageKeyToken = "auth/token";
+class Auth extends ChangeNotifier {
+  static final _instance = Auth._internal();
 
-class Auth {
+  factory Auth() => _instance;
+
+  Auth._internal();
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-  static final _m = Mutex();
+  final _m = Mutex();
+  final _clientSetupMutex = Mutex();
 
-  static OpenIdConnectClient? _client;
+  static final _httpClient = http.Client();
+  OpenIdConnectClient? _client;
+  final String _discoveryUrl = (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
+      '/auth/realms/' +
+      (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
+      "/.well-known/openid-configuration";
 
-  static bool _loggedIn = false;
+  bool loggedIn = false;
 
-  static Future<void> init() async {
-    if (_initialized()) {
-      return;
-    }
-    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
-        _client = await OpenIdConnectClient.create(
-          discoveryDocumentUrl: (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
-              '/auth/realms/' +
-              (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
-              "/.well-known/openid-configuration",
-          clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
-          redirectUrl: kIsWeb
-              ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
-              : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
-          scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
-        );
-        _client?.changes.listen((event) {
-          _logger.d(event.type.toString() + ": " + event.message.toString());
-        });
-      } catch (e) {
-        _logger.e("Could not setup client: " + e.toString());
+  Future<void> init() async {
+    await _clientSetupMutex.protect(() async {
+      if (_initialized) {
+        return;
       }
-    } else {
-      _logger.d("Postponing init(): Currently offline");
-    }
-    final token = await OpenIdIdentity.load();
-    if (token != null) {
-      _loggedIn = true;
-      _logger.d("Using token from storage");
-      if (_client != null && !tokenValid) {
-        _logger.d("But token is invalid");
-        if (_client?.hasTokenExpired == true) {
-          _logger.d("Token is expired, attempting refresh");
-          final ok = await _client?.refresh();
-          _logger.d("Refresh was ok? " + ok.toString());
+      if (await _serverAvailable()) {
+        try {
+          _client = await OpenIdConnectClient.create(
+            discoveryDocumentUrl: _discoveryUrl,
+            clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
+            redirectUrl: kIsWeb
+                ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
+                : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
+            scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
+            autoRefresh: false,
+          );
+          loggedIn = _client?.identity != null;
+          _client?.changes.listen((event) async {
+            _logger.d(event.type.toString() + ": " + event.message.toString());
+            switch (event.type) {
+              case AuthEventTypes.Refresh:
+              case AuthEventTypes.Success:
+                loggedIn = true;
+                notifyListeners();
+
+                break;
+              case AuthEventTypes.NotLoggedIn: // applies if token exists but timed out on client init
+                loggedIn = _client?.identity != null;
+                if (!loggedIn) {
+                  _cleanup();
+                }
+                notifyListeners();
+                break;
+              case AuthEventTypes.Error:
+              case AuthEventTypes.Logout:
+                if (await _serverAvailable()) {
+                  loggedIn = false;
+                  await _cleanup();
+                  notifyListeners();
+                } else {
+                  _client = null;
+                }
+            }
+          });
+        } catch (e) {
+          _logger.e("Could not setup client: " + e.toString());
+        }
+      } else {
+        _logger.d("Postponing real init(): Currently offline");
+        final token = await OpenIdIdentity.load();
+        if (token != null) {
+          _logger.d("Using token from storage, assuming still valid");
+          loggedIn = true;
+          notifyListeners();
         }
       }
-    }
+    });
   }
 
-  static bool _initialized() {
-    return _client != null;
-  }
+  bool get _initialized => _client != null;
 
-  static Future<void> login(BuildContext context, AppState state, String user, String pw) async {
+  Future<void> login(BuildContext context, String user, String pw) async {
     await _m.protect(() async {
-      state.notifyListeners();
-
-      if (!_initialized()) {
+      if (!_initialized) {
         await init();
         if (_client == null) {
           Toast.showErrorToast(context, "Can't login, are you online?");
@@ -103,8 +127,9 @@ class Auth {
         _logger.d("Old token still valid");
         return;
       }
-      if (await _client!.refresh(raiseEvents: false)) {
+      if (await refreshToken()) {
         _logger.d("refreshed token");
+        return;
       }
       final OpenIdIdentity? token;
       try {
@@ -115,64 +140,65 @@ class Auth {
       }
 
       if (token != null) {
-        token.save();
         _logger.i('Logged in');
-        _loggedIn = true;
-        await state.initMessaging();
+        await AppState().initMessaging();
       } else {
         _logger.w("_token null");
         throw AuthException("token null");
       }
       return;
     });
-    state.notifyListeners();
   }
 
-  static logout(BuildContext context, AppState state) async {
-    if (!_initialized()) {
+  logout(BuildContext context) async {
+    if (!_initialized) {
       await init();
     }
     if (_client?.identity == null) {
       return;
     }
 
-    if (state.fcmToken != null) {
-      await FcmTokenService.deregisterFcmToken(state.fcmToken!);
+    if (AppState().fcmToken != null) {
+      await FcmTokenService.deregisterFcmToken(AppState().fcmToken!);
     }
-    await CacheHelper.clearCache();
-    await state.onLogout();
-    await _client?.logoutToken();
-    await OpenIdIdentity.clear(); // remove saved token
 
     _logger.d("logout");
-    _loggedIn = false;
     Navigator.of(context).popUntil((route) => route.isFirst);
-    state.notifyListeners();
   }
 
-  static Future<Map<String, String>> getHeaders() async {
-    if (!tokenValid) {
-      await refreshToken();
-      if (!tokenValid) throw AuthException("Not logged in");
+  Future<void> _cleanup() async {
+    await CacheHelper.clearCache();
+    await AppState().onLogout();
+    await OpenIdIdentity.clear(); // remove saved token
+  }
+
+  Future<Map<String, String>> getHeaders() async {
+    if (!loggedIn) throw AuthException("Not logged in");
+    if (!(await refreshToken())) {
+      return {};
     }
     return {"Authorization": "Bearer " + await getToken()};
   }
 
-  static Future<bool> refreshToken() async {
-    if (tokenValid) return true;
-    if (_client != null && _client!.identity != null && _client!.hasTokenExpired == true) {
-      final ok = await _client!.refresh();
-      return ok && tokenValid;
-    }
-    return false;
+  Future<bool> refreshToken() async {
+    return await _m.protect(() async {
+      if (!_initialized) {
+        await init();
+      }
+      if (tokenValid) return true;
+      if (_client != null && _client!.identity != null && _client!.hasTokenExpired == true && (await _serverAvailable())) {
+        final ok = await _client!.refresh();
+        return ok && tokenValid;
+      }
+      return false;
+    });
   }
 
-  static bool get tokenValid =>
-      _loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
+  bool get tokenValid => loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
 
-  static bool get loggingIn => _m.isLocked;
+  bool get loggingIn => _m.isLocked;
 
-  static Future<String> getToken() async {
+  Future<String> getToken() async {
     if (_client != null) {
       return _client!.identity!.accessToken;
     }
@@ -183,7 +209,23 @@ class Auth {
     return "";
   }
 
-  static String? getUsername() {
+  String? getUsername() {
     return _client?.identity?.userName;
+  }
+
+  Future<bool> _serverAvailable() async {
+    if (await (Connectivity().checkConnectivity()) == ConnectivityResult.none) {
+      return false;
+    }
+    var uri = Uri.parse(_discoveryUrl);
+    if (_discoveryUrl.startsWith("https://")) {
+      uri = uri.replace(scheme: "https");
+    }
+    try {
+      final resp = await _httpClient.get(uri);
+      return resp.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
   }
 }

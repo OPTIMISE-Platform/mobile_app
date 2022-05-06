@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/get_timestamp.dart';
 import 'package:mobile_app/config/set_color.dart';
 import 'package:mobile_app/config/set_off_state.dart';
@@ -79,17 +80,16 @@ class FunctionConfigDefault implements FunctionConfig {
     printer: SimplePrinter(),
   );
 
-  final AppState _state;
   final String _functionId;
 
   final List<Widget> _fields = [];
   dynamic _result;
 
-  FunctionConfigDefault(this._state, this._functionId);
+  FunctionConfigDefault(this._functionId);
 
   @override
   Widget? build(BuildContext context, [dynamic value]) {
-    final characteristic = _state.nestedFunctions[_functionId]?.concept.base_characteristic;
+    final characteristic = AppState().nestedFunctions[_functionId]?.concept.base_characteristic;
     if (characteristic == null) {
       return null;
     }
@@ -253,12 +253,12 @@ class FunctionConfigDefault implements FunctionConfig {
 
   @override
   String? getRelatedControllingFunction(value) {
-    final conceptId = _state.nestedFunctions[_functionId]?.concept.id;
+    final conceptId = AppState().nestedFunctions[_functionId]?.concept.id;
     if (conceptId == null) {
       return null;
     }
     final controllingFunctions =
-        _state.nestedFunctions.values.where((element) => element.isControlling() && element.concept.id == conceptId).toList(growable: false);
+        AppState().nestedFunctions.values.where((element) => element.isControlling() && element.concept.id == conceptId).toList(growable: false);
     if (controllingFunctions.length == 1) {
       return controllingFunctions[0].id;
     }
@@ -268,11 +268,11 @@ class FunctionConfigDefault implements FunctionConfig {
 
   @override
   List<String>? getAllRelatedControllingFunctions() {
-    final conceptId = _state.nestedFunctions[_functionId]?.concept.id;
+    final conceptId = AppState().nestedFunctions[_functionId]?.concept.id;
     if (conceptId == null) {
       return null;
     }
-    return _state.nestedFunctions.values
+    return AppState().nestedFunctions.values
         .where((element) => element.isControlling() && element.concept.id == conceptId)
         .toList(growable: false)
         .map((e) => e.id)

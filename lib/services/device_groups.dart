@@ -58,7 +58,7 @@ class DeviceGroupsService {
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.get<List<dynamic>?>(uri,
         queryParameters: queryParameters, options: Options(headers: headers));
@@ -82,7 +82,7 @@ class DeviceGroupsService {
 
     final encoded = json.encode(group.toJson());
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
 

@@ -21,7 +21,6 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
@@ -59,13 +58,12 @@ class DevicesService {
       ..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
-  static Future<List<DeviceInstance>> getDevices(AppState state,
-  int limit, int offset, DeviceSearchFilter filter) async {
+  static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {
     late Response<List<dynamic>?> resp;
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
 
-    final body = filter.toBody(limit, offset, state);
+    final body = filter.toBody(limit, offset);
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
     final encoded = json.encode(body);
     _logger.d("Devices: " + encoded);
@@ -92,7 +90,7 @@ class DevicesService {
 
     final encoded = json.encode(device.toJson());
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
 
@@ -112,7 +110,7 @@ class DevicesService {
     if (filter.query.isNotEmpty) {
       queryParameters["search"] = filter.query;
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
 

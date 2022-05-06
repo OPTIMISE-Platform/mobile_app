@@ -54,7 +54,7 @@ class LocationService {
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri,
@@ -76,7 +76,7 @@ class LocationService {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/device-manager/locations/' + location.id;
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.put<dynamic?>(uri, options: Options(headers: headers), data: location.toJson());
@@ -91,7 +91,7 @@ class LocationService {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/device-manager/locations/';
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
@@ -106,7 +106,7 @@ class LocationService {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/device-manager/locations/' + id;
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.delete(uri, options: Options(headers: headers));

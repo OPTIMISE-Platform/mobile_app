@@ -30,10 +30,10 @@ class MyAppBar {
 
   static Widget _notifications(BuildContext context) {
     return Consumer<AppState>(
-      builder: (_, state, __) {
-        state.initNotifications(context);
-        state.checkMessageDisplay(context);
-        final unread = state.notifications
+      builder: (_, __, ___) {
+        AppState().initNotifications(context);
+        AppState().checkMessageDisplay(context);
+        final unread = AppState().notifications
             .where((element) => !element.isRead)
             .toList(growable: false)
             .length;
@@ -48,7 +48,7 @@ class MyAppBar {
               context,
               platformPageRoute(
                 context: context,
-                builder: (context) => NotificationList(),
+                builder: (context) => const NotificationList(),
               ),
             );
           },

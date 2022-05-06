@@ -48,10 +48,10 @@ class LocationPage extends StatelessWidget {
     printer: SimplePrinter(),
   );
 
-  _refresh(AppState state, Location location, BuildContext context) async {
+  _refresh(Location location, BuildContext context) async {
     parentState.filter.locationIds = [location.id];
-    await state.loadDeviceGroups(context);
-    await state.searchDevices(parentState.filter, context, true);
+    await AppState().loadDeviceGroups(context);
+    await AppState().searchDevices(parentState.filter, context, true);
   }
 
   @override
@@ -134,7 +134,7 @@ class LocationPage extends StatelessWidget {
       ));
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
-          onPressed: () => _refresh(state, location, context),
+          onPressed: () => _refresh(location, context),
           icon: const Icon(Icons.refresh),
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
@@ -179,7 +179,7 @@ class LocationPage extends StatelessWidget {
                     child: PlatformCircularProgressIndicator(),
                   )
                 : RefreshIndicator(
-                    onRefresh: () async => await _refresh(state, location, context),
+                    onRefresh: () async => await _refresh(location, context),
                     child: location.device_ids.isEmpty && location.device_group_ids.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {

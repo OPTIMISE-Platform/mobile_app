@@ -54,7 +54,7 @@ class DeviceTypesService {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/device-manager/device-types/' + id;
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.get<Map<String, dynamic>>(uri,
         options: Options(headers: headers));

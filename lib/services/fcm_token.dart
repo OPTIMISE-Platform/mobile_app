@@ -61,7 +61,7 @@ class FcmTokenService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.post(url, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
@@ -81,7 +81,7 @@ class FcmTokenService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
 
     final resp = await _client.delete(uri, headers: headers);
     if (resp.statusCode > 204 && resp.statusCode != 404) { // dont have to delete what cant be found

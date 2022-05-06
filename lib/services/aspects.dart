@@ -50,7 +50,7 @@ class AspectsService {
   static Future<List<Aspect>> getAspects() async {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-repository/aspects';
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));

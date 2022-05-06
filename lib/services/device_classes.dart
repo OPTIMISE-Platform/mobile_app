@@ -52,7 +52,7 @@ class DeviceClassesService {
         '/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<Map<String, dynamic>?>(uri,

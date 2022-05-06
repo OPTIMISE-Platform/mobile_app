@@ -63,7 +63,7 @@ class NotificationsService {
     String uri = (dotenv.env["API_URL"] ?? 'localhost') +
         '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final resp = await _dio!.get<Map<String, dynamic>>(uri,
         options: Options(headers: headers));
@@ -89,7 +89,7 @@ class NotificationsService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
 
     final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
 
@@ -107,7 +107,7 @@ class NotificationsService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
 
     final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
 

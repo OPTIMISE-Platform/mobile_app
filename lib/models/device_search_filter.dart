@@ -63,7 +63,7 @@ class DeviceSearchFilter {
   addNetwork(String id) => networkIds = _add(networkIds, id);
   removeNetwork(String id) => networkIds = _remove(networkIds, id);
 
-  Map<String, dynamic> toBody(int limit, int offset, AppState state) {
+  Map<String, dynamic> toBody(int limit, int offset) {
     final body = <String, dynamic>{
       "resource": "devices",
       "find": {
@@ -75,8 +75,8 @@ class DeviceSearchFilter {
     };
     if (offset > 0) {
       body["find"]["after"] = {
-        "sort_field_value": state.devices[offset-1].name,
-        "id": state.devices[offset-1].id,
+        "sort_field_value": AppState().devices[offset-1].name,
+        "id": AppState().devices[offset-1].id,
       };
     }
 
@@ -91,7 +91,7 @@ class DeviceSearchFilter {
     if (deviceClassIds != null) {
       final List<String> deviceIds = [];
       for (var e in deviceClassIds!) {
-        deviceIds.addAll(state.deviceClasses[e]?.deviceIds ?? []);
+        deviceIds.addAll(AppState().deviceClasses[e]?.deviceIds ?? []);
       }
       if (allDeviceIds == null) {
         allDeviceIds = deviceIds;
@@ -102,7 +102,7 @@ class DeviceSearchFilter {
 
     if (deviceGroupIds != null) {
       final List<String> devicesInGroups = [];
-      state.deviceGroups.where((element) => deviceGroupIds!.contains(element.id)).forEach((group) => devicesInGroups.addAll(group.device_ids));
+      AppState().deviceGroups.where((element) => deviceGroupIds!.contains(element.id)).forEach((group) => devicesInGroups.addAll(group.device_ids));
       if (allDeviceIds == null) {
         allDeviceIds = devicesInGroups;
       } else {
@@ -112,7 +112,7 @@ class DeviceSearchFilter {
 
     if (locationIds != null) {
       final List<String> deviceInLocations = [];
-      state.locations.where((element) => locationIds!.contains(element.id)).forEach((location) => deviceInLocations.addAll(location.device_ids));
+      AppState().locations.where((element) => locationIds!.contains(element.id)).forEach((location) => deviceInLocations.addAll(location.device_ids));
       if (allDeviceIds == null) {
         allDeviceIds = deviceInLocations;
       } else {
@@ -132,7 +132,7 @@ class DeviceSearchFilter {
 
     if (networkIds != null) {
       final List<String> localIds = [];
-      state.networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
+      AppState().networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
       conditions.add({
         "condition": {
           "feature": "features.local_id",

@@ -59,6 +59,23 @@ const notificationDeleteManyType = "delete notifications";
 const messageKey = "messages";
 
 class AppState extends ChangeNotifier {
+  static final _instance = AppState._internal();
+  factory AppState() => _instance;
+  AppState._internal() {
+    SystemChannels.lifecycle.setMessageHandler((msg) {
+      if (msg == AppLifecycleState.resumed.toString()) {
+        handleQueuedMessages();
+      }
+      return Future.value(null);
+    });
+    if (kIsWeb) {
+      // receive broadcasts from service worker
+      getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
+        _handleRemoteMessageCommand(event.data["data"]);
+      });
+    }
+  }
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -105,7 +122,7 @@ class AppState extends ChangeNotifier {
 
   DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
 
-  int totalDevices = -1;
+  int totalDevices = 0;
   final Mutex _totalDevicesMutex = Mutex();
 
   final List<DeviceInstance> devices = <DeviceInstance>[];
@@ -130,24 +147,10 @@ class AppState extends ChangeNotifier {
   bool _notificationInited = false;
   String? _messageIdToDisplay;
 
-  bool get loggedIn => Auth.tokenValid;
+  bool get loggedIn => Auth().loggedIn;
 
-  bool get loggingIn => Auth.loggingIn;
+  bool get loggingIn => Auth().loggingIn;
 
-  AppState() {
-    SystemChannels.lifecycle.setMessageHandler((msg) {
-      if (msg == AppLifecycleState.resumed.toString()) {
-        handleQueuedMessages();
-      }
-      return Future.value(null);
-    });
-    if (kIsWeb) {
-      // receive broadcasts from service worker
-      getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
-        _handleRemoteMessageCommand(event.data["data"]);
-      });
-    }
-  }
 
   init(BuildContext context) async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
@@ -205,13 +208,13 @@ class AppState extends ChangeNotifier {
   }
 
   updateTotalDevices(BuildContext context) async {
-    await _totalDevicesMutex.acquire();
-    final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
-    if (total != totalDevices) {
-      totalDevices = total;
-      notifyListeners();
-    }
-    _totalDevicesMutex.release();
+    await _totalDevicesMutex.protect(() async {
+      final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
+      if (total != totalDevices) {
+        totalDevices = total;
+        notifyListeners();
+      }
+    });
   }
 
   Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false]) async {
@@ -252,7 +255,7 @@ class AppState extends ChangeNotifier {
     late final List<DeviceInstance> newDevices;
     const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(this, limit, _deviceOffset, _deviceSearchFilter);
+      newDevices = await DevicesService.getDevices(limit, _deviceOffset, _deviceSearchFilter);
     } catch (e) {
       _logger.e("Could not get devices: " + e.toString());
       Toast.showErrorToast(context, "Could not load devices");
@@ -305,7 +308,7 @@ class AppState extends ChangeNotifier {
       }
     }
     for (var element in groups) {
-      element.prepareStates(this);
+      element.prepareStates();
       commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
     }
     if (commandCallbacks.isEmpty) {
@@ -592,7 +595,11 @@ class AppState extends ChangeNotifier {
   }
 
   onLogout() async {
-    await messaging.deleteToken();
+    try {
+      await messaging.deleteToken();
+    } catch (e) {
+      _logger.w("Could not delete FCM token: " + e.toString());
+    }
     fcmToken = null;
     await _storage.delete(key: messageKey);
     _initialized = false;
@@ -603,7 +610,7 @@ class AppState extends ChangeNotifier {
 
     nestedFunctions.clear();
     _deviceSearchFilter = DeviceSearchFilter.empty();
-    totalDevices = -1;
+    totalDevices = 0;
 
     devices.clear();
     _allDevicesLoaded = false;

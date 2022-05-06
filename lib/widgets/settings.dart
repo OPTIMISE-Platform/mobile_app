@@ -202,7 +202,7 @@ class Settings extends StatelessWidget {
                   dotenv.env["VERSION"].toString() +
                   "\n" +
                   "Username: " +
-                  Auth.getUsername().toString() +
+                  Auth().getUsername().toString() +
                   "\n" +
                   "FCM Token (SHA1): " +
                   sha1.convert(utf8.encode(state.fcmToken ?? "")).toString();
@@ -257,7 +257,7 @@ class Settings extends StatelessWidget {
                       builder: (context) => const PageSpinner("Logout"),
                     ));
                 try {
-                  await Auth.logout(context, state);
+                  await Auth().logout(context);
                 } catch (e) {
                   Toast.showErrorToast(context, "Can't logout");
                 }

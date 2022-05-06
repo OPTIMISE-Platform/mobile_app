@@ -55,7 +55,7 @@ class NetworksService {
       queryParameters["ids"] = ids.join(",");
     }
 
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<List<dynamic>?>(uri,

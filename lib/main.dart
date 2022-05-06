@@ -44,7 +44,6 @@ Future main() async {
   await dotenv.load(fileName: ".env");
   await Settings.init();
   await MyTheme.loadTheme();
-  await Auth.init();
   await findSystemLocale();
   await initializeDateFormatting(Intl.systemLocale, null);
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,12 +51,19 @@ Future main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await Auth().init();
   runApp(
     RootRestorationScope(restorationId: "root", child:
-      ChangeNotifierProvider(
-        create: (context) => AppState(),
-        child: const MyApp(),
-      ))
+        MultiProvider(providers: [
+          ChangeNotifierProvider(
+            create: (context) => AppState(),
+          ),
+          ChangeNotifierProvider(
+            create: (context) => Auth(),
+          ),
+        ],
+          child: const MyApp(),)
+     )
   );
 }
 

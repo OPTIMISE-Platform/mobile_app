@@ -44,9 +44,9 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
     super.dispose();
   }
 
-  void _openLocationPage(int i, AppState state, DeviceListState? parentState) async {
-    parentState?.filter.locationIds = [state.locations[i].id];
-    state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, null, [state.locations[i].id]), context);
+  void _openLocationPage(int i, DeviceListState? parentState) async {
+    parentState?.filter.locationIds = [AppState().locations[i].id];
+    AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, null, [AppState().locations[i].id]), context);
     await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationPage(i, parentState!)));
     parentState?.filter.locationIds = null;
   }
@@ -81,7 +81,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
         }
 
         state.locations.add(await LocationService.createLocation(newName!));
-        _openLocationPage(state.locations.length - 1, state, parentState);
+        _openLocationPage(state.locations.length - 1, parentState);
         state.notifyListeners();
       });
       return Scrollbar(
@@ -134,7 +134,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                                       state.locations[i].device_group_ids.length.toString() +
                                       " Group" +
                                       (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
-                                  onTap: () => _openLocationPage(i, state, parentState))
+                                  onTap: () => _openLocationPage(i, parentState))
                             ]);
                           },
                         )));

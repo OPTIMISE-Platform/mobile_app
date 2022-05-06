@@ -172,7 +172,7 @@ class DeviceListItem extends StatelessWidget {
                 context: context,
                 builder: (context) {
                   final target = DevicePage(_stateDeviceIndex, null);
-                  target.refresh(context, state);
+                  target.refresh(context);
                   return target;
                 },
               ));

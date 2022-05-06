@@ -24,7 +24,6 @@ import 'package:mobile_app/widgets/toast.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:provider/provider.dart';
 
-import 'app_state.dart';
 import 'services/auth.dart';
 
 class Home extends StatefulWidget {
@@ -46,10 +45,10 @@ class _HomeState extends State<Home> {
   bool _pwHidden = true;
   bool _loginChecked = false;
 
-  _login(AppState state) async {
+  _login() async {
     if (_user.isEmpty || _pw.isEmpty) return;
     try {
-      await Auth.login(context, state, _user, _pw);
+      await Auth().login(context, _user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
     } on AuthenticationException catch (e) {
@@ -64,13 +63,13 @@ class _HomeState extends State<Home> {
     }
   }
 
-  PlatformTextFormField _passwordField(AppState state) {
+  PlatformTextFormField _passwordField() {
     return PlatformTextFormField(
       hintText: "Password",
       keyboardType: TextInputType.visiblePassword,
       obscureText: _pwHidden,
       onChanged: (value) => setState(() => _pw = value),
-      onFieldSubmitted: (_) => _login(state),
+      onFieldSubmitted: (_) => _login(),
       initialValue: _pw,
       material: (context, _) => MaterialTextFormFieldData(
         decoration: InputDecoration(
@@ -86,7 +85,7 @@ class _HomeState extends State<Home> {
   }
 
   _checklogin() async {
-    await Auth.refreshToken();
+    await Auth().refreshToken();
     setState(() {
       _loginChecked = true;
     });
@@ -100,14 +99,14 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    const _appBar = MyAppBar("Login");
-    return Consumer<AppState>(
-      builder: (context, state, child) {
-        return state.loggedIn
+    final _appBar = MyAppBar(_loginChecked ? "Login" : "Loading");
+    return Consumer<Auth>(
+      builder: (context, auth, child) {
+        return auth.loggedIn
             ? const DeviceList()
             : PlatformScaffold(
                 appBar: _appBar.getAppBar(context, [MyAppBar.settings(context)]),
-                body: state.loggingIn || !_loginChecked
+                body: auth.loggingIn || !_loginChecked
                     ? Center(child: PlatformCircularProgressIndicator())
                     : Container(
                         padding: MyTheme.inset * 3,
@@ -118,17 +117,17 @@ class _HomeState extends State<Home> {
                             hintText: "Username",
                             keyboardType: TextInputType.text,
                             onChanged: (value) => setState(() => _user = value),
-                            onFieldSubmitted: (_) => _login(state),
+                            onFieldSubmitted: (_) => _login(),
                             initialValue: _user,
                             autofocus: true,
                           ),
                           PlatformWidget(
-                              material: (_, __) => _passwordField(state),
+                              material: (_, __) => _passwordField(),
                               cupertino: (context, __) =>
-                                  Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField(state)), _visibilityButton()])),
+                                  Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField()), _visibilityButton()])),
                           PlatformElevatedButton(
                             child: const Text("Login"),
-                            onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(state),
+                            onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(),
                           ),
                         ])),
                       ));

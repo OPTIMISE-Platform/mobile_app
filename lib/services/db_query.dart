@@ -33,7 +33,7 @@ class DbQueryService {
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
-    final headers = await Auth.getHeaders();
+    final headers = await Auth().getHeaders();
 
     final resp = await _client.post(uri, headers: headers, body: json.encode([query]));
     if (resp.statusCode != 200) {

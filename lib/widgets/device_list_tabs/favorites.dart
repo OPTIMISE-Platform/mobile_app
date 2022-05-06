@@ -62,7 +62,7 @@ class DeviceListFavorites extends StatelessWidget {
                                           child: const Text("Add Favorites"),
                                           onPressed: () {
                                             final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
-                                            parentState?.switchBottomBar(5, state, true);
+                                            parentState?.switchBottomBar(5, true);
                                           },
                                         ))),
                                       ],
