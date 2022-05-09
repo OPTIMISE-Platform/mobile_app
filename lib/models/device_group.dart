@@ -96,11 +96,12 @@ class DeviceGroup {
 
   Map<String, dynamic> toJson() => _$DeviceGroupToJson(this);
 
-  prepareStates() {
-    if (states.isNotEmpty) {
+  prepareStates([bool? force]) {
+    if (states.isNotEmpty && force != true) {
       // only once
       return;
     }
+    states.clear();
     for (final criterion in criteria) {
       final f = AppState().nestedFunctions[criterion.function_id];
       if (f == null) {
@@ -170,4 +171,18 @@ class DeviceGroupCriteria {
   factory DeviceGroupCriteria.fromJson(Map<String, dynamic> json) => _$DeviceGroupCriteriaFromJson(json);
 
   Map<String, dynamic> toJson() => _$DeviceGroupCriteriaToJson(this);
+}
+
+class DeviceInstanceWithRemovesCriteria {
+  bool removesCriteria;
+  DeviceInstance device;
+
+  DeviceInstanceWithRemovesCriteria(this.device, this.removesCriteria);
+}
+
+class DeviceGroupHelperResponse {
+  List<DeviceGroupCriteria> criteria;
+  List<DeviceInstanceWithRemovesCriteria> devices;
+
+  DeviceGroupHelperResponse(this.criteria, this.devices);
 }

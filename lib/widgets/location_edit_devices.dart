@@ -145,7 +145,6 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
       }
 
       return Scaffold(
-          //floatingActionButton: _fab(),
           body: PlatformScaffold(
         appBar: MyAppBar(location.name).getAppBar(context, [
           PlatformWidget(

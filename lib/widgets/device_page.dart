@@ -22,10 +22,13 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/config/function_config.dart';
 import 'package:mobile_app/config/get_timestamp.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mobile_app/widgets/chart.dart';
+import 'package:mobile_app/widgets/group_edit_devices.dart';
 import 'package:mobile_app/widgets/toast.dart';
 import 'package:mobile_app/widgets/util/expandable_text.dart';
 import 'package:mobile_app/widgets/util/favorize_button.dart';
@@ -78,8 +81,7 @@ class DevicePage extends StatelessWidget {
         _stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[_stateDeviceGroupIndex!]]);
   }
 
-  _performAction(
-      DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
+  _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
     if (connectionStatus == DeviceConnectionStatus.offline) {
       Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
       return;
@@ -355,12 +357,74 @@ class DevicePage extends StatelessWidget {
             try {
               await DevicesService.saveDevice(state.devices[_stateDeviceIndex!]);
               state.notifyListeners();
-            } catch(e) {
+            } catch (e) {
               Toast.showErrorToast(context, "Could not update device name");
               device.setNickname(oldName);
             }
           },
           icon: Icon(PlatformIcons(context).edit),
+          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+        ));
+      } else if (deviceGroup != null) {
+        appBarActions.add(PlatformIconButton(
+          onPressed: () async {
+            final oldName = deviceGroup.name;
+            final newName = await showPlatformDialog(
+                context: context,
+                builder: (_) {
+                  final controller = TextEditingController(text: deviceGroup.name);
+                  return PlatformAlertDialog(
+                    title: Text(
+                      "Rename " + deviceGroup.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    content: PlatformTextFormField(controller: controller),
+                    actions: <Widget>[
+                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                    ],
+                  );
+                });
+            if (newName == null) return;
+            deviceGroup.name = newName;
+            try {
+              await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[_stateDeviceGroupIndex!]);
+              state.notifyListeners();
+            } catch (e) {
+              Toast.showErrorToast(context, "Could not update device name");
+              deviceGroup.name = oldName;
+            }
+          },
+          icon: Icon(PlatformIcons(context).edit),
+          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+        ));
+        appBarActions.add(PlatformIconButton(
+          onPressed: () async {
+            final deleted = await showPlatformDialog(
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                      title: Text("Do you want to permanently delete group '" + deviceGroup.name + "'?"),
+                      actions: [
+                        PlatformDialogAction(
+                          child: PlatformText('Cancel'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        PlatformDialogAction(
+                            child: PlatformText('Delete'),
+                            cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                            onPressed: () async {
+                              await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
+                              state.deviceGroups.removeAt(_stateDeviceGroupIndex!);
+                              Navigator.pop(context, true);
+                            })
+                      ],
+                    ));
+            if (deleted == true) {
+              Navigator.pop(context);
+              state.notifyListeners();
+            }
+          },
+          icon: Icon(PlatformIcons(context).delete),
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
       }
@@ -397,10 +461,14 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
-                  context: context,
-                  builder: (context) => Chart(element),
-                )),
+                onLongPress: device == null || element.value is! num
+                    ? null
+                    : () => Navigator.push(
+                        context,
+                        platformPageRoute(
+                          context: context,
+                          builder: (context) => Chart(element),
+                        )),
                 title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: Container(
@@ -421,10 +489,14 @@ class DevicePage extends StatelessWidget {
             element.functionId,
             ListTile(
                 onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
-                  context: context,
-                  builder: (context) => Chart(element),
-                )),
+                onLongPress: device == null || element.value is! num
+                    ? null
+                    : () => Navigator.push(
+                        context,
+                        platformPageRoute(
+                          context: context,
+                          builder: (context) => Chart(element),
+                        )),
                 title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
@@ -468,10 +540,14 @@ class DevicePage extends StatelessWidget {
           element.functionId,
           ListTile(
             title: Text(_getTitle(element)),
-            onLongPress: device == null || element.value is! num ? null : () =>  Navigator.push(context,  platformPageRoute(
-              context: context,
-              builder: (context) => Chart(element),
-            )),
+            onLongPress: device == null || element.value is! num
+                ? null
+                : () => Navigator.push(
+                    context,
+                    platformPageRoute(
+                      context: context,
+                      builder: (context) => Chart(element),
+                    )),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
                 ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
@@ -529,48 +605,61 @@ class DevicePage extends StatelessWidget {
         trailingHeader.add(FavorizeButton(null, _stateDeviceGroupIndex));
       }
 
-      return PlatformScaffold(
-        appBar: _appBar.getAppBar(context, appBarActions),
-        body: RefreshIndicator(
-          onRefresh: () => _refresh(context,  false),
-          child: Scrollbar(
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: MyTheme.inset,
-              children: [
-                ListTile(
-                  // header
-                  leading: Container(
-                    height: MediaQuery.of(context).textScaleFactor * 48,
-                    width: MediaQuery.of(context).textScaleFactor * 48,
-                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                    child: Padding(
-                      padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                      child: device != null
-                          ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.imageWidget
-                          : deviceGroup!.imageWidget ?? const Icon(Icons.devices_other, color: Colors.white),
+      return Scaffold(
+          floatingActionButton: deviceGroup == null
+              ? null
+              : FloatingActionButton(
+                  onPressed: () async {
+                    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(_stateDeviceGroupIndex!)));
+                    await state.searchDevices(DeviceSearchFilter("",null, null, null, [deviceGroup.id], null, null ), context, true);
+                    deviceGroup.prepareStates(true);
+                    _refresh(context, false);
+                  },
+                  backgroundColor: MyTheme.appColor,
+                  child: Icon(Icons.list, color: MyTheme.textColor),
+                ),
+          body: PlatformScaffold(
+            appBar: _appBar.getAppBar(context, appBarActions),
+            body: RefreshIndicator(
+              onRefresh: () => _refresh(context, false),
+              child: Scrollbar(
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: MyTheme.inset,
+                  children: [
+                    ListTile(
+                      // header
+                      leading: Container(
+                        height: MediaQuery.of(context).textScaleFactor * 48,
+                        width: MediaQuery.of(context).textScaleFactor * 48,
+                        decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                        child: Padding(
+                          padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                          child: device != null
+                              ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.imageWidget
+                              : deviceGroup!.imageWidget ?? const Icon(Icons.devices_other, color: Colors.white),
+                        ),
+                      ),
+                      title: Text(
+                        device != null
+                            ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.name ?? "MISSING_DEVICE_CLASS_NAME"
+                            : "Device Group",
+                      ),
+                      subtitle: device != null
+                          ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
+                          : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
+                      trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
                     ),
-                  ),
-                  title: Text(
-                    device != null
-                        ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.name ?? "MISSING_DEVICE_CLASS_NAME"
-                        : "Device Group",
-                  ),
-                  subtitle: device != null
-                      ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
-                      : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
-                  trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
+                    Container(
+                      padding: const EdgeInsets.only(left: 6, right: 6),
+                      child: const Divider(thickness: 2),
+                    ),
+                    ...widgets.skip(1), // skip first divider
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.only(left: 6, right: 6),
-                  child: const Divider(thickness: 2),
-                ),
-                ...widgets.skip(1), // skip first divider
-              ],
+              ),
             ),
-          ),
-        ),
-      );
+          ));
     });
   }
 }

@@ -54,13 +54,16 @@ String roundNumbersString(dynamic value) {
 }
 
 String formatValue(dynamic value) {
-  return (value is List && value.isNotEmpty
-      ? value.every((e) => e == value[0])
-          ? roundNumbersString(value[0])
-          : value[0] is num
-              ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
-              : "-"
-      : value == null || (value is List && value.isEmpty) ? "-" : roundNumbersString(value));
+  if (value is List && value.isNotEmpty) {
+    dynamic preferredNotnull = value.firstWhere((element) => element != null, orElse:  () => null);
+    return value.every((e) => (e is num && preferredNotnull is num && roundNumbersString(e) == roundNumbersString(preferredNotnull)) || e == preferredNotnull || e == null)
+        ? roundNumbersString(preferredNotnull)
+        : preferredNotnull is num
+            ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
+            : "-";
+  } else {
+    return value == null || (value is List && value.isEmpty) ? "-" : roundNumbersString(value);
+  }
 }
 
 abstract class FunctionConfig {
@@ -123,7 +126,11 @@ class FunctionConfigDefault implements FunctionConfig {
                       },
                       max: characteristic.max_value!,
                       min: characteristic.min_value!,
-                      value: value is double ? value : value is int ? value.toDouble() : characteristic.min_value!,
+                      value: value is double
+                          ? value
+                          : value is int
+                              ? value.toDouble()
+                              : characteristic.min_value!,
                     )),
                 Text(value is double ? (value as double).toStringAsFixed(2) : value?.toString() ?? characteristic.min_value!.toString()),
               ]);
@@ -272,7 +279,9 @@ class FunctionConfigDefault implements FunctionConfig {
     if (conceptId == null) {
       return null;
     }
-    return AppState().nestedFunctions.values
+    return AppState()
+        .nestedFunctions
+        .values
         .where((element) => element.isControlling() && element.concept.id == conceptId)
         .toList(growable: false)
         .map((e) => e.id)

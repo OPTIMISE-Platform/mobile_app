@@ -14,13 +14,19 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/widgets/device_list.dart';
 import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:mobile_app/widgets/device_list_tabs/group_list_item.dart';
+import 'package:mobile_app/widgets/device_page.dart';
 import 'package:provider/provider.dart';
 
 import '../../app_state.dart';
+import '../../models/device_search_filter.dart';
 import '../../theme.dart';
 
 class DeviceGroupList extends StatefulWidget {
@@ -33,9 +39,54 @@ class DeviceGroupList extends StatefulWidget {
 class _DeviceGroupListState extends State<DeviceGroupList> {
   int? _selected;
 
+  static StreamSubscription? _fabSubscription;
+
+  @override
+  void dispose() {
+    _fabSubscription?.cancel().then((_) => _fabSubscription = null);
+    super.dispose();
+  }
+
+  void _openGroupPage(int i, DeviceListState? parentState) async {
+    parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
+    AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null), context);
+    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DevicePage(null, i)));
+    parentState?.filter.locationIds = null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
+      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+      _fabSubscription ??= parentState?.fabPressed.listen((_) async {
+        final titleController = TextEditingController(text: "");
+        String? newName;
+        await showPlatformDialog(
+            context: context,
+            builder: (_) => PlatformAlertDialog(
+              title: const Text("New Group"),
+              content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+              actions: [
+                PlatformDialogAction(
+                  child: PlatformText('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                PlatformDialogAction(
+                    child: PlatformText('Create'),
+                    onPressed: () {
+                      newName = titleController.value.text;
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                    })
+              ],
+            ));
+        if (newName == null) {
+          return;
+        }
+
+        state.deviceGroups.add(await DeviceGroupsService.createDeviceGroup(newName!));
+        _openGroupPage(state.deviceGroups.length - 1, parentState);
+        state.notifyListeners();
+      });
       return state.loadingDeviceGroups()
           ? Center(child: PlatformCircularProgressIndicator())
           : _selected == null

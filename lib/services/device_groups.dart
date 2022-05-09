@@ -22,6 +22,7 @@ import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_stor
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
@@ -53,15 +54,13 @@ class DeviceGroupsService {
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/resources/device-groups';
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/resources/device-groups';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(uri,
-        queryParameters: queryParameters, options: Options(headers: headers));
+    final resp = await _dio!.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
@@ -70,15 +69,15 @@ class DeviceGroupsService {
     }
 
     final l = resp.data ?? [];
-    final groups = List<DeviceGroup>.generate(
-        l.length, (index) => DeviceGroup.fromJson(l[index]));
+    final groups = List<DeviceGroup>.generate(l.length, (index) => DeviceGroup.fromJson(l[index]));
     return groups.map((e) => e.initImage()).toList(growable: false);
   }
 
   static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group) async {
     _logger.d("Saving device group: " + group.id);
 
-    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
+    final uri =
+        (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
 
     final encoded = json.encode(group.toJson());
 
@@ -91,5 +90,64 @@ class DeviceGroupsService {
     }
 
     return DeviceGroup.fromJson(resp.data!);
+  }
+
+  static Future<DeviceGroup> createDeviceGroup(String name) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/';
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return DeviceGroup.fromJson(resp.data).initImage();
+  }
+
+  static Future<void> deleteDeviceGroup(String id) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + id;
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.delete(uri, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return;
+  }
+
+  static Future<DeviceGroupHelperResponse> getMatchingDevicesForGroup(List<String> deviceIds, int limit, int offset, String search) async {
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-selection/device-group-helper';
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = limit.toString();
+    queryParameters["offset"] = offset.toString();
+    queryParameters["search"] = search;
+    queryParameters["maintains_group_usability"] = "true";
+    queryParameters["function_block_list"] = (dotenv.env["FUNCTION_GET_TIMESTAMP"] ?? "");
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final resp = await _dio!
+        .post<Map<String, dynamic>>(uri, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(deviceIds));
+    if (resp.statusCode == null || resp.statusCode! > 304) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+    if (resp.statusCode == 304) {
+      _logger.d("Using cached device groups");
+    }
+
+    final instances = (resp.data as Map<String, dynamic>)["options"] ?? [];
+    final criteria = (resp.data as Map<String, dynamic>)["criteria"] ?? [];
+    return DeviceGroupHelperResponse(
+        List<DeviceGroupCriteria>.generate(criteria.length, (index) => DeviceGroupCriteria.fromJson(criteria[index])),
+        List<DeviceInstanceWithRemovesCriteria>.generate(instances.length, (index) {
+          instances[index]["device"]["shared"] = false;
+          instances[index]["device"]["creator"] = "";
+          return DeviceInstanceWithRemovesCriteria(DeviceInstance.fromJson(instances[index]["device"]), (instances[index]["removes_criteria"] as List<dynamic>).isNotEmpty);
+        }));
   }
 }

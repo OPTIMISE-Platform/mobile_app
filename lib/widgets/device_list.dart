@@ -177,7 +177,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
         case tabGroups:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          _showFab = false;
+          _showFab = true;
           break;
         case tabNetworks:
           hideSearch = true;
