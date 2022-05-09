@@ -127,7 +127,7 @@ class Auth extends ChangeNotifier {
         _logger.d("Old token still valid");
         return;
       }
-      if (await refreshToken()) {
+      if (await refreshToken(skipLock: true)) {
         _logger.d("refreshed token");
         return;
       }
@@ -180,18 +180,23 @@ class Auth extends ChangeNotifier {
     return {"Authorization": "Bearer " + await getToken()};
   }
 
-  Future<bool> refreshToken() async {
-    return await _m.protect(() async {
-      if (!_initialized) {
-        await init();
-      }
-      if (tokenValid) return true;
-      if (_client != null && _client!.identity != null && _client!.hasTokenExpired == true && (await _serverAvailable())) {
-        final ok = await _client!.refresh();
-        return ok && tokenValid;
-      }
-      return false;
-    });
+  Future<bool> refreshToken({bool skipLock = false}) async {
+    if (skipLock) {
+      return await __refresh();
+    }
+    return await _m.protect(__refresh);
+  }
+
+  Future<bool> __refresh() async {
+    if (!_initialized) {
+      await init();
+    }
+    if (tokenValid) return true;
+    if (_client != null && _client!.identity != null && _client!.hasTokenExpired == true && (await _serverAvailable())) {
+      final ok = await _client!.refresh();
+      return ok && tokenValid;
+    }
+    return false;
   }
 
   bool get tokenValid => loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
