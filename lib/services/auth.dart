@@ -87,13 +87,7 @@ class Auth extends ChangeNotifier {
                 break;
               case AuthEventTypes.Error:
               case AuthEventTypes.Logout:
-                if (await _serverAvailable()) {
-                  loggedIn = false;
-                  await _cleanup();
-                  notifyListeners();
-                } else {
-                  _client = null;
-                }
+                await _onLogout();
             }
           });
         } catch (e) {
@@ -162,14 +156,31 @@ class Auth extends ChangeNotifier {
       await FcmTokenService.deregisterFcmToken(AppState().fcmToken!);
     }
 
+    await _client!.logoutToken();
     _logger.d("logout");
+    await _onLogout();
     Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  _onLogout() async {
+    if (await _serverAvailable()) {
+      await _cleanup();
+    } else {
+      _client = null;
+    }
+    loggedIn = false;
+    notifyListeners();
   }
 
   Future<void> _cleanup() async {
     await CacheHelper.clearCache();
     await AppState().onLogout();
-    await OpenIdIdentity.clear(); // remove saved token
+    if (_client != null) {
+      _client!.clearIdentity();
+      await Future.delayed(const Duration(seconds: 2)); // can't await clearIdentity()
+    } else {
+      await OpenIdIdentity.clear(); // remove saved token
+    }
   }
 
   Future<Map<String, String>> getHeaders() async {
