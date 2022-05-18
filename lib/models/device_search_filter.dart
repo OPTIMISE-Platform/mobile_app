@@ -69,7 +69,8 @@ class DeviceSearchFilter {
       "find": {
         "limit": limit,
         "offset": offset,
-        "sortBy": "name.asc",
+        "sort_by": "display_name",
+        "sort_desc": false,
         "search": query,
       }
     };
