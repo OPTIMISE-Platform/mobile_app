@@ -20,11 +20,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/notification.dart' as app;
-import '../app_state.dart';
+import '../../../models/notification.dart' as app;
+import '../../app_state.dart';
+import '../shared/app_bar.dart';
 
 class NotificationList extends StatefulWidget {
   const NotificationList({Key? key}) : super(key: key);

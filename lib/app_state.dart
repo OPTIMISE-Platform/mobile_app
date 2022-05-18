@@ -43,8 +43,9 @@ import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
-import 'package:mobile_app/util/get_broadcast_channel.dart';
-import 'package:mobile_app/util/remote_message_encoder.dart';
+import 'package:mobile_app/shared/get_broadcast_channel.dart';
+import 'package:mobile_app/shared/remote_message_encoder.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
 
 import 'models/device_class.dart';
@@ -52,7 +53,6 @@ import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
 import 'models/device_search_filter.dart';
 import 'models/device_type.dart';
-import 'widgets/toast.dart';
 
 const notificationUpdateType = "put notification";
 const notificationDeleteManyType = "delete notifications";

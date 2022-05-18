@@ -22,14 +22,14 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/device_groups.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:mutex/mutex.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../models/device_instance.dart';
-import '../theme.dart';
-import 'device_list.dart';
+import '../../../app_state.dart';
+import '../../../models/device_instance.dart';
+import '../../../theme.dart';
+import '../../shared/app_bar.dart';
+import '../shared/search_delegate.dart';
 
 class GroupEditDevices extends StatefulWidget {
   final int _stateGroupIndex;

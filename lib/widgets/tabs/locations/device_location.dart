@@ -20,13 +20,13 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/locations.dart';
-import 'package:mobile_app/widgets/location_page.dart';
+import 'package:mobile_app/widgets/tabs/locations/location_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../models/device_search_filter.dart';
-import '../../theme.dart';
-import '../device_list.dart';
+import '../../../app_state.dart';
+import '../../../models/device_search_filter.dart';
+import '../../../theme.dart';
+import '../device_tabs.dart';
 
 class DeviceListByLocation extends StatefulWidget {
   const DeviceListByLocation({Key? key}) : super(key: key);
@@ -44,7 +44,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
     super.dispose();
   }
 
-  void _openLocationPage(int i, DeviceListState? parentState) async {
+  void _openLocationPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.locationIds = [AppState().locations[i].id];
     AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, null, [AppState().locations[i].id]), context);
     await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationPage(i, parentState!)));
@@ -54,7 +54,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
   @override
   Widget build(BuildContext _) {
     return Consumer<AppState>(builder: (_, state, child) {
-      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
       _fabSubscription ??= parentState?.fabPressed.listen((_) async {
         final titleController = TextEditingController(text: "");
         String? newName;

@@ -21,17 +21,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/widgets/util/favorize_button.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../config/function_config.dart';
-import '../../models/device_command_response.dart';
-import '../../models/device_instance.dart';
-import '../../services/device_commands.dart';
-import '../../theme.dart';
-import '../device_page.dart';
-import '../toast.dart';
+import '../../../app_state.dart';
+import '../../../config/function_config.dart';
+import '../../../models/device_command_response.dart';
+import '../../../models/device_instance.dart';
+import '../../../services/device_commands.dart';
+import '../../../theme.dart';
+import '../../shared/favorize_button.dart';
+import '../../shared/toast.dart';
+import 'detail_page/detail_page.dart';
 
 class DeviceListItem extends StatelessWidget {
   static final _logger = Logger(
@@ -171,7 +171,7 @@ class DeviceListItem extends StatelessWidget {
               platformPageRoute(
                 context: context,
                 builder: (context) {
-                  final target = DevicePage(_stateDeviceIndex, null);
+                  final target = DetailPage(_stateDeviceIndex, null);
                   target.refresh(context);
                   return target;
                 },

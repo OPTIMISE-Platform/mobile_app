@@ -19,11 +19,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/widgets/device_page.dart';
-import 'package:mobile_app/widgets/util/favorize_button.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
+import '../../../app_state.dart';
+import '../../shared/favorize_button.dart';
 
 class GroupListItem extends StatelessWidget {
   final int _stateGroupIndex;
@@ -55,7 +55,7 @@ class GroupListItem extends StatelessWidget {
                 platformPageRoute(
                   context: context,
                   builder: (context) {
-                    final target = DevicePage(null, _stateGroupIndex);
+                    final target = DetailPage(null, _stateGroupIndex);
                     target.refresh(context);
                     return target;
                   },

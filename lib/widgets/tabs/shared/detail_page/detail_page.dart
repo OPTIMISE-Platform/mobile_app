@@ -26,28 +26,28 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/device_groups.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
-import 'package:mobile_app/widgets/chart.dart';
-import 'package:mobile_app/widgets/group_edit_devices.dart';
-import 'package:mobile_app/widgets/toast.dart';
-import 'package:mobile_app/widgets/util/expandable_text.dart';
-import 'package:mobile_app/widgets/util/favorize_button.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
+import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../models/aspect.dart';
-import '../models/device_command_response.dart';
-import '../models/device_instance.dart';
-import '../services/device_commands.dart';
-import '../services/devices.dart';
-import '../theme.dart';
-import '../util/keyed_list.dart';
+import '../../../../app_state.dart';
+import '../../../../models/aspect.dart';
+import '../../../../models/device_command_response.dart';
+import '../../../../models/device_instance.dart';
+import '../../../../services/device_commands.dart';
+import '../../../../services/devices.dart';
+import '../../../../shared/keyed_list.dart';
+import '../../../../theme.dart';
+import '../../../shared/app_bar.dart';
+import '../../../shared/expandable_text.dart';
+import '../../../shared/favorize_button.dart';
+import '../../../shared/toast.dart';
 
-class DevicePage extends StatelessWidget {
+class DetailPage extends StatelessWidget {
   final int? _stateDeviceIndex;
   final int? _stateDeviceGroupIndex;
 
-  DevicePage(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key) {
+  DetailPage(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key) {
     if ((_stateDeviceIndex == null && _stateDeviceGroupIndex == null) || (_stateDeviceIndex != null && _stateDeviceGroupIndex != null)) {
       throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
     }

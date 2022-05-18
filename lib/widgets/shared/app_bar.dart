@@ -18,10 +18,10 @@ import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/widgets/settings.dart';
+import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
 
-import 'notification_list.dart';
+import '../notifications/notification_list.dart';
 
 class MyAppBar {
   final String _title;

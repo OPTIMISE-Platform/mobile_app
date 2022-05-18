@@ -29,7 +29,7 @@ import 'package:mobile_app/services/settings.dart';
 import '../app_state.dart';
 import '../models/characteristic.dart';
 import '../models/content_variable.dart';
-import '../util/math_list.dart';
+import '../shared/math_list.dart';
 import 'get_color.dart';
 import 'get_on_off_state.dart';
 import 'get_temperature.dart';

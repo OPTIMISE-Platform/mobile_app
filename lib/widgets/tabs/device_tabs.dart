@@ -24,21 +24,23 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_group.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_location.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_networks.dart';
-import 'package:mobile_app/widgets/device_list_tabs/favorites.dart';
+import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:provider/provider.dart';
 
-import 'device_list_tabs/device_class.dart';
+import '../shared/app_bar.dart';
+import 'classes/device_class.dart';
+import 'favorites/favorites.dart';
+import 'groups/group_list.dart';
+import 'locations/device_location.dart';
+import 'networks/device_networks.dart';
+import 'shared/search_delegate.dart';
 
-class DeviceList extends StatefulWidget {
-  const DeviceList({Key? key}) : super(key: key);
+
+class DeviceTabs extends StatefulWidget {
+  const DeviceTabs({Key? key}) : super(key: key);
 
   @override
-  State<DeviceList> createState() => DeviceListState();
+  State<DeviceTabs> createState() => DeviceTabsState();
 }
 
 const tabFavorites = 0;
@@ -48,7 +50,7 @@ const tabGroups = 3;
 const tabNetworks = 4;
 const tabDevices = 5;
 
-class DeviceListState extends State<DeviceList> with RestorationMixin {
+class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
   int _bottomBarIndex = 0;
   bool _initialized = false;
@@ -73,7 +75,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
 
   final _cupertinoSearchController = RestorableTextEditingController();
 
-  DeviceListState() {}
+  DeviceTabsState() {}
 
   _searchChanged(String search) {
     if (filter.query == search) {
@@ -87,52 +89,6 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       switchBottomBar(_bottomBarIndex, true);
     });
-  }
-
-  Widget _buildListWidget() {
-    return RefreshIndicator(
-      onRefresh: () => AppState().refreshDevices(context),
-      child: Scrollbar(
-        child: AppState().loadingDevices
-            ? Center(child: PlatformCircularProgressIndicator())
-            : AppState().devices.isEmpty
-                ? LayoutBuilder(
-                    builder: (context, constraint) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                          child: IntrinsicHeight(
-                            child: Column(
-                              children: const [
-                                Expanded(
-                                  child: Center(child: Text("No Devices")),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: MyTheme.inset,
-                    itemCount: AppState().totalDevices,
-                    itemBuilder: (context, i) {
-                      if (i >= AppState().devices.length) {
-                        AppState().loadDevices(context);
-                      }
-                      if (i > AppState().devices.length - 1) {
-                        return const SizedBox.shrink();
-                      }
-                      return Column(children: [
-                        const Divider(),
-                        DeviceListItem(i, null),
-                      ]);
-                    }),
-      ),
-    );
   }
 
   switchBottomBar(int i, bool force) {
@@ -279,7 +235,7 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                       delegate: DevicesSearchDelegate(
                         (query) {
                           _searchChanged(query);
-                          return _buildListWidget();
+                          return const DeviceList();
                         },
                         (q) => _searchChanged(q),
                       ));
@@ -563,13 +519,13 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
                 Expanded(child: (() {
                   switch (_bottomBarIndex) {
                     case tabDevices:
-                      return _buildListWidget();
+                      return const DeviceList();
                     case tabLocations:
                       return const DeviceListByLocation();
                     case tabClasses:
                       return const DeviceListByDeviceClass();
                     case tabGroups:
-                      return const DeviceGroupList();
+                      return const GroupList();
                     case tabNetworks:
                       return const DeviceListByNetwork();
                     case tabFavorites:
@@ -601,49 +557,5 @@ class DeviceListState extends State<DeviceList> with RestorationMixin {
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
     registerForRestoration(_cupertinoSearchController, "_cupertinoSearchController");
-  }
-}
-
-class DevicesSearchDelegate extends SearchDelegate {
-  final Widget Function(String query) _resultBuilder;
-  final void Function(String query) _onChanged;
-  late final Consumer<AppState> _consumer;
-
-  DevicesSearchDelegate(this._resultBuilder, this._onChanged) {
-    _consumer = Consumer<AppState>(builder: (state, __, ___) {
-      return _resultBuilder(query);
-    });
-  }
-
-  @override
-  List<Widget>? buildActions(BuildContext context) {
-    return MyAppBar.getDefaultActions(context);
-  }
-
-  @override
-  Widget? buildLeading(BuildContext context) {
-    return PlatformIconButton(
-        onPressed: () {
-          close(context, null);
-        },
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-        icon: const Icon(Icons.arrow_back));
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    _onChanged(query);
-    return _consumer;
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    _onChanged(query);
-    return _consumer;
-  }
-
-  @override
-  ThemeData appBarTheme(BuildContext context) {
-    return MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme;
   }
 }

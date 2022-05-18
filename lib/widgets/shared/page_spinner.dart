@@ -16,7 +16,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
+
+import 'app_bar.dart';
+
 
 
 class PageSpinner extends StatelessWidget {

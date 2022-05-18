@@ -26,7 +26,7 @@ import 'package:mobile_app/models/device_command.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
-import '../widgets/toast.dart';
+import '../widgets/shared/toast.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {

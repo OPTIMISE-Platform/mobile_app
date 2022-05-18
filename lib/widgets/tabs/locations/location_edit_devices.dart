@@ -22,12 +22,12 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/locations.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../theme.dart';
-import 'device_list.dart';
+import '../../../app_state.dart';
+import '../../../theme.dart';
+import '../../shared/app_bar.dart';
+import '../shared/search_delegate.dart';
 
 class LocationEditDevices extends StatefulWidget {
   final int _stateLocationIndex;

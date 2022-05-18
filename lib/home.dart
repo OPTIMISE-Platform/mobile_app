@@ -18,13 +18,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
-import 'package:mobile_app/widgets/device_list.dart';
-import 'package:mobile_app/widgets/toast.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:provider/provider.dart';
 
 import 'services/auth.dart';
+import 'widgets/shared/app_bar.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -48,7 +48,7 @@ class _HomeState extends State<Home> {
   _login() async {
     if (_user.isEmpty || _pw.isEmpty) return;
     try {
-      await Auth().login(context, _user, _pw);
+      await Auth().login(_user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
     } on AuthenticationException catch (e) {
@@ -103,7 +103,7 @@ class _HomeState extends State<Home> {
     return Consumer<Auth>(
       builder: (context, auth, child) {
         return auth.loggedIn
-            ? const DeviceList()
+            ? const DeviceTabs()
             : PlatformScaffold(
                 appBar: _appBar.getAppBar(context, [MyAppBar.settings(context)]),
                 body: auth.loggingIn || !_loginChecked

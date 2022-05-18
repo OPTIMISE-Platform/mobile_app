@@ -24,7 +24,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 
 import '../services/cache_helper.dart';
-import '../util/base64_response_decoder.dart';
+import '../shared/base64_response_decoder.dart';
 
 part 'location.g.dart';
 

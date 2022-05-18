@@ -27,7 +27,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/function.dart';
 
 import '../services/cache_helper.dart';
-import '../util/base64_response_decoder.dart';
+import '../shared/base64_response_decoder.dart';
 import 'attribute.dart';
 import 'device_instance.dart';
 import 'device_state.dart';

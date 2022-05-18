@@ -21,24 +21,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/locations.dart';
-import 'package:mobile_app/widgets/app_bar.dart';
-import 'package:mobile_app/widgets/location_edit_groups.dart';
-import 'package:mobile_app/widgets/util/expandable_fab.dart';
+import 'package:mobile_app/widgets/tabs/locations/location_edit_groups.dart';
 import 'package:provider/provider.dart';
 
-import '../app_state.dart';
-import '../models/location.dart';
-import '../theme.dart';
-import 'device_list.dart';
-import 'device_list_tabs/device_list_item.dart';
-import 'device_list_tabs/group_list_item.dart';
+import '../../../app_state.dart';
+import '../../../models/location.dart';
+import '../../../theme.dart';
+import '../../shared/app_bar.dart';
+import '../../shared/expandable_fab.dart';
+import '../device_tabs.dart';
+import '../shared/device_list_item.dart';
+import '../shared/group_list_item.dart';
 import 'location_edit_devices.dart';
 
 class LocationPage extends StatelessWidget {
   final int _stateLocationIndex;
   final StreamController _toggleStreamController = StreamController();
   late final Stream _toggleStream;
-  final DeviceListState parentState;
+  final DeviceTabsState parentState;
 
   LocationPage(this._stateLocationIndex, this.parentState, {Key? key}) : super(key: key) {
     _toggleStream = _toggleStreamController.stream.asBroadcastStream();

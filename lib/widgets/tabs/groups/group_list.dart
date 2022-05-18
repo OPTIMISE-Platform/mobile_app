@@ -19,24 +19,24 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/device_groups.dart';
-import 'package:mobile_app/widgets/device_list.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
-import 'package:mobile_app/widgets/device_list_tabs/group_list_item.dart';
-import 'package:mobile_app/widgets/device_page.dart';
+import 'package:mobile_app/widgets/tabs/device_tabs.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../models/device_search_filter.dart';
-import '../../theme.dart';
+import '../../../app_state.dart';
+import '../../../models/device_search_filter.dart';
+import '../../../theme.dart';
+import '../shared/device_list_item.dart';
+import '../shared/group_list_item.dart';
 
-class DeviceGroupList extends StatefulWidget {
-  const DeviceGroupList({Key? key}) : super(key: key);
+class GroupList extends StatefulWidget {
+  const GroupList({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _DeviceGroupListState();
+  State<StatefulWidget> createState() => _GroupListState();
 }
 
-class _DeviceGroupListState extends State<DeviceGroupList> {
+class _GroupListState extends State<GroupList> {
   int? _selected;
 
   static StreamSubscription? _fabSubscription;
@@ -47,17 +47,17 @@ class _DeviceGroupListState extends State<DeviceGroupList> {
     super.dispose();
   }
 
-  void _openGroupPage(int i, DeviceListState? parentState) async {
+  void _openGroupPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
     AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null), context);
-    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DevicePage(null, i)));
+    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DetailPage(null, i)));
     parentState?.filter.locationIds = null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
       _fabSubscription ??= parentState?.fabPressed.listen((_) async {
         final titleController = TextEditingController(text: "");
         String? newName;

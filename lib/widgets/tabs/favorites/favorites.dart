@@ -16,13 +16,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../theme.dart';
-import '../device_list.dart';
-import 'group_list_item.dart';
+import '../../../app_state.dart';
+import '../../../theme.dart';
+import '../device_tabs.dart';
+import '../shared/device_list_item.dart';
+import '../shared/group_list_item.dart';
 
 class DeviceListFavorites extends StatelessWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);
@@ -61,7 +61,7 @@ class DeviceListFavorites extends StatelessWidget {
                                                 child: PlatformElevatedButton(
                                           child: const Text("Add Favorites"),
                                           onPressed: () {
-                                            final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                                            final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
                                             parentState?.switchBottomBar(5, true);
                                           },
                                         ))),
@@ -88,7 +88,7 @@ class DeviceListFavorites extends StatelessWidget {
                         children: [
                           const Divider(),
                           GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                            final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+                            final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
                             if (parentState == null) return;
                             parentState.filter.deviceGroupIds = null;
                             state.searchDevices(parentState.filter, context);

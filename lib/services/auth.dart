@@ -19,15 +19,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
-import 'package:http/http.dart' as http;
 
-import '../widgets/toast.dart';
 import 'cache_helper.dart';
 
 class Auth extends ChangeNotifier {
@@ -107,13 +106,12 @@ class Auth extends ChangeNotifier {
 
   bool get _initialized => _client != null;
 
-  Future<void> login(BuildContext context, String user, String pw) async {
+  Future<void> login(String user, String pw) async {
     await _m.protect(() async {
       if (!_initialized) {
         await init();
         if (_client == null) {
-          Toast.showErrorToast(context, "Can't login, are you online?");
-          return;
+          throw AuthException("Can't login, are you online?");
         }
       }
 

@@ -17,13 +17,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/widgets/device_list_tabs/device_list_item.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../models/device_search_filter.dart';
-import '../../theme.dart';
-import '../device_list.dart';
+import '../../../app_state.dart';
+import '../../../models/device_search_filter.dart';
+import '../../../theme.dart';
+import '../device_tabs.dart';
+import '../shared/device_list_item.dart';
 
 class DeviceListByDeviceClass extends StatefulWidget {
   const DeviceListByDeviceClass({Key? key}) : super(key: key);
@@ -39,7 +39,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       final deviceClasses = state.deviceClasses.values.toList(growable: false);
-      final parentState = context.findAncestorStateOfType<State<DeviceList>>() as DeviceListState?;
+      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
 
       return Scrollbar(
         child: state.loadingDeviceClasses
