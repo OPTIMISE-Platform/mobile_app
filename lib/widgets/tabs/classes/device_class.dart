@@ -111,25 +111,22 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
                               ]);
                             },
                           ))
-                : state.devices.isEmpty
-                    ? state.loadingDevices
-                        ? Center(
-                            child: PlatformCircularProgressIndicator(),
-                          )
-                        : const Center(child: Text("No Devices"))
-                    : ListView.builder(
-                        padding: MyTheme.inset,
-                        itemCount: state.totalDevices,
-                        itemBuilder: (_, i) {
-                          if (i >= state.devices.length) {
-                            state.loadDevices(context);
-                            return const SizedBox.shrink();
-                          }
-                          return Column(
-                            children: [const Divider(), DeviceListItem(i, null)],
-                          );
-                        },
-                      ),
+                : RefreshIndicator(
+                    onRefresh: () =>
+                        state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true),
+                    child: ListView.builder(
+                      padding: MyTheme.inset,
+                      itemCount: state.totalDevices,
+                      itemBuilder: (_, i) {
+                        if (i >= state.devices.length) {
+                          state.loadDevices(context);
+                          return const SizedBox.shrink();
+                        }
+                        return Column(
+                          children: [const Divider(), DeviceListItem(i, null)],
+                        );
+                      },
+                    )),
       );
     });
   }
