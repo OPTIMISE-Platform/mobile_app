@@ -277,7 +277,7 @@ class AppState extends ChangeNotifier {
   }
 
   bool get loadingDevices {
-    return _devicesMutex.isLocked;
+    return _totalDevicesMutex.isLocked || _devicesMutex.isLocked;
   }
 
   bool get allDevicesLoaded {
