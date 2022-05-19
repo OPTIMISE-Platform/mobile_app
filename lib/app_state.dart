@@ -301,7 +301,7 @@ class AppState extends ChangeNotifier {
       await loadDeviceType(context, element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
-      if (element.getConnectionStatus() != DeviceConnectionStatus.online) {
+      if (element.getConnectionStatus() == DeviceConnectionStatus.offline) {
         callbacks.forEach((element) => element.callback(null));
       } else {
         commandCallbacks.addAll(callbacks);
