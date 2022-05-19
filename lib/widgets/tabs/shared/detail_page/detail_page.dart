@@ -592,6 +592,11 @@ class DetailPage extends StatelessWidget {
         widgets.add(const Divider());
         widgets.add(element.t);
       }
+      if (deviceGroup != null) { // prevent fab overlap
+        widgets.add(Column(
+          children: const [Divider(), ListTile()],
+        ));
+      }
 
       final List<Widget> trailingHeader = [];
 

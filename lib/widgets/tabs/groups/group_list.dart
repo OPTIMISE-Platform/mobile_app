@@ -37,8 +37,6 @@ class GroupList extends StatefulWidget {
 }
 
 class _GroupListState extends State<GroupList> {
-  int? _selected;
-
   static StreamSubscription? _fabSubscription;
 
   @override
@@ -64,21 +62,21 @@ class _GroupListState extends State<GroupList> {
         await showPlatformDialog(
             context: context,
             builder: (_) => PlatformAlertDialog(
-              title: const Text("New Group"),
-              content: PlatformTextFormField(controller: titleController, hintText: "Name"),
-              actions: [
-                PlatformDialogAction(
-                  child: PlatformText('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                PlatformDialogAction(
-                    child: PlatformText('Create'),
-                    onPressed: () {
-                      newName = titleController.value.text;
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    })
-              ],
-            ));
+                  title: const Text("New Group"),
+                  content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+                  actions: [
+                    PlatformDialogAction(
+                      child: PlatformText('Cancel'),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    PlatformDialogAction(
+                        child: PlatformText('Create'),
+                        onPressed: () {
+                          newName = titleController.value.text;
+                          Navigator.popUntil(context, (route) => route.isFirst);
+                        })
+                  ],
+                ));
         if (newName == null) {
           return;
         }
@@ -89,59 +87,43 @@ class _GroupListState extends State<GroupList> {
       });
       return state.loadingDeviceGroups()
           ? Center(child: PlatformCircularProgressIndicator())
-          : _selected == null
-              ? RefreshIndicator(
-                  onRefresh: () => state.loadDeviceGroups(context),
-                  child: state.deviceGroups.isEmpty
-                      ? LayoutBuilder(
-                          builder: (context, constraint) {
-                            return SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                child: IntrinsicHeight(
-                                  child: Column(
-                                    children: const [
-                                      Expanded(
-                                        child: Center(child: Text("No Groups")),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          },
-                        )
-                      : Scrollbar(
-                          child: ListView.builder(
+          : RefreshIndicator(
+              onRefresh: () => state.loadDeviceGroups(context),
+              child: state.deviceGroups.isEmpty
+                  ? LayoutBuilder(
+                      builder: (context, constraint) {
+                        return SingleChildScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: MyTheme.inset,
-                          itemCount: state.deviceGroups.length,
-                          itemBuilder: (context, i) {
-                            return Column(children: [
-                              const Divider(),
-                              GroupListItem(i, null),
-                            ]);
-                          },
-                        )))
-              : state.devices.isEmpty
-                  ? state.loadingDevices
-                      ? Center(
-                          child: PlatformCircularProgressIndicator(),
-                        )
-                      : const Center(child: Text("No Devices"))
-                  : ListView.builder(
-                      padding: MyTheme.inset,
-                      itemCount: state.totalDevices,
-                      itemBuilder: (_, i) {
-                        if (i > state.devices.length - 1) {
-                          return const SizedBox.shrink();
-                        }
-                        return Column(
-                          children: [const Divider(), DeviceListItem(i, null)],
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                            child: IntrinsicHeight(
+                              child: Column(
+                                children: const [
+                                  Expanded(
+                                    child: Center(child: Text("No Groups")),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         );
                       },
-                    );
+                    )
+                  : Scrollbar(
+                      child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: MyTheme.inset,
+                      itemCount: state.deviceGroups.length + 1,
+                      itemBuilder: (context, i) {
+                        return i < state.deviceGroups.length ? Column(children: [
+                          const Divider(),
+                          GroupListItem(i, null),
+                        ]) : Column(children: const [
+                          Divider(),
+                          ListTile(),
+                        ]);
+                      },
+                    )));
     });
   }
 }

@@ -112,30 +112,36 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> {
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: MyTheme.inset,
-                          itemCount: state.locations.length,
+                          itemCount: state.locations.length + 1,
                           itemBuilder: (context, i) {
-                            return Column(children: [
-                              const Divider(),
-                              ListTile(
-                                  title: Text(state.locations[i].name),
-                                  leading: Container(
-                                    height: MediaQuery.of(context).textScaleFactor * 48,
-                                    width: MediaQuery.of(context).textScaleFactor * 48,
-                                    decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                      child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
-                                    ),
-                                  ),
-                                  subtitle: Text(state.locations[i].device_ids.length.toString() +
-                                      " Device" +
-                                      (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
-                                      ", " +
-                                      state.locations[i].device_group_ids.length.toString() +
-                                      " Group" +
-                                      (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : "")),
-                                  onTap: () => _openLocationPage(i, parentState))
-                            ]);
+                            return i < state.locations.length
+                                ? Column(children: [
+                                    const Divider(),
+                                    ListTile(
+                                        title: Text(state.locations[i].name),
+                                        leading: Container(
+                                          height: MediaQuery.of(context).textScaleFactor * 48,
+                                          width: MediaQuery.of(context).textScaleFactor * 48,
+                                          decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                          child: Padding(
+                                            padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                            child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
+                                          ),
+                                        ),
+                                        subtitle: Text(state.locations[i].device_ids.length.toString() +
+                                            " Device" +
+                                            (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
+                                            ", " +
+                                            state.locations[i].device_group_ids.length.toString() +
+                                            " Group" +
+                                            (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty
+                                                ? "s"
+                                                : "")),
+                                        onTap: () => _openLocationPage(i, parentState))
+                                  ])
+                                : Column(
+                                    children: const [Divider(), ListTile()],
+                                  );
                           },
                         )));
     });

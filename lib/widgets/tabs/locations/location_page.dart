@@ -202,10 +202,13 @@ class LocationPage extends StatelessWidget {
                           )
                         : ListView.builder(
                             padding: MyTheme.inset,
-                            itemCount: state.totalDevices + matchingGroups.length,
+                            itemCount: location.device_ids.length + matchingGroups.length + 1,
                             itemBuilder: (_, i) {
                               if (i > state.devices.length + matchingGroups.length - 1) {
-                                return const SizedBox.shrink();
+                                state.loadDevices(context);
+                                return Column(
+                                  children: const [Divider(), ListTile()],
+                                );
                               }
                               if (i < state.devices.length) {
                                 return Column(
