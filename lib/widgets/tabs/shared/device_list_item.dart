@@ -22,12 +22,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../../../app_state.dart';
 import '../../../config/function_config.dart';
 import '../../../models/device_command_response.dart';
 import '../../../models/device_instance.dart';
 import '../../../services/device_commands.dart';
+import '../../../services/settings.dart';
 import '../../../theme.dart';
 import '../../shared/favorize_button.dart';
 import '../../shared/toast.dart';
@@ -40,8 +42,10 @@ class DeviceListItem extends StatelessWidget {
 
   final int _stateDeviceIndex;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
+  final GlobalKey _keyFavButton = GlobalKey();
+  FavorizeButton? _favorizeButton;
 
-  const DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
+  DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -153,16 +157,22 @@ class DeviceListItem extends StatelessWidget {
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: MyTheme.insetSize),
               position: BadgePosition.topEnd(),
-              child: Text(device.displayName),
+              child: Text(
+                device.displayName,
+              ),
               badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
               showBadge: connectionStatus == DeviceConnectionStatus.offline,
               badgeColor: Colors.transparent,
               elevation: 0,
             )),
         trailing: trailingWidgets.isEmpty
-            ? FavorizeButton(_stateDeviceIndex, null)
+            ? _favorizeButton = FavorizeButton(_stateDeviceIndex, null, key: _keyFavButton)
             : Row(
-                children: [...trailingWidgets, const VerticalDivider(), FavorizeButton(_stateDeviceIndex, null)],
+                children: [
+                  ...trailingWidgets,
+                  const VerticalDivider(),
+                  _favorizeButton = FavorizeButton(_stateDeviceIndex, null, key: _keyFavButton)
+                ],
                 mainAxisSize: MainAxisSize.min, // limit size to needed
               ),
         onTap: () {
@@ -181,10 +191,37 @@ class DeviceListItem extends StatelessWidget {
           }
         },
       ));
+      WidgetsBinding.instance?.addPostFrameCallback((_) => _showTutorial(context));
       return Column(
         children: columnWidgets,
         mainAxisSize: MainAxisSize.min,
       );
     });
+  }
+
+  void _showTutorial(BuildContext context) {
+    if (!Settings.tutorialSeen(Tutorial.deviceListItem)) {
+      TutorialCoachMark(
+        context,
+        targets: [
+          TargetFocus(keyTarget: _keyFavButton, contents: [
+            TargetContent(
+                align: ContentAlign.bottom,
+                child: const Text(
+                  "Toggle favorite",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24),
+                ),
+                padding: const EdgeInsets.only(top: 50))
+          ]),
+        ],
+        colorShadow: MyTheme.appColor,
+        onClickTarget: (focus) {
+          _favorizeButton!.click();
+        },
+        alignSkip: Alignment.topRight,
+      ).show();
+      Settings.markTutorialSeen(Tutorial.deviceListItem);
+    }
   }
 }

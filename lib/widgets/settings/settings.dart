@@ -76,6 +76,14 @@ class Settings extends StatelessWidget {
             Toast.showConfirmationToast(context, "Cache cleared, please restart App");
           },
         ),
+        const Divider(),
+        ListTile(
+          title: const Text("Reset Tutorials"),
+          onTap: () async {
+            await settingsService.Settings.resetTutorials();
+            Toast.showConfirmationToast(context, "Tutorials reset");
+          },
+        ),
       ];
 
       if (MyTheme.canChangeColorTheme) {

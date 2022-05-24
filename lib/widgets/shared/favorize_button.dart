@@ -38,6 +38,17 @@ class FavorizeButton extends StatelessWidget {
     return !(MyTheme.isDarkMode && MyTheme.currentTheme == themeMaterial);
   }
 
+  click() async {
+    if (_stateDeviceIndex != null) {
+      AppState().devices[_stateDeviceIndex!].toggleFavorite();
+      await DevicesService.saveDevice(AppState().devices[_stateDeviceIndex!]);
+    } else {
+      AppState().deviceGroups[_stateDeviceGroupIndex!].toggleFavorite();
+      AppState().deviceGroups[_stateDeviceGroupIndex!] = await DeviceGroupsService.saveDeviceGroup(AppState().deviceGroups[_stateDeviceGroupIndex!]);
+    }
+    AppState().notifyListeners();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
@@ -54,22 +65,12 @@ class FavorizeButton extends StatelessWidget {
         children.add(const Icon(Icons.star_border, color: Colors.grey));
       }
       return PlatformIconButton(
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-        icon: Stack(
-          alignment: AlignmentDirectional.center,
-          children: children,
-        ),
-        onPressed: () async {
-          if (_stateDeviceIndex != null) {
-            state.devices[_stateDeviceIndex!].toggleFavorite();
-            await DevicesService.saveDevice(state.devices[_stateDeviceIndex!]);
-          } else {
-            state.deviceGroups[_stateDeviceGroupIndex!].toggleFavorite();
-            state.deviceGroups[_stateDeviceGroupIndex!] = await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[_stateDeviceGroupIndex!]);
-          }
-          state.notifyListeners();
-        },
-      );
+          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Stack(
+            alignment: AlignmentDirectional.center,
+            children: children,
+          ),
+          onPressed: click);
     });
   }
 }

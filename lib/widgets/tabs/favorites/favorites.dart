@@ -17,15 +17,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
+import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../../../app_state.dart';
+import '../../../services/settings.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
 import '../shared/group_list_item.dart';
 
 class DeviceListFavorites extends StatelessWidget {
-  const DeviceListFavorites({Key? key}) : super(key: key);
+  DeviceListFavorites({Key? key}) : super(key: key);
+
+  final GlobalKey _keyFavButton = GlobalKey();
+
+  _openFavorites(BuildContext context) {
+    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    parentState?.switchBottomBar(5, true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +49,9 @@ class DeviceListFavorites extends StatelessWidget {
         }
       }
       state.devices.removeWhere((element) => !element.favorite);
+      if (state.devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
+        WidgetsBinding.instance?.addPostFrameCallback((_) => _showTutorial(context));
+      }
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
@@ -59,11 +71,9 @@ class DeviceListFavorites extends StatelessWidget {
                                         Expanded(
                                             child: Center(
                                                 child: PlatformElevatedButton(
+                                          widgetKey: _keyFavButton,
                                           child: const Text("Add Favorites"),
-                                          onPressed: () {
-                                            final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-                                            parentState?.switchBottomBar(5, true);
-                                          },
+                                          onPressed: () => _openFavorites(context),
                                         ))),
                                       ],
                                     ),
@@ -99,5 +109,32 @@ class DeviceListFavorites extends StatelessWidget {
                   ),
           ));
     });
+  }
+
+  void _showTutorial(BuildContext context) {
+    if (!Settings.tutorialSeen(Tutorial.addFavoriteButton)) {
+      TutorialCoachMark(
+        context,
+        targets: [
+          TargetFocus(keyTarget: _keyFavButton, contents: [
+            TargetContent(
+              align: ContentAlign.top,
+              child: const Text(
+                "Add some devices to your favorites for quick access",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24),
+              ),
+              padding: const EdgeInsets.only(bottom: 75, left: 20, right: 20),
+            )
+          ])
+        ],
+        colorShadow: MyTheme.appColor,
+        onClickTarget: (_) {
+          _openFavorites(context);
+        },
+        alignSkip: Alignment.topRight,
+      ).show();
+      Settings.markTutorialSeen(Tutorial.addFavoriteButton);
+    }
   }
 }

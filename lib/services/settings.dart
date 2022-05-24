@@ -37,7 +37,6 @@ class Settings {
   static const _defaultDisplayedFractionDigits = 2;
   static int _currentDisplayedFractionDigits = 0;
 
-
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -57,7 +56,7 @@ class Settings {
     }
   }
 
-  static _setDefaults(){
+  static _setDefaults() {
     _currentThemeValue = _hiveGetWithDefault(_themeKey, _defaultTheme);
     _currentThemeColorValue = _hiveGetWithDefault(_themeColorKey, _defaultThemeColor);
     _currentDisplayedFractionDigits = _hiveGetIntWithDefault(_displayedFractionDigitsKey, _defaultDisplayedFractionDigits);
@@ -157,5 +156,20 @@ class Settings {
     await _box?.put(_displayedFractionDigitsKey, value.toString()).then((v) => _box?.flush());
   }
 
+  static bool tutorialSeen(Tutorial tutorial) {
+    checkInit();
+    return _box!.containsKey(tutorial.toString());
+  }
 
+  static Future<void> markTutorialSeen(Tutorial tutorial) {
+    checkInit();
+    return _box!.put(tutorial.toString(), true.toString());
+  }
+
+  static Future<void> resetTutorials() async {
+    checkInit();
+    await Future.wait(Tutorial.values.map((e) => _box!.delete(e.toString())));
+  }
 }
+
+enum Tutorial { addFavoriteButton, deviceListItem }

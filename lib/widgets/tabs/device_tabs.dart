@@ -534,7 +534,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         case tabNetworks:
                           return const DeviceListByNetwork();
                         case tabFavorites:
-                          return const DeviceListFavorites();
+                          return DeviceListFavorites();
                         default:
                           return Center(
                               child: Row(children: [
