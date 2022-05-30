@@ -674,7 +674,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
     }
     WidgetsBinding.instance!.addObserver(this);
-    _refresh(context);
+    WidgetsBinding.instance?.addPostFrameCallback((_) => _refresh(context));
   }
 
   @override
