@@ -22,8 +22,33 @@ import '../../../app_state.dart';
 import '../../../theme.dart';
 import '../shared/device_list_item.dart';
 
-class DeviceList extends StatelessWidget {
+class DeviceList extends StatefulWidget {
   const DeviceList({Key? key}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => _DeviceListState();
+}
+
+class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      AppState().refreshDevices(context);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

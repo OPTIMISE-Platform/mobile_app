@@ -18,7 +18,6 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -58,21 +57,23 @@ const notificationUpdateType = "put notification";
 const notificationDeleteManyType = "delete notifications";
 const messageKey = "messages";
 
-class AppState extends ChangeNotifier {
+class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static final _instance = AppState._internal();
   factory AppState() => _instance;
   AppState._internal() {
-    SystemChannels.lifecycle.setMessageHandler((msg) {
-      if (msg == AppLifecycleState.resumed.toString()) {
-        handleQueuedMessages();
-      }
-      return Future.value(null);
-    });
+    WidgetsBinding.instance!.addObserver(this);
     if (kIsWeb) {
       // receive broadcasts from service worker
       getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
         _handleRemoteMessageCommand(event.data["data"]);
       });
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      handleQueuedMessages();
     }
   }
 

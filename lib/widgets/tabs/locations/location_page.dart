@@ -34,13 +34,22 @@ import '../shared/device_list_item.dart';
 import '../shared/group_list_item.dart';
 import 'location_edit_devices.dart';
 
-class LocationPage extends StatelessWidget {
+class LocationPage extends StatefulWidget {
   final int _stateLocationIndex;
-  final StreamController _toggleStreamController = StreamController();
-  late final Stream _toggleStream;
   final DeviceTabsState parentState;
 
-  LocationPage(this._stateLocationIndex, this.parentState, {Key? key}) : super(key: key) {
+
+  const LocationPage(this._stateLocationIndex, this.parentState, {Key? key}) : super(key: key);
+
+  @override
+  State<StatefulWidget> createState() => LocationPageState();
+}
+
+class LocationPageState extends State<LocationPage> with WidgetsBindingObserver {
+  final StreamController _toggleStreamController = StreamController();
+  late final Stream _toggleStream;
+
+  LocationPageState() {
     _toggleStream = _toggleStreamController.stream.asBroadcastStream();
   }
 
@@ -49,26 +58,44 @@ class LocationPage extends StatelessWidget {
   );
 
   _refresh(Location location, BuildContext context) async {
-    parentState.filter.locationIds = [location.id];
+    widget.parentState.filter.locationIds = [location.id];
     await AppState().loadDeviceGroups(context);
-    await AppState().searchDevices(parentState.filter, context, true);
+    await AppState().searchDevices(widget.parentState.filter, context, true);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh(AppState().locations[widget._stateLocationIndex], context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      if (state.locations.length - 1 < _stateLocationIndex) {
+      if (state.locations.length - 1 < widget._stateLocationIndex) {
         _logger.w("Location Page requested for location index that is not in AppState");
         return Center(child: PlatformCircularProgressIndicator());
       }
 
-      if ((state.loadingDevices || state.devices.length != state.locations[_stateLocationIndex].device_ids.length) && !state.allDevicesLoaded) {
+      if ((state.loadingDevices || state.devices.length != state.locations[widget._stateLocationIndex].device_ids.length) && !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
         }
       }
 
-      final location = state.locations[_stateLocationIndex];
+      final location = state.locations[widget._stateLocationIndex];
 
       List<Widget> appBarActions = [];
       appBarActions.add(PlatformIconButton(
@@ -97,7 +124,7 @@ class LocationPage extends StatelessWidget {
           }
           location.name = newName;
           final newLocation = await LocationService.saveLocation(location);
-          state.locations[_stateLocationIndex] = newLocation;
+          state.locations[widget._stateLocationIndex] = newLocation;
           state.notifyListeners();
         },
         icon: Icon(PlatformIcons(context).edit),
@@ -119,7 +146,7 @@ class LocationPage extends StatelessWidget {
                           cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
                           onPressed: () async {
                             await LocationService.deleteLocation(location.id);
-                            state.locations.removeAt(_stateLocationIndex);
+                            state.locations.removeAt(widget._stateLocationIndex);
                             Navigator.pop(context, true);
                           })
                     ],
@@ -144,7 +171,7 @@ class LocationPage extends StatelessWidget {
       final List<int> matchingGroups = [];
       for (var i = 0; i < state.deviceGroups.length; i++) {
         if (location.device_group_ids.contains(state.deviceGroups[i].id) &&
-            (parentState.filter.deviceGroupIds == null || parentState.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
+            (widget.parentState.filter.deviceGroupIds == null || widget.parentState.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
           matchingGroups.add(i);
         }
       }
@@ -158,15 +185,15 @@ class LocationPage extends StatelessWidget {
               ActionButton(
                 onPressed: () async {
                   _toggleStreamController.add(null);
-                  await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditDevices(_stateLocationIndex)));
-                  state.searchDevices(parentState.filter, context);
+                  await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditDevices(widget._stateLocationIndex)));
+                  state.searchDevices(widget.parentState.filter, context);
                 },
                 icon: Icon(Icons.sensors, color: MyTheme.textColor),
               ),
               ActionButton(
                 onPressed: () {
                   _toggleStreamController.add(null);
-                  Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditGroups(_stateLocationIndex)));
+                  Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditGroups(widget._stateLocationIndex)));
                 },
                 icon: Icon(Icons.devices_other, color: MyTheme.textColor),
               )
@@ -219,9 +246,9 @@ class LocationPage extends StatelessWidget {
                                 children: [
                                   const Divider(),
                                   GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                                    parentState.filter.locationIds = [location.id];
+                                    widget.parentState.filter.locationIds = [location.id];
                                     state.searchDevices(
-                                        parentState.filter, context);
+                                        widget.parentState.filter, context);
                                   })
                                 ],
                               );

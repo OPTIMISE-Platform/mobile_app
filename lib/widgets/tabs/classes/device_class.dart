@@ -32,8 +32,34 @@ class DeviceListByDeviceClass extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByDeviceClassState();
 }
 
-class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> {
+class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with WidgetsBindingObserver {
   int? _selected;
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      if (_selected == null) {
+        AppState().loadDeviceClasses(context);
+      } else {
+        final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
+        final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+        AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

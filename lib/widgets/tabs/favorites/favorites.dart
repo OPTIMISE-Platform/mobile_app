@@ -26,14 +26,39 @@ import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
 import '../shared/group_list_item.dart';
 
-class DeviceListFavorites extends StatelessWidget {
-  DeviceListFavorites({Key? key}) : super(key: key);
+class DeviceListFavorites extends StatefulWidget {
+  const DeviceListFavorites({Key? key}) : super(key: key);
 
+  @override
+  State<StatefulWidget> createState() => _DeviceListFavoritesState();
+}
+
+class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsBindingObserver {
   final GlobalKey _keyFavButton = GlobalKey();
 
   _openFavorites(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
     parentState?.switchBottomBar(5, true);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      AppState().refreshDevices(context);
+    }
   }
 
   @override

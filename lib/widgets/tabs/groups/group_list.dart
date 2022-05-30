@@ -26,7 +26,6 @@ import 'package:provider/provider.dart';
 import '../../../app_state.dart';
 import '../../../models/device_search_filter.dart';
 import '../../../theme.dart';
-import '../shared/device_list_item.dart';
 import '../shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
@@ -36,13 +35,28 @@ class GroupList extends StatefulWidget {
   State<StatefulWidget> createState() => _GroupListState();
 }
 
-class _GroupListState extends State<GroupList> {
+class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   static StreamSubscription? _fabSubscription;
 
   @override
   void dispose() {
     _fabSubscription?.cancel().then((_) => _fabSubscription = null);
+    WidgetsBinding.instance!.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      AppState().loadDeviceGroups(context);
+    }
   }
 
   void _openGroupPage(int i, DeviceTabsState? parentState) async {

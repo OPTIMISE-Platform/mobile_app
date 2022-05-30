@@ -35,13 +35,29 @@ class DeviceListByLocation extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByLocationState();
 }
 
-class _DeviceListByLocationState extends State<DeviceListByLocation> {
+class _DeviceListByLocationState extends State<DeviceListByLocation> with WidgetsBindingObserver {
   static StreamSubscription? _fabSubscription;
 
   @override
   void dispose() {
     _fabSubscription?.cancel().then((_) => _fabSubscription = null);
+    WidgetsBinding.instance!.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      AppState().loadLocations(context);
+      setState(() {});
+    }
   }
 
   void _openLocationPage(int i, DeviceTabsState? parentState) async {

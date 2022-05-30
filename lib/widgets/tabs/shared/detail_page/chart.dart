@@ -14,54 +14,6 @@
  *  limitations under the License.
  */
 
-/*
- * Copyright 2022 InfAI (CC SES)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
-/*
- * Copyright 2022 InfAI (CC SES)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
-/*
- * Copyright 2022 InfAI (CC SES)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -84,17 +36,16 @@ class Chart extends StatefulWidget {
   Chart(this._state, {Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _ChartState(_state);
+  State<StatefulWidget> createState() => _ChartState();
 }
 
-class _ChartState extends State<Chart> {
+class _ChartState extends State<Chart> with WidgetsBindingObserver {
   static final _HHMMformat = DateFormat.Hm();
   static final _EHHMMformat = DateFormat.E().add_Hm();
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  final DeviceState _state;
   final _appBar = const MyAppBar("Chart");
   final _refreshMutex = Mutex();
 
@@ -105,6 +56,26 @@ class _ChartState extends State<Chart> {
   String _aggregation = "mean";
   List<FlSpot>? _spots;
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+      _refresh(context, _range);
+    }
+  }
+
   _refresh(BuildContext context, int range) async {
     await _refreshMutex.protect(() async {
       setState(() {
@@ -112,8 +83,8 @@ class _ChartState extends State<Chart> {
       });
       late final List<List<dynamic>> data;
       try {
-        data = await DbQueryService.query(DbQuery(null, _state.deviceId, _state.serviceId, _getGroupTime(range), null, null, null,
-            QueriesRequestElementTime(_getTime(range), null, null), [QueriesRequestElementColumn(_state.path!, _aggregation, null)], null));
+        data = await DbQueryService.query(DbQuery(null, widget._state.deviceId, widget._state.serviceId, _getGroupTime(range), null, null, null,
+            QueriesRequestElementTime(_getTime(range), null, null), [QueriesRequestElementColumn(widget._state.path!, _aggregation, null)], null));
       } catch (e) {
         Toast.showErrorToast(context, "Could not load data");
         _logger.e(e);
@@ -194,10 +165,6 @@ class _ChartState extends State<Chart> {
         return 36 * 60 * 60 * 1000; // 1.5d
     }
     return null;
-  }
-
-  _ChartState(this._state) {
-    _logger.d("Chart opened: " + _state.deviceId! + ", " + _state.serviceId! + ", " + _state.path!);
   }
 
   @override
@@ -281,7 +248,8 @@ class _ChartState extends State<Chart> {
             )),
       ),
       PlatformIconButton(
-        onPressed: _refreshing ? null : () => _refresh(context, _range),
+        onPressed: _refreshing ? null : () =>
+            _refresh(context, _range),
         icon: _refreshing ? PlatformCircularProgressIndicator() : const Icon(Icons.refresh),
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )

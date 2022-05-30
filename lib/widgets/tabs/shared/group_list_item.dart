@@ -56,7 +56,6 @@ class GroupListItem extends StatelessWidget {
                   context: context,
                   builder: (context) {
                     final target = DetailPage(null, _stateGroupIndex);
-                    target.refresh(context);
                     return target;
                   },
                 ));

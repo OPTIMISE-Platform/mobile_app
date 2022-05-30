@@ -33,9 +33,36 @@ class DeviceListByNetwork extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByNetworkState();
 }
 
-class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
+class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsBindingObserver {
   int? _selected;
   bool _loading = false;
+
+  _refresh() async {
+    if (_selected == null) {
+      AppState().loadNetworks(context);
+    } else {
+      AppState().searchDevices(
+          (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.filter ?? DeviceSearchFilter("", null, null, [AppState().networks[_selected!].id]), context, true);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,14 +72,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> {
           child: state.loadingNetworks()
               ? Center(child: PlatformCircularProgressIndicator())
               : RefreshIndicator(
-              onRefresh: () async {
-                if (_selected == null) {
-                  AppState().loadNetworks(context);
-                } else {
-                  AppState().searchDevices(
-                      parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[_selected!].id]), context, true);
-                }
-              },
+              onRefresh: () async => await _refresh(),
               child: _selected == null ? state.networks.isEmpty
                   ? LayoutBuilder(
                 builder: (context, constraint) {

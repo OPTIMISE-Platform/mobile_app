@@ -43,32 +43,27 @@ import '../../../shared/expandable_text.dart';
 import '../../../shared/favorize_button.dart';
 import '../../../shared/toast.dart';
 
-class DetailPage extends StatelessWidget {
+class DetailPage extends StatefulWidget {
   final int? _stateDeviceIndex;
   final int? _stateDeviceGroupIndex;
 
-  DetailPage(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key) {
-    if ((_stateDeviceIndex == null && _stateDeviceGroupIndex == null) || (_stateDeviceIndex != null && _stateDeviceGroupIndex != null)) {
-      throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
-    }
-  }
+  const DetailPage(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key);
 
+  @override
+  State<StatefulWidget> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  refresh(BuildContext context) {
-    WidgetsBinding.instance?.addPostFrameCallback((_) async {
-      await _refresh(context, true);
-    });
-  }
-
-  _refresh(BuildContext context, bool external) async {
+  _refresh(BuildContext context) async {
     late final List<DeviceState> states;
-    if (_stateDeviceIndex != null) {
-      states = AppState().devices[_stateDeviceIndex!].states;
+    if (widget._stateDeviceIndex != null) {
+      states = AppState().devices[widget._stateDeviceIndex!].states;
     } else {
-      states = AppState().deviceGroups[_stateDeviceGroupIndex!].states;
+      states = AppState().deviceGroups[widget._stateDeviceGroupIndex!].states;
     }
     for (var element in states) {
       if (!element.isControlling) {
@@ -76,9 +71,9 @@ class DetailPage extends StatelessWidget {
         element.transitioning = true;
       }
     }
-    if (!external) AppState().notifyListeners(); // not allowed when just building the widget
-    AppState().loadStates(context, _stateDeviceIndex == null ? [] : [AppState().devices[_stateDeviceIndex!]],
-        _stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[_stateDeviceGroupIndex!]]);
+    WidgetsBinding.instance?.addPostFrameCallback((_) => AppState().notifyListeners());
+    AppState().loadStates(context, widget._stateDeviceIndex == null ? [] : [AppState().devices[widget._stateDeviceIndex!]],
+        widget._stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[widget._stateDeviceGroupIndex!]]);
   }
 
   _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
@@ -143,7 +138,7 @@ class DetailPage extends StatelessWidget {
       measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
 
       List<String>? refreshingMeasurementFunctionIds;
-      if (_stateDeviceGroupIndex != null) {
+      if (widget._stateDeviceGroupIndex != null) {
         refreshingMeasurementFunctionIds = measuringFunctionConfig.getAllRelatedControllingFunctions();
       } else {
         refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
@@ -300,7 +295,8 @@ class DetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       if ((state.loadingDevices ||
-              (_stateDeviceGroupIndex != null && state.devices.length != state.deviceGroups[_stateDeviceGroupIndex!].device_ids.length)) &&
+              (widget._stateDeviceGroupIndex != null &&
+                  (state.deviceGroups.length <= widget._stateDeviceGroupIndex! || state.devices.length != state.deviceGroups[widget._stateDeviceGroupIndex!].device_ids.length))) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
@@ -308,21 +304,21 @@ class DetailPage extends StatelessWidget {
         return Center(child: PlatformCircularProgressIndicator());
       }
 
-      if (_stateDeviceIndex != null && state.devices.length - 1 < _stateDeviceIndex!) {
+      if (widget._stateDeviceIndex != null && state.devices.length - 1 < widget._stateDeviceIndex!) {
         _logger.w("Device Page requested for device index that is not in AppState");
         return Center(child: PlatformCircularProgressIndicator());
       }
-      if (_stateDeviceGroupIndex != null && state.deviceGroups.length - 1 < _stateDeviceGroupIndex!) {
+      if (widget._stateDeviceGroupIndex != null && state.deviceGroups.length - 1 < widget._stateDeviceGroupIndex!) {
         _logger.w("Device Page requested for device group index that is not in AppState");
         return Center(child: PlatformCircularProgressIndicator());
       }
-      final device = _stateDeviceIndex == null ? null : state.devices[_stateDeviceIndex!];
-      final deviceGroup = _stateDeviceGroupIndex == null ? null : state.deviceGroups[_stateDeviceGroupIndex!];
+      final device = widget._stateDeviceIndex == null ? null : state.devices[widget._stateDeviceIndex!];
+      final deviceGroup = widget._stateDeviceGroupIndex == null ? null : state.deviceGroups[widget._stateDeviceGroupIndex!];
       late final List<DeviceState> states;
-      if (_stateDeviceIndex != null) {
-        states = state.devices[_stateDeviceIndex!].states;
+      if (widget._stateDeviceIndex != null) {
+        states = state.devices[widget._stateDeviceIndex!].states;
       } else {
-        states = state.deviceGroups[_stateDeviceGroupIndex!].states;
+        states = state.deviceGroups[widget._stateDeviceGroupIndex!].states;
       }
 
       final connectionStatus = device?.getConnectionStatus();
@@ -355,7 +351,7 @@ class DetailPage extends StatelessWidget {
             if (newName == null) return;
             device.setNickname(newName);
             try {
-              await DevicesService.saveDevice(state.devices[_stateDeviceIndex!]);
+              await DevicesService.saveDevice(state.devices[widget._stateDeviceIndex!]);
               state.notifyListeners();
             } catch (e) {
               Toast.showErrorToast(context, "Could not update device name");
@@ -388,7 +384,7 @@ class DetailPage extends StatelessWidget {
             if (newName == null) return;
             deviceGroup.name = newName;
             try {
-              await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[_stateDeviceGroupIndex!]);
+              await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[widget._stateDeviceGroupIndex!]);
               state.notifyListeners();
             } catch (e) {
               Toast.showErrorToast(context, "Could not update device name");
@@ -414,7 +410,7 @@ class DetailPage extends StatelessWidget {
                             cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
                             onPressed: () async {
                               await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
-                              state.deviceGroups.removeAt(_stateDeviceGroupIndex!);
+                              state.deviceGroups.removeAt(widget._stateDeviceGroupIndex!);
                               Navigator.pop(context, true);
                             })
                       ],
@@ -430,7 +426,7 @@ class DetailPage extends StatelessWidget {
       }
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
-          onPressed: () => _refresh(context, false),
+          onPressed: () => _refresh(context),
           icon: const Icon(Icons.refresh),
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
@@ -592,7 +588,8 @@ class DetailPage extends StatelessWidget {
         widgets.add(const Divider());
         widgets.add(element.t);
       }
-      if (deviceGroup != null) { // prevent fab overlap
+      if (deviceGroup != null) {
+        // prevent fab overlap
         widgets.add(Column(
           children: const [Divider(), ListTile()],
         ));
@@ -605,9 +602,9 @@ class DetailPage extends StatelessWidget {
             message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
-        trailingHeader.add(FavorizeButton(_stateDeviceIndex!, null));
+        trailingHeader.add(FavorizeButton(widget._stateDeviceIndex!, null));
       } else {
-        trailingHeader.add(FavorizeButton(null, _stateDeviceGroupIndex));
+        trailingHeader.add(FavorizeButton(null, widget._stateDeviceGroupIndex));
       }
 
       return Scaffold(
@@ -615,10 +612,11 @@ class DetailPage extends StatelessWidget {
               ? null
               : FloatingActionButton(
                   onPressed: () async {
-                    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(_stateDeviceGroupIndex!)));
-                    await state.searchDevices(DeviceSearchFilter("",null, null, null, [deviceGroup.id], null, null ), context, true);
+                    await Navigator.push(
+                        context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._stateDeviceGroupIndex!)));
+                    await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), context, true);
                     deviceGroup.prepareStates(true);
-                    _refresh(context, false);
+                    _refresh(context);
                   },
                   backgroundColor: MyTheme.appColor,
                   child: Icon(Icons.list, color: MyTheme.textColor),
@@ -626,7 +624,7 @@ class DetailPage extends StatelessWidget {
           body: PlatformScaffold(
             appBar: _appBar.getAppBar(context, appBarActions),
             body: RefreshIndicator(
-              onRefresh: () => _refresh(context, false),
+              onRefresh: () => _refresh(context),
               child: Scrollbar(
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -666,5 +664,28 @@ class DetailPage extends StatelessWidget {
             ),
           ));
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if ((widget._stateDeviceIndex == null && widget._stateDeviceGroupIndex == null) ||
+        (widget._stateDeviceIndex != null && widget._stateDeviceGroupIndex != null)) {
+      throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
+    }
+    WidgetsBinding.instance!.addObserver(this);
+    _refresh(context);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance!.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh(context);
   }
 }
