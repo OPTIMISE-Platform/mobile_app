@@ -29,8 +29,10 @@ import '../../shared/expandable_text.dart';
 
 class SmartServicesReleaseLaunch extends StatefulWidget {
   final SmartServiceRelease release;
+  final SmartServiceInstance? instance;
+  final List<SmartServiceExtendedParameter>? parameters;
 
-  const SmartServicesReleaseLaunch(this.release, {Key? key}) : super(key: key);
+  const SmartServicesReleaseLaunch(this.release, {this.instance, this.parameters, Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _SmartServicesReleaseLaunchState();
@@ -39,7 +41,6 @@ class SmartServicesReleaseLaunch extends StatefulWidget {
 class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch> {
   List<SmartServiceExtendedParameter>? parameters;
 
-  final appBar = const MyAppBar("Launch Release");
   static final _format = DateFormat.yMd().add_jms();
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -182,7 +183,11 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      parameters = await SmartServiceService.getReleaseParameters(widget.release.id);
+      if (widget.parameters == null) {
+        parameters = await SmartServiceService.getReleaseParameters(widget.release.id);
+      } else {
+        parameters = widget.parameters;
+      }
       setState(() {});
     });
   }
@@ -247,46 +252,52 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
       }
     }
     configs.add(const SizedBox(height: 100)); // prevent FAB overlap
+    final appBar = MyAppBar((widget.instance != null ? "Edit" : "Launch") + " Release");
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
-            final nameDescription = await showPlatformDialog(
-                context: context,
-                builder: (_) {
-                  final result = {"name": widget.release.name, "description": widget.release.description};
-                  return PlatformAlertDialog(
-                    title: const Text("Set Name and Description"),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        PlatformTextFormField(
-                          hintText: "Name",
-                          initialValue: widget.release.name,
-                          onChanged: (newValue) => result["name"] = newValue,
-                        ),
-                        PlatformTextFormField(
-                          hintText: "Description",
-                          maxLines: 8,
-                          minLines: 8,
-                          initialValue: widget.release.description,
-                          onChanged: (newValue) => result["description"] = newValue,
-                        ),
+            if (widget.instance == null) {
+              final nameDescription = await showPlatformDialog(
+                  context: context,
+                  builder: (_) {
+                    final result = {"name": widget.release.name, "description": widget.release.description};
+                    return PlatformAlertDialog(
+                      title: const Text("Set Name and Description"),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PlatformTextFormField(
+                            hintText: "Name",
+                            initialValue: widget.release.name,
+                            onChanged: (newValue) => result["name"] = newValue,
+                          ),
+                          PlatformTextFormField(
+                            hintText: "Description",
+                            maxLines: 8,
+                            minLines: 8,
+                            initialValue: widget.release.description,
+                            onChanged: (newValue) => result["description"] = newValue,
+                          ),
+                        ],
+                      ),
+                      actions: <Widget>[
+                        PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                        PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
                       ],
-                    ),
-                    actions: <Widget>[
-                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
-                    ],
-                  );
-                });
-            if (nameDescription == null) return;
-            await SmartServiceService.createInstance(
-                widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(), nameDescription["name"], nameDescription["description"]);
+                    );
+                  });
+              if (nameDescription == null) return;
+
+              await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
+                  nameDescription["name"], nameDescription["description"]);
+            } else {
+              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList());
+            }
             Navigator.pop(this.context);
           },
           backgroundColor: MyTheme.appColor,
-          label: Text("Start", style: TextStyle(color: MyTheme.textColor)),
-          icon: Icon(Icons.play_arrow, color: MyTheme.textColor),
+          label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: MyTheme.textColor)),
+          icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: MyTheme.textColor),
         ),
         body: PlatformScaffold(
             appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),

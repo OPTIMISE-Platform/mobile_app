@@ -22,6 +22,7 @@ import 'package:mobile_app/widgets/shared/app_bar.dart';
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
 import '../../shared/expandable_text.dart';
+import 'instance_edit_launch.dart';
 
 class SmartServicesInstanceDetails extends StatefulWidget {
   final SmartServiceInstance instance;
@@ -51,13 +52,64 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
     return Scaffold(
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
-            // TODO
+            final release = await SmartServiceService.getRelease(widget.instance.release_id);
+            await Navigator.push(
+                this.context,
+                platformPageRoute(
+                  context: this.context,
+                  builder: (_) => SmartServicesReleaseLaunch(
+                    release,
+                    instance: widget.instance,
+                    parameters: parameters,
+                  ),
+                ));
+            Navigator.pop(this.context);
           },
           backgroundColor: MyTheme.appColor,
           child: Icon(Icons.edit, color: MyTheme.textColor),
         ),
         body: PlatformScaffold(
-            appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),
+            appBar: appBar.getAppBar(context, [PlatformIconButton(
+              onPressed: () async {
+                final nameDescription = await showPlatformDialog(
+                    context: context,
+                    builder: (_) {
+                      final result = {"name": widget.instance.name, "description": widget.instance.description};
+                      return PlatformAlertDialog(
+                        title: const Text("Set Name and Description"),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PlatformTextFormField(
+                              hintText: "Name",
+                              initialValue: widget.instance.name,
+                              onChanged: (newValue) => result["name"] = newValue,
+                            ),
+                            PlatformTextFormField(
+                              hintText: "Description",
+                              maxLines: 8,
+                              minLines: 8,
+                              initialValue: widget.instance.description,
+                              onChanged: (newValue) => result["description"] = newValue,
+                            ),
+                          ],
+                        ),
+                        actions: <Widget>[
+                          PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                        ],
+                      );
+                    });
+                if (nameDescription == null) return;
+
+                final updated = await SmartServiceService.updateInstanceInfo(widget.instance.id, nameDescription["name"], nameDescription["description"]);
+                widget.instance.name = updated.name;
+                widget.instance.description = updated.description;
+                setState(() {});
+              },
+              icon: Icon(PlatformIcons(context).edit),
+              cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            )]..addAll(MyAppBar.getDefaultActions(context))),
             body: Scrollbar(
               child: parameters == null
                   ? Center(child: PlatformCircularProgressIndicator())

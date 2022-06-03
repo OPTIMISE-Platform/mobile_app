@@ -73,7 +73,7 @@ class SmartServiceService {
               "id-1",
               3,
             ),
-            SmartServiceParameter("id-2", null),
+            SmartServiceParameter("id-2", 1337),
             SmartServiceParameter("id-3", 0.4),
             SmartServiceParameter("id-4", <dynamic>[0, 1]),
             SmartServiceParameter("id-5", <dynamic>[0, 1]),
@@ -81,16 +81,16 @@ class SmartServiceService {
               "id-6",
               null,
             ),
-            SmartServiceParameter("id-7", <dynamic>[false, true, false]),
+            SmartServiceParameter("id-7", <dynamic>[true, false]),
             SmartServiceParameter(
               "id-8",
               false,
             ),
             SmartServiceParameter(
               "id-9",
-              "a",
+              "value-a",
             ),
-            SmartServiceParameter("id-10", "b")
+            SmartServiceParameter("id-10", "value-b")
           ]),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "not ready", "release_id", "user_id", false, false, null),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "incomplete delete", "release_id", "user_id", true, false, null)
@@ -149,13 +149,31 @@ class SmartServiceService {
     return;
   }
 
-  static Future<SmartServiceInstance> patchInstance(String instanceId, List<SmartServiceParameter>? parameters) async {
-    final String url = baseUrl + "/instances/" + instanceId;
+  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters) async {
+    final String url = baseUrl + "/instances/" + instanceId + "/parameters";
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.patch<dynamic>(url, options: Options(headers: headers), data: json.encode(parameters));
+    final resp = await dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(parameters));
+    if (resp.statusCode == null || resp.statusCode! > 299) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+
+    return SmartServiceInstance.fromJson(resp.data);
+  }
+
+  static Future<SmartServiceInstance> updateInstanceInfo(String instanceId, String name, String description) async {
+    final String url = baseUrl + "/instances/" + instanceId + "/info";
+    final Map<String, dynamic> body = {
+      "name": name,
+      "description": description,
+    };
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final resp = await dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
     if (resp.statusCode == null || resp.statusCode! > 299) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
@@ -276,5 +294,29 @@ class SmartServiceService {
 
     final l = resp.data ?? [];
     return List<SmartServiceRelease>.generate(l.length, (index) => SmartServiceRelease.fromJson(l[index]));
+  }
+
+  static Future<SmartServiceRelease> getRelease(String id) async {
+    return SmartServiceRelease(
+        "2223-01-01T00:00:00Z",
+        "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily",
+        "design_id",
+        "id",
+        "release name",
+        null); // TODO
+
+    final String url = baseUrl + "/releases/" + id;
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final resp = await _dio!.get<dynamic>(url, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.statusCode! > 304) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+    if (resp.statusCode == 304) {
+      _logger.d("Using cached SmartServiceRelease");
+    }
+
+    return SmartServiceRelease.fromJson(resp.data);
   }
 }

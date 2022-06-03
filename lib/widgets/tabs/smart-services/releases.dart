@@ -21,7 +21,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
-import 'package:mobile_app/widgets/tabs/smart-services/launch.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
 import 'package:mutex/mutex.dart';
 
 import '../../../models/smart_service.dart';

@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:badges/badges.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/smart_service.dart';
@@ -27,7 +26,7 @@ import 'package:mutex/mutex.dart';
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
-import 'instance-details.dart';
+import 'instance_details.dart';
 
 class SmartServicesInstances extends StatefulWidget {
   const SmartServicesInstances({Key? key}) : super(key: key);
@@ -59,7 +58,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
           platformPageRoute(
             context: context,
             builder: (context) {
-              final target = SmartServicesReleases();
+              final target = const SmartServicesReleases();
               return target;
             },
           ));
