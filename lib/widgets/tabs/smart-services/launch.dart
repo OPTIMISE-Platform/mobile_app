@@ -250,7 +250,38 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(
           onPressed: () async {
-            await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(), widget.release.name, widget.release.id);
+            final nameDescription = await showPlatformDialog(
+                context: context,
+                builder: (_) {
+                  final result = {"name": widget.release.name, "description": widget.release.description};
+                  return PlatformAlertDialog(
+                    title: const Text("Set Name and Description"),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PlatformTextFormField(
+                          hintText: "Name",
+                          initialValue: widget.release.name,
+                          onChanged: (newValue) => result["name"] = newValue,
+                        ),
+                        PlatformTextFormField(
+                          hintText: "Description",
+                          maxLines: 8,
+                          minLines: 8,
+                          initialValue: widget.release.description,
+                          onChanged: (newValue) => result["description"] = newValue,
+                        ),
+                      ],
+                    ),
+                    actions: <Widget>[
+                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                    ],
+                  );
+                });
+            if (nameDescription == null) return;
+            await SmartServiceService.createInstance(
+                widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(), nameDescription["name"], nameDescription["description"]);
             Navigator.pop(this.context);
           },
           backgroundColor: MyTheme.appColor,
