@@ -61,7 +61,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static final _instance = AppState._internal();
   factory AppState() => _instance;
   AppState._internal() {
-    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance?.addObserver(this);
     if (kIsWeb) {
       // receive broadcasts from service worker
       getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
