@@ -61,7 +61,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static final _instance = AppState._internal();
   factory AppState() => _instance;
   AppState._internal() {
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     if (kIsWeb) {
       // receive broadcasts from service worker
       getBroadcastChannel("optimise-mobile-app").onMessage.listen((event) {
@@ -419,11 +419,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
-    fcmToken = await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
-    if (fcmToken == null) {
+    final token = await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
+    if (token == null) {
       _logger.e("fcmToken null");
     } else {
-      _handleFcmTokenRefresh(fcmToken!);
+      _handleFcmTokenRefresh(token);
     }
     _handleMessageInteraction(await messaging.getInitialMessage());
   }
