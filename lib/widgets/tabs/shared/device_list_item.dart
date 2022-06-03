@@ -190,7 +190,7 @@ class DeviceListItem extends StatelessWidget {
           }
         },
       ));
-      WidgetsBinding.instance?.addPostFrameCallback((_) => _showTutorial(context));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       return Column(
         children: columnWidgets,
         mainAxisSize: MainAxisSize.min,

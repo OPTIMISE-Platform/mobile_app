@@ -34,7 +34,7 @@ class _ExpandableTextState extends State<ExpandableText> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _text = widget._text;
         _collapsed_lines = widget._collapsed_lines;
@@ -45,7 +45,7 @@ class _ExpandableTextState extends State<ExpandableText> {
   @override
   void didUpdateWidget(oldWidget) {
     super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance?.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       setState(() {
         _text = widget._text;
         _collapsed_lines = widget._collapsed_lines;

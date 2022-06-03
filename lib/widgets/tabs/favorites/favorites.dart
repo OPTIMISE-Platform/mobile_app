@@ -43,14 +43,14 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
 
   @override
   void dispose() {
-    WidgetsBinding.instance!.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
@@ -75,7 +75,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
       }
       state.devices.removeWhere((element) => !element.favorite);
       if (state.devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
-        WidgetsBinding.instance?.addPostFrameCallback((_) => _showTutorial(context));
+        WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       }
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),

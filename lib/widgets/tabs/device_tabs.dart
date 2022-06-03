@@ -25,6 +25,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
 
 import '../shared/app_bar.dart';
@@ -48,6 +49,7 @@ const tabLocations = 2;
 const tabGroups = 3;
 const tabNetworks = 4;
 const tabDevices = 5;
+const tabSmartServices = 6;
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
@@ -149,6 +151,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           hideSearch = true;
           AppState().searchDevices(filter, context);
           _showFab = false;
+          break;
+        case tabSmartServices:
+          hideSearch = true;
+          _showFab = true;
+          break;
       }
     });
   }
@@ -187,6 +194,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
           const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
           const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
+          const BottomNavigationBarItem(icon: Icon(Icons.auto_fix_high), label: "Services"), // TODO icon
         ],
         currentIndex: _bottomBarIndex,
         itemChanged: (i) => switchBottomBar(i, false),
@@ -213,7 +221,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return Consumer<AppState>(
       builder: (context, state, child) {
         if (!_initialized) {
-          WidgetsBinding.instance?.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             state.loadDeviceGroups(context);
             state.loadNetworks(context);
             state.loadLocations(context);
@@ -253,7 +261,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
         }
-        if (_bottomBarIndex != tabGroups) {
+        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices) {
           final List<PopupMenuOption> filterActions = [];
           if (_bottomBarIndex != tabClasses && state.deviceClasses.isNotEmpty) {
             filterActions.add(PopupMenuOption(
@@ -534,17 +542,19 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         case tabNetworks:
                           return const DeviceListByNetwork();
                         case tabFavorites:
-                          return DeviceListFavorites();
+                          return const DeviceListFavorites();
+                        case tabSmartServices:
+                          return const SmartServicesInstances();
                         default:
                           return Center(
-                              child: Row(children: [
+                              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                             const Icon(
                               Icons.error,
                               color: MyTheme.errorColor,
                             ),
                             SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
                             const Text("not implemented")
-                          ], mainAxisAlignment: MainAxisAlignment.center));
+                          ]));
                       }
                     })()),
                   ]),
