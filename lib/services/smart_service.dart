@@ -67,7 +67,31 @@ class SmartServiceService {
           "user_id",
           false,
           true,
-          null),
+          [
+            SmartServiceParameter("id-0", "differen"),
+            SmartServiceParameter(
+              "id-1",
+              3,
+            ),
+            SmartServiceParameter("id-2", null),
+            SmartServiceParameter("id-3", 0.4),
+            SmartServiceParameter("id-4", <dynamic>[0, 1]),
+            SmartServiceParameter("id-5", <dynamic>[0, 1]),
+            SmartServiceParameter(
+              "id-6",
+              null,
+            ),
+            SmartServiceParameter("id-7", <dynamic>[false, true, false]),
+            SmartServiceParameter(
+              "id-8",
+              false,
+            ),
+            SmartServiceParameter(
+              "id-9",
+              "a",
+            ),
+            SmartServiceParameter("id-10", "b")
+          ]),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "not ready", "release_id", "user_id", false, false, null),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "incomplete delete", "release_id", "user_id", true, false, null)
     ]; // TODO
@@ -140,14 +164,32 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceExtendedParameter>> getReleaseParameters(String releaseId) async {
-    return [ // TODO
-      SmartServiceExtendedParameter("id", "label", "str-free", "default_value", "default_value", false, null, ContentVariable.STRING),
-      SmartServiceExtendedParameter("id","label", "int-free", 1, 1, false, null, ContentVariable.INTEGER),
-      SmartServiceExtendedParameter("id","super long label i have no idea why anyone would need that much space for a label", "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily", null, null, false, null, ContentVariable.INTEGER),
-      SmartServiceExtendedParameter("id","label", "float-free", 0.4, 0.4, false, null, ContentVariable.FLOAT),
-      SmartServiceExtendedParameter("id","super long label i have no idea why anyone would need that much space for a label", "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily", <dynamic>[0, 1], <dynamic>[0, 1], true, null, ContentVariable.INTEGER),
-      SmartServiceExtendedParameter("id","label", "float-free-many", <dynamic>[0, 1], <dynamic>[0, 1], true, null, ContentVariable.FLOAT),
-      SmartServiceExtendedParameter("id",
+    return [
+      // TODO
+      SmartServiceExtendedParameter("id-0", "label", "str-free", "default_value", "default_value", false, null, ContentVariable.STRING),
+      SmartServiceExtendedParameter("id-1", "label", "int-free", 1, 1, false, null, ContentVariable.INTEGER),
+      SmartServiceExtendedParameter(
+          "id-2",
+          "super long label i have no idea why anyone would need that much space for a label",
+          "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily",
+          null,
+          null,
+          false,
+          null,
+          ContentVariable.INTEGER),
+      SmartServiceExtendedParameter("id-3", "label", "float-free", 0.4, 0.4, false, null, ContentVariable.FLOAT),
+      SmartServiceExtendedParameter(
+          "id-4",
+          "super long label i have no idea why anyone would need that much space for a label",
+          "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily",
+          <dynamic>[0, 1],
+          <dynamic>[0, 1],
+          true,
+          null,
+          ContentVariable.INTEGER),
+      SmartServiceExtendedParameter("id-5", "label", "float-free-many", <dynamic>[0, 1], <dynamic>[0, 1], true, null, ContentVariable.FLOAT),
+      SmartServiceExtendedParameter(
+          "id-6",
           "label",
           "str-choose many",
           null,
@@ -159,9 +201,11 @@ class SmartServiceService {
             SmartServiceParameterOption("", "c", "value-c"),
           ],
           ContentVariable.STRING),
-      SmartServiceExtendedParameter("id","label", "bool-free-many", <dynamic>[false, true, false], <dynamic>[false, true, false], true, null, ContentVariable.BOOLEAN),
-      SmartServiceExtendedParameter("id","label", "bool-free", false, false, false, null, ContentVariable.BOOLEAN),
-      SmartServiceExtendedParameter("id",
+      SmartServiceExtendedParameter(
+          "id-7", "label", "bool-free-many", <dynamic>[false, true, false], <dynamic>[false, true, false], true, null, ContentVariable.BOOLEAN),
+      SmartServiceExtendedParameter("id-8", "label", "bool-free", false, false, false, null, ContentVariable.BOOLEAN),
+      SmartServiceExtendedParameter(
+          "id-9",
           "label",
           "str-choose one",
           null,
@@ -173,7 +217,8 @@ class SmartServiceService {
             SmartServiceParameterOption("", "c", "value-c"),
           ],
           ContentVariable.STRING),
-      SmartServiceExtendedParameter("id",
+      SmartServiceExtendedParameter(
+          "id-10",
           "label",
           "str-choose one, default a",
           "value-a",
@@ -185,8 +230,6 @@ class SmartServiceService {
             SmartServiceParameterOption("", "c", "value-c"),
           ],
           ContentVariable.STRING),
-
-
     ]; // TODO
     final String url = baseUrl + "/releases/" + releaseId + "/parameters";
 
@@ -205,7 +248,16 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceRelease>> getReleases(int limit, int offset) async {
-    return [SmartServiceRelease("1970-01-01T00:00:00Z", "daily", "design_id", "id", "kaputt release", "error"), SmartServiceRelease("2223-01-01T00:00:00Z", "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily", "design_id", "id", "release name", null)]; // TODO
+    return [
+      SmartServiceRelease("1970-01-01T00:00:00Z", "daily", "design_id", "id", "kaputt release", "error"),
+      SmartServiceRelease(
+          "2223-01-01T00:00:00Z",
+          "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily",
+          "design_id",
+          "id",
+          "release name",
+          null)
+    ]; // TODO
 
     final String url = baseUrl + "/releases";
     final Map<String, String> queryParameters = {};

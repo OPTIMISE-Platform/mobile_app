@@ -27,6 +27,7 @@ import 'package:mutex/mutex.dart';
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
+import 'instance-details.dart';
 
 class SmartServicesInstances extends StatefulWidget {
   const SmartServicesInstances({Key? key}) : super(key: key);
@@ -41,7 +42,6 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   Mutex instancesMutex = Mutex();
   static StreamSubscription? _fabSubscription;
 
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -54,13 +54,15 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
     super.initState();
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
-      await Navigator.push(context, platformPageRoute(
-        context: context,
-        builder: (context) {
-          final target = SmartServicesReleases();
-          return target;
-        },
-      ));
+      await Navigator.push(
+          context,
+          platformPageRoute(
+            context: context,
+            builder: (context) {
+              final target = SmartServicesReleases();
+              return target;
+            },
+          ));
       _refresh();
     });
     _refresh();
@@ -132,21 +134,29 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                           return Column(children: [
                             const Divider(),
                             ListTile(
-                              title: Container(
-                                  alignment: Alignment.centerLeft,
-                                  child: Badge(
+                                title: Container(
                                     alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                    position: BadgePosition.topEnd(),
-                                    child: Text(instances[i].name),
-                                    badgeContent: instances[i].incomplete_delete ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
-                                        : const Icon(Icons.pending, size: 16, color: Colors.lightBlue)
-                                    ,
-                                    showBadge: instances[i].incomplete_delete || !instances[i].ready,
-                                    badgeColor: Colors.transparent,
-                                    elevation: 0,
-                                  )),
-                            )
+                                    child: Badge(
+                                      alignment: Alignment.centerLeft,
+                                      padding: const EdgeInsets.only(left: MyTheme.insetSize),
+                                      position: BadgePosition.topEnd(),
+                                      badgeContent: instances[i].incomplete_delete
+                                          ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
+                                          : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
+                                      showBadge: instances[i].incomplete_delete || !instances[i].ready,
+                                      badgeColor: Colors.transparent,
+                                      elevation: 0,
+                                      child: Text(instances[i].name),
+                                    )),
+                                onTap: () async {
+                                  await Navigator.push(
+                                      context,
+                                      platformPageRoute(
+                                        context: context,
+                                        builder: (context) => SmartServicesInstanceDetails(instances[i]),
+                                      ));
+                                  _refresh();
+                                })
                           ]);
                         },
                       )));
