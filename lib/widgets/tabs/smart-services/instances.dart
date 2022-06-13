@@ -139,10 +139,10 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                       alignment: Alignment.centerLeft,
                                       padding: const EdgeInsets.only(left: MyTheme.insetSize),
                                       position: BadgePosition.topEnd(),
-                                      badgeContent: instances[i].incomplete_delete
+                                      badgeContent: instances[i].error != null
                                           ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
                                           : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                      showBadge: instances[i].incomplete_delete || !instances[i].ready,
+                                      showBadge: instances[i].error != null || !instances[i].ready,
                                       badgeColor: Colors.transparent,
                                       elevation: 0,
                                       child: Text(instances[i].name),

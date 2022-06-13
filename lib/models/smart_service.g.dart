@@ -111,7 +111,7 @@ SmartServiceInstance _$SmartServiceInstanceFromJson(
       json['name'] as String,
       json['release_id'] as String,
       json['user_id'] as String,
-      json['incomplete_delete'] as bool,
+      json['error'] as String?,
       json['ready'] as bool,
       (json['parameters'] as List<dynamic>?)
           ?.map(
@@ -128,7 +128,7 @@ Map<String, dynamic> _$SmartServiceInstanceToJson(
       'name': instance.name,
       'release_id': instance.release_id,
       'user_id': instance.user_id,
-      'incomplete_delete': instance.incomplete_delete,
+      'error': instance.error,
       'ready': instance.ready,
       'parameters': instance.parameters,
     };

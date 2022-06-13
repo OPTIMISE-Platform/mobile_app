@@ -49,6 +49,42 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
   @override
   Widget build(BuildContext context) {
     final appBar = MyAppBar(widget.instance.name);
+
+    final List<Widget> trailingHeader = [];
+
+    if (widget.instance.error != null) {
+      trailingHeader.add(Tooltip(
+          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+    }
+
+    trailingHeader.add(PlatformIconButton(
+      onPressed: () async {
+        final deleted = await showPlatformDialog(
+            context: context,
+            builder: (context) => PlatformAlertDialog(
+              title: const Text("Do you want to permanently delete this service?"),
+              actions: [
+                PlatformDialogAction(
+                  child: PlatformText('Cancel'),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                PlatformDialogAction(
+                    child: PlatformText('Delete'),
+                    cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                    onPressed: () async {
+                      await SmartServiceService.deleteInstance(widget.instance.id);
+                      Navigator.pop(this.context, true);
+                    })
+              ],
+            ));
+        if (deleted == true) {
+          Navigator.pop(this.context);
+        }
+      },
+      icon: Icon(PlatformIcons(context).delete),
+      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+    ));
+
     return Scaffold(
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
@@ -132,33 +168,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                             ),
                             title: Text(widget.instance.name),
                             subtitle: ExpandableText(widget.instance.description, 3),
-                            trailing: PlatformIconButton(
-                              onPressed: () async {
-                                final deleted = await showPlatformDialog(
-                                    context: context,
-                                    builder: (context) => PlatformAlertDialog(
-                                          title: const Text("Do you want to permanently delete this service?"),
-                                          actions: [
-                                            PlatformDialogAction(
-                                              child: PlatformText('Cancel'),
-                                              onPressed: () => Navigator.pop(context),
-                                            ),
-                                            PlatformDialogAction(
-                                                child: PlatformText('Delete'),
-                                                cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
-                                                onPressed: () async {
-                                                  await SmartServiceService.deleteInstance(widget.instance.id);
-                                                  Navigator.pop(this.context, true);
-                                                })
-                                          ],
-                                        ));
-                                if (deleted == true) {
-                                  Navigator.pop(this.context);
-                                }
-                              },
-                              icon: Icon(PlatformIcons(context).delete),
-                              cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-                            ),
+                            trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                           );
                         }
                         if (i == parameters!.length + 1) {

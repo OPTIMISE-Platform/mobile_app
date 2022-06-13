@@ -85,11 +85,12 @@ class SmartServiceExtendedParameter {
 @JsonSerializable()
 class SmartServiceInstance {
   String description, design_id, id, name, release_id, user_id;
-  bool incomplete_delete, ready;
+  String? error;
+  bool ready;
   List<SmartServiceParameter>? parameters;
 
   SmartServiceInstance(
-      this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.incomplete_delete, this.ready, this.parameters);
+      this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.error, this.ready, this.parameters);
 
   factory SmartServiceInstance.fromJson(Map<String, dynamic> json) => _$SmartServiceInstanceFromJson(json);
 

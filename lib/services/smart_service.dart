@@ -65,7 +65,7 @@ class SmartServiceService {
           "complete",
           "release_id",
           "user_id",
-          false,
+          null,
           true,
           [
             SmartServiceParameter("id-0", "differen"),
@@ -92,8 +92,8 @@ class SmartServiceService {
             ),
             SmartServiceParameter("id-10", "value-b")
           ]),
-      SmartServiceInstance("dummy desc", "design_id", "id-0", "not ready", "release_id", "user_id", false, false, null),
-      SmartServiceInstance("dummy desc", "design_id", "id-0", "incomplete delete", "release_id", "user_id", true, false, null)
+      SmartServiceInstance("dummy desc", "design_id", "id-0", "not ready", "release_id", "user_id", null, false, null),
+      SmartServiceInstance("dummy desc", "design_id", "id-0", "incomplete delete", "release_id", "user_id", "incomplete delete", false, null)
     ]; // TODO
 
     final String url = baseUrl + "/instances";
