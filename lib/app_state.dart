@@ -338,6 +338,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         commandCallbacks[i].callback(result[i].message);
       } else {
         _logger.e(result[i].status_code.toString() + ": " + result[i].message);
+        commandCallbacks[i].callback(null);
       }
     }
     notifyListeners();
