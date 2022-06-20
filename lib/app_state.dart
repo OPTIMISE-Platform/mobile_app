@@ -16,6 +16,7 @@
 
 import 'dart:convert';
 
+import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -88,6 +89,20 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
     _logger.d("Queuing message " + message.messageId.toString());
+    final remoteMessageMap = remoteMessageToMap(message);
+
+    switch (remoteMessageMap["data"]["type"]) {
+      case notificationUpdateType:
+        final updatedNotification = app.Notification.fromJson(json.decode(remoteMessageMap["data"]["payload"]));
+        if (updatedNotification.isRead) {
+          await Eraser.clearAppNotificationsByTag(updatedNotification.id);
+        }
+        break;
+      case notificationDeleteManyType:
+        List<dynamic> ids = json.decode(remoteMessageMap["data"]["payload"]);
+        ids.forEach((id) => Eraser.clearAppNotificationsByTag(id));
+        break;
+    }
 
     String? read = await _storage.read(key: messageKey);
     final List list;
@@ -98,7 +113,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       list = [];
     }
 
-    list.add(remoteMessageToMap(message));
+    list.add(remoteMessageMap);
 
     await _storage.write(key: messageKey, value: json.encode(list));
     _messageMutex.release();
@@ -151,7 +166,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   bool get loggedIn => Auth().loggedIn;
 
   bool get loggingIn => Auth().loggingIn;
-
 
   init(BuildContext context) async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
@@ -482,10 +496,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         } else {
           notifications.insert(0, updatedNotification);
         }
+        if (updatedNotification.isRead) {
+          Eraser.clearAppNotificationsByTag(updatedNotification.id);
+        }
         notifyListeners();
         break;
       case notificationDeleteManyType:
         List<dynamic> ids = json.decode(data["payload"]);
+        ids.forEach((id) => Eraser.clearAppNotificationsByTag(id));
         notifications.removeWhere((element) => ids.contains(element.id));
         notifyListeners();
         break;
