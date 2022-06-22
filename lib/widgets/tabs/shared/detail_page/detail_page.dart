@@ -296,7 +296,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     return Consumer<AppState>(builder: (context, state, child) {
       if ((state.loadingDevices ||
               (widget._stateDeviceGroupIndex != null &&
-                  (state.deviceGroups.length <= widget._stateDeviceGroupIndex! || state.devices.length != state.deviceGroups[widget._stateDeviceGroupIndex!].device_ids.length))) &&
+                  (state.deviceGroups.length <= widget._stateDeviceGroupIndex! ||
+                      state.devices.length != state.deviceGroups[widget._stateDeviceGroupIndex!].device_ids.length))) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
@@ -468,6 +469,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                 title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: Container(
+                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                   padding: const EdgeInsets.only(right: 12),
                   child: element.transitioning
                       ? PlatformCircularProgressIndicator()
@@ -496,7 +498,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                 title: Text(_getTitle(element)),
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
-                    ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
+                    ? Container(
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 -12),
+                        padding: const EdgeInsets.only(right: 12),
+                        child: PlatformCircularProgressIndicator())
                     : functionConfig.displayValue(element.value, context) != null
                         ? PlatformIconButton(
                             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),

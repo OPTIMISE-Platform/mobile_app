@@ -55,8 +55,11 @@ String roundNumbersString(dynamic value) {
 
 String formatValue(dynamic value) {
   if (value is List && value.isNotEmpty) {
-    dynamic preferredNotnull = value.firstWhere((element) => element != null, orElse:  () => null);
-    return value.every((e) => (e is num && preferredNotnull is num && roundNumbersString(e) == roundNumbersString(preferredNotnull)) || e == preferredNotnull || e == null)
+    dynamic preferredNotnull = value.firstWhere((element) => element != null, orElse: () => null);
+    return value.every((e) =>
+            (e is num && preferredNotnull is num && roundNumbersString(e) == roundNumbersString(preferredNotnull)) ||
+            e == preferredNotnull ||
+            e == null)
         ? roundNumbersString(preferredNotnull)
         : preferredNotnull is num
             ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
@@ -92,25 +95,36 @@ class FunctionConfigDefault implements FunctionConfig {
 
   @override
   Widget? build(BuildContext context, [dynamic value]) {
-    final characteristic = AppState().nestedFunctions[_functionId]?.concept.base_characteristic;
+    final characteristic = AppState().nestedFunctions[_functionId]?.concept.base_characteristic?.clone();
     if (characteristic == null) {
       return null;
     }
     _result = {};
-    _fields.clear();
-    _walkTree(context, "", characteristic, value ?? characteristic.value);
+    return StatefulBuilder(builder: (_, setState) {
+      _fields.clear();
+      _walkTree(context, "", characteristic, value ?? characteristic.value, setState);
 
-    return Column(
-      children: _fields,
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-    );
+      final column = Column(
+        children: _fields,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+      );
+      return SingleChildScrollView(
+          child: PlatformWidget(
+        cupertino: (_, __) => Material(
+          child: column,
+        ),
+        material: (_, __) => column,
+      ));
+    });
   }
 
-  _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value) {
+  _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value, void Function(void Function()) setState) {
     switch (characteristic.type) {
       case ContentVariable.FLOAT:
         if (value is List) value = value[0];
+        final dynamic existingValue = _getValue(path);
+        if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
@@ -152,9 +166,12 @@ class FunctionConfigDefault implements FunctionConfig {
             }
           }, (v) => double.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true, decimal: true)));
         }
+        _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
       case ContentVariable.INTEGER:
         if (value is List) value = value[0];
+        final dynamic existingValue = _getValue(path);
+        if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
           _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
@@ -198,14 +215,20 @@ class FunctionConfigDefault implements FunctionConfig {
             }
           }, (v) => int.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true)));
         }
+        _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
       case ContentVariable.STRING:
         if (value is List) value = value[0];
+        final dynamic existingValue = _getValue(path);
+        if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
+        _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
       case ContentVariable.BOOLEAN:
         if (value is List) value = value[0];
+        final dynamic existingValue = _getValue(path);
+        if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         _fields.add(Row(children: [
           Expanded(
@@ -220,24 +243,61 @@ class FunctionConfigDefault implements FunctionConfig {
                   _insertValueIntoResult(newValue, path);
                   setState(() => value = newValue);
                 },
-                value: value,
+                value: value ?? false,
               );
             },
           ),
         ]));
+        _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
       case ContentVariable.STRUCTURE:
+        final dynamic existingValue = _getValue(path);
+        if (existingValue != null) value = existingValue;
         characteristic.sub_characteristics?.forEach((sub) {
           var subPath = sub.name;
           if (path.isNotEmpty) {
             subPath = path + "." + subPath;
           }
-          _walkTree(context, subPath, sub, value != null ? value[sub.name] : null);
+          _walkTree(context, subPath, sub, value != null ? value[sub.name] ?? sub.value : sub.value, setState);
         });
+        break;
+      case ContentVariable.LIST:
+        _fields.add(const Divider());
+        final bool hasStarElement = characteristic.sub_characteristics != null &&
+            characteristic.sub_characteristics!.isNotEmpty &&
+            characteristic.sub_characteristics![0].name == "*";
+        if (hasStarElement) {
+          _fields.add(ListTile(
+              title: Text(characteristic.name),
+              trailing: PlatformIconButton(
+                icon: Icon(PlatformIcons(context).add),
+                onPressed: () {
+                  final clone = characteristic.sub_characteristics![0].clone();
+                  clone.name = characteristic.sub_characteristics!.length.toString();
+                  clone.id = "";
+                  characteristic.sub_characteristics!.add(clone);
+                  setState(() {});
+                },
+              )));
+        } else {
+          _fields.add(Text(characteristic.name));
+        }
+
+        for (var i = 0; i < (characteristic.sub_characteristics?.length ?? 0); i++) {
+          final sub = characteristic.sub_characteristics![i];
+          if (sub.name != "*") {
+            var subPath = "[" + (hasStarElement ? i - 1 : i).toString() + "]";
+            if (path.isNotEmpty) {
+              subPath = path + "." + subPath;
+            }
+            _walkTree(context, subPath, sub,
+                value != null ? (value is List ? (value.length > i ? value[i] : null) : value[sub.name]) ?? sub.value : sub.value, setState);
+          }
+        }
     }
   }
 
-  _insertValueIntoResult(dynamic value, String path) {
+  _insertValueIntoResult(dynamic value, String path, {bool ignoreExisting = false}) {
     if (path == "") {
       _result = value;
       return;
@@ -246,11 +306,52 @@ class FunctionConfigDefault implements FunctionConfig {
     var subResult = _result;
     for (var i = 0; i < pathParts.length - 1; i++) {
       if (subResult[pathParts[i]] == null) {
-        subResult[pathParts[i]] = {};
+        if (pathParts.length > i + 1 && pathParts[i + 1].startsWith("[")) {
+          subResult[pathParts[i]] = <dynamic>[];
+        } else {
+          subResult[pathParts[i]] = {};
+        }
       }
-      subResult = subResult[pathParts[i]];
+      if (pathParts[i].startsWith("[")) {
+        subResult = subResult.elementAt(int.parse(pathParts[i].replaceFirst("[", "").replaceFirst("]", "")));
+      } else {
+        subResult = subResult[pathParts[i]];
+      }
     }
-    subResult[pathParts[pathParts.length - 1]] = value;
+    if (pathParts[pathParts.length - 1].startsWith("[")) {
+      int i = int.parse(pathParts[pathParts.length - 1].replaceFirst("[", "").replaceFirst("]", ""));
+      if (subResult.length <= i) {
+        subResult.insert(i, value);
+      } else if (subResult[i] == null || !ignoreExisting) {
+        subResult[i] = value;
+      }
+    } else if (subResult[pathParts[pathParts.length - 1]] == null || !ignoreExisting) {
+      subResult[pathParts[pathParts.length - 1]] = value;
+    }
+  }
+
+  dynamic _getValue(String path) {
+    if (path == "") {
+      return _result;
+    }
+    final pathParts = path.split(".");
+    var subResult = _result;
+    for (var i = 0; i < pathParts.length - 1; i++) {
+      if (subResult[pathParts[i]] == null) {
+        return null;
+      }
+      if (pathParts[i].startsWith("[")) {
+        subResult = subResult.elementAt(int.parse(pathParts[i].replaceFirst("[", "").replaceFirst("]", "")));
+      } else {
+        subResult = subResult[pathParts[i]];
+      }
+    }
+    if (pathParts[pathParts.length - 1].startsWith("[")) {
+      int i = int.parse(pathParts[pathParts.length - 1].replaceFirst("[", "").replaceFirst("]", ""));
+      return (subResult as List).length > i ? subResult[i] : null;
+    } else {
+      return subResult[pathParts[pathParts.length - 1]];
+    }
   }
 
   @override
