@@ -62,21 +62,21 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
         final deleted = await showPlatformDialog(
             context: context,
             builder: (context) => PlatformAlertDialog(
-              title: const Text("Do you want to permanently delete this service?"),
-              actions: [
-                PlatformDialogAction(
-                  child: PlatformText('Cancel'),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                PlatformDialogAction(
-                    child: PlatformText('Delete'),
-                    cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
-                    onPressed: () async {
-                      await SmartServiceService.deleteInstance(widget.instance.id);
-                      Navigator.pop(this.context, true);
-                    })
-              ],
-            ));
+                  title: const Text("Do you want to permanently delete this service?"),
+                  actions: [
+                    PlatformDialogAction(
+                      child: PlatformText('Cancel'),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    PlatformDialogAction(
+                        child: PlatformText('Delete'),
+                        cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                        onPressed: () async {
+                          await SmartServiceService.deleteInstance(widget.instance.id);
+                          Navigator.pop(this.context, true);
+                        })
+                  ],
+                ));
         if (deleted == true) {
           Navigator.pop(this.context);
         }
@@ -105,47 +105,52 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           child: Icon(Icons.edit, color: MyTheme.textColor),
         ),
         body: PlatformScaffold(
-            appBar: appBar.getAppBar(context, [PlatformIconButton(
-              onPressed: () async {
-                final nameDescription = await showPlatformDialog(
-                    context: context,
-                    builder: (_) {
-                      final result = {"name": widget.instance.name, "description": widget.instance.description};
-                      return PlatformAlertDialog(
-                        title: const Text("Set Name and Description"),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            PlatformTextFormField(
-                              hintText: "Name",
-                              initialValue: widget.instance.name,
-                              onChanged: (newValue) => result["name"] = newValue,
-                            ),
-                            PlatformTextFormField(
-                              hintText: "Description",
-                              maxLines: 8,
-                              minLines: 8,
-                              initialValue: widget.instance.description,
-                              onChanged: (newValue) => result["description"] = newValue,
-                            ),
-                          ],
-                        ),
-                        actions: <Widget>[
-                          PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
-                        ],
-                      );
-                    });
-                if (nameDescription == null) return;
+            appBar: appBar.getAppBar(
+                context,
+                [
+                  PlatformIconButton(
+                    onPressed: () async {
+                      final nameDescription = await showPlatformDialog(
+                          context: context,
+                          builder: (_) {
+                            final result = {"name": widget.instance.name, "description": widget.instance.description};
+                            return PlatformAlertDialog(
+                              title: const Text("Set Name and Description"),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  PlatformTextFormField(
+                                    hintText: "Name",
+                                    initialValue: widget.instance.name,
+                                    onChanged: (newValue) => result["name"] = newValue,
+                                  ),
+                                  PlatformTextFormField(
+                                    hintText: "Description",
+                                    maxLines: 8,
+                                    minLines: 8,
+                                    initialValue: widget.instance.description,
+                                    onChanged: (newValue) => result["description"] = newValue,
+                                  ),
+                                ],
+                              ),
+                              actions: <Widget>[
+                                PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                                PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                              ],
+                            );
+                          });
+                      if (nameDescription == null) return;
 
-                final updated = await SmartServiceService.updateInstanceInfo(widget.instance.id, nameDescription["name"], nameDescription["description"]);
-                widget.instance.name = updated.name;
-                widget.instance.description = updated.description;
-                setState(() {});
-              },
-              icon: Icon(PlatformIcons(context).edit),
-              cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-            )]..addAll(MyAppBar.getDefaultActions(context))),
+                      final updated =
+                          await SmartServiceService.updateInstanceInfo(widget.instance.id, nameDescription["name"], nameDescription["description"]);
+                      widget.instance.name = updated.name;
+                      widget.instance.description = updated.description;
+                      setState(() {});
+                    },
+                    icon: Icon(PlatformIcons(context).edit),
+                    cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                  )
+                ]..addAll(MyAppBar.getDefaultActions(context))),
             body: Scrollbar(
               child: parameters == null
                   ? Center(child: PlatformCircularProgressIndicator())
@@ -178,7 +183,9 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                           const Divider(),
                           ListTile(
                             title: Text(parameters![i - 1].label),
-                            trailing: Text(parameters![i - 1].value.toString()),
+                            trailing: Container(
+                                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
+                                child: Text(parameters![i - 1].value.toString())),
                             subtitle: ExpandableText(parameters![i - 1].description, 1),
                           )
                         ]);

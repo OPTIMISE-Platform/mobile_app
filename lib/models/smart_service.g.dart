@@ -24,7 +24,7 @@ part of 'smart_service.dart';
 
 SmartServiceRelease _$SmartServiceReleaseFromJson(Map<String, dynamic> json) =>
     SmartServiceRelease(
-      json['created_at'] as String,
+      json['created_at'] as int,
       json['description'] as String,
       json['design_id'] as String,
       json['id'] as String,

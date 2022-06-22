@@ -56,7 +56,7 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceInstance>> getInstances(int limit, int offset) async {
-    return [
+    /* TODO return [
       SmartServiceInstance(
           "dummy desc",
           // TODO
@@ -94,7 +94,7 @@ class SmartServiceService {
           ]),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "not ready", "release_id", "user_id", null, false, null),
       SmartServiceInstance("dummy desc", "design_id", "id-0", "incomplete delete", "release_id", "user_id", "incomplete delete", false, null)
-    ]; // TODO
+    ]; */
 
     final String url = baseUrl + "/instances";
     final Map<String, String> queryParameters = {};
@@ -182,8 +182,8 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceExtendedParameter>> getReleaseParameters(String releaseId) async {
-    return [
-      // TODO
+    /* TODO return [
+
       SmartServiceExtendedParameter("id-0", "label", "str-free", "default_value", "default_value", false, null, ContentVariable.STRING),
       SmartServiceExtendedParameter("id-1", "label", "int-free", 1, 1, false, null, ContentVariable.INTEGER),
       SmartServiceExtendedParameter(
@@ -248,7 +248,7 @@ class SmartServiceService {
             SmartServiceParameterOption("", "c", "value-c"),
           ],
           ContentVariable.STRING),
-    ]; // TODO
+    ]; */
     final String url = baseUrl + "/releases/" + releaseId + "/parameters";
 
     final headers = await Auth().getHeaders();
@@ -266,7 +266,7 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceRelease>> getReleases(int limit, int offset) async {
-    return [
+    /* TODO return [
       SmartServiceRelease("1970-01-01T00:00:00Z", "daily", "design_id", "id", "kaputt release", "error"),
       SmartServiceRelease(
           "2223-01-01T00:00:00Z",
@@ -275,7 +275,7 @@ class SmartServiceService {
           "id",
           "release name",
           null)
-    ]; // TODO
+    ]; */
 
     final String url = baseUrl + "/releases";
     final Map<String, String> queryParameters = {};
@@ -297,13 +297,13 @@ class SmartServiceService {
   }
 
   static Future<SmartServiceRelease> getRelease(String id) async {
-    return SmartServiceRelease(
+    /* TODO return SmartServiceRelease(
         "2223-01-01T00:00:00Z",
         "description which is just very long and contains a lot of very important information like what this actually does and how you should configure all these awesome options which you really need to do right? no, because this service isnt just a smart service its actualöly a super smart service. its the result of 100 year long deep learning models that will improve your life and totally will get you laid daily",
         "design_id",
         "id",
         "release name",
-        null); // TODO
+        null); */
 
     final String url = baseUrl + "/releases/" + id;
 

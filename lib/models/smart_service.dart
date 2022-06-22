@@ -22,13 +22,14 @@ part 'smart_service.g.dart';
 
 @JsonSerializable()
 class SmartServiceRelease {
-  String created_at, description, design_id, id, name;
+  String description, design_id, id, name;
   String? error;
+  int created_at;
 
   SmartServiceRelease(this.created_at, this.description, this.design_id, this.id, this.name, this.error);
 
   DateTime createdAt() {
-    return DateTime.parse(created_at).toLocal();
+    return DateTime.fromMillisecondsSinceEpoch(created_at * 1000).toLocal();
   }
 
   factory SmartServiceRelease.fromJson(Map<String, dynamic> json) => _$SmartServiceReleaseFromJson(json);
