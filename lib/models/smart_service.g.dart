@@ -48,6 +48,8 @@ SmartServiceParameter _$SmartServiceParameterFromJson(
     SmartServiceParameter(
       json['id'] as String,
       json['value'],
+      json['label'] as String,
+      json['value_label'] as String?,
     );
 
 Map<String, dynamic> _$SmartServiceParameterToJson(
@@ -55,6 +57,8 @@ Map<String, dynamic> _$SmartServiceParameterToJson(
     <String, dynamic>{
       'id': instance.id,
       'value': instance.value,
+      'label': instance.label,
+      'value_label': instance.value_label,
     };
 
 SmartServiceParameterOption _$SmartServiceParameterOptionFromJson(
@@ -87,6 +91,7 @@ SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(
               SmartServiceParameterOption.fromJson(e as Map<String, dynamic>))
           .toList(),
       json['type'] as String,
+      json['value_label'] as String?,
     );
 
 Map<String, dynamic> _$SmartServiceExtendedParameterToJson(
@@ -100,6 +105,7 @@ Map<String, dynamic> _$SmartServiceExtendedParameterToJson(
       'multiple': instance.multiple,
       'options': instance.options,
       'type': instance.type,
+      'value_label': instance.value_label,
     };
 
 SmartServiceInstance _$SmartServiceInstanceFromJson(

@@ -39,10 +39,11 @@ class SmartServiceRelease {
 
 @JsonSerializable()
 class SmartServiceParameter {
-  String id;
+  String id, label;
+  String? value_label;
   dynamic value;
 
-  SmartServiceParameter(this.id, this.value);
+  SmartServiceParameter(this.id, this.value, this.label, this.value_label);
 
   factory SmartServiceParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceParameterFromJson(json);
 
@@ -63,23 +64,27 @@ class SmartServiceParameterOption {
 
 @JsonSerializable()
 class SmartServiceExtendedParameter {
-  String id; //"inherited"
+  String id, label; //"inherited"
+  String? value_label; //"inherited"
   dynamic value; //"inherited"
 
-  String  label, description;
+  String description;
   dynamic default_value;
   bool multiple;
   List<SmartServiceParameterOption>? options;
   ContentType type;
 
-  SmartServiceExtendedParameter(this.id, this.label, this.description, this.value, this.default_value, this.multiple, this.options, this.type);
+  SmartServiceExtendedParameter(this.id, this.label, this.description, this.value, this.default_value, this.multiple, this.options, this.type, this.value_label);
 
   factory SmartServiceExtendedParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceExtendedParameterFromJson(json);
 
   Map<String, dynamic> toJson() => _$SmartServiceExtendedParameterToJson(this);
 
   SmartServiceParameter toSmartServiceParameter() {
-    return SmartServiceParameter(id, value);
+    if (value != null && options != null) {
+      value_label = options!.firstWhere((element) => element.value == value).label;
+    }
+    return SmartServiceParameter(id, value, label, value_label);
   }
 }
 

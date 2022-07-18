@@ -34,21 +34,9 @@ class SmartServicesInstanceDetails extends StatefulWidget {
 }
 
 class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDetails> {
-  List<SmartServiceExtendedParameter>? parameters;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
-      widget.instance.parameters?.forEach((iParam) => parameters!.firstWhere((extParam) => iParam.id == extParam.id).value = iParam.value);
-      setState(() => {});
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final appBar = MyAppBar(widget.instance.name);
+  Widget build(BuildContext context) {final appBar = MyAppBar(widget.instance.name);
 
     final List<Widget> trailingHeader = [];
 
@@ -89,6 +77,8 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
             final release = await SmartServiceService.getRelease(widget.instance.release_id);
+            final parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
+            parameters.forEach((p) => p.value = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id).value);
             await Navigator.push(
                 this.context,
                 platformPageRoute(
@@ -152,12 +142,12 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                   )
                 ]..addAll(MyAppBar.getDefaultActions(context))),
             body: Scrollbar(
-              child: parameters == null
+              child: widget.instance.parameters == null
                   ? Center(child: PlatformCircularProgressIndicator())
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: MyTheme.inset,
-                      itemCount: parameters!.length + 2,
+                      itemCount: widget.instance.parameters!.length + 2,
                       itemBuilder: (context, i) {
                         if (i == 0) {
                           return ListTile(
@@ -176,17 +166,16 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                             trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                           );
                         }
-                        if (i == parameters!.length + 1) {
+                        if (i == widget.instance.parameters!.length + 1) {
                           return const SizedBox(height: 72); // prevent FAB overlap
                         }
                         return Column(children: [
                           const Divider(),
                           ListTile(
-                            title: Text(parameters![i - 1].label),
+                            title: Text(widget.instance.parameters![i - 1].label),
                             trailing: Container(
                                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
-                                child: Text(parameters![i - 1].value.toString())),
-                            subtitle: ExpandableText(parameters![i - 1].description, 1),
+                                child: Text(widget.instance.parameters![i - 1].value_label ?? widget.instance.parameters![i-1].value.toString())),
                           )
                         ]);
                       },
