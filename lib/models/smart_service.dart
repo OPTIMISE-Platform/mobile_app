@@ -53,9 +53,10 @@ class SmartServiceParameter {
 @JsonSerializable()
 class SmartServiceParameterOption {
   String kind, label;
+  String? entity_id, needs_same_entity_id_in_parameter;
   dynamic value;
 
-  SmartServiceParameterOption(this.kind, this.label, this.value);
+  SmartServiceParameterOption(this.kind, this.label, this.value, this.needs_same_entity_id_in_parameter, this.entity_id);
 
   factory SmartServiceParameterOption.fromJson(Map<String, dynamic> json) => _$SmartServiceParameterOptionFromJson(json);
 

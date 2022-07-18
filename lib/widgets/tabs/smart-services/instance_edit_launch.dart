@@ -46,6 +46,16 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     printer: SimplePrinter(),
   );
 
+  List<SmartServiceParameterOption> _filterOptions(SmartServiceExtendedParameter p) {
+    return (p.options?? []).where((o) {
+      if (o.needs_same_entity_id_in_parameter == null) return true;
+      final param = parameters!.firstWhere((p) => p.id == o.needs_same_entity_id_in_parameter);
+      final optionIndex = param.options!.indexWhere((paramOption) => paramOption.value == param.value);
+      if (optionIndex == -1) return false;
+      return param.options![optionIndex].entity_id == o.entity_id;
+    }).toList();
+  }
+
   Widget _getEditWidget(int i, {int? sub}) {
     final p = parameters![i];
     final dynamic subValue = sub != null ? (p.value as List)[sub] : null;
@@ -61,12 +71,12 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                 p.value = p.options!.where((element) => x.contains(element.label)).map((e) => e.value).toList();
               });
             },
-            options: p.options!.map((e) => e.label).toList(growable: false),
+            options: _filterOptions(p).map((e) => e.label).toList(growable: false),
             selectedValues: p.options!.where((element) => (p.value ?? []).contains(element.value)).map((e) => e.label).toList(),
             whenEmpty: p.label,
           ));
     } else if (p.options != null) {
-      final List<DropdownMenuItem> items = p.options!
+      final List<DropdownMenuItem> items = _filterOptions(p)
           .map((e) => DropdownMenuItem(
                 value: e.value,
                 child: Text(e.label),

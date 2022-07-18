@@ -67,6 +67,8 @@ SmartServiceParameterOption _$SmartServiceParameterOptionFromJson(
       json['kind'] as String,
       json['label'] as String,
       json['value'],
+      json['needs_same_entity_id_in_parameter'] as String?,
+      json['entity_id'] as String?,
     );
 
 Map<String, dynamic> _$SmartServiceParameterOptionToJson(
@@ -75,6 +77,8 @@ Map<String, dynamic> _$SmartServiceParameterOptionToJson(
       'kind': instance.kind,
       'label': instance.label,
       'value': instance.value,
+      'needs_same_entity_id_in_parameter': instance.needs_same_entity_id_in_parameter,
+      'entity_id': instance.entity_id,
     };
 
 SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(
