@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:math';
+
 import 'package:json_annotation/json_annotation.dart';
 
 import 'content_variable.dart';
@@ -75,7 +77,8 @@ class SmartServiceExtendedParameter {
   List<SmartServiceParameterOption>? options;
   ContentType type;
 
-  SmartServiceExtendedParameter(this.id, this.label, this.description, this.value, this.default_value, this.multiple, this.options, this.type, this.value_label);
+  SmartServiceExtendedParameter(
+      this.id, this.label, this.description, this.value, this.default_value, this.multiple, this.options, this.type, this.value_label);
 
   factory SmartServiceExtendedParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceExtendedParameterFromJson(json);
 
@@ -96,8 +99,7 @@ class SmartServiceInstance {
   bool ready;
   List<SmartServiceParameter>? parameters;
 
-  SmartServiceInstance(
-      this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.error, this.ready, this.parameters);
+  SmartServiceInstance(this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.error, this.ready, this.parameters);
 
   factory SmartServiceInstance.fromJson(Map<String, dynamic> json) => _$SmartServiceInstanceFromJson(json);
 
@@ -117,4 +119,31 @@ class SmartServiceModule {
   factory SmartServiceModule.fromJson(Map<String, dynamic> json) => _$SmartServiceModuleFromJson(json);
 
   Map<String, dynamic> toJson() => _$SmartServiceModuleToJson(this);
+}
+
+class SmartServiceModuleWidget extends SmartServiceModule {
+  int height, width;
+
+  SmartServiceModuleWidget(
+      String design_id, id, instance_id, release_id, user_id, SmartServiceModuleType module_type, dynamic module_data, this.height, this.width)
+      : super(design_id, id, instance_id, release_id, user_id, module_type, module_data);
+
+  factory SmartServiceModuleWidget.fromModule(SmartServiceModule module) {
+    final height = Random().nextInt(10) + 1; // TODO
+    final width = height;
+    return SmartServiceModuleWidget(
+        module.design_id, module.id, module.instance_id, module.release_id, module.user_id, module.module_type, module.module_data, height, width);
+  }
+}
+
+@JsonSerializable()
+class SmartServiceDashboard {
+  String id, name;
+  List<String> widgetIds;
+
+  SmartServiceDashboard(this.id, this.name, this.widgetIds);
+
+  factory SmartServiceDashboard.fromJson(Map<String, dynamic> json) => _$SmartServiceDashboardFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SmartServiceDashboardToJson(this);
 }

@@ -24,6 +24,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
@@ -44,12 +45,13 @@ class DeviceTabs extends StatefulWidget {
 }
 
 const tabFavorites = 0;
-const tabClasses = 1;
-const tabLocations = 2;
-const tabGroups = 3;
-const tabNetworks = 4;
-const tabDevices = 5;
-const tabSmartServices = 6;
+const tabClasses = 2;
+const tabLocations = 3;
+const tabGroups = 4;
+const tabNetworks = 5;
+const tabDevices = 6;
+const tabSmartServices = 7;
+const tabDashboard = 1;
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
@@ -62,7 +64,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   String? customAppBarTitle;
   bool hideSearch = false;
 
-  bool _showFab = false;
+  bool showFab = false;
   final StreamController _fabPressedController = StreamController();
   Stream? _fabPressedControllerStream;
 
@@ -117,6 +119,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           case tabFavorites:
             filter.favorites = null;
             break;
+          case tabDashboard:
+            // no-op
+            break;
         }
         _bottomBarIndex = i;
       }
@@ -124,37 +129,41 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         case tabDevices:
           hideSearch = false;
           AppState().searchDevices(filter, context);
-          _showFab = false;
+          showFab = false;
           break;
         case tabLocations:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          _showFab = true;
+          showFab = true;
           break;
         case tabGroups:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          _showFab = true;
+          showFab = true;
           break;
         case tabNetworks:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          _showFab = false;
+          showFab = false;
           break;
         case tabFavorites:
           hideSearch = false;
           filter.favorites = true;
           AppState().searchDevices(filter, context);
-          _showFab = false;
+          showFab = false;
           break;
         case tabClasses:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          _showFab = false;
+          showFab = false;
           break;
         case tabSmartServices:
           hideSearch = true;
-          _showFab = true;
+          showFab = true;
+          break;
+        case tabDashboard:
+          hideSearch = true;
+          showFab = false;
           break;
       }
     });
@@ -189,6 +198,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return PlatformNavBar(
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
+          const BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Dashboard"),
           const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
           BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
           const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
@@ -261,7 +271,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
         }
-        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices) {
+        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices && _bottomBarIndex != tabDashboard) { // TODO move decision to showFab etc.
           final List<PopupMenuOption> filterActions = [];
           if (_bottomBarIndex != tabClasses && state.deviceClasses.isNotEmpty) {
             filterActions.add(PopupMenuOption(
@@ -503,7 +513,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               return false;
             },
             child: Scaffold(
-                floatingActionButton: _showFab
+                floatingActionButton: showFab
                     ? Container(
                         margin: const EdgeInsets.only(bottom: 55),
                         child: FloatingActionButton(
@@ -545,6 +555,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                           return const DeviceListFavorites();
                         case tabSmartServices:
                           return const SmartServicesInstances();
+                        case tabDashboard:
+                          return const Dashboard();
                         default:
                           return Center(
                               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [

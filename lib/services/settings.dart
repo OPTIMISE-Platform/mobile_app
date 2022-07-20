@@ -14,9 +14,12 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile_app/exceptions/settings_exception.dart';
+import 'package:mobile_app/models/smart_service.dart';
 import 'package:path_provider/path_provider.dart';
 
 class Settings {
@@ -36,6 +39,9 @@ class Settings {
   static const _displayedFractionDigitsKey = "displayed_fraction_digits";
   static const _defaultDisplayedFractionDigits = 2;
   static int _currentDisplayedFractionDigits = 0;
+
+  static const _smartServiceDashboardsKey = "smart_service_dashboards";
+
 
   static checkInit() {
     if (!isInitialized) {
@@ -169,6 +175,19 @@ class Settings {
   static Future<void> resetTutorials() async {
     checkInit();
     await Future.wait(Tutorial.values.map((e) => _box!.delete(e.toString())));
+  }
+
+  static List<SmartServiceDashboard> getSmartServiceDashboards() {
+    checkInit();
+    final str = _box!.get(_smartServiceDashboardsKey);
+    if (str == null) return [];
+    final List<dynamic> l = json.decode(str);
+    return List<SmartServiceDashboard>.generate(l.length, (index) => SmartServiceDashboard.fromJson(l[index]));
+  }
+
+  static setSmartServiceDashboards(List<SmartServiceDashboard> dashboards) async {
+    checkInit();
+    await _box?.put(_smartServiceDashboardsKey, json.encode(dashboards)).then((value) => _box?.flush());
   }
 }
 

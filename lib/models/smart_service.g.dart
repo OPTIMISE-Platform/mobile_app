@@ -164,3 +164,19 @@ Map<String, dynamic> _$SmartServiceModuleToJson(SmartServiceModule instance) =>
       'module_type': instance.module_type,
       'module_data': instance.module_data,
     };
+
+SmartServiceDashboard _$SmartServiceDashboardFromJson(Map<String, dynamic> json) =>
+    SmartServiceDashboard(
+          json['id'] as String,
+          json['name'] as String,
+          (json['widgetIds'] as List<dynamic>)
+              .map((e) => e as String)
+              .toList(),
+    );
+
+Map<String, dynamic> _$SmartServiceDashboardToJson(SmartServiceDashboard instance) =>
+    <String, dynamic>{
+          'id': instance.id,
+          'name': instance.name,
+          'widgetIds': instance.widgetIds,
+    };
