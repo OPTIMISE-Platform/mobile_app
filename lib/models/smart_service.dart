@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-import 'dart:math';
-
 import 'package:json_annotation/json_annotation.dart';
 
 import 'content_variable.dart';
@@ -106,7 +104,8 @@ class SmartServiceInstance {
   Map<String, dynamic> toJson() => _$SmartServiceInstanceToJson(this);
 }
 
-typedef SmartServiceModuleType = String; // TODO define module types
+typedef SmartServiceModuleType = String;
+const SmartServiceModuleType smartServiceModuleTypeWidget = "widget";
 
 @JsonSerializable()
 class SmartServiceModule {
@@ -119,21 +118,6 @@ class SmartServiceModule {
   factory SmartServiceModule.fromJson(Map<String, dynamic> json) => _$SmartServiceModuleFromJson(json);
 
   Map<String, dynamic> toJson() => _$SmartServiceModuleToJson(this);
-}
-
-class SmartServiceModuleWidget extends SmartServiceModule {
-  int height, width;
-
-  SmartServiceModuleWidget(
-      String design_id, id, instance_id, release_id, user_id, SmartServiceModuleType module_type, dynamic module_data, this.height, this.width)
-      : super(design_id, id, instance_id, release_id, user_id, module_type, module_data);
-
-  factory SmartServiceModuleWidget.fromModule(SmartServiceModule module) {
-    final height = Random().nextInt(10) + 1; // TODO
-    final width = height;
-    return SmartServiceModuleWidget(
-        module.design_id, module.id, module.instance_id, module.release_id, module.user_id, module.module_type, module.module_data, height, width);
-  }
 }
 
 @JsonSerializable()

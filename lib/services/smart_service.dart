@@ -193,4 +193,26 @@ class SmartServiceService {
 
     return SmartServiceRelease.fromJson(resp.data);
   }
+
+  static Future<List<SmartServiceModule>> getModules({SmartServiceModuleType? type}) async {
+    final String url = baseUrl + "/modules";
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = "0";
+    if (type != null) {
+      queryParameters["module_type"] = type;
+    }
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.statusCode! > 304) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+    if (resp.statusCode == 304) {
+      _logger.d("Using cached SmartServiceModules");
+    }
+
+    final l = resp.data ?? [];
+    return List<SmartServiceModule>.generate(l.length, (index) => SmartServiceModule.fromJson(l[index]));
+  }
 }

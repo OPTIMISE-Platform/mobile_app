@@ -20,6 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/services/smart_service.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../app_state.dart';
@@ -58,15 +60,14 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
-          // TODO
-          final items = List<SmartServiceModuleWidget>.generate(
-              50,
-              (index) => SmartServiceModuleWidget.fromModule(
-                  SmartServiceModule("design_id", index.toString(), "instance_id", "release_id", "user_id", "module_type", null)));
-          _smartServiceWidgets = {};
-          items.forEach((element) => _smartServiceWidgets![element.id] = element); // TODO
-        }));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
+      final items = modules.map((e) => SmartServiceModuleWidget.fromModule(e)).where((element) => element != null);
+      _smartServiceWidgets = {};
+      items.forEach((element) => _smartServiceWidgets![element!.id] = element);
+      setState(() {});
+      _refresh();
+    });
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(
       initialIndex: 0,
@@ -96,9 +97,8 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
 
     final tabs = List<Widget>.generate(
         _dashboards.length,
-        (index) =>
-            SingleChildScrollView(scrollDirection: Axis.vertical, child: Container(width: MediaQuery.of(context).size.width,
-                child: _tabBody(index))));
+        (index) => SingleChildScrollView(
+            scrollDirection: Axis.vertical, child: Container(width: MediaQuery.of(context).size.width, child: _tabBody(index))));
 
     // Add dashboard with all widgets
     tabHeaders.add(const Tab(
@@ -107,22 +107,23 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
     final items = _smartServiceWidgets?.values.toList() ?? [];
     tabs.add(SingleChildScrollView(
         scrollDirection: Axis.vertical,
-        child: SizedBox(
-            height: MediaQuery.of(context).size.height - 192,
-            width: MediaQuery.of(context).size.width,
-            child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (context, idx) {
-                  final item = items[idx];
-                  return SizedBox(
-                    height: item.height * heightUnit,
-                    child: Card(
-                      child: Center(
-                        child: _buildSmartServiceWidget(item),
-                      ),
-                    ),
-                  );
-                }))));
+        child: RefreshIndicator(
+            onRefresh: () async => _refresh(),
+            child: SizedBox(
+                height: MediaQuery.of(context).size.height - 192,
+                width: MediaQuery.of(context).size.width,
+                child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, idx) {
+                      final item = items[idx];
+                      return SizedBox(
+                        height: item.height * heightUnit,
+                        width: MediaQuery.of(context).size.width,
+                        child: Card(
+                          child: item.build(),
+                        ),
+                      );
+                    })))));
 
     // Add button for new dashboard
     tabHeaders.add(Tab(
@@ -300,49 +301,49 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
       Settings.setSmartServiceDashboards(_dashboards);
     }
 
-    return Container(
-        //SizedBox does not work here
-        height: MediaQuery.of(context).size.height - 192,
-        child:
-         ReorderableListView.builder(
-          itemCount: items.length,
-          itemBuilder: (context, idx) {
-            final item = items[idx]!;
-            return Dismissible(
-                key: ValueKey(_dashboards[tabIdx].widgetIds.toString() + "_" + idx.toString()),
-                // key needs to stay the same while dragging but change when deleting
-                background: Container(
-                  alignment: Alignment.centerRight,
-                  padding: MyTheme.inset,
-                  color: MyTheme.warnColor,
-                  child: Icon(
-                    PlatformIcons(context).delete,
-                    color: Colors.white,
-                  ),
-                ),
-                direction: DismissDirection.endToStart,
-                onDismissed: (_) {
-                  items.removeAt(idx);
-                  _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
-                  Settings.setSmartServiceDashboards(_dashboards);
-                  setState(() {});
-                },
-                child: SizedBox(
-                    height: item.height * heightUnit,
-                    child: Card(
-                      child: Center(
-                        child: _buildSmartServiceWidget(item),
+    return RefreshIndicator(
+        onRefresh: () async => _refresh(),
+        child: Container(
+            //SizedBox does not work here
+            height: MediaQuery.of(context).size.height - 192,
+            child: ReorderableListView.builder(
+              itemCount: items.length,
+              itemBuilder: (context, idx) {
+                final item = items[idx]!;
+                return Dismissible(
+                    key: ValueKey(_dashboards[tabIdx].widgetIds.toString() + "_" + idx.toString()),
+                    // key needs to stay the same while dragging but change when deleting
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: MyTheme.inset,
+                      color: MyTheme.warnColor,
+                      child: Icon(
+                        PlatformIcons(context).delete,
+                        color: Colors.white,
                       ),
-                    )));
-          },
-          onReorder: (int oldIndex, int newIndex) async {
-            final tmp = items[oldIndex];
-            items.removeAt(oldIndex);
-            items.insert(newIndex - (oldIndex < newIndex ? 1 : 0), tmp);
-            _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
-            await Settings.setSmartServiceDashboards(_dashboards);
-          },
-        ));
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (_) {
+                      items.removeAt(idx);
+                      _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
+                      Settings.setSmartServiceDashboards(_dashboards);
+                      setState(() {});
+                    },
+                    child: SizedBox(
+                        height: item.height * heightUnit,
+                        width: MediaQuery.of(context).size.width,
+                        child: Card(
+                          child: item.build(),
+                        )));
+              },
+              onReorder: (int oldIndex, int newIndex) async {
+                final tmp = items[oldIndex];
+                items.removeAt(oldIndex);
+                items.insert(newIndex - (oldIndex < newIndex ? 1 : 0), tmp);
+                _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
+                await Settings.setSmartServiceDashboards(_dashboards);
+              },
+            )));
   }
 
   Future<void> _addWidget(double totalBuildWith) async {
@@ -361,12 +362,11 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
                         return SizedBox(
                             key: ValueKey(item.id),
                             height: item.height * heightUnit * (MediaQuery.of(context).size.width / totalBuildWith),
+                            width: MediaQuery.of(context).size.width,
                             child: GestureDetector(
                               child: Card(
                                 elevation: 2,
-                                child: Center(
-                                  child: _buildSmartServiceWidget(item),
-                                ),
+                                child: item.build(),
                               ),
                               onTap: () => Navigator.pop(context, item.id),
                             ));
@@ -378,7 +378,45 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
     setState(() {});
   }
 
-  Widget _buildSmartServiceWidget(SmartServiceModuleWidget item) {
-    return Text("Placeholder " + item.id); // TODO
+  _refresh() async {
+    List<SmartServiceModuleWidget?> items = _smartServiceWidgets?.values.toList() ?? [];
+    if ((_tabController?.index ?? 0) < _dashboards.length) {
+      items = _getTabWidgets(_tabController?.index ?? 0);
+    }
+    final List<Future> futures = [];
+    items.forEach((e) => futures.add(__refreshWidget(e)));
+    setState(() {});
+    await Future.wait(futures);
+  }
+
+  Future<void> __refreshWidget(SmartServiceModuleWidget? w) async {
+    if (w == null) {
+      return;
+    }
+    await w.refresh();
+    setState(() {});
+  }
+
+  List<SmartServiceModuleWidget?> _getTabWidgets(int idx) {
+    final List<String> missingIds = [];
+    final items = _smartServiceWidgets == null
+        ? <SmartServiceModuleWidget>[]
+        : _dashboards[idx]
+            .widgetIds
+            .map((e) {
+              if (_smartServiceWidgets!.containsKey(e)) {
+                return _smartServiceWidgets![e];
+              } else {
+                missingIds.add(e);
+                return null;
+              }
+            })
+            .where((element) => element != null)
+            .toList();
+    if (missingIds.isNotEmpty) {
+      _dashboards[idx].widgetIds.removeWhere((e) => missingIds.contains(e));
+      Settings.setSmartServiceDashboards(_dashboards);
+    }
+    return items;
   }
 }
