@@ -14,30 +14,11 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/material.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
+class WidgetInfo {
+  final String widget_type;
+  final dynamic widget_data;
 
-class SmSeText extends SmartServiceModuleWidget {
-  String data = "";
+  WidgetInfo(this.widget_type, this.widget_data);
 
-  @override
-  int height = 1;
-
-  @override
-  int width = 1;
-
-  @override
-  Widget build(BuildContext context, bool _) {
-    return ListTile(title: Text(data),);
-  }
-
-  @override
-  void configure(data) {
-    this.data = data;
-  }
-
-  @override
-  Future<void> refresh() async {
-    return;
-  }
+  factory WidgetInfo.fromJson(Map<String, dynamic> json) => WidgetInfo(json["widget_type"], json["widget_data"]);
 }

@@ -17,16 +17,20 @@
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/example.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
 
 import '../../../../exceptions/argument_exception.dart';
 import '../../../../models/smart_service.dart';
+import '../dashboard.dart';
+import 'button.dart';
 
 typedef SmSeWidgetType = String;
 
 // DEFINE NEW WIDGET TYPES BELOW
 const SmSeWidgetType SmSeExampleType = "example";
 const SmSeWidgetType SmSeTextType = "text";
+const SmSeWidgetType SmSeButtonType = "button";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -39,9 +43,9 @@ abstract class SmartServiceModuleWidget {
   /// Currently without effect
   abstract int width;
 
-  void configure(String id, dynamic data);
+  void configure(dynamic data);
 
-  Widget build();
+  Widget build(BuildContext context, bool onlyPreview);
 
   late String id;
 
@@ -58,20 +62,37 @@ abstract class SmartServiceModuleWidget {
     if (!data.containsKey("widget_type") || !data.containsKey("widget_data") || data["widget_type"] is! String) {
       throw ArgumentException("invalid module data");
     }
-    final widget_data = data["widget_data"];
-    switch (data["widget_type"]) {
+    return fromWidgetInfo(module.id, WidgetInfo(data["widget_type"], data["widget_data"]));
+  }
+
+  static SmartServiceModuleWidget? fromWidgetInfo(String id, WidgetInfo data) {
+    SmartServiceModuleWidget? w;
+
+    switch (data.widget_type) {
       // ADD NEW WIDGETS BELOW
 
       case SmSeExampleType:
-        return SmSeExample()..configure(module.id, widget_data);
+        w = SmSeExample();
+        break;
       case SmSeTextType:
-        return SmSeText()..configure(module.id, widget_data);
-
+        w = SmSeText();
+        break;
+      case SmSeButtonType:
+        w = SmSeButton();
+        break;
 
       // ADD NEW WIDGETS ABOVE
       default:
-        _logger.e("unimplemented widget type " + data["widget_type"]);
+        _logger.e("unimplemented widget type " + data.widget_type);
         return null;
     }
+    w.id = id;
+    w.configure(data.widget_data);
+
+    return w;
+  }
+
+  redrawDashboard(BuildContext context) {
+    (context.findAncestorStateOfType<State<Dashboard>>() as DashboardState?)?.setState(() {});
   }
 }

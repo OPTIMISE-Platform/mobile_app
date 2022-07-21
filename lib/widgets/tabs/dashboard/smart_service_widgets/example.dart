@@ -16,6 +16,7 @@
 
 import 'dart:math';
 
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
@@ -32,13 +33,12 @@ class SmSeExample extends SmartServiceModuleWidget {
   int width = 1;
 
   @override
-  Widget build() {
-    return Row(crossAxisAlignment: CrossAxisAlignment.center, children: [_refreshing.isLocked ? PlatformCircularProgressIndicator() : Text(data)]);
+  Widget build(BuildContext context, bool _) {
+    return ListTile(title: _refreshing.isLocked ? Center(child: PlatformCircularProgressIndicator()) : Text(data));
   }
 
   @override
-  void configure(String id, data) {
-    this.id = id;
+  void configure(data) {
     this.data = data;
   }
 

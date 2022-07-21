@@ -32,11 +32,12 @@ class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _DashboardState();
+  State<StatefulWidget> createState() => DashboardState();
 }
 
-class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, TickerProviderStateMixin {
-  static const double heightUnit = 48;
+class DashboardState extends State<Dashboard> with WidgetsBindingObserver, TickerProviderStateMixin {
+  static const double heightUnit = 64;
+  static const Duration animationDuration = Duration(milliseconds: 100);
 
   Map<String, SmartServiceModuleWidget>? _smartServiceWidgets;
   final List<SmartServiceDashboard> _dashboards = Settings.getSmartServiceDashboards();
@@ -47,7 +48,7 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
   late final Stream _toggleStream;
   bool _newDashboardDialogOpen = false;
 
-  _DashboardState() {
+  DashboardState() {
     _toggleStream = _toggleStreamController.stream.asBroadcastStream();
   }
 
@@ -116,12 +117,15 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
                     itemCount: items.length,
                     itemBuilder: (context, idx) {
                       final item = items[idx];
-                      return SizedBox(
+                      return AnimatedContainer(
+                        duration: animationDuration,
                         height: item.height * heightUnit,
                         width: MediaQuery.of(context).size.width,
                         child: Card(
-                          child: item.build(),
-                        ),
+                            child: SingleChildScrollView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: item.build(context, false),
+                        )),
                       );
                     })))));
 
@@ -329,12 +333,15 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
                       Settings.setSmartServiceDashboards(_dashboards);
                       setState(() {});
                     },
-                    child: SizedBox(
+                    child: AnimatedContainer(
+                        duration: animationDuration,
                         height: item.height * heightUnit,
                         width: MediaQuery.of(context).size.width,
                         child: Card(
-                          child: item.build(),
-                        )));
+                            child: SingleChildScrollView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: item.build(context, false),
+                        ))));
               },
               onReorder: (int oldIndex, int newIndex) async {
                 final tmp = items[oldIndex];
@@ -359,14 +366,15 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver, Tick
                       itemCount: items.length,
                       itemBuilder: (context, idx) {
                         final item = items[idx];
-                        return SizedBox(
+                        return AnimatedContainer(
+                            duration: animationDuration,
                             key: ValueKey(item.id),
                             height: item.height * heightUnit * (MediaQuery.of(context).size.width / totalBuildWith),
                             width: MediaQuery.of(context).size.width,
                             child: GestureDetector(
                               child: Card(
                                 elevation: 2,
-                                child: item.build(),
+                                child: item.build(context, true),
                               ),
                               onTap: () => Navigator.pop(context, item.id),
                             ));
