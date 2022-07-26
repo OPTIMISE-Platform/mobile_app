@@ -99,7 +99,6 @@ class FunctionConfigDefault implements FunctionConfig {
     if (characteristic == null) {
       return null;
     }
-    _result = {};
     return StatefulBuilder(builder: (_, setState) {
       _fields.clear();
       _walkTree(context, "", characteristic, value ?? characteristic.value, setState);
@@ -150,6 +149,23 @@ class FunctionConfigDefault implements FunctionConfig {
               ]);
             },
           ));
+        } else if (characteristic.allowed_values != null) {
+          _fields.add(StatefulBuilder(
+              builder: (context, setState) => SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: DropdownButton<double>(
+                    value: value,
+                    items: characteristic.allowed_values!
+                        .map((e) => DropdownMenuItem<double>(
+                              value: e,
+                              child: Text(e),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      value = v;
+                      _insertValueIntoResult(v, path);
+                    }),
+                  ))));
         } else {
           _fields.add(defaultTextFormField(characteristic, value, path, (value) {
             double doubleValue = 0;
@@ -193,6 +209,23 @@ class FunctionConfigDefault implements FunctionConfig {
               ]);
             },
           ));
+        } else if (characteristic.allowed_values != null) {
+          _fields.add(StatefulBuilder(
+              builder: (context, setState) => SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: DropdownButton<int>(
+                    value: value,
+                    items: characteristic.allowed_values!
+                        .map((e) => DropdownMenuItem<int>(
+                              value: e,
+                              child: Text(e),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      value = v;
+                      _insertValueIntoResult(v, path);
+                    }),
+                  ))));
         } else {
           _fields.add(defaultTextFormField(characteristic, value, path, (value) {
             if (value == null) {
@@ -222,7 +255,26 @@ class FunctionConfigDefault implements FunctionConfig {
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
-        _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
+        if (characteristic.allowed_values != null) {
+          _fields.add(StatefulBuilder(
+              builder: (context, setState) => SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: DropdownButton<String>(
+                    value: value,
+                    items: characteristic.allowed_values!
+                        .map((e) => DropdownMenuItem<String>(
+                              value: e,
+                              child: Text(e),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      value = v;
+                      _insertValueIntoResult(v, path);
+                    }),
+                  ))));
+        } else {
+          _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
+        }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
       case ContentVariable.BOOLEAN:

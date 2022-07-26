@@ -24,15 +24,16 @@ class Characteristic {
   double? min_value, max_value;
   dynamic value;
   List<Characteristic>? sub_characteristics;
+  List<dynamic>? allowed_values;
 
 
-  Characteristic(this.id, this.name, this.type, this.min_value, this.max_value, this.value, this.sub_characteristics, this.display_unit);
+  Characteristic(this.id, this.name, this.type, this.min_value, this.max_value, this.value, this.sub_characteristics, this.display_unit, this.allowed_values);
   factory Characteristic.fromJson(Map<String, dynamic> json) => _$CharacteristicFromJson(json);
   Map<String, dynamic> toJson() => _$CharacteristicToJson(this);
 
   Characteristic clone() {
     final List<Characteristic> subs = [];
     sub_characteristics?.forEach((sub) => subs.add(sub.clone()));
-    return Characteristic(id, name, type, min_value, max_value, value, subs, display_unit);
+    return Characteristic(id, name, type, min_value, max_value, value, subs, display_unit, allowed_values);
   }
 }
