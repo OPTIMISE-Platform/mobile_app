@@ -15,10 +15,10 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
-class SmSeText extends SmartServiceModuleWidget {
-  String text = "";
+class SmSeSingleValue extends SmSeRequest {
+  dynamic value;
 
   @override
   double height = 1;
@@ -28,12 +28,16 @@ class SmSeText extends SmartServiceModuleWidget {
 
   @override
   Widget buildInternal(BuildContext context, bool _, bool __) {
-    return Text(text);
+    return Text(value.toString());
   }
 
   @override
-  void configure(data) {
-    if (data is! Map<String, dynamic> || data["text"] == null) return;
-    text = data["text"] as String;
+  Future<void> refreshInternal() async {
+    final resp = await request.perform();
+    if (resp.statusCode > 299) {
+      value = "ERROR Status " + resp.statusCode.toString();
+    } else {
+      value = resp.body.endsWith("\n") ? resp.body.substring(0, resp.body.length - 1) : resp.body;
+    }
   }
 }

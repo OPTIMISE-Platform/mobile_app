@@ -14,37 +14,27 @@
  *  limitations under the License.
  */
 
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
-import 'package:mutex/mutex.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/material_icons.dart';
 
-class SmSeExample extends SmartServiceModuleWidget {
-  String data = "";
-  final Mutex _refreshing = Mutex();
-
-  @override
-  int height = 1;
+class SmSeIcon extends SmartServiceModuleWidget {
+  int codePoint = 0xe237;
 
   @override
-  int width = 1;
+  double height = 1;
 
   @override
-  Widget build(BuildContext context, bool _) {
-    return ListTile(title: _refreshing.isLocked ? Center(child: PlatformCircularProgressIndicator()) : Text(data));
+  double width = 1;
+
+  @override
+  Widget buildInternal(BuildContext context, bool _, bool __) {
+    return Icon(IconData(codePoint, fontFamily: 'MaterialIcons'));
   }
 
   @override
   void configure(data) {
-    this.data = data;
-  }
-
-  @override
-  Future<void> refresh() async {
-    await _refreshing.protect(() async => await Future.delayed(Duration(seconds: Random().nextInt(3), milliseconds: 300)));
-    return;
+    if (data is! Map<String, dynamic> || data["icon_name"] == null) return;
+    codePoint = iconNameToCodePoints[data["icon_name"] as String] ?? codePoint;
   }
 }

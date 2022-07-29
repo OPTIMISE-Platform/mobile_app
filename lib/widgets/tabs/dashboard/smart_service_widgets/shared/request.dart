@@ -14,10 +14,14 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/exceptions/argument_exception.dart';
 
 import '../../../../../services/auth.dart';
+import '../base.dart';
 
 class Request {
   static final _client = http.Client();
@@ -26,7 +30,9 @@ class Request {
   dynamic body;
   final bool need_token;
 
-  Request(this.method, this.url, this.body, this.need_token);
+  Request(this.method, this.url, dynamic body, this.need_token) {
+      this.body = json.encode(body);
+  }
 
   factory Request.fromJson(Map<String, dynamic> json) =>
       Request(json["method"] as String, json["url"] as String, json["body"], json["need_token"] as bool);
@@ -58,5 +64,16 @@ class Request {
       default:
         throw ArgumentException("Unsupported method " + method);
     }
+  }
+}
+
+abstract class SmSeRequest extends SmartServiceModuleWidget {
+  late Request request;
+
+  @override
+  @mustCallSuper
+  void configure(dynamic data) {
+    if (data is! Map<String, dynamic> || data["request"] == null) return;
+    request = Request.fromJson(data["request"]);
   }
 }

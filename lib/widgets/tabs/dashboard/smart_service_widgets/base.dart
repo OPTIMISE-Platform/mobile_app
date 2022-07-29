@@ -14,11 +14,20 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/example.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/single_value.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
+import 'package:mutex/mutex.dart';
 
 import '../../../../exceptions/argument_exception.dart';
 import '../../../../models/smart_service.dart';
@@ -28,9 +37,15 @@ import 'button.dart';
 typedef SmSeWidgetType = String;
 
 // DEFINE NEW WIDGET TYPES BELOW
-const SmSeWidgetType SmSeExampleType = "example";
-const SmSeWidgetType SmSeTextType = "text";
-const SmSeWidgetType SmSeButtonType = "button";
+const SmSeWidgetType smSeTextType = "text";
+const SmSeWidgetType smSeButtonType = "button";
+const SmSeWidgetType smSeFlipType = "flip";
+const SmSeWidgetType smSeRowType = "row";
+const SmSeWidgetType smSeColumnType = "column";
+const SmSeWidgetType smSeIconType = "icon";
+const SmSeWidgetType smSeSingleValueType = "single_value";
+const SmSeWidgetType smSeRequestIconType = "request_icon";
+const SmSeWidgetType smSeLineChartType = "line_chart";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -38,18 +53,34 @@ abstract class SmartServiceModuleWidget {
     printer: SimplePrinter(),
   );
 
-  abstract int height;
+  double get height;
 
   /// Currently without effect
-  abstract int width;
+  double get width;
 
   void configure(dynamic data);
 
-  Widget build(BuildContext context, bool onlyPreview);
+  @nonVirtual
+  Widget build(BuildContext context, bool onlyPreview) => SizedBox(
+      height: height * heightUnit,
+      child: _refreshing.isLocked ? Center(child: PlatformCircularProgressIndicator()) : buildInternal(context, onlyPreview, false));
+
+  @protected
+  Widget buildInternal(BuildContext context, bool onlyPreview, bool parentFlexible);
 
   late String id;
 
-  Future<void> refresh();
+  final Mutex _refreshing = Mutex();
+
+  @nonVirtual
+  Future<void> refresh() async {
+    await _refreshing.protect(refreshInternal);
+  }
+
+  @protected
+  Future<void> refreshInternal() async {
+    return;
+  }
 
   static SmartServiceModuleWidget? fromModule(SmartServiceModule module) {
     if (module.module_type != smartServiceModuleTypeWidget) {
@@ -70,20 +101,37 @@ abstract class SmartServiceModuleWidget {
 
     switch (data.widget_type) {
       // ADD NEW WIDGETS BELOW
-
-      case SmSeExampleType:
-        w = SmSeExample();
-        break;
-      case SmSeTextType:
+      case smSeTextType:
         w = SmSeText();
         break;
-      case SmSeButtonType:
+      case smSeButtonType:
         w = SmSeButton();
+        break;
+      case smSeFlipType:
+        w = SmSeFlip();
+        break;
+      case smSeRowType:
+        w = SmSeRow();
+        break;
+      case smSeColumnType:
+        w = SmSeColumn();
+        break;
+      case smSeIconType:
+        w = SmSeIcon();
+        break;
+      case smSeSingleValueType:
+        w = SmSeSingleValue();
+        break;
+      case smSeRequestIconType:
+        w = SmSeRequestIcon();
+        break;
+      case smSeLineChartType:
+        w = SmSeLineChart();
         break;
 
       // ADD NEW WIDGETS ABOVE
       default:
-        _logger.e("unimplemented widget type " + data.widget_type);
+        _logger.w("unimplemented widget type '" + data.widget_type + "'");
         return null;
     }
     w.id = id;
@@ -93,6 +141,7 @@ abstract class SmartServiceModuleWidget {
   }
 
   redrawDashboard(BuildContext context) {
-    (context.findAncestorStateOfType<State<Dashboard>>() as DashboardState?)?.setState(() {});
+    final state = (context.findAncestorStateOfType<State<Dashboard>>() as DashboardState?);
+    if (state?.mounted == true) state!.setState(() {});
   }
 }

@@ -24,9 +24,10 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../app_state.dart';
 import '../../../theme.dart';
 import '../../shared/expandable_fab.dart';
+
+const double heightUnit = 32;
 
 class Dashboard extends StatefulWidget {
   const Dashboard({Key? key}) : super(key: key);
@@ -36,9 +37,6 @@ class Dashboard extends StatefulWidget {
 }
 
 class DashboardState extends State<Dashboard> with WidgetsBindingObserver, TickerProviderStateMixin {
-  static const double heightUnit = 64;
-  static const Duration animationDuration = Duration(milliseconds: 100);
-
   Map<String, SmartServiceModuleWidget>? _smartServiceWidgets;
   final List<SmartServiceDashboard> _dashboards = Settings.getSmartServiceDashboards();
 
@@ -66,7 +64,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       final items = modules.map((e) => SmartServiceModuleWidget.fromModule(e)).where((element) => element != null);
       _smartServiceWidgets = {};
       items.forEach((element) => _smartServiceWidgets![element!.id] = element);
-      setState(() {});
+      if (mounted) setState(() {});
       _refresh();
     });
     WidgetsBinding.instance.addObserver(this);
@@ -80,15 +78,11 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().refreshDevices(context);
-    }
+    _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
-    final totalBuildWith = MediaQuery.of(context).size.width;
-
     // Add all configured dashboards
     final tabHeaders = _dashboards
         .map((e) => Tab(
@@ -117,15 +111,8 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                     itemCount: items.length,
                     itemBuilder: (context, idx) {
                       final item = items[idx];
-                      return AnimatedContainer(
-                        duration: animationDuration,
-                        height: item.height * heightUnit,
-                        width: MediaQuery.of(context).size.width,
-                        child: Card(
-                            child: SingleChildScrollView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: item.build(context, false),
-                        )),
+                      return Card(
+                        child: item.build(context, false),
                       );
                     })))));
 
@@ -145,9 +132,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
         vsync: this,
       );
       _tabController!.addListener(() async {
-        if (_tabController!.index >= _dashboards.length && _showFab) {
+        if (_tabController!.index >= _dashboards.length && _showFab && mounted) {
           setState(() => _showFab = false);
-        } else if (_tabController!.index < _dashboards.length && !_showFab) {
+        } else if (_tabController!.index < _dashboards.length && !_showFab && mounted) {
           setState(() => _showFab = true);
         }
         if (_tabController!.index == _dashboards.length + 1 && !_newDashboardDialogOpen) {
@@ -176,18 +163,26 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
           if (newName != null) {
             _dashboards.add(SmartServiceDashboard(const Uuid().v4(), titleController.text, []));
             Settings.setSmartServiceDashboards(_dashboards);
-            setState(() {}); // Refresh _tabController
+            if (mounted) setState(() {}); // Refresh _tabController
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              setState(() {
-                _tabController?.index = _dashboards.length - 1; // switch to new tab
-              });
-              _addWidget(totalBuildWith);
+              if (mounted) {
+                setState(() {
+                  _tabController?.index = _dashboards.length - 1; // switch to new tab
+                });
+              }
+              _addWidget();
             });
           } else {
-            WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
                   _tabController?.index = _tabController!.previousIndex;
-                }));
+                });
+              }
+            });
           }
+        } else {
+          _refresh();
         }
       });
     }
@@ -200,7 +195,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       children: [
         ActionButton(
           onPressed: () async {
-            await _addWidget(totalBuildWith);
+            await _addWidget();
             _toggleStreamController.add(null);
           },
           icon: Icon(Icons.add, color: MyTheme.textColor),
@@ -234,7 +229,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             }
             _dashboards[_tabController!.index].name = newName!;
             Settings.setSmartServiceDashboards(_dashboards);
-            setState(() {});
+            if (mounted) setState(() {});
           },
           icon: Icon(Icons.drive_file_rename_outline, color: MyTheme.textColor),
         ),
@@ -261,7 +256,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             _dashboards.removeAt(_tabController!.index);
             Settings.setSmartServiceDashboards(_dashboards);
             _toggleStreamController.add(null);
-            setState(() {});
+            if (mounted) setState(() {});
           },
           color: MyTheme.warnColor,
           icon: Icon(Icons.delete, color: MyTheme.textColor),
@@ -331,17 +326,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                       items.removeAt(idx);
                       _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
                       Settings.setSmartServiceDashboards(_dashboards);
-                      setState(() {});
+                      if (mounted) setState(() {});
                     },
-                    child: AnimatedContainer(
-                        duration: animationDuration,
-                        height: item.height * heightUnit,
-                        width: MediaQuery.of(context).size.width,
-                        child: Card(
-                            child: SingleChildScrollView(
-                          physics: const NeverScrollableScrollPhysics(),
-                          child: item.build(context, false),
-                        ))));
+                    child: Card(child: item.build(context, false)));
               },
               onReorder: (int oldIndex, int newIndex) async {
                 final tmp = items[oldIndex];
@@ -353,7 +340,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             )));
   }
 
-  Future<void> _addWidget(double totalBuildWith) async {
+  Future<void> _addWidget() async {
     final items = _smartServiceWidgets?.values.toList() ?? [];
     final newId = await showPlatformDialog(
         context: context,
@@ -364,26 +351,18 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                   width: MediaQuery.of(context).size.width,
                   child: ListView.builder(
                       itemCount: items.length,
-                      itemBuilder: (context, idx) {
-                        final item = items[idx];
-                        return AnimatedContainer(
-                            duration: animationDuration,
-                            key: ValueKey(item.id),
-                            height: item.height * heightUnit * (MediaQuery.of(context).size.width / totalBuildWith),
-                            width: MediaQuery.of(context).size.width,
-                            child: GestureDetector(
-                              child: Card(
-                                elevation: 2,
-                                child: item.build(context, true),
-                              ),
-                              onTap: () => Navigator.pop(context, item.id),
-                            ));
-                      })));
+                      itemBuilder: (context, idx) => GestureDetector(
+                            child: Card(
+                              elevation: 2,
+                              child: items[idx].build(context, true),
+                            ),
+                            onTap: () => Navigator.pop(context, items[idx].id),
+                          ))));
         });
     if (newId == null) return;
     _dashboards[_tabController!.index].widgetIds.add(newId);
     Settings.setSmartServiceDashboards(_dashboards);
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   _refresh() async {
@@ -393,7 +372,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     }
     final List<Future> futures = [];
     items.forEach((e) => futures.add(__refreshWidget(e)));
-    setState(() {});
+    if (mounted) setState(() {});
     await Future.wait(futures);
   }
 
@@ -402,7 +381,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       return;
     }
     await w.refresh();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   List<SmartServiceModuleWidget?> _getTabWidgets(int idx) {

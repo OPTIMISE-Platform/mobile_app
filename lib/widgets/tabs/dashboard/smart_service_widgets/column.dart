@@ -15,25 +15,18 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 
-class SmSeText extends SmartServiceModuleWidget {
-  String text = "";
-
-  @override
-  double height = 1;
+class SmSeColumn extends SmSeRow {
 
   @override
-  double width = 1;
+  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a + b);
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
-    return Text(text);
-  }
+  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a > b ? a : b);
 
   @override
-  void configure(data) {
-    if (data is! Map<String, dynamic> || data["text"] == null) return;
-    text = data["text"] as String;
+  Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
+    return Column(mainAxisAlignment: MainAxisAlignment.center, children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
   }
 }

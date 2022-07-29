@@ -18,7 +18,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
@@ -40,8 +39,6 @@ class Chart extends StatefulWidget {
 }
 
 class _ChartState extends State<Chart> with WidgetsBindingObserver {
-  static final _HHMMformat = DateFormat.Hm();
-  static final _EHHMMformat = DateFormat.E().add_Hm();
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -291,7 +288,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                                 return const SizedBox.shrink();
                               }
                               final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                              return Center(child: Text(_range < 4 ? _HHMMformat.format(dt) : _EHHMMformat.format(dt)));
+                              return Center(child: Text(_range < 4 ? MyTheme.formatHHMM.format(dt) : MyTheme.formatEHHMM.format(dt)));
                             }),
                       ),
                       leftTitles: AxisTitles(

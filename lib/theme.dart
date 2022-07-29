@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:intl/intl.dart';
 
 
 typedef ThemeStyle = String;
@@ -42,6 +43,9 @@ class MyTheme {
 
   static const double insetSize = 12.0;
   static const EdgeInsets inset = EdgeInsets.all(insetSize);
+
+  static final formatHHMM = DateFormat.Hm();
+  static final formatEHHMM = DateFormat.E().add_Hm();
 
   static ThemeData materialTheme = ThemeData(
     cupertinoOverrideTheme: cupertinoTheme,

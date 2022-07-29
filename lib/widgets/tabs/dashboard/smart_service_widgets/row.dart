@@ -16,41 +16,33 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 
-class SmSeButton extends SmSeRequest {
-  SmartServiceModuleWidget? child;
+class SmSeRow extends SmartServiceModuleWidget {
+  final List<SmartServiceModuleWidget?> children = [];
 
   @override
-  double height = 2;
+  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a > b ? a : b);
 
   @override
-  double width = 1;
+  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a + b);
 
   @override
   Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
-    final w = child?.buildInternal(context, onlyPreview, false) ?? const SizedBox.shrink();
-    final onPressed = onlyPreview ? null : () async => await request.perform();
-
-    return (child is SmSeIcon
-        ? IconButton(icon: w, onPressed: onPressed)
-        : TextButton(
-            child: w,
-            onPressed: onPressed,
-          ));
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
   }
 
   @override
   void configure(data) {
-    super.configure(data);
-    if (data is! Map<String, dynamic> || data["child"] == null) return;
-    child = SmartServiceModuleWidget.fromWidgetInfo(id + "_child", WidgetInfo.fromJson(data["child"]));
+    if (data is! Map<String, dynamic> || data["children"] == null) return;
+
+    children.clear();
+    (data["children"] as List<dynamic>).asMap().forEach((i, e) => children.add(SmartServiceModuleWidget.fromWidgetInfo(id + "_" + i.toString(), WidgetInfo.fromJson(e))));
   }
 
   @override
   Future<void> refreshInternal() async {
-    return await child?.refresh();
+    await Future.wait(children.map((e) => e?.refresh() ?? Future.value(null)));
+    return;
   }
 }
