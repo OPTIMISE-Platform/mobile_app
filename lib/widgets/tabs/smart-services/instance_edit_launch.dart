@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
@@ -47,7 +48,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   );
 
   List<SmartServiceParameterOption> _filterOptions(SmartServiceExtendedParameter p) {
-    return (p.options?? []).where((o) {
+    return (p.options ?? []).where((o) {
       if (o.needs_same_entity_id_in_parameter == null) return true;
       final param = parameters!.firstWhere((p) => p.id == o.needs_same_entity_id_in_parameter);
       final optionIndex = param.options!.indexWhere((paramOption) => paramOption.value == param.value);
@@ -59,6 +60,10 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   Widget _getEditWidget(int i, {int? sub}) {
     final p = parameters![i];
     final dynamic subValue = sub != null ? (p.value as List)[sub] : null;
+
+    if (p.characteristic_id != null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.label), p.characteristic.build(context)]);
+    }
 
     if (p.multiple && p.options != null) {
       return ConstrainedBox(

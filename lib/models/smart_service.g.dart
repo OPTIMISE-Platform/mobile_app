@@ -22,8 +22,7 @@ part of 'smart_service.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-SmartServiceRelease _$SmartServiceReleaseFromJson(Map<String, dynamic> json) =>
-    SmartServiceRelease(
+SmartServiceRelease _$SmartServiceReleaseFromJson(Map<String, dynamic> json) => SmartServiceRelease(
       json['created_at'] as int,
       json['description'] as String,
       json['design_id'] as String,
@@ -32,9 +31,7 @@ SmartServiceRelease _$SmartServiceReleaseFromJson(Map<String, dynamic> json) =>
       json['error'] as String?,
     );
 
-Map<String, dynamic> _$SmartServiceReleaseToJson(
-        SmartServiceRelease instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceReleaseToJson(SmartServiceRelease instance) => <String, dynamic>{
       'created_at': instance.created_at,
       'description': instance.description,
       'design_id': instance.design_id,
@@ -43,27 +40,21 @@ Map<String, dynamic> _$SmartServiceReleaseToJson(
       'error': instance.error,
     };
 
-SmartServiceParameter _$SmartServiceParameterFromJson(
-        Map<String, dynamic> json) =>
-    SmartServiceParameter(
+SmartServiceParameter _$SmartServiceParameterFromJson(Map<String, dynamic> json) => SmartServiceParameter(
       json['id'] as String,
       json['value'],
       json['label'] as String,
       json['value_label'] as String?,
     );
 
-Map<String, dynamic> _$SmartServiceParameterToJson(
-        SmartServiceParameter instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceParameterToJson(SmartServiceParameter instance) => <String, dynamic>{
       'id': instance.id,
       'value': instance.value,
       'label': instance.label,
       'value_label': instance.value_label,
     };
 
-SmartServiceParameterOption _$SmartServiceParameterOptionFromJson(
-        Map<String, dynamic> json) =>
-    SmartServiceParameterOption(
+SmartServiceParameterOption _$SmartServiceParameterOptionFromJson(Map<String, dynamic> json) => SmartServiceParameterOption(
       json['kind'] as String,
       json['label'] as String,
       json['value'],
@@ -71,9 +62,7 @@ SmartServiceParameterOption _$SmartServiceParameterOptionFromJson(
       json['entity_id'] as String?,
     );
 
-Map<String, dynamic> _$SmartServiceParameterOptionToJson(
-        SmartServiceParameterOption instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceParameterOptionToJson(SmartServiceParameterOption instance) => <String, dynamic>{
       'kind': instance.kind,
       'label': instance.label,
       'value': instance.value,
@@ -81,26 +70,21 @@ Map<String, dynamic> _$SmartServiceParameterOptionToJson(
       'entity_id': instance.entity_id,
     };
 
-SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(
-        Map<String, dynamic> json) =>
-    SmartServiceExtendedParameter(
+SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(Map<String, dynamic> json) => SmartServiceExtendedParameter(
       json['id'] as String,
       json['label'] as String,
       json['description'] as String,
       json['value'],
       json['default_value'],
       json['multiple'] as bool,
-      (json['options'] as List<dynamic>?)
-          ?.map((e) =>
-              SmartServiceParameterOption.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      (json['options'] as List<dynamic>?)?.map((e) => SmartServiceParameterOption.fromJson(e as Map<String, dynamic>)).toList(),
       json['type'] as String,
       json['value_label'] as String?,
+      json['characteristic_id'] as String?,
+      json['characteristic'] == null ? null : Characteristic.fromJson(json['characteristic']),
     );
 
-Map<String, dynamic> _$SmartServiceExtendedParameterToJson(
-        SmartServiceExtendedParameter instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceExtendedParameterToJson(SmartServiceExtendedParameter instance) => <String, dynamic>{
       'id': instance.id,
       'value': instance.value,
       'label': instance.label,
@@ -110,11 +94,11 @@ Map<String, dynamic> _$SmartServiceExtendedParameterToJson(
       'options': instance.options,
       'type': instance.type,
       'value_label': instance.value_label,
+      'characteristic_id': instance.characteristic_id,
+      'characteristic': instance.characteristic.toJson(),
     };
 
-SmartServiceInstance _$SmartServiceInstanceFromJson(
-        Map<String, dynamic> json) =>
-    SmartServiceInstance(
+SmartServiceInstance _$SmartServiceInstanceFromJson(Map<String, dynamic> json) => SmartServiceInstance(
       json['description'] as String,
       json['design_id'] as String,
       json['id'] as String,
@@ -123,15 +107,10 @@ SmartServiceInstance _$SmartServiceInstanceFromJson(
       json['user_id'] as String,
       json['error'] as String?,
       json['ready'] as bool,
-      (json['parameters'] as List<dynamic>?)
-          ?.map(
-              (e) => SmartServiceParameter.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      (json['parameters'] as List<dynamic>?)?.map((e) => SmartServiceParameter.fromJson(e as Map<String, dynamic>)).toList(),
     );
 
-Map<String, dynamic> _$SmartServiceInstanceToJson(
-        SmartServiceInstance instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceInstanceToJson(SmartServiceInstance instance) => <String, dynamic>{
       'description': instance.description,
       'design_id': instance.design_id,
       'id': instance.id,
@@ -143,8 +122,7 @@ Map<String, dynamic> _$SmartServiceInstanceToJson(
       'parameters': instance.parameters,
     };
 
-SmartServiceModule _$SmartServiceModuleFromJson(Map<String, dynamic> json) =>
-    SmartServiceModule(
+SmartServiceModule _$SmartServiceModuleFromJson(Map<String, dynamic> json) => SmartServiceModule(
       json['design_id'] as String,
       json['id'] as String,
       json['instance_id'] as String,
@@ -154,8 +132,7 @@ SmartServiceModule _$SmartServiceModuleFromJson(Map<String, dynamic> json) =>
       json['module_data'],
     );
 
-Map<String, dynamic> _$SmartServiceModuleToJson(SmartServiceModule instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$SmartServiceModuleToJson(SmartServiceModule instance) => <String, dynamic>{
       'design_id': instance.design_id,
       'id': instance.id,
       'instance_id': instance.instance_id,
@@ -165,18 +142,14 @@ Map<String, dynamic> _$SmartServiceModuleToJson(SmartServiceModule instance) =>
       'module_data': instance.module_data,
     };
 
-SmartServiceDashboard _$SmartServiceDashboardFromJson(Map<String, dynamic> json) =>
-    SmartServiceDashboard(
-          json['id'] as String,
-          json['name'] as String,
-          (json['widgetIds'] as List<dynamic>)
-              .map((e) => e as String)
-              .toList(),
+SmartServiceDashboard _$SmartServiceDashboardFromJson(Map<String, dynamic> json) => SmartServiceDashboard(
+      json['id'] as String,
+      json['name'] as String,
+      (json['widgetIds'] as List<dynamic>).map((e) => e as String).toList(),
     );
 
-Map<String, dynamic> _$SmartServiceDashboardToJson(SmartServiceDashboard instance) =>
-    <String, dynamic>{
-          'id': instance.id,
-          'name': instance.name,
-          'widgetIds': instance.widgetIds,
+Map<String, dynamic> _$SmartServiceDashboardToJson(SmartServiceDashboard instance) => <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'widgetIds': instance.widgetIds,
     };

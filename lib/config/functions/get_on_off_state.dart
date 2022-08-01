@@ -17,13 +17,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/config/function_config.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
-class FunctionConfigGetOnOffState implements FunctionConfig {
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
+class FunctionConfigGetOnOffState extends FunctionConfig {
+  FunctionConfigGetOnOffState() {
+    functionId = dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? "";
   }
+
 
   @override
   Widget? displayValue(value, BuildContext context) {
@@ -57,11 +57,6 @@ class FunctionConfigGetOnOffState implements FunctionConfig {
   @override
   List<String>? getAllRelatedControllingFunctions() {
     return [dotenv.env['FUNCTION_SET_OFF_STATE'] ?? '', dotenv.env['FUNCTION_SET_ON_STATE'] ?? ''];
-  }
-
-  @override
-  getConfiguredValue() {
-    return null;
   }
 
 }

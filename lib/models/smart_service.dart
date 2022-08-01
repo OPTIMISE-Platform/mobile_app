@@ -17,6 +17,7 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import 'content_variable.dart';
+import 'characteristic.dart';
 
 part 'smart_service.g.dart';
 
@@ -67,16 +68,21 @@ class SmartServiceParameterOption {
 class SmartServiceExtendedParameter {
   String id, label; //"inherited"
   String? value_label; //"inherited"
-  dynamic value; //"inherited"
+  //dynamic value; //"inherited" //in _value
 
   String description;
   dynamic default_value;
   bool multiple;
   List<SmartServiceParameterOption>? options;
   ContentType type;
+  String? characteristic_id;
+  late Characteristic characteristic;
 
-  SmartServiceExtendedParameter(
-      this.id, this.label, this.description, this.value, this.default_value, this.multiple, this.options, this.type, this.value_label);
+  SmartServiceExtendedParameter(this.id, this.label, this.description, dynamic value, this.default_value, this.multiple, this.options, this.type,
+      this.value_label, this.characteristic_id, Characteristic? char) {
+    characteristic = char ?? Characteristic(id, "", type, null, null, value, null, "", options);
+    characteristic.value = value ?? default_value ?? characteristic.value;
+  }
 
   factory SmartServiceExtendedParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceExtendedParameterFromJson(json);
 
@@ -87,6 +93,14 @@ class SmartServiceExtendedParameter {
       value_label = options!.firstWhere((element) => element.value == value).label;
     }
     return SmartServiceParameter(id, value, label, value_label);
+  }
+
+  dynamic get value {
+    return characteristic.value;
+  }
+
+  set value(dynamic v) {
+    characteristic.value = v;
   }
 }
 
@@ -105,6 +119,7 @@ class SmartServiceInstance {
 }
 
 typedef SmartServiceModuleType = String;
+
 const SmartServiceModuleType smartServiceModuleTypeWidget = "widget";
 
 @JsonSerializable()

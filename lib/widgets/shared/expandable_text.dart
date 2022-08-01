@@ -46,10 +46,12 @@ class _ExpandableTextState extends State<ExpandableText> {
   void didUpdateWidget(oldWidget) {
     super.didUpdateWidget(oldWidget);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      setState(() {
-        _text = widget._text;
-        _collapsed_lines = widget._collapsed_lines;
-      });
+      if (mounted) {
+        setState(() {
+          _text = widget._text;
+          _collapsed_lines = widget._collapsed_lines;
+        });
+      }
     });
   }
 

@@ -15,17 +15,17 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/config/function_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
-class FunctionConfigSetOffState implements FunctionConfig {
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
+class FunctionConfigSetColor extends FunctionConfig {
+  FunctionConfigSetColor() {
+    functionId = dotenv.env["FUNCTION_SET_COLOR"] ?? "";
   }
 
   @override
   Widget? displayValue(value, BuildContext context) {
-    return const Icon(Icons.power_off_outlined);
+    return const Icon(Icons.palette);
   }
 
   @override
@@ -37,10 +37,4 @@ class FunctionConfigSetOffState implements FunctionConfig {
   List<String>? getAllRelatedControllingFunctions() {
     return null;
   }
-
-  @override
-  getConfiguredValue() {
-    return null;
-  }
-
 }

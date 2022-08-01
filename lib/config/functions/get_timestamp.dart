@@ -15,16 +15,16 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_app/config/function_config.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
-class FunctionConfigGetTimestamp implements FunctionConfig {
-  static final _format = DateFormat.yMd().add_jms();
-
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
+class FunctionConfigGetTimestamp extends FunctionConfig {
+  FunctionConfigGetTimestamp() {
+    functionId = dotenv.env["FUNCTION_GET_TIMESTAMP"] ?? "";
   }
+
+  static final _format = DateFormat.yMd().add_jms();
 
   @override
   Widget? displayValue(value, BuildContext context) {
@@ -58,10 +58,4 @@ class FunctionConfigGetTimestamp implements FunctionConfig {
   List<String>? getAllRelatedControllingFunctions() {
     return null;
   }
-
-  @override
-  getConfiguredValue() {
-    return null;
-  }
-
 }

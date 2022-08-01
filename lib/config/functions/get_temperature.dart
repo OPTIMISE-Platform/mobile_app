@@ -15,17 +15,17 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/config/function_config.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
-class FunctionConfigGetTemperature implements FunctionConfig {
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
+class FunctionConfigGetTemperature extends FunctionConfig {
+  FunctionConfigGetTemperature() {
+    functionId = dotenv.env["FUNCTION_GET_TEMPERATURE"] ?? "";
   }
 
   @override
   Widget? displayValue(value, BuildContext context) {
-   return null;
+    return null;
   }
 
   @override
@@ -37,10 +37,4 @@ class FunctionConfigGetTemperature implements FunctionConfig {
   List<String>? getAllRelatedControllingFunctions() {
     return null;
   }
-
-  @override
-  getConfiguredValue() {
-    return null;
-  }
-
 }

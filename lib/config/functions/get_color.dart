@@ -17,19 +17,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/config/function_config.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
-import '../exceptions/argument_exception.dart';
+import '../../exceptions/argument_exception.dart';
 
-class FunctionConfigGetColor implements FunctionConfig {
+class FunctionConfigGetColor extends FunctionConfig {
+  FunctionConfigGetColor() {
+    functionId = dotenv.env['FUNCTION_GET_COLOR'] ?? "";
+  }
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-
-  @override
-  Widget? build(BuildContext context, [dynamic value]) {
-    return null;
-  }
 
   @override
   Widget? displayValue(value, BuildContext context) {
@@ -79,11 +78,6 @@ class FunctionConfigGetColor implements FunctionConfig {
   @override
   List<String>? getAllRelatedControllingFunctions() {
     return [dotenv.env['FUNCTION_SET_COLOR'] ?? ''];
-  }
-
-  @override
-  getConfiguredValue() {
-    return null;
   }
 
   Color _getColor(Map<String, dynamic> value) {

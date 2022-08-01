@@ -1,0 +1,86 @@
+/*
+ * Copyright 2022 InfAI (CC SES)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/exceptions/argument_exception.dart';
+
+import '../../models/characteristic.dart';
+
+class RGB {
+  static Widget build(BuildContext context, Characteristic characteristic) {
+    var _color = _getColor(characteristic.value);
+    return StatefulBuilder(
+        builder: (context, setState) {
+          void setter(Color c) => setState(() {
+            _color = c;
+            characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
+          });
+          return Column(mainAxisSize: MainAxisSize.min, children: [
+            ColorPicker(
+              pickerColor: _color,
+              onColorChanged: (c) {
+                _color = c;
+                characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
+              },
+              enableAlpha: false,
+              displayThumbColor: false,
+              portraitOnly: false,
+              paletteType: PaletteType.hueWheel,
+              labelTypes: [],
+            ),
+            Row(children: [
+              _getQuickButton(Colors.red, setter),
+              _getQuickButton(Colors.green, setter),
+              _getQuickButton(Colors.blue, setter),
+              _getQuickButton(Colors.white, setter),
+              _getQuickButton(const Color.fromARGB(255, 253, 244, 220), setter),
+            ], mainAxisAlignment: MainAxisAlignment.center)
+          ]);
+        });
+  }
+
+  static Color _getColor(dynamic value) {
+    if (value == null) {
+      return Colors.white;
+    }
+    if (value is! Map<String, dynamic>) {
+      throw ArgumentException("value is not map: " + value.toString());
+    }
+    if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
+      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+    }
+    return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
+  }
+
+  static Widget _getQuickButton(Color c, void Function(Color c) set) {
+    return PlatformIconButton(
+      icon: Stack(
+        alignment: AlignmentDirectional.center,
+        children: [
+          Icon(
+            Icons.square,
+            color: c,
+          ),
+          const Icon(Icons.square_outlined, color: Colors.grey),
+        ],
+      ),
+      onPressed: () => set(c),
+      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+    );
+  }
+}

@@ -25,7 +25,7 @@ part of 'characteristic.dart';
 Characteristic _$CharacteristicFromJson(Map<String, dynamic> json) => Characteristic(
       json['id'] as String,
       json['name'] as String,
-      json['type'] as String,
+      json['type'] as ContentType,
       (json['min_value'] as num?)?.toDouble(),
       (json['max_value'] as num?)?.toDouble(),
       json['value'],

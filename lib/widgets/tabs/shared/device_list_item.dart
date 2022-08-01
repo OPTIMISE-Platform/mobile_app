@@ -25,7 +25,7 @@ import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import '../../../app_state.dart';
-import '../../../config/function_config.dart';
+import '../../../config/functions/function_config.dart';
 import '../../../models/device_command_response.dart';
 import '../../../models/device_instance.dart';
 import '../../../services/device_commands.dart';
