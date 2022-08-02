@@ -27,6 +27,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 import 'package:provider/provider.dart';
@@ -119,29 +120,5 @@ class MyAppState extends State<MyApp> {
             ),
           ),
         ));
-  }
-
-  Future<Position?> determinePosition() async {
-    // Test if location services are enabled.
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return null;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return null;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return null;
-    }
-
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
-    return await Geolocator.getCurrentPosition();
   }
 }

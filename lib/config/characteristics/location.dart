@@ -16,10 +16,10 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 
 import '../../models/characteristic.dart';
+import '../../shared/location.dart';
 import '../../theme.dart';
 
 class Location {
@@ -33,7 +33,7 @@ class Location {
           initial = FormattedLocation.fromLatLng(
               lat: characteristic.value["Latitude"], lon: characteristic.value["Longitude"], displayName: characteristic.value_label ?? "");
         } else {
-          _determinePosition().then((value) {
+          determinePosition().then((value) {
             if (value != null) {
               initial = FormattedLocation.fromLatLng(
                   lat: value.latitude, lon: value.longitude, geojson: GeoGeometry.point(LatLng(value.latitude, value.longitude), MyTheme.appColor));
@@ -67,30 +67,5 @@ class Location {
               },
             );
     });
-  }
-
-  static Future<Position?> _determinePosition() async {
-    LocationPermission permission;
-    // Test if location services are enabled.
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      return null;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return null;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      return null;
-    }
-
-    // When we reach here, permissions are granted and we can
-    // continue accessing the position of the device.
-    return await Geolocator.getCurrentPosition();
   }
 }
