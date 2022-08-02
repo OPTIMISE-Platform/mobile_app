@@ -24,7 +24,6 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:intl/intl.dart';
 
-
 typedef ThemeStyle = String;
 
 const ThemeStyle themeMaterial = "material";
@@ -48,26 +47,26 @@ class MyTheme {
   static final formatEHHMM = DateFormat.E().add_Hm();
 
   static ThemeData materialTheme = ThemeData(
-    cupertinoOverrideTheme: cupertinoTheme,
-    primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
-      50: Color.fromRGBO(50, 184, 186, 0.1),
-      100: Color.fromRGBO(50, 184, 186, 0.2),
-      200: Color.fromRGBO(50, 184, 186, 0.3),
-      300: Color.fromRGBO(50, 184, 186, 0.4),
-      400: Color.fromRGBO(50, 184, 186, 0.5),
-      500: Color.fromRGBO(50, 184, 186, 0.6),
-      600: Color.fromRGBO(50, 184, 186, 0.7),
-      700: Color.fromRGBO(50, 184, 186, 0.8),
-      800: Color.fromRGBO(50, 184, 186, 0.9),
-      900: Color.fromRGBO(50, 184, 186, 1),
-    }),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: ButtonStyle(
-        padding: MaterialStateProperty.all(MyTheme.inset),
-        foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
+      cupertinoOverrideTheme: cupertinoTheme,
+      primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
+        50: Color.fromRGBO(50, 184, 186, 0.1),
+        100: Color.fromRGBO(50, 184, 186, 0.2),
+        200: Color.fromRGBO(50, 184, 186, 0.3),
+        300: Color.fromRGBO(50, 184, 186, 0.4),
+        400: Color.fromRGBO(50, 184, 186, 0.5),
+        500: Color.fromRGBO(50, 184, 186, 0.6),
+        600: Color.fromRGBO(50, 184, 186, 0.7),
+        700: Color.fromRGBO(50, 184, 186, 0.8),
+        800: Color.fromRGBO(50, 184, 186, 0.9),
+        900: Color.fromRGBO(50, 184, 186, 1),
+      }),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          padding: MaterialStateProperty.all(MyTheme.inset),
+          foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
+        ),
       ),
-    ),
-  );
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: MyTheme.appColor));
 
   static ThemeData materialDarkTheme = ThemeData(
     cupertinoOverrideTheme: cupertinoTheme,
@@ -90,6 +89,7 @@ class MyTheme {
         foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
       ),
     ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: MyTheme.appColor),
   );
 
   static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
@@ -114,9 +114,16 @@ class MyTheme {
     return currentColor == dark;
   }
 
-
-  static TargetPlatform initialPlatform = kIsWeb ? TargetPlatform.android : Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
-  static ThemeStyle currentTheme = kIsWeb ? themeMaterial : Platform.isIOS ? themeCupertino : themeMaterial;
+  static TargetPlatform initialPlatform = kIsWeb
+      ? TargetPlatform.android
+      : Platform.isIOS
+          ? TargetPlatform.iOS
+          : TargetPlatform.android;
+  static ThemeStyle currentTheme = kIsWeb
+      ? themeMaterial
+      : Platform.isIOS
+          ? themeCupertino
+          : themeMaterial;
   static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
 
   static loadTheme() async {

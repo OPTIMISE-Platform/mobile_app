@@ -18,10 +18,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/models/characteristic.dart';
 
+import 'location.dart';
 import 'rgb.dart';
 
 
 final Map<String?, Widget Function(BuildContext context, Characteristic characteristic)> characteristicConfigs = {
   dotenv.env['CHARACTERISTIC_RGB']: RGB.build,
+  dotenv.env['CHARACTERISTIC_LOCATION_EPSG4326']: Location.build,
 };
 

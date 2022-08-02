@@ -79,7 +79,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   _refresh() async {
     instances.clear();
     allInstancesLoaded = false;
-    await _loadInstances();
+    final f = _loadInstances();
+    setState(() {});
+    await f;
   }
 
   _loadInstances() async {

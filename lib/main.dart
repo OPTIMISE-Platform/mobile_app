@@ -20,14 +20,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import "package:intl/intl_standalone.dart"
-if (dart.library.html) "package:intl/intl_browser.dart";
+import "package:intl/intl_standalone.dart" if (dart.library.html) "package:intl/intl_browser.dart";
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:open_location_picker/open_location_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -52,9 +53,10 @@ Future main() async {
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await Auth().init();
-  runApp(
-    RootRestorationScope(restorationId: "root", child:
-        MultiProvider(providers: [
+  runApp(RootRestorationScope(
+      restorationId: "root",
+      child: MultiProvider(
+        providers: [
           ChangeNotifierProvider(
             create: (context) => AppState(),
           ),
@@ -62,9 +64,8 @@ Future main() async {
             create: (context) => Auth(),
           ),
         ],
-          child: const MyApp(),)
-     )
-  );
+        child: const MyApp(),
+      )));
 }
 
 class MyApp extends StatefulWidget {
@@ -88,25 +89,59 @@ class MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     AppUpdater.cleanup();
-    return Theme(
-      key: key,
-      data: MyTheme.materialTheme,
-      child: PlatformProvider(
-        initialPlatform: MyTheme.initialPlatform,
-        settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
-        builder: (context) => PlatformApp(
-          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-            DefaultMaterialLocalizations.delegate,
-            DefaultWidgetsLocalizations.delegate,
-            DefaultCupertinoLocalizations.delegate,
-          ],
-          home: const Home(),
-          material: (_, __) => MaterialAppData(
-            theme: MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme,
+    return OpenMapSettings(
+        onError: (context, error) {
+          print(error.toString());
+        },
+        getCurrentLocation: () async {
+          final pos = await determinePosition();
+          if (pos == null) return null;
+          return LatLng(pos.latitude, pos.longitude);
+        },
+        getLocationStream: () => Geolocator.getPositionStream().map((event) => LatLng(event.latitude, event.longitude)),
+        child: Theme(
+          key: key,
+          data: MyTheme.materialTheme,
+          child: PlatformProvider(
+            initialPlatform: MyTheme.initialPlatform,
+            settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
+            builder: (context) => PlatformApp(
+              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+                DefaultMaterialLocalizations.delegate,
+                DefaultWidgetsLocalizations.delegate,
+                DefaultCupertinoLocalizations.delegate,
+              ],
+              home: const Home(),
+              material: (_, __) => MaterialAppData(
+                theme: MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme,
+              ),
+              cupertino: (_, __) => MyTheme.cupertinoAppData,
+            ),
           ),
-          cupertino: (_, __) => MyTheme.cupertinoAppData,
-        ),
-      ),
-    );
+        ));
+  }
+
+  Future<Position?> determinePosition() async {
+    // Test if location services are enabled.
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        return null;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    // When we reach here, permissions are granted and we can
+    // continue accessing the position of the device.
+    return await Geolocator.getCurrentPosition();
   }
 }

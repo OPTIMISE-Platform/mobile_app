@@ -78,7 +78,11 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           onPressed: () async {
             final release = await SmartServiceService.getRelease(widget.instance.release_id);
             final parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
-            parameters.forEach((p) => p.value = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id).value);
+            for (SmartServiceExtendedParameter p in parameters) {
+              final existing = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id);
+              p.value = existing.value;
+              p.value_label = existing.value_label;
+            }
             await Navigator.push(
                 this.context,
                 platformPageRoute(

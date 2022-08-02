@@ -47,6 +47,8 @@ class Characteristic {
     return Characteristic(id, name, type, min_value, max_value, value, subs, display_unit, allowed_values);
   }
 
+  String? value_label; // not in API, only locally used for Characteristic/Smart Service Parameter Duality
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );

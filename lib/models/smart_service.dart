@@ -67,8 +67,8 @@ class SmartServiceParameterOption {
 @JsonSerializable()
 class SmartServiceExtendedParameter {
   String id, label; //"inherited"
-  String? value_label; //"inherited"
-  //dynamic value; //"inherited" //in _value
+  // String? value_label; //"inherited" // in characteristic.value_label
+  // dynamic value; //"inherited" //in characteristic.value
 
   String description;
   dynamic default_value;
@@ -79,9 +79,10 @@ class SmartServiceExtendedParameter {
   late Characteristic characteristic;
 
   SmartServiceExtendedParameter(this.id, this.label, this.description, dynamic value, this.default_value, this.multiple, this.options, this.type,
-      this.value_label, this.characteristic_id, Characteristic? char) {
+      String? value_label, this.characteristic_id, Characteristic? char) {
     characteristic = char ?? Characteristic(id, "", type, null, null, value, null, "", options);
     characteristic.value = value ?? default_value ?? characteristic.value;
+    characteristic.value_label = value_label;
   }
 
   factory SmartServiceExtendedParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceExtendedParameterFromJson(json);
@@ -101,6 +102,14 @@ class SmartServiceExtendedParameter {
 
   set value(dynamic v) {
     characteristic.value = v;
+  }
+
+  String? get value_label {
+    return characteristic.value_label;
+  }
+
+  set value_label(String? v) {
+    characteristic.value_label = v;
   }
 }
 
