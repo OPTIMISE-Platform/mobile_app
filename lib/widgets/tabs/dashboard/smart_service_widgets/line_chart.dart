@@ -103,10 +103,10 @@ class SmSeLineChart extends SmSeRequest {
       for (int i = 0; i < respArr.length; i++) {
         final t = DateTime.parse(respArr[i][0]).millisecondsSinceEpoch.toDouble();
         for (int j = 1; j < respArr[i].length; j++) {
-          lineSpots[j - 1].add(FlSpot(t, respArr[i][j] is int ? respArr[i][j].toDouble() : respArr[i][j]));
+          if (respArr[i][j] != null) lineSpots[j - 1].add(FlSpot(t, respArr[i][j] is int ? respArr[i][j].toDouble() : respArr[i][j]));
         }
       }
-      _lines.addAll(lineSpots.asMap().entries.map((e) => LineChartBarData(
+      _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
             dotData: FlDotData(show: false),
             spots: e.value,
             color: _getLineColor(e.key),
