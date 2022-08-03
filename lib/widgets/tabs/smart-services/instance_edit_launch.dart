@@ -305,6 +305,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
 
               await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
                   nameDescription["name"], nameDescription["description"]);
+              Navigator.pop(context);
             } else {
               await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList());
             }
