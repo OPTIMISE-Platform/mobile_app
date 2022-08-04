@@ -82,7 +82,8 @@ class SmSeLineChart extends SmSeRequest {
                         }),
                   ),
                 ),
-                lineTouchData: LineTouchData(enabled: !previewOnly, touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
+                lineTouchData: LineTouchData(
+                    enabled: !previewOnly, touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
               ),
               swapAnimationDuration: const Duration(milliseconds: 400),
             ));
@@ -98,20 +99,34 @@ class SmSeLineChart extends SmSeRequest {
     } else {
       final List<dynamic> respArr = json.decode(resp.body);
       if (respArr.isEmpty) return;
-      List<List<FlSpot>> lineSpots = List.generate((respArr[0] as List<dynamic>).length - 1, (index) => []);
-
-      for (int i = 0; i < respArr.length; i++) {
-        final t = DateTime.parse(respArr[i][0]).millisecondsSinceEpoch.toDouble();
-        for (int j = 1; j < respArr[i].length; j++) {
-          if (respArr[i][j] != null) lineSpots[j - 1].add(FlSpot(t, respArr[i][j] is int ? respArr[i][j].toDouble() : respArr[i][j]));
+      if (respArr[0] is! List || respArr.isEmpty) return;
+      if (respArr[0][0] is List) {
+        int linesAdded = 0;
+        for (int i = 0; i < respArr.length; i++) {
+          if (respArr[i].isEmpty) continue;
+          _add2D(respArr[i], colorOffset: linesAdded);
+          linesAdded += (respArr[i][0] as List).length - 1;
         }
+      } else {
+        _add2D(respArr);
       }
-      _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
-            dotData: FlDotData(show: false),
-            spots: e.value,
-            color: _getLineColor(e.key),
-          )));
     }
+  }
+
+  void _add2D(List<dynamic> values, {int colorOffset = 0}) {
+    List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
+
+    for (int i = 0; i < values.length; i++) {
+      final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
+      for (int j = 1; j < values[i].length; j++) {
+        if (values[i][j] != null) lineSpots[j - 1].add(FlSpot(t, values[i][j] is int ? values[i][j].toDouble() : values[i][j]));
+      }
+    }
+    _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
+          dotData: FlDotData(show: false),
+          spots: e.value,
+          color: _getLineColor(e.key + colorOffset),
+        )));
   }
 
   Color _getLineColor(int i) {
