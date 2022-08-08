@@ -19,7 +19,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/m
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 class SmSeRequestIcon extends SmSeRequest {
-  int codePoint = 0xe237;
+  int codePoint = 0xe30b;
 
   @override
   double height = 1;
@@ -35,6 +35,6 @@ class SmSeRequestIcon extends SmSeRequest {
   @override
   Future<void> refreshInternal() async {
     final resp = await request.perform();
-    codePoint = iconNameToCodePoints[resp.body.endsWith("\n") ? resp.body.substring(0, resp.body.length - 1) : resp.body] ?? 0xe237;
+    codePoint = iconNameToCodePoints[resp.body.endsWith("\n") ? resp.body.substring(0, resp.body.length - 1) : resp.body] ?? 0xe30b;
   }
 }

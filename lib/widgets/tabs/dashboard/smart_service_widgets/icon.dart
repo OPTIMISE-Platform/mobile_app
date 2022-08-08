@@ -19,7 +19,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dar
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/material_icons.dart';
 
 class SmSeIcon extends SmartServiceModuleWidget {
-  int codePoint = 0xe237;
+  int codePoint = 0xe30b;
 
   @override
   double height = 1;
