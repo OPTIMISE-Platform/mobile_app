@@ -29,7 +29,6 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/single_v
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
 import 'package:mutex/mutex.dart';
 
-import '../../../../exceptions/argument_exception.dart';
 import '../../../../models/smart_service.dart';
 import '../dashboard.dart';
 import 'button.dart';
@@ -84,14 +83,17 @@ abstract class SmartServiceModuleWidget {
 
   static SmartServiceModuleWidget? fromModule(SmartServiceModule module) {
     if (module.module_type != smartServiceModuleTypeWidget) {
-      throw ArgumentException("wrong module type");
+     _logger.w("wrong module type");
+     return null;
     }
     if (module.module_data is! Map<String, dynamic>) {
-      throw ArgumentException("invalid module data");
+      _logger.w("invalid module data");
+      return null;
     }
     final data = module.module_data as Map<String, dynamic>;
     if (!data.containsKey("widget_type") || !data.containsKey("widget_data") || data["widget_type"] is! String) {
-      throw ArgumentException("invalid module data");
+      _logger.w("invalid module data");
+      return null;
     }
     return fromWidgetInfo(module.id, WidgetInfo(data["widget_type"], data["widget_data"]));
   }
