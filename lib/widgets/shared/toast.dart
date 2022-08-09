@@ -51,7 +51,7 @@ class Toast {
       const SizedBox(
         width: 12.0,
       ),
-      Text(text)];
+      Text(text, style: const TextStyle(color: Colors.black))];
     showToast(context, widgets, MyTheme.errorColor, duration);
   }
 
@@ -61,7 +61,7 @@ class Toast {
       const SizedBox(
         width: 12.0,
       ),
-      Text(text)];
+      Text(text, style: const TextStyle(color: Colors.black))];
     showToast(context, widgets, MyTheme.successColor, duration);
   }
 
@@ -71,7 +71,7 @@ class Toast {
       const SizedBox(
         width: 12.0,
       ),
-      Text(text)];
+      Text(text, style: const TextStyle(color: Colors.black))];
     showToast(context, widgets, MyTheme.warnColor, duration);
   }
 
@@ -81,7 +81,7 @@ class Toast {
       const SizedBox(
         width: 12.0,
       ),
-      Text(text)];
+      Text(text, style: const TextStyle(color: Colors.black))];
     showToast(context, widgets, MyTheme.isDarkMode ? const Color(0xFF808080) : Colors.grey, duration);
   }
 }

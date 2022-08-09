@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
@@ -26,17 +27,18 @@ import 'instance_edit_launch.dart';
 
 class SmartServicesInstanceDetails extends StatefulWidget {
   final SmartServiceInstance instance;
+  final BuildContext? parentContext;
 
-  const SmartServicesInstanceDetails(this.instance, {Key? key}) : super(key: key);
+  const SmartServicesInstanceDetails(this.instance, this.parentContext, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _SmartServicesInstanceDetailsState();
 }
 
 class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDetails> {
-
   @override
-  Widget build(BuildContext context) {final appBar = MyAppBar(widget.instance.name);
+  Widget build(BuildContext context) {
+    final appBar = MyAppBar(widget.instance.name);
 
     final List<Widget> trailingHeader = [];
 
@@ -49,18 +51,21 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
       onPressed: () async {
         final deleted = await showPlatformDialog(
             context: context,
-            builder: (context) => PlatformAlertDialog(
+            builder: (dialogContext) => PlatformAlertDialog(
                   title: const Text("Do you want to permanently delete this service?"),
                   actions: [
                     PlatformDialogAction(
                       child: PlatformText('Cancel'),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                     ),
                     PlatformDialogAction(
                         child: PlatformText('Delete'),
                         cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
                         onPressed: () async {
-                          await SmartServiceService.deleteInstance(widget.instance.id);
+                          final f = SmartServiceService.deleteInstance(widget.instance.id);
+                          f.catchError(
+                              (_) => Toast.showErrorToast(widget.parentContext ?? context, "Could not delete Smart Service " + widget.instance.name));
+                          await Future.any([f, Future.delayed(const Duration(milliseconds: 500))]);
                           Navigator.pop(this.context, true);
                         })
                   ],
@@ -179,7 +184,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                             title: Text(widget.instance.parameters![i - 1].label),
                             trailing: Container(
                                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
-                                child: Text(widget.instance.parameters![i - 1].value_label ?? widget.instance.parameters![i-1].value.toString())),
+                                child: Text(widget.instance.parameters![i - 1].value_label ?? widget.instance.parameters![i - 1].value.toString())),
                           )
                         ]);
                       },

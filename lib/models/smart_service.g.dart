@@ -108,6 +108,7 @@ SmartServiceInstance _$SmartServiceInstanceFromJson(Map<String, dynamic> json) =
       json['error'] as String?,
       json['ready'] as bool,
       (json['parameters'] as List<dynamic>?)?.map((e) => SmartServiceParameter.fromJson(e as Map<String, dynamic>)).toList(),
+      json['deleting'] as bool?,
     );
 
 Map<String, dynamic> _$SmartServiceInstanceToJson(SmartServiceInstance instance) => <String, dynamic>{
@@ -120,6 +121,7 @@ Map<String, dynamic> _$SmartServiceInstanceToJson(SmartServiceInstance instance)
       'error': instance.error,
       'ready': instance.ready,
       'parameters': instance.parameters,
+      'deleting': instance.deleting,
     };
 
 SmartServiceModule _$SmartServiceModuleFromJson(Map<String, dynamic> json) => SmartServiceModule(

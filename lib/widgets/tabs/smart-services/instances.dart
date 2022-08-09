@@ -40,6 +40,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   final List<SmartServiceInstance> instances = [];
   Mutex instancesMutex = Mutex();
   static StreamSubscription? _fabSubscription;
+  late final DeviceTabsState? parentState;
 
   @override
   void dispose() {
@@ -51,7 +52,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   @override
   void initState() {
     super.initState();
-    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       await Navigator.push(
           context,
@@ -144,7 +145,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                       badgeContent: instances[i].error != null
                                           ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
                                           : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                      showBadge: instances[i].error != null || !instances[i].ready,
+                                      showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
                                       badgeColor: Colors.transparent,
                                       elevation: 0,
                                       child: Text(instances[i].name),
@@ -154,7 +155,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                       context,
                                       platformPageRoute(
                                         context: context,
-                                        builder: (context) => SmartServicesInstanceDetails(instances[i]),
+                                        builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
                                       ));
                                   _refresh();
                                 })
