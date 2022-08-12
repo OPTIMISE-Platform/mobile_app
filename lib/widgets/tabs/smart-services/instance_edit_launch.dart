@@ -307,7 +307,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                   nameDescription["name"], nameDescription["description"]);
               Navigator.pop(context);
             } else {
-              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList());
+              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(), releaseId: widget.release.id);
             }
             Navigator.pop(this.context);
           },

@@ -25,6 +25,7 @@ import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
+import '../shared/keyed_list.dart';
 import 'auth.dart';
 
 class SmartServiceService {
@@ -52,6 +53,22 @@ class SmartServiceService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
     _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+  }
+
+  static Future<SmartServiceInstance> getInstance(String id) async {
+    final String url = baseUrl + "/instances/" + id;
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final resp = await _dio!.get<dynamic>(url, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.statusCode! > 304) {
+      throw UnexpectedStatusCodeException(resp.statusCode);
+    }
+    if (resp.statusCode == 304) {
+      _logger.d("Using cached SmartServiceInstance");
+    }
+
+    return SmartServiceInstance.fromJson(resp.data);
   }
 
   static Future<List<SmartServiceInstance>> getInstances(int limit, int offset) async {
@@ -88,7 +105,8 @@ class SmartServiceService {
     return;
   }
 
-  static Future<void> createInstance(String releaseId, List<SmartServiceParameter>? parameters, String name, String description) async {
+  static Future<SmartServiceInstance> createInstance(
+      String releaseId, List<SmartServiceParameter>? parameters, String name, String description) async {
     final String url = baseUrl + "/releases/" + releaseId + "/instances";
 
     final Map<String, dynamic> body = {
@@ -105,16 +123,21 @@ class SmartServiceService {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
 
-    return;
+    return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters) async {
+  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters, {String? releaseId}) async {
     final String url = baseUrl + "/instances/" + instanceId + "/parameters";
+
+    final Map<String, String> queryParameters = {};
+    if (releaseId != null) {
+      queryParameters["release_id"] = releaseId;
+    }
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(parameters));
+    final resp = await dio.put<dynamic>(url, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(parameters));
     if (resp.statusCode == null || resp.statusCode! > 299) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
@@ -163,6 +186,7 @@ class SmartServiceService {
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
     queryParameters["offset"] = offset.toString();
+    queryParameters["latest"] = "true";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -194,12 +218,15 @@ class SmartServiceService {
     return SmartServiceRelease.fromJson(resp.data);
   }
 
-  static Future<List<SmartServiceModule>> getModules({SmartServiceModuleType? type}) async {
+  static Future<List<SmartServiceModule>> getModules({SmartServiceModuleType? type, String? instanceId}) async {
     final String url = baseUrl + "/modules";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "0";
     if (type != null) {
       queryParameters["module_type"] = type;
+    }
+    if (instanceId != null) {
+      queryParameters["instance_id"] = instanceId;
     }
 
     final headers = await Auth().getHeaders();
@@ -214,5 +241,21 @@ class SmartServiceService {
 
     final l = resp.data ?? [];
     return List<SmartServiceModule>.generate(l.length, (index) => SmartServiceModule.fromJson(l[index]));
+  }
+
+  static Future<Pair<List<SmartServiceExtendedParameter>, bool>> prepareUpgrade(SmartServiceInstance oldInstance) async {
+    if (oldInstance.new_release_id == null) throw ArgumentError("No Update available");
+    final params = await getReleaseParameters(oldInstance.new_release_id!);
+    bool newParamsAdded = false;
+    for (final param in params) {
+      final i = oldInstance.parameters?.indexWhere((e) => e.id == param.id) ?? -1;
+      if (i != -1) {
+        param.value = oldInstance.parameters![i].value;
+        param.value_label = oldInstance.parameters![i].value_label;
+      } else {
+        newParamsAdded = true;
+      }
+    }
+    return Pair(params, newParamsAdded);
   }
 }

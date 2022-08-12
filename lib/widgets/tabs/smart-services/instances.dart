@@ -27,6 +27,7 @@ import '../../../models/smart_service.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
 import 'instance_details.dart';
+import 'instance_edit_launch.dart';
 
 class SmartServicesInstances extends StatefulWidget {
   const SmartServicesInstances({Key? key}) : super(key: key);
@@ -38,6 +39,7 @@ class SmartServicesInstances extends StatefulWidget {
 class _SmartServicesInstancesState extends State<SmartServicesInstances> with WidgetsBindingObserver {
   bool allInstancesLoaded = false;
   final List<SmartServiceInstance> instances = [];
+  List<bool> upgradingInstances = [];
   Mutex instancesMutex = Mutex();
   static StreamSubscription? _fabSubscription;
   late final DeviceTabsState? parentState;
@@ -79,6 +81,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
 
   _refresh() async {
     instances.clear();
+    upgradingInstances.clear();
     allInstancesLoaded = false;
     final f = _loadInstances();
     setState(() {});
@@ -93,6 +96,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
       const limit = 50;
       final newInstances = await SmartServiceService.getInstances(limit, instances.length);
       instances.addAll(newInstances);
+      while (instances.length > upgradingInstances.length) {
+        upgradingInstances.add(false);
+      }
       allInstancesLoaded = newInstances.length < limit;
     });
     setState(() {});
@@ -104,7 +110,10 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
         child: instancesMutex.isLocked
             ? Center(child: PlatformCircularProgressIndicator())
             : RefreshIndicator(
-                onRefresh: () async => await _refresh(),
+                onRefresh: () async {
+                  if (upgradingInstances.contains(true)) return;
+                  await _refresh();
+                },
                 child: instances.isEmpty
                     ? LayoutBuilder(
                         builder: (context, constraint) {
@@ -136,29 +145,61 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                           return Column(children: [
                             const Divider(),
                             ListTile(
-                                title: Container(
+                              title: Container(
+                                  alignment: Alignment.centerLeft,
+                                  child: Badge(
                                     alignment: Alignment.centerLeft,
-                                    child: Badge(
-                                      alignment: Alignment.centerLeft,
-                                      padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                      position: BadgePosition.topEnd(),
-                                      badgeContent: instances[i].error != null
-                                          ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
-                                          : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                      showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
-                                      badgeColor: Colors.transparent,
-                                      elevation: 0,
-                                      child: Text(instances[i].name),
-                                    )),
-                                onTap: () async {
-                                  await Navigator.push(
-                                      context,
-                                      platformPageRoute(
-                                        context: context,
-                                        builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
-                                      ));
-                                  _refresh();
-                                })
+                                    padding: const EdgeInsets.only(left: MyTheme.insetSize),
+                                    position: BadgePosition.topEnd(),
+                                    badgeContent: instances[i].error != null
+                                        ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
+                                        : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
+                                    showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
+                                    badgeColor: Colors.transparent,
+                                    elevation: 0,
+                                    child: Text(instances[i].name),
+                                  )),
+                              onTap: () async {
+                                await Navigator.push(
+                                    context,
+                                    platformPageRoute(
+                                      context: context,
+                                      builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
+                                    ));
+                                _refresh();
+                              },
+                              trailing: instances[i].new_release_id == null
+                                  ? null
+                                  : upgradingInstances[i]
+                                      ? PlatformCircularProgressIndicator()
+                                      : IconButton(
+                                          icon: const Icon(Icons.upgrade),
+                                          onPressed: () async {
+                                            setState(() {
+                                              upgradingInstances[i] = true;
+                                            });
+                                            final p = await SmartServiceService.prepareUpgrade(instances[i]);
+                                            if (!p.t) {
+                                              await SmartServiceService.updateInstanceParameters(
+                                                  instances[i].id, p.k.map((e) => e.toSmartServiceParameter()).toList(),
+                                                  releaseId: instances[i].new_release_id);
+                                            } else {
+                                              final release = await SmartServiceService.getRelease(instances[i].new_release_id!);
+                                              await Navigator.push(
+                                                  context,
+                                                  platformPageRoute(
+                                                      context: context,
+                                                      builder: (context) => SmartServicesReleaseLaunch(
+                                                            release,
+                                                            instance: instances[i],
+                                                            parameters: p.k,
+                                                          )));
+                                            }
+                                            upgradingInstances[i] = false;
+                                            if (!upgradingInstances.contains(true)) _refresh();
+                                          },
+                                        ),
+                            )
                           ]);
                         },
                       )));
