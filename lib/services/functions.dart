@@ -48,21 +48,24 @@ class FunctionsService {
   }
 
   static Future<List<NestedFunction>> getNestedFunctions() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/api-aggregator/nested-function-infos';
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/api-aggregator/nested-function-infos';
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached nested functions");
     }
 
     final l = resp.data ?? [];
-    return List<NestedFunction>.generate(
-        l.length, (index) => NestedFunction.fromJson(l[index]));
+    return List<NestedFunction>.generate(l.length, (index) => NestedFunction.fromJson(l[index]));
   }
 }

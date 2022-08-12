@@ -34,7 +34,6 @@ class DevicesService {
     printer: SimplePrinter(),
   );
 
-
   static late final Dio? _dio;
   static CacheOptions? _options;
 
@@ -54,12 +53,10 @@ class DevicesService {
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {
-    late Response<List<dynamic>?> resp;
     final headers = await Auth().getHeaders();
     await initOptions();
 
@@ -67,11 +64,14 @@ class DevicesService {
     final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
     final encoded = json.encode(body);
     _logger.d("Devices: " + encoded);
-    resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
-
-
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     if (resp.statusCode == 304) {
@@ -79,23 +79,31 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    return List<DeviceInstance>.generate(
-        l.length, (index) => DeviceInstance.fromJson(l[index]));
+    return List<DeviceInstance>.generate(l.length, (index) => DeviceInstance.fromJson(l[index]));
   }
 
   static Future<void> saveDevice(DeviceInstance device) async {
     _logger.d("Saving device: " + device.id);
 
-    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/devices/' + device.id + "?update-only-same-origin-attributes=" + sharedOrigin + "," + appOrigin;
+    final uri = (dotenv.env["API_URL"] ?? 'localhost') +
+        '/device-manager/devices/' +
+        device.id +
+        "?update-only-same-origin-attributes=" +
+        sharedOrigin +
+        "," +
+        appOrigin;
 
     final encoded = json.encode(device.toJson());
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
-
-    if (resp.statusCode == null || resp.statusCode! > 204) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    try {
+      await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return;
@@ -103,8 +111,7 @@ class DevicesService {
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
   static Future<int> getTotalDevices(DeviceSearchFilter filter) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/total/devices';
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
     if (filter.query.isNotEmpty) {
@@ -112,10 +119,14 @@ class DevicesService {
     }
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
-
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<int> resp;
+    try {
+      resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     if (resp.statusCode == 304) {

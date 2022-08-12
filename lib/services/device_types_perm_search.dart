@@ -48,8 +48,7 @@ class DeviceTypesPermSearchService {
   }
 
   static Future<List<DeviceTypePermSearch>> getDeviceTypes([List<String>? ids]) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/resources/device-types';
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/resources/device-types';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     if (ids != null && ids.isNotEmpty) {
@@ -59,17 +58,20 @@ class DeviceTypesPermSearchService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<List<dynamic>?>(uri,
-        queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device types");
     }
 
     final l = resp.data ?? [];
-    return List<DeviceTypePermSearch>.generate(
-        l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
+    return List<DeviceTypePermSearch>.generate(l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
   }
 }

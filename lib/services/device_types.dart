@@ -51,15 +51,18 @@ class DeviceTypesService {
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/device-manager/device-types/' + id;
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-types/' + id;
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<Map<String, dynamic>>(uri,
-        options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<Map<String, dynamic>> resp;
+    try {
+      resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device type");

@@ -60,15 +60,19 @@ class NotificationsService {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
+    String uri =
+        (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<Map<String, dynamic>>(uri,
-        options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<Map<String, dynamic>> resp;
+    try {
+      resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached notifications");
@@ -81,9 +85,8 @@ class NotificationsService {
     return app.NotificationResponse.fromJson(resp.data!);
   }
 
-  static Future setNotification( app.Notification notification) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications/' + notification.id;
+  static Future setNotification(app.Notification notification) async {
+    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications/' + notification.id;
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -93,15 +96,13 @@ class NotificationsService {
 
     final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
 
-
     if (resp.statusCode > 201) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
   }
 
   static Future deleteNotifications(List<String> ids) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/notifications';
+    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -110,7 +111,6 @@ class NotificationsService {
     final headers = await Auth().getHeaders();
 
     final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
-
 
     if (resp.statusCode > 204) {
       throw UnexpectedStatusCodeException(resp.statusCode);

@@ -22,7 +22,6 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:http/http.dart' as http;
 
-
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
@@ -54,8 +53,7 @@ class FcmTokenService {
   }
 
   static registerFcmToken(String token) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/fcm-tokens/' + token;
+    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/fcm-tokens/' + token;
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -63,9 +61,14 @@ class FcmTokenService {
     }
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.post(url, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response resp;
+    try {
+      resp = await _dio!.post(url, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     if (resp.statusCode == 304) {
@@ -74,8 +77,7 @@ class FcmTokenService {
   }
 
   static deregisterFcmToken(String token) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/fcm-tokens/' + token;
+    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/fcm-tokens/' + token;
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -84,7 +86,8 @@ class FcmTokenService {
     final headers = await Auth().getHeaders();
 
     final resp = await _client.delete(uri, headers: headers);
-    if (resp.statusCode > 204 && resp.statusCode != 404) { // dont have to delete what cant be found
+    if (resp.statusCode > 204 && resp.statusCode != 404) {
+      // dont have to delete what cant be found
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
     await initOptions();
@@ -92,4 +95,3 @@ class FcmTokenService {
     await _options?.store?.delete(key); // ensure token is resubmitted when registered again
   }
 }
-

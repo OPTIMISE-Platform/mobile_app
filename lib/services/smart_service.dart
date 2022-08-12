@@ -60,7 +60,7 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp;
+    final Response<dynamic> resp;
     try {
       resp = await _dio!.get<dynamic>(url, options: Options(headers: headers));
     } on DioError catch (e) {
@@ -84,9 +84,14 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached SmartServiceInstance");
@@ -102,9 +107,13 @@ class SmartServiceService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.delete(url, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    try {
+      await dio.delete(url, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return;
@@ -123,15 +132,20 @@ class SmartServiceService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.post<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<dynamic> resp;
+    try {
+      resp = await dio.post<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
-
     return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters, {String? releaseId}) async {
+  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters,
+      {String? releaseId}) async {
     final String url = baseUrl + "/instances/" + instanceId + "/parameters";
 
     final Map<String, String> queryParameters = {};
@@ -142,9 +156,14 @@ class SmartServiceService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.put<dynamic>(url, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(parameters));
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<dynamic> resp;
+    try {
+      resp = await dio.put<dynamic>(url, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(parameters));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return SmartServiceInstance.fromJson(resp.data);
@@ -160,9 +179,14 @@ class SmartServiceService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<dynamic> resp;
+    try {
+      resp = await dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return SmartServiceInstance.fromJson(resp.data);
@@ -173,9 +197,14 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(url, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.get<List<dynamic>?>(url, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached SmartServiceExtendedParameter");
@@ -186,7 +215,6 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceRelease>> getReleases(int limit, int offset) async {
-
     final String url = baseUrl + "/releases";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
@@ -195,9 +223,14 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached SmartServiceRelease");
@@ -212,9 +245,14 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<dynamic>(url, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<dynamic> resp;
+    try {
+      resp = await _dio!.get<dynamic>(url, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached SmartServiceRelease");
@@ -236,9 +274,14 @@ class SmartServiceService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached SmartServiceModules");

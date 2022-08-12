@@ -48,17 +48,20 @@ class DeviceClassesService {
   }
 
   static Future<List<DeviceClass>> getDeviceClasses() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/api-aggregator/device-class-uses';
+    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.get<Map<String, dynamic>?>(uri,
-        queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<Map<String, dynamic>?> resp;
+    try {
+      resp = await dio.get<Map<String, dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device classes");
@@ -67,8 +70,7 @@ class DeviceClassesService {
 
     final l = resp.data!["device-classes"];
     if (l == null) return [];
-    final deviceClasses = List<DeviceClass>.generate(
-        l.length, (index) => DeviceClass.fromJson(l[index]));
+    final deviceClasses = List<DeviceClass>.generate(l.length, (index) => DeviceClass.fromJson(l[index]));
     for (var element in deviceClasses) {
       for (var s in (resp.data!["used-devices"][element.id] as List<dynamic>)) {
         element.deviceIds.add(s as String);

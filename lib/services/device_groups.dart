@@ -60,9 +60,14 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await _dio!.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device groups");
@@ -83,10 +88,14 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
-
-    if (resp.statusCode == null || resp.statusCode! > 204) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<Map<String, dynamic>> resp;
+    try {
+      resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return DeviceGroup.fromJson(resp.data!);
@@ -98,11 +107,15 @@ class DeviceGroupsService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<dynamic> resp;
+    try {
+      resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
-
     return DeviceGroup.fromJson(resp.data).initImage();
   }
 
@@ -112,9 +125,13 @@ class DeviceGroupsService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.delete(uri, options: Options(headers: headers));
-    if (resp.statusCode == null || resp.statusCode! > 299) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    try {
+      await dio.delete(uri, options: Options(headers: headers));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
     return;
@@ -131,10 +148,15 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!
-        .post<Map<String, dynamic>>(uri, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(deviceIds));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    final Response<Map<String, dynamic>> resp;
+    try {
+      resp = await _dio!
+          .post<Map<String, dynamic>>(uri, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(deviceIds));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
     if (resp.statusCode == 304) {
       _logger.d("Using cached device groups");
@@ -147,7 +169,8 @@ class DeviceGroupsService {
         List<DeviceInstanceWithRemovesCriteria>.generate(instances.length, (index) {
           instances[index]["device"]["shared"] = false;
           instances[index]["device"]["creator"] = "";
-          return DeviceInstanceWithRemovesCriteria(DeviceInstance.fromJson(instances[index]["device"]), (instances[index]["removes_criteria"] as List<dynamic>).isNotEmpty);
+          return DeviceInstanceWithRemovesCriteria(
+              DeviceInstance.fromJson(instances[index]["device"]), (instances[index]["removes_criteria"] as List<dynamic>).isNotEmpty);
         }));
   }
 }
