@@ -16,6 +16,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import '../shared/keyed_list.dart';
 import 'content_variable.dart';
 import 'characteristic.dart';
 
@@ -148,9 +149,9 @@ class SmartServiceModule {
 @JsonSerializable()
 class SmartServiceDashboard {
   String id, name;
-  List<String> widgetIds;
+  List<Pair<String, String>> widgetAndInstanceIds;
 
-  SmartServiceDashboard(this.id, this.name, this.widgetIds);
+  SmartServiceDashboard(this.id, this.name, this.widgetAndInstanceIds);
 
   factory SmartServiceDashboard.fromJson(Map<String, dynamic> json) => _$SmartServiceDashboardFromJson(json);
 

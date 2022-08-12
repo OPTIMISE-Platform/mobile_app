@@ -17,8 +17,9 @@
 class WidgetInfo {
   final String widget_type;
   final dynamic widget_data;
+  final String? widget_key;
 
-  WidgetInfo(this.widget_type, this.widget_data);
+  WidgetInfo(this.widget_type, this.widget_data, this.widget_key);
 
-  factory WidgetInfo.fromJson(Map<String, dynamic> json) => WidgetInfo(json["widget_type"], json["widget_data"]);
+  factory WidgetInfo.fromJson(Map<String, dynamic> json) => WidgetInfo(json["widget_type"], json["widget_data"], json["widget_key"]);
 }

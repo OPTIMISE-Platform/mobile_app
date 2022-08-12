@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
 class KeyedList<K, T> {
   final Map<K, List<T>> m = {};
 
@@ -41,4 +43,8 @@ class Pair<K, T> {
   final T t;
 
   Pair(this.k, this.t);
+
+  factory Pair.fromJson(Map<String, dynamic> json) => Pair(json["k"], json["t"]);
+
+  Map<String, dynamic> toJson() => {"k": k is String ? k : json.encode(k), "t": t is String ? t : json.encode(t)};
 }

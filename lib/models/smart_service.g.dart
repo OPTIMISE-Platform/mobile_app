@@ -149,11 +149,11 @@ Map<String, dynamic> _$SmartServiceModuleToJson(SmartServiceModule instance) => 
 SmartServiceDashboard _$SmartServiceDashboardFromJson(Map<String, dynamic> json) => SmartServiceDashboard(
       json['id'] as String,
       json['name'] as String,
-      (json['widgetIds'] as List<dynamic>).map((e) => e as String).toList(),
+      (json['widgetAndInstanceIds'] as List<dynamic>).map((e) => Pair<String, String>.fromJson(e)).toList(),
     );
 
 Map<String, dynamic> _$SmartServiceDashboardToJson(SmartServiceDashboard instance) => <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
-      'widgetIds': instance.widgetIds,
+      'widgetAndInstanceIds': instance.widgetAndInstanceIds,
     };

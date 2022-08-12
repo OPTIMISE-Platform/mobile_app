@@ -57,6 +57,9 @@ abstract class SmartServiceModuleWidget {
   /// Currently without effect
   double get width;
 
+  late WidgetInfo widgetInfo;
+  late String instance_id;
+
   void configure(dynamic data);
 
   @nonVirtual
@@ -95,7 +98,13 @@ abstract class SmartServiceModuleWidget {
       _logger.w("invalid module data");
       return null;
     }
-    return fromWidgetInfo(module.id, WidgetInfo(data["widget_type"], data["widget_data"]));
+    final widgetInfo = WidgetInfo.fromJson(data);
+    final id = widgetInfo.widget_key != null ?  (module.instance_id + "_" + widgetInfo.widget_key!) : module.id;
+    final w = fromWidgetInfo(id, widgetInfo);
+    if (w != null) {
+      w.instance_id = module.instance_id;
+    }
+    return w;
   }
 
   static SmartServiceModuleWidget? fromWidgetInfo(String id, WidgetInfo data) {
@@ -137,6 +146,7 @@ abstract class SmartServiceModuleWidget {
         return null;
     }
     w.id = id;
+    w.widgetInfo = data;
     w.configure(data.widget_data);
 
     return w;

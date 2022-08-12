@@ -24,6 +24,8 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../exceptions/unexpected_status_code_exception.dart';
+import '../../../shared/keyed_list.dart';
 import '../../../theme.dart';
 import '../../shared/expandable_fab.dart';
 
@@ -280,25 +282,19 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   }
 
   Widget _tabBody(int tabIdx) {
-    final List<String> missingIds = [];
     final items = _smartServiceWidgets == null
         ? <SmartServiceModuleWidget>[]
         : _dashboards[tabIdx]
-            .widgetIds
+            .widgetAndInstanceIds
             .map((e) {
-              if (_smartServiceWidgets!.containsKey(e)) {
-                return _smartServiceWidgets![e];
+              if (_smartServiceWidgets!.containsKey(e.k)) {
+                return _smartServiceWidgets![e.k];
               } else {
-                missingIds.add(e);
                 return null;
               }
             })
             .where((element) => element != null)
             .toList();
-    if (missingIds.isNotEmpty) {
-      _dashboards[tabIdx].widgetIds.removeWhere((e) => missingIds.contains(e));
-      Settings.setSmartServiceDashboards(_dashboards);
-    }
 
     return RefreshIndicator(
         onRefresh: () async => _refresh(),
@@ -310,7 +306,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
               itemBuilder: (context, idx) {
                 final item = items[idx]!;
                 return Dismissible(
-                    key: ValueKey(_dashboards[tabIdx].widgetIds.toString() + "_" + idx.toString()),
+                    key: ValueKey(_dashboards[tabIdx].widgetAndInstanceIds.toString() + "_" + idx.toString()),
                     // key needs to stay the same while dragging but change when deleting
                     background: Container(
                       alignment: Alignment.centerRight,
@@ -324,7 +320,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                     direction: DismissDirection.endToStart,
                     onDismissed: (_) {
                       items.removeAt(idx);
-                      _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
+                      _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
                       Settings.setSmartServiceDashboards(_dashboards);
                       if (mounted) setState(() {});
                     },
@@ -334,7 +330,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                 final tmp = items[oldIndex];
                 items.removeAt(oldIndex);
                 items.insert(newIndex - (oldIndex < newIndex ? 1 : 0), tmp);
-                _dashboards[tabIdx].widgetIds = items.map((e) => e!.id).toList();
+                _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
                 await Settings.setSmartServiceDashboards(_dashboards);
               },
             )));
@@ -356,11 +352,11 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                               elevation: 2,
                               child: items[idx].build(context, true),
                             ),
-                            onTap: () => Navigator.pop(context, items[idx].id),
+                            onTap: () => Navigator.pop(context, Pair(items[idx].id, items[idx].instance_id)),
                           ))));
         });
     if (newId == null) return;
-    _dashboards[_tabController!.index].widgetIds.add(newId);
+    _dashboards[_tabController!.index].widgetAndInstanceIds.add(newId);
     Settings.setSmartServiceDashboards(_dashboards);
     if (mounted) setState(() {});
   }
@@ -385,13 +381,13 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   }
 
   List<SmartServiceModuleWidget?> _getTabWidgets(int idx) {
-    final List<String> missingIds = [];
+    final List<Pair<String, String>> missingIds = [];
     final items = _smartServiceWidgets == null
         ? <SmartServiceModuleWidget>[]
         : _dashboards[idx]
-            .widgetIds
+            .widgetAndInstanceIds
             .map((e) {
-              if (_smartServiceWidgets!.containsKey(e)) {
+              if (_smartServiceWidgets!.containsKey(e.k)) {
                 return _smartServiceWidgets![e];
               } else {
                 missingIds.add(e);
@@ -401,9 +397,45 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             .where((element) => element != null)
             .toList();
     if (missingIds.isNotEmpty) {
-      _dashboards[idx].widgetIds.removeWhere((e) => missingIds.contains(e));
-      Settings.setSmartServiceDashboards(_dashboards);
+      // delay cleanup, not time critical
+      Future.delayed(const Duration(seconds: 5)).then((_) => _cleanup(idx, missingIds));
     }
     return items;
+  }
+
+  _cleanup(int idx, List<Pair<String, String>> missingIds) async {
+    final List<Future> futures = [];
+    for (var p in missingIds) {
+      futures.add(() async {
+        try {
+          final instance = await SmartServiceService.getInstance(p.t);
+          // might still create widget if not ready
+          if (instance.ready) {
+            // widget might have been created in the meantime
+            final modules = (await SmartServiceService.getModules(type: smartServiceModuleTypeWidget, instanceId: p.t))
+                .map((e) => SmartServiceModuleWidget.fromModule(e))
+                .toList(growable: false);
+            final j = modules.indexWhere((e) => e?.id == p.k);
+            if (j == -1) {
+              _dashboards[idx].widgetAndInstanceIds.removeWhere((e) => e.k == p.k);
+            } else if (mounted) {
+              _smartServiceWidgets?[modules[j]!.id] = modules[j]!; // add widget to list
+              __refreshWidget(modules[j]).then((_) {
+                if (mounted) setState(() {}); //display widget
+              });
+            }
+          }
+        } on UnexpectedStatusCodeException catch (e) {
+          if (e.code == 404) {
+            // instance deleted
+            _dashboards[idx].widgetAndInstanceIds.removeWhere((e) => e.k == p.k);
+          } else {
+            rethrow;
+          }
+        }
+      }());
+    }
+    await Future.wait(futures);
+    Settings.setSmartServiceDashboards(_dashboards);
   }
 }
