@@ -176,7 +176,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
       columnWidgets.add(ListTile(
         title: title,
         leading: widget._favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
-        trailing: trailingWidgets.length == 1
+        trailing: trailingWidgets.isEmpty ? null : trailingWidgets.length == 1
             ? trailingWidgets[0]
             : PlatformIconButton(
                 cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
