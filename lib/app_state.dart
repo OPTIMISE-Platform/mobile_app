@@ -282,7 +282,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
-      loadStates(context, newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']); // no await => run in background
+      await loadStates(context, newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(context); // when loadDevices called directly
