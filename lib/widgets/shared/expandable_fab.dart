@@ -248,7 +248,6 @@ class ActionButton extends StatelessWidget {
     this.backgroundColor = MyTheme.appColor,
     this.elevation = 4,
     required this.icon,
-    this.color,
   }) : super(key: key);
 
   final VoidCallback? onPressed;

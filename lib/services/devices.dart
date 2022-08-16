@@ -85,11 +85,8 @@ class DevicesService {
   static Future<void> saveDevice(DeviceInstance device) async {
     _logger.d("Saving device: ${device.id}");
 
-    final uri = "${dotenv.env["API_URL"] ?? 'localhost'}
-        '/device-manager/devices/${
-        device.id }?update-only-same-origin-attributes=$
-        sharedOrigin ,$
-        appOrigin";
+    final uri =
+        "${dotenv.env["API_URL"] ?? 'localhost'}'/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
 
     final encoded = json.encode(device.toJson());
 

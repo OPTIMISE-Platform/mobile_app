@@ -29,7 +29,7 @@ jobs:
           echo "VERSION=$v" >> .env
           echo "DISTRIBUTOR=github" >> .env
           echo "VERSION=$v" >> $GITHUB_ENV
-      - run: flutter build apk
+      - run: flutter build apk --no-tree-shake-icons
       - uses: "marvinpinto/action-automatic-releases@latest"
         with:
           repo_token: "${{ secrets.GITHUB_TOKEN }}"

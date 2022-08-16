@@ -92,7 +92,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     }
 
     switch (p.type) {
-      case ContentVariable.INTEGER:
+      case ContentVariable.integer:
         return PlatformTextFormField(
           key: ValueKey(i.toString() + sub.toString()),
           hintText: p.label,
@@ -126,7 +126,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             }
           },
         );
-      case ContentVariable.FLOAT:
+      case ContentVariable.float:
         return PlatformTextFormField(
           key: ValueKey(i.toString() + sub.toString()),
           hintText: p.label,
@@ -154,7 +154,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             }
           },
         );
-      case ContentVariable.STRING:
+      case ContentVariable.string:
         return PlatformTextFormField(
           key: ValueKey(i.toString() + sub.toString()),
           hintText: p.label,
@@ -167,7 +167,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             }
           },
         );
-      case ContentVariable.BOOLEAN:
+      case ContentVariable.boolean:
         return Row(children: [
           Container(padding: const EdgeInsets.only(right: MyTheme.insetSize), child: Text(p.label)),
           PlatformSwitch(

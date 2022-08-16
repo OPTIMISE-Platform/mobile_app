@@ -81,7 +81,7 @@ class Characteristic {
 
   _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value, void Function(void Function()) setState) {
     switch (characteristic.type) {
-      case ContentVariable.FLOAT:
+      case ContentVariable.float:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -145,7 +145,7 @@ class Characteristic {
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.INTEGER:
+      case ContentVariable.integer:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -211,7 +211,7 @@ class Characteristic {
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.STRING:
+      case ContentVariable.string:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -238,7 +238,7 @@ class Characteristic {
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.BOOLEAN:
+      case ContentVariable.boolean:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -263,7 +263,7 @@ class Characteristic {
         ]));
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.STRUCTURE:
+      case ContentVariable.structure:
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
         characteristic.sub_characteristics?.forEach((sub) {
@@ -274,7 +274,7 @@ class Characteristic {
           _walkTree(context, subPath, sub, value != null ? value[sub.name] ?? sub.value : sub.value, setState);
         });
         break;
-      case ContentVariable.LIST:
+      case ContentVariable.list:
         _fields.add(const Divider());
         final bool hasStarElement = characteristic.sub_characteristics != null &&
             characteristic.sub_characteristics!.isNotEmpty &&
