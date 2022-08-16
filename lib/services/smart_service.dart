@@ -37,7 +37,7 @@ class SmartServiceService {
 
   static late final Dio? _dio;
 
-  static String baseUrl = (dotenv.env["API_URL"] ?? 'localhost') + '/smart-services/repository';
+  static String baseUrl = '${dotenv.env["API_URL"] ?? 'localhost'}/smart-services/repository';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
@@ -56,7 +56,7 @@ class SmartServiceService {
   }
 
   static Future<SmartServiceInstance> getInstance(String id) async {
-    final String url = baseUrl + "/instances/" + id;
+    final String url = "$baseUrl/instances/$id";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -77,7 +77,7 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceInstance>> getInstances(int limit, int offset) async {
-    final String url = baseUrl + "/instances";
+    final String url = "$baseUrl/instances";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
     queryParameters["offset"] = offset.toString();
@@ -102,7 +102,7 @@ class SmartServiceService {
   }
 
   static Future<void> deleteInstance(String id) async {
-    final String url = baseUrl + "/instances/" + id;
+    final String url = "$baseUrl/instances/$id";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -121,7 +121,7 @@ class SmartServiceService {
 
   static Future<SmartServiceInstance> createInstance(
       String releaseId, List<SmartServiceParameter>? parameters, String name, String description) async {
-    final String url = baseUrl + "/releases/" + releaseId + "/instances";
+    final String url = "$baseUrl/releases/$releaseId/instances";
 
     final Map<String, dynamic> body = {
       "name": name,
@@ -146,7 +146,7 @@ class SmartServiceService {
 
   static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters,
       {String? releaseId}) async {
-    final String url = baseUrl + "/instances/" + instanceId + "/parameters";
+    final String url = "$baseUrl/instances/$instanceId/parameters";
 
     final Map<String, String> queryParameters = {};
     if (releaseId != null) {
@@ -170,7 +170,7 @@ class SmartServiceService {
   }
 
   static Future<SmartServiceInstance> updateInstanceInfo(String instanceId, String name, String description) async {
-    final String url = baseUrl + "/instances/" + instanceId + "/info";
+    final String url = "$baseUrl/instances/$instanceId/info";
     final Map<String, dynamic> body = {
       "name": name,
       "description": description,
@@ -193,7 +193,7 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceExtendedParameter>> getReleaseParameters(String releaseId) async {
-    final String url = baseUrl + "/releases/" + releaseId + "/parameters";
+    final String url = "$baseUrl/releases/$releaseId/parameters";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -214,12 +214,15 @@ class SmartServiceService {
     return List<SmartServiceExtendedParameter>.generate(l.length, (index) => SmartServiceExtendedParameter.fromJson(l[index]));
   }
 
-  static Future<List<SmartServiceRelease>> getReleases(int limit, int offset) async {
-    final String url = baseUrl + "/releases";
+  static Future<List<SmartServiceRelease>> getReleases(int limit, int offset, {bool addUsableFlag = true}) async {
+    final String url = "$baseUrl/releases";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
     queryParameters["offset"] = offset.toString();
     queryParameters["latest"] = "true";
+    if (addUsableFlag) {
+      queryParameters["add-usable-flag"] = "true";
+    }
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -241,7 +244,7 @@ class SmartServiceService {
   }
 
   static Future<SmartServiceRelease> getRelease(String id) async {
-    final String url = baseUrl + "/releases/" + id;
+    final String url = "$baseUrl/releases/$id";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -262,7 +265,7 @@ class SmartServiceService {
   }
 
   static Future<List<SmartServiceModule>> getModules({SmartServiceModuleType? type, String? instanceId}) async {
-    final String url = baseUrl + "/modules";
+    final String url = "$baseUrl/modules";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "0";
     if (type != null) {

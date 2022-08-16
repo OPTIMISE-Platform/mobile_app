@@ -26,6 +26,7 @@ import 'package:mutex/mutex.dart';
 
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
+import '../../shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
   const SmartServicesReleases({Key? key}) : super(key: key);
@@ -132,10 +133,13 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
                                             showBadge: releases[i].error != null,
                                             badgeColor: Colors.transparent,
                                             elevation: 0,
-                                            child: Text(releases[i].name))),
+                                            child: Text(
+                                              releases[i].name,
+                                              style: releases[i].usable == false ? const TextStyle(color: Colors.grey) : null,
+                                            ))),
                                     subtitle: Text(_format.format(releases[i].createdAt())),
-                                    onTap: releases[i].error != null
-                                        ? null
+                                    onTap: releases[i].error != null || releases[i].usable == false
+                                        ? () => Toast.showWarningToast(context, "Missing devices for this service")
                                         : () => Navigator.push(context,
                                             platformPageRoute(context: context, builder: (context) => SmartServicesReleaseLaunch(releases[i])))),
                               ]);

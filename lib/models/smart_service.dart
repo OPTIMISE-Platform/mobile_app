@@ -27,8 +27,9 @@ class SmartServiceRelease {
   String description, design_id, id, name;
   String? error;
   int created_at;
+  bool? usable;
 
-  SmartServiceRelease(this.created_at, this.description, this.design_id, this.id, this.name, this.error);
+  SmartServiceRelease(this.created_at, this.description, this.design_id, this.id, this.name, this.error, this.usable);
 
   DateTime createdAt() {
     return DateTime.fromMillisecondsSinceEpoch(created_at * 1000).toLocal();

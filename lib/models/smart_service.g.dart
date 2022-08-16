@@ -29,6 +29,7 @@ SmartServiceRelease _$SmartServiceReleaseFromJson(Map<String, dynamic> json) => 
       json['id'] as String,
       json['name'] as String,
       json['error'] as String?,
+      json['usable'] as bool?,
     );
 
 Map<String, dynamic> _$SmartServiceReleaseToJson(SmartServiceRelease instance) => <String, dynamic>{
@@ -38,6 +39,7 @@ Map<String, dynamic> _$SmartServiceReleaseToJson(SmartServiceRelease instance) =
       'id': instance.id,
       'name': instance.name,
       'error': instance.error,
+      'usable': instance.usable,
     };
 
 SmartServiceParameter _$SmartServiceParameterFromJson(Map<String, dynamic> json) => SmartServiceParameter(
