@@ -36,7 +36,7 @@ import '../../exceptions/no_network_exception.dart';
 import '../../services/auth.dart';
 import '../../theme.dart';
 
-import 'package:mobile_app/services/settings.dart' as settingsService;
+import 'package:mobile_app/services/settings.dart' as settings_service;
 
 import '../shared/app_bar.dart';
 import '../shared/page_spinner.dart';
@@ -80,7 +80,7 @@ class Settings extends StatelessWidget {
         ListTile(
           title: const Text("Reset Tutorials"),
           onTap: () async {
-            await settingsService.Settings.resetTutorials();
+            await settings_service.Settings.resetTutorials();
             Toast.showConfirmationToast(context, "Tutorials reset");
           },
         ),
@@ -155,10 +155,10 @@ class Settings extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Current Build: " + appUpdater.currentBuild.toString()),
-                          Text("Latest Build: " + appUpdater.latestBuild.toString()),
-                          Text("Uploaded: " + _format.format(appUpdater.updateDate.toLocal())),
-                          Text("Download size: " + (appUpdater.downloadSize / 1000000.0).toStringAsFixed(1) + " MB"),
+                          Text("Current Build: ${appUpdater.currentBuild}"),
+                          Text("Latest Build: ${appUpdater.latestBuild}"),
+                          Text("Uploaded: ${_format.format(appUpdater.updateDate.toLocal())}"),
+                          Text("Download size: ${(appUpdater.downloadSize / 1000000.0).toStringAsFixed(1)} MB"),
                         ],
                       ),
                       actions: [
@@ -184,7 +184,7 @@ class Settings extends StatelessWidget {
                         builder: (context, snapshot) {
                           return Column(mainAxisSize: MainAxisSize.min, children: [
                             LinearProgressIndicator(value: snapshot.data! / 100),
-                            Text(snapshot.data!.toStringAsFixed(2) + " %"),
+                            Text("${snapshot.data!.toStringAsFixed(2)} %"),
                           ]);
                         }),
                     actions: [
@@ -192,8 +192,8 @@ class Settings extends StatelessWidget {
                           stream: stream,
                           initialData: 0,
                           builder: (context, snapshot) => PlatformDialogAction(
-                              child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...'),
-                              onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null))
+                              onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null,
+                              child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...')))
                     ],
                   ),
                 );
@@ -207,14 +207,7 @@ class Settings extends StatelessWidget {
         ListTile(
             title: const Text("Show Debug Information"),
             onTap: () {
-              final txt = "Version: " +
-                  dotenv.env["VERSION"].toString() +
-                  "\n" +
-                  "Username: " +
-                  Auth().getUsername().toString() +
-                  "\n" +
-                  "FCM Token (SHA1): " +
-                  sha1.convert(utf8.encode(state.fcmToken ?? "")).toString();
+              final txt = "Version: ${dotenv.env["VERSION"]}\nUsername: ${Auth().getUsername()}\nFCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}";
               showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
@@ -223,7 +216,7 @@ class Settings extends StatelessWidget {
                     const Spacer(),
                     PlatformIconButton(
                         icon: Icon(PlatformIcons(context).share),
-                        onPressed: () => Share.share("OPTIMISE Debug Information\n" + txt, subject: "OPTIMISE Debug Information"))
+                        onPressed: () => Share.share("OPTIMISE Debug Information\n$txt", subject: "OPTIMISE Debug Information"))
                   ]),
                   content: Text(
                     txt,
@@ -288,7 +281,7 @@ class Settings extends StatelessWidget {
 
 StatefulBuilder Function(BuildContext context) getDisplayedFractionsDigitSelectDialog(AppState state) {
   return (context) {
-    var currentDisplayedFractionDigitsSetting = settingsService.Settings.getDisplayedFractionDigits();
+    var currentDisplayedFractionDigitsSetting = settings_service.Settings.getDisplayedFractionDigits();
     return StatefulBuilder(
       builder: (context, setState) => PlatformAlertDialog(
           actions: [
@@ -303,7 +296,7 @@ StatefulBuilder Function(BuildContext context) getDisplayedFractionsDigitSelectD
               //axis: Axis.horizontal,
               onChanged: (value) => setState(() {
                 currentDisplayedFractionDigitsSetting = value;
-                settingsService.Settings.setDisplayedFractionDigits(value);
+                settings_service.Settings.setDisplayedFractionDigits(value);
                 state.notifyListeners();
               })
           )

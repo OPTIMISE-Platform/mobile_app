@@ -22,13 +22,13 @@ typedef ContentType = String;
 
 @JsonSerializable()
 class ContentVariable {
-  static const ContentType NONE = '';
-  static const ContentType STRING = "https://schema.org/Text";
-  static const ContentType INTEGER = 'https://schema.org/Integer';
-  static const ContentType FLOAT = 'https://schema.org/Float';
-  static const ContentType BOOLEAN = 'https://schema.org/Boolean';
-  static const ContentType STRUCTURE = 'https://schema.org/StructuredValue';
-  static const ContentType LIST = 'https://schema.org/ItemList';
+  static const ContentType none = '';
+  static const ContentType string = "https://schema.org/Text";
+  static const ContentType integer = 'https://schema.org/Integer';
+  static const ContentType float = 'https://schema.org/Float';
+  static const ContentType boolean = 'https://schema.org/Boolean';
+  static const ContentType structure = 'https://schema.org/StructuredValue';
+  static const ContentType list = 'https://schema.org/ItemList';
 
 
 

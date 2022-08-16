@@ -48,7 +48,7 @@ class FunctionsService {
   }
 
   static Future<List<NestedFunction>> getNestedFunctions() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/api-aggregator/nested-function-infos';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/api-aggregator/nested-function-infos';
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));

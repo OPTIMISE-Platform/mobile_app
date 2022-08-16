@@ -128,7 +128,7 @@ class _NotificationListState extends State<NotificationList> {
               if (confirmed is bool && confirmed) {
                 final List<Future> futures = [];
                 for (var element in _selected) {
-                  futures.add(state.deleteNotification(context, state.notifications.indexOf(element)));
+                  futures.add(state.deleteNotification(this.context, state.notifications.indexOf(element)));
                 }
                 await Future.wait(futures);
                 setState(() {
@@ -188,11 +188,11 @@ class _NotificationListState extends State<NotificationList> {
                                             alignment: Alignment.centerLeft,
                                             padding: const EdgeInsets.only(left: MyTheme.insetSize),
                                             position: BadgePosition.topEnd(),
-                                            child: Text(state.notifications[i].title),
                                             badgeContent: const Icon(Icons.circle_notifications, size: 16, color: MyTheme.warnColor),
                                             showBadge: !state.notifications[i].isRead,
                                             badgeColor: Colors.transparent,
                                             elevation: 0,
+                                            child: Text(state.notifications[i].title),
                                           )),
                                       subtitle: Text(_format.format(state.notifications[i].createdAt())),
                                       onTap: () {

@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
@@ -52,7 +51,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
       if (_selected == null) {
-        AppState().loadDeviceClasses(context);
+        AppState().loadDeviceClasses();
       } else {
         final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
         final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
@@ -72,7 +71,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
             ? Center(child: PlatformCircularProgressIndicator())
             : _selected == null
                 ? RefreshIndicator(
-                    onRefresh: () => state.loadDeviceClasses(context),
+                    onRefresh: () => state.loadDeviceClasses(),
                     child: state.deviceClasses.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {
@@ -102,9 +101,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                 const Divider(),
                                 ListTile(
                                     title: Text(deviceClasses[i].name),
-                                    subtitle: Text(deviceClasses[i].deviceIds.length.toString() +
-                                        " Device" +
-                                        (deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : "")),
+                                    subtitle: Text("${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
                                     leading: Container(
                                       height: MediaQuery.of(context).textScaleFactor * 48,
                                       width: MediaQuery.of(context).textScaleFactor * 48,

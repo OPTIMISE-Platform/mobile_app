@@ -27,8 +27,7 @@ class DbQueryService {
   static final _client = http.Client();
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {
-    final url =
-        (dotenv.env["API_URL"] ?? 'localhost') + '/db/v3/queries';
+    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/db/v3/queries';
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");

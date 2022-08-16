@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/locations.dart';
@@ -144,15 +143,8 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
                                             child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
                                           ),
                                         ),
-                                        subtitle: Text(state.locations[i].device_ids.length.toString() +
-                                            " Device" +
-                                            (state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : "") +
-                                            ", " +
-                                            state.locations[i].device_group_ids.length.toString() +
-                                            " Group" +
-                                            (state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty
-                                                ? "s"
-                                                : "")),
+                                        subtitle: Text(
+                                            "${state.locations[i].device_ids.length} Device${state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : ""}, ${state.locations[i].device_group_ids.length} Group${state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : ""}"),
                                         onTap: () => _openLocationPage(i, parentState))
                                   ])
                                 : Column(

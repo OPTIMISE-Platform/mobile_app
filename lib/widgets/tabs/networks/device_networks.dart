@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
@@ -42,7 +41,10 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
       AppState().loadNetworks(context);
     } else {
       AppState().searchDevices(
-          (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.filter ?? DeviceSearchFilter("", null, null, [AppState().networks[_selected!].id]), context, true);
+          (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.filter ??
+              DeviceSearchFilter("", null, null, [AppState().networks[_selected!].id]),
+          context,
+          true);
     }
   }
 
@@ -72,96 +74,93 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
           child: state.loadingNetworks()
               ? Center(child: PlatformCircularProgressIndicator())
               : RefreshIndicator(
-              onRefresh: () async => await _refresh(),
-              child: _selected == null ? state.networks.isEmpty
-                  ? LayoutBuilder(
-                builder: (context, constraint) {
-                  return SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          children: const [
-                            Expanded(
-                              child: Center(child: Text("No Networks")),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              )
-                  : ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: MyTheme.inset,
-                itemCount: state.networks.length,
-                itemBuilder: (context, i) {
-                  return Column(children: [
-                    const Divider(),
-                    ListTile(
-                        title: Text(state.networks[i].name),
-                        leading: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline
-                            ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Tooltip(
-                              message: "Network is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
-                        ])
-                            : null,
-                        subtitle: Text((state.networks[i].device_local_ids ?? []).length.toString() +
-                            " Device" +
-                            ((state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1
-                                ? "s"
-                                : "")),
-                        onTap: (state.networks[i].device_local_ids ?? []).isEmpty
-                            ? null
-                            : () {
-                          _loading = true;
-                          parentState?.filter.addNetwork(state.networks[i].id);
-                          state
-                              .searchDevices(
-                              parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]), context, true)
-                              .then((_) => setState(() => _loading = true));
-                          parentState?.setState(() {
-                            parentState.hideSearch = false;
-                            parentState.onBackCallback = () {
-                              parentState.setState(() {
-                                parentState.filter.networkIds = null;
-                                parentState.customAppBarTitle = null;
-                                parentState.onBackCallback = null;
-                                parentState.hideSearch = true;
-                              });
-                              setState(() => _selected = null);
-                            };
-                            parentState.customAppBarTitle = state.networks[i].name;
+                  onRefresh: () async => await _refresh(),
+                  child: _selected == null
+                      ? state.networks.isEmpty
+                          ? LayoutBuilder(
+                              builder: (context, constraint) {
+                                return SingleChildScrollView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                    child: IntrinsicHeight(
+                                      child: Column(
+                                        children: const [
+                                          Expanded(
+                                            child: Center(child: Text("No Networks")),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            )
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: MyTheme.inset,
+                              itemCount: state.networks.length,
+                              itemBuilder: (context, i) {
+                                return Column(children: [
+                                  const Divider(),
+                                  ListTile(
+                                      title: Text(state.networks[i].name),
+                                      leading: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline
+                                          ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                                              Tooltip(
+                                                  message: "Network is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
+                                            ])
+                                          : null,
+                                      subtitle: Text(
+                                          "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
+                                      onTap: (state.networks[i].device_local_ids ?? []).isEmpty
+                                          ? null
+                                          : () {
+                                              _loading = true;
+                                              parentState?.filter.addNetwork(state.networks[i].id);
+                                              state
+                                                  .searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]),
+                                                      context, true)
+                                                  .then((_) => setState(() => _loading = true));
+                                              parentState?.setState(() {
+                                                parentState.hideSearch = false;
+                                                parentState.onBackCallback = () {
+                                                  parentState.setState(() {
+                                                    parentState.filter.networkIds = null;
+                                                    parentState.customAppBarTitle = null;
+                                                    parentState.onBackCallback = null;
+                                                    parentState.hideSearch = true;
+                                                  });
+                                                  setState(() => _selected = null);
+                                                };
+                                                parentState.customAppBarTitle = state.networks[i].name;
 
-                            setState(() {
-                              _selected = i;
-                            });
-                          });
-                        })
-                  ]);
-                },
-              ) : state.devices.isEmpty
-                  ? state.loadingDevices || _loading
-                  ? Center(
-                child: PlatformCircularProgressIndicator(),
-              )
-                  : const Center(child: Text("No Devices"))
-                  : ListView.builder(
-                padding: MyTheme.inset,
-                itemCount: state.totalDevices,
-                itemBuilder: (_, i) {
-                  if (i > state.devices.length - 1) {
-                    return const SizedBox.shrink();
-                  }
-                  return Column(
-                    children: [const Divider(), DeviceListItem(i, null)],
-                  );
-                },
-              )
-          )
-      );
+                                                setState(() {
+                                                  _selected = i;
+                                                });
+                                              });
+                                            })
+                                ]);
+                              },
+                            )
+                      : state.devices.isEmpty
+                          ? state.loadingDevices || _loading
+                              ? Center(
+                                  child: PlatformCircularProgressIndicator(),
+                                )
+                              : const Center(child: Text("No Devices"))
+                          : ListView.builder(
+                              padding: MyTheme.inset,
+                              itemCount: state.totalDevices,
+                              itemBuilder: (_, i) {
+                                if (i > state.devices.length - 1) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  children: [const Divider(), DeviceListItem(i, null)],
+                                );
+                              },
+                            )));
     });
   }
 }

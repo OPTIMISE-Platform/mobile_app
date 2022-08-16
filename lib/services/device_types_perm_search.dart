@@ -48,7 +48,7 @@ class DeviceTypesPermSearchService {
   }
 
   static Future<List<DeviceTypePermSearch>> getDeviceTypes([List<String>? ids]) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/resources/device-types';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/device-types';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     if (ids != null && ids.isNotEmpty) {

@@ -139,7 +139,6 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   void _showTutorial(BuildContext context) {
     if (!Settings.tutorialSeen(Tutorial.addFavoriteButton)) {
       TutorialCoachMark(
-        context,
         targets: [
           TargetFocus(keyTarget: _keyFavButton, contents: [
             TargetContent(
@@ -158,7 +157,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
           _openFavorites(context);
         },
         alignSkip: Alignment.topRight,
-      ).show();
+      ).show(context: context);
       Settings.markTutorialSeen(Tutorial.addFavoriteButton);
     }
   }

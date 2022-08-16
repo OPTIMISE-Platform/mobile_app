@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
@@ -31,7 +30,7 @@ class LocationEditGroups extends StatefulWidget {
     printer: SimplePrinter(),
   );
 
-  LocationEditGroups(this._stateLocationIndex, {Key? key}) : super(key: key) {}
+  LocationEditGroups(this._stateLocationIndex, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _LocationEditGroupsState();

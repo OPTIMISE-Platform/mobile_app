@@ -23,15 +23,27 @@ import 'dart:math' as math;
 
 import 'package:mobile_app/theme.dart';
 
+typedef Direction = double;
+
+const Direction around = -1;
+const Direction left = 0;
+const Direction right = 180;
+const Direction up = 90;
+const Direction down = 270;
+
 @immutable
 class ExpandableFab extends StatefulWidget {
-  ExpandableFab({
+  const ExpandableFab({
     Key? key,
     this.initialOpen,
     this.toggleStream,
     required this.distance,
     required this.children,
     required this.icon,
+    this.backgroundColor = MyTheme.appColor,
+    this.angle = 90,
+    this.elevation,
+    this.direction = around,
   }) : super(key: key);
 
   final bool? initialOpen;
@@ -39,9 +51,13 @@ class ExpandableFab extends StatefulWidget {
   final List<Widget> children;
   final Widget icon;
   final Stream? toggleStream;
+  final Color backgroundColor;
+  final double angle;
+  final double? elevation;
+  final Direction direction;
 
   @override
-  _ExpandableFabState createState() => _ExpandableFabState();
+  State<StatefulWidget> createState() => _ExpandableFabState();
 }
 
 class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProviderStateMixin {
@@ -64,9 +80,7 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
       reverseCurve: Curves.easeOutQuad,
       parent: _controller,
     );
-    _toggleSubscription = widget.toggleStream?.listen((_) =>
-        _toggle()
-    );
+    _toggleSubscription = widget.toggleStream?.listen((_) => _toggle());
   }
 
   @override
@@ -77,7 +91,7 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
   }
 
   void _toggle() {
-      setState(() {
+    setState(() {
       _open = !_open;
       if (_open) {
         _controller.forward();
@@ -112,12 +126,14 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
           clipBehavior: Clip.antiAlias,
           child: InkWell(
             onTap: _toggle,
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(
-                Icons.close,
-                color: MyTheme.appColor,
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _open
+                  ? const Icon(
+                      Icons.close,
+                      color: MyTheme.appColor,
+                    )
+                  : null,
             ),
           ),
         ),
@@ -128,12 +144,15 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
   List<Widget> _buildExpandingActionButtons() {
     final children = <Widget>[];
     final count = widget.children.length;
-    final step = 90.0 / (count - 1);
+    final step = widget.angle / (count - 1);
     for (var i = 0, angleInDegrees = 0.0; i < count; i++, angleInDegrees += step) {
       children.add(
         _ExpandingActionButton(
-          directionInDegrees: angleInDegrees,
-          maxDistance: widget.distance,
+          index: i,
+          total: count,
+          angle: widget.angle,
+          direction: widget.direction,
+          maxDistance: widget.direction == around ? widget.distance : (i + 1) * widget.distance,
           progress: _expandAnimation,
           child: widget.children[i],
         ),
@@ -159,8 +178,9 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
           curve: const Interval(0.25, 1.0, curve: Curves.easeInOut),
           duration: const Duration(milliseconds: 250),
           child: FloatingActionButton(
-            backgroundColor: MyTheme.appColor,
+            backgroundColor: widget.backgroundColor,
             onPressed: _toggle,
+            elevation: widget.elevation,
             child: widget.icon,
           ),
         ),
@@ -173,22 +193,31 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
 class _ExpandingActionButton extends StatelessWidget {
   const _ExpandingActionButton({
     Key? key,
-    required this.directionInDegrees,
+    //required this.directionInDegrees,
+    required this.index,
+    required this.total,
     required this.maxDistance,
     required this.progress,
     required this.child,
+    required this.angle,
+    required this.direction,
   }) : super(key: key);
 
-  final double directionInDegrees;
+  //final double directionInDegrees;
+  final int index;
+  final int total;
   final double maxDistance;
   final Animation<double> progress;
   final Widget child;
+  final double angle;
+  final Direction direction;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: progress,
       builder: (context, child) {
+        final directionInDegrees = direction == around ? index * (angle / (total - 1)) : direction;
         final offset = Offset.fromDirection(
           directionInDegrees * (math.pi / 180.0),
           progress.value * maxDistance,
@@ -215,25 +244,30 @@ class ActionButton extends StatelessWidget {
   const ActionButton({
     Key? key,
     this.onPressed,
+    this.color = MyTheme.appColor,
+    this.backgroundColor = MyTheme.appColor,
+    this.elevation = 4,
     required this.icon,
     this.color,
   }) : super(key: key);
 
   final VoidCallback? onPressed;
   final Widget icon;
-  final Color? color;
+  final Color color;
+  final Color backgroundColor;
+  final double elevation;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
-      color: color ?? MyTheme.appColor,
-      elevation: 4.0,
+      color: backgroundColor,
+      elevation: elevation,
       child: IconButton(
         onPressed: onPressed,
         icon: icon,
-        color: MyTheme.appColor,
+        color: color,
       ),
     );
   }

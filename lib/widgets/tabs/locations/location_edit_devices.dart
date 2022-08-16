@@ -35,7 +35,7 @@ class LocationEditDevices extends StatefulWidget {
     printer: SimplePrinter(),
   );
 
-  LocationEditDevices(this._stateLocationIndex, {Key? key}) : super(key: key) {}
+  LocationEditDevices(this._stateLocationIndex, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _LocationEditDevicesState();
@@ -99,9 +99,9 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
         },
       ),
       Positioned(
-        child: _fab(),
         right: 15,
         bottom: 15,
+        child: _fab(),
       ),
     ]);
   }
@@ -178,6 +178,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
             : Column(children: [
                 PlatformWidget(
                   cupertino: (_, __) => Container(
+                    padding: MyTheme.inset,
                     child: CupertinoSearchTextField(
                       onChanged: (query) => _searchChanged(query),
                       style: TextStyle(color: MyTheme.textColor),
@@ -185,7 +186,6 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
                       restorationId: "cupertino-device-search",
                       controller: _cupertinoSearchController.value,
                     ),
-                    padding: MyTheme.inset,
                   ),
                 ),
                 Expanded(child: _buildListWidget())

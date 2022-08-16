@@ -44,17 +44,15 @@ class AppUpdater {
   late String updateUrl;
   late String localFile;
 
-  AppUpdater() {}
-
   static cleanup() async {
     if (kIsWeb) return;
-    final f = (await getApplicationSupportDirectory()).path + '/update.apk';
+    final f = '${(await getApplicationSupportDirectory()).path}/update.apk';
     final file = File(f);
     if (await file.exists()) {
       try {
         await file.delete(recursive: true);
       } catch (e) {
-        _logger.e("Can't cleanup update file " + e.toString());
+        _logger.e("Can't cleanup update file $e");
       }
     }
   }
@@ -72,7 +70,7 @@ class AppUpdater {
     ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
-    final url = "https://api.github.com/repos/" + dotenv.env["GITHUB_REPO"]! + '/releases?per_page=1';
+    final url = "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
@@ -105,7 +103,7 @@ class AppUpdater {
 
     final req = http.Request('GET', uri);
     final resp = _client.send(req);
-    localFile = (await getApplicationSupportDirectory()).path + '/update.apk';
+    localFile = '${(await getApplicationSupportDirectory()).path}/update.apk';
 
     final List<List<int>> chunks = [];
     int downloaded = 0;

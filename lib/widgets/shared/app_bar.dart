@@ -39,9 +39,9 @@ class MyAppBar {
             .length;
         return PlatformIconButton(
           icon: Badge(
-            child: const Icon(Icons.notifications),
             badgeContent: Text(unread.toString()),
             showBadge: unread > 0,
+            child: const Icon(Icons.notifications),
           ),
           onPressed: () {
             Navigator.push(

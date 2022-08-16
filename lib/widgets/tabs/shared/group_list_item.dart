@@ -36,10 +36,9 @@ class GroupListItem extends StatelessWidget {
     return Consumer<AppState>(builder: (context, state, child) {
       return ListTile(
           title: Text(state.deviceGroups[_stateGroupIndex].name),
-          subtitle: Text(state.deviceGroups[_stateGroupIndex].device_ids.length.toString() +
-              " Device" +
-              (state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : "")),
-          leading: Container(
+          subtitle: Text("${state.deviceGroups[_stateGroupIndex].device_ids.length} Device${state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : ""}"),
+          /*
+          trailing: Container(
             height: MediaQuery.of(context).textScaleFactor * 48,
             width: MediaQuery.of(context).textScaleFactor * 48,
             decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
@@ -47,7 +46,8 @@ class GroupListItem extends StatelessWidget {
                 padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
                 child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
           ),
-          trailing: FavorizeButton(null, _stateGroupIndex),
+           */
+          leading: FavorizeButton(null, _stateGroupIndex),
           onTap: () {
             state.searchDevices(DeviceSearchFilter("", null, null, null, [state.deviceGroups[_stateGroupIndex].id]), context);
             final future = Navigator.push(

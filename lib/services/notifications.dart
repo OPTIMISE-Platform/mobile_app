@@ -61,7 +61,7 @@ class NotificationsService {
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     String uri =
-        (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications?limit=' + limit.toString() + "&offset=" + offset.toString();
+        "${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/notifications?limit=${limit.toString()}&offset=${offset.toString()}";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -86,7 +86,7 @@ class NotificationsService {
   }
 
   static Future setNotification(app.Notification notification) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications/' + notification.id;
+    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/notifications/${notification.id}';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -102,7 +102,7 @@ class NotificationsService {
   }
 
   static Future deleteNotifications(List<String> ids) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') + '/notifications-v2/notifications';
+    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/notifications';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {

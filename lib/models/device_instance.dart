@@ -31,8 +31,8 @@ enum DeviceConnectionStatus {
   unknown,
 }
 
-const attributeFavorite = appOrigin + "/" + "favorite";
-const attributeNickname = sharedOrigin + "/" + "nickname";
+const attributeFavorite = "$appOrigin/favorite";
+const attributeNickname = "$sharedOrigin/nickname";
 
 @JsonSerializable()
 class DeviceInstance {

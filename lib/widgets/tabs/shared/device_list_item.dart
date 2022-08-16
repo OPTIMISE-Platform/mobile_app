@@ -35,24 +35,33 @@ import '../../shared/favorize_button.dart';
 import '../../shared/toast.dart';
 import 'detail_page/detail_page.dart';
 
-class DeviceListItem extends StatelessWidget {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
+class DeviceListItem extends StatefulWidget {
   final int _stateDeviceIndex;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
-  FavorizeButton? _favorizeButton;
 
   DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
 
   @override
+  State<StatefulWidget> createState() => _DeviceListItemState();
+}
+
+class _DeviceListItemState extends State<DeviceListItem> {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
+  bool _expanded = false;
+  FavorizeButton? _favorizeButton;
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final device = state.devices[_stateDeviceIndex];
+      final device = state.devices[widget._stateDeviceIndex];
       final List<Widget> trailingWidgets = [];
-      device.states.where((element) => !element.isControlling && element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).forEach((element) {
+      final filteredStates =
+          device.states.where((element) => !element.isControlling && element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']);
+      filteredStates.forEach((element) {
         trailingWidgets.add(Container(
           width: MediaQuery.of(context).textScaleFactor * 50,
           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
@@ -120,7 +129,7 @@ class DeviceListItem extends StatelessWidget {
                               }
                               assert(responses.length == 1);
                               if (responses[0].status_code != 200) {
-                                final err = "Error running command: " + responses[0].message.toString();
+                                final err = "Error running command: ${responses[0].message}";
                                 Toast.showErrorToast(context, err);
                                 _logger.e(err);
                                 return;
@@ -133,7 +142,7 @@ class DeviceListItem extends StatelessWidget {
                               }
                               assert(responses.length == 1);
                               if (responses[0].status_code != 200) {
-                                final err = "Error running command: " + responses[0].message.toString();
+                                final err = "Error running command: ${responses[0].message}";
                                 Toast.showErrorToast(context, err);
                                 element.transitioning = false;
                                 state.notifyListeners();
@@ -150,60 +159,63 @@ class DeviceListItem extends StatelessWidget {
 
       final connectionStatus = device.getConnectionStatus();
       final List<Widget> columnWidgets = [];
-      columnWidgets.add(ListTile(
-        title: Container(
+      final Widget title = Container(
+          alignment: Alignment.centerLeft,
+          child: Badge(
             alignment: Alignment.centerLeft,
-            child: Badge(
-              alignment: Alignment.centerLeft,
-              padding: const EdgeInsets.only(left: MyTheme.insetSize),
-              position: BadgePosition.topEnd(),
-              child: Text(
-                device.displayName,
-              ),
-              badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-              showBadge: connectionStatus == DeviceConnectionStatus.offline,
-              badgeColor: Colors.transparent,
-              elevation: 0,
-            )),
-        trailing: trailingWidgets.isEmpty
-            ? _favorizeButton = FavorizeButton(_stateDeviceIndex, null, key: _keyFavButton)
-            : Row(
-                children: [
-                  ...trailingWidgets,
-                  const VerticalDivider(),
-                  _favorizeButton = FavorizeButton(_stateDeviceIndex, null, key: _keyFavButton)
-                ],
-                mainAxisSize: MainAxisSize.min, // limit size to needed
-              ),
-        onTap: () {
-          final future = Navigator.push(
-              context,
-              platformPageRoute(
-                context: context,
-                builder: (context) {
-                  final target = DetailPage(_stateDeviceIndex, null);
-                  return target;
-                },
-              ));
-          if (_poppedCallback != null) {
-            future.then(_poppedCallback!);
-          }
-        },
+            padding: const EdgeInsets.only(left: MyTheme.insetSize),
+            position: BadgePosition.topEnd(),
+            badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
+            showBadge: connectionStatus == DeviceConnectionStatus.offline,
+            badgeColor: Colors.transparent,
+            elevation: 0,
+            child: Text(
+              device.displayName,
+            ),
+          ));
+      columnWidgets.add(ListTile(
+        title: title,
+        leading: _favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
+        trailing: trailingWidgets.isEmpty ? null : trailingWidgets.length == 1
+            ? trailingWidgets[0]
+            : PlatformIconButton(
+                cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                material: (_, __) => MaterialIconButtonData(
+                    splashRadius: 25,
+                    icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                    onPressed: () {
+                      _expanded = !_expanded;
+                      setState(() {});
+                    })),
+        onTap: () => _onTap(context),
       ));
+
+      if (_expanded) {
+        columnWidgets.add(
+          ListTile(
+              title: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            children: trailingWidgets,
+          )),
+        );
+      }
+
       WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
-      return Column(
-        children: columnWidgets,
-        mainAxisSize: MainAxisSize.min,
-      );
+      return AnimatedSize(
+          duration: const Duration(milliseconds: 75),
+          alignment: Alignment.topLeft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: columnWidgets,
+          ));
     });
   }
 
   void _showTutorial(BuildContext context) {
     if (!Settings.tutorialSeen(Tutorial.deviceListItem)) {
       TutorialCoachMark(
-        context,
         targets: [
-          TargetFocus(keyTarget: _keyFavButton, contents: [
+          TargetFocus(keyTarget: widget._keyFavButton, contents: [
             TargetContent(
                 align: ContentAlign.bottom,
                 child: const Text(
@@ -219,8 +231,23 @@ class DeviceListItem extends StatelessWidget {
           _favorizeButton!.click();
         },
         alignSkip: Alignment.topRight,
-      ).show();
+      ).show(context: context);
       Settings.markTutorialSeen(Tutorial.deviceListItem);
+    }
+  }
+
+  _onTap(BuildContext context) {
+    final future = Navigator.push(
+        context,
+        platformPageRoute(
+          context: context,
+          builder: (context) {
+            final target = DetailPage(widget._stateDeviceIndex, null);
+            return target;
+          },
+        ));
+    if (widget._poppedCallback != null) {
+      future.then(widget._poppedCallback!);
     }
   }
 }

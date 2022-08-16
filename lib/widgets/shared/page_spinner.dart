@@ -28,10 +28,10 @@ class PageSpinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _appBar = MyAppBar(_title);
+    final appBar = MyAppBar(_title);
     return PlatformScaffold(
       //backgroundColor: MyTheme.appColor,
-      appBar: _appBar.getAppBar(context),
+      appBar: appBar.getAppBar(context),
       body: Center(
           child: PlatformCircularProgressIndicator(),
       ),

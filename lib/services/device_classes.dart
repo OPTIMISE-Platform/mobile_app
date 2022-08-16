@@ -48,7 +48,7 @@ class DeviceClassesService {
   }
 
   static Future<List<DeviceClass>> getDeviceClasses() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/api-aggregator/device-class-uses';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
 
     final headers = await Auth().getHeaders();

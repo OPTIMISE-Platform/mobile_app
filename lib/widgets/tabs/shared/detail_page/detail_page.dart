@@ -72,7 +72,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => AppState().notifyListeners());
-    AppState().loadStates(context, widget._stateDeviceIndex == null ? [] : [AppState().devices[widget._stateDeviceIndex!]],
+    AppState().loadStates(widget._stateDeviceIndex == null ? [] : [AppState().devices[widget._stateDeviceIndex!]],
         widget._stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[widget._stateDeviceGroupIndex!]]);
   }
 
@@ -121,7 +121,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     if (function == null) {
       const err = "Function not found";
       Toast.showWarningToast(context, err, const Duration(milliseconds: 750));
-      _logger.e(err + ": " + element.functionId);
+      _logger.e("$err: ${element.functionId}");
       return;
     }
 
@@ -151,7 +151,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           states[i].transitioning = false;
           value = value as DeviceCommandResponse;
           if (value.status_code != 200) {
-            _logger.e(value.status_code.toString() + ": " + value.message);
+            _logger.e("${value.status_code}: ${value.message}");
             return;
           }
           if (value.message is List && value.message.length == 1) {
@@ -169,7 +169,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       if (content == null) {
         const err = "Function Config missing build()";
         Toast.showErrorToast(context, err, const Duration(milliseconds: 750));
-        _logger.e(err + ": " + element.functionId);
+        _logger.e("$err: ${element.functionId}");
         return;
       }
       input = await showPlatformDialog(
@@ -213,7 +213,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       AppState().notifyListeners();
       const err = "Error running command";
       Toast.showErrorToast(context, err);
-      _logger.e(err + ": " + responses[0].message.toString());
+      _logger.e("$err: ${responses[0].message}");
       return;
     }
     element.transitioning = false;
@@ -246,7 +246,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
       Toast.showInformationToast(context, FunctionConfigGetTimestamp().formatTimestamp(state.value), const Duration(milliseconds: 1000));
     } catch (e) {
-      _logger.w("Could not display timestamp: " + e.toString());
+      _logger.w("Could not display timestamp: $e");
     }
   }
 
@@ -323,7 +323,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
 
       final connectionStatus = device?.getConnectionStatus();
-      final _appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
+      final appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
       if (state.devices.isEmpty) {
         state.loadDevices(context);
       }
@@ -339,7 +339,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   final controller = TextEditingController(text: device.displayName);
                   return PlatformAlertDialog(
                     title: Text(
-                      "Rename " + device.displayName,
+                      "Rename ${device.displayName}",
                       overflow: TextOverflow.ellipsis,
                     ),
                     content: PlatformTextFormField(controller: controller),
@@ -372,7 +372,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   final controller = TextEditingController(text: deviceGroup.name);
                   return PlatformAlertDialog(
                     title: Text(
-                      "Rename " + deviceGroup.name,
+                      "Rename ${deviceGroup.name}",
                       overflow: TextOverflow.ellipsis,
                     ),
                     content: PlatformTextFormField(controller: controller),
@@ -400,7 +400,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             final deleted = await showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
-                      title: Text("Do you want to permanently delete group '" + deviceGroup.name + "'?"),
+                      title: Text("Do you want to permanently delete group '${deviceGroup.name}'?"),
                       actions: [
                         PlatformDialogAction(
                           child: PlatformText('Cancel'),
@@ -475,9 +475,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                       ? PlatformCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
                           Text(
-                              formatValue(element.value) +
-                                  " " +
-                                  (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""),
+                              "${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}",
                               style: const TextStyle(fontStyle: FontStyle.italic)),
                 )),
           );
@@ -516,10 +514,6 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                                     ),
                           )
                         : PlatformTextButton(
-                            child: functionConfig.displayValue(element.value, context) ??
-                                Text(formatValue(element.value) +
-                                    " " +
-                                    (state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "")),
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
                                 : () => _performAction(
@@ -528,6 +522,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                                       element,
                                       states,
                                     ),
+                            child: functionConfig.displayValue(element.value, context) ??
+                                Text("${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}"),
                           )),
           );
         }
@@ -627,7 +623,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   child: Icon(Icons.list, color: MyTheme.textColor),
                 ),
           body: PlatformScaffold(
-            appBar: _appBar.getAppBar(context, appBarActions),
+            appBar: appBar.getAppBar(context, appBarActions),
             body: RefreshIndicator(
               onRefresh: () => _refresh(context),
               child: Scrollbar(
@@ -656,7 +652,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                       subtitle: device != null
                           ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
                           : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
-                      trailing: Row(children: trailingHeader, mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end),
+                      trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                     ),
                     Container(
                       padding: const EdgeInsets.only(left: 6, right: 6),

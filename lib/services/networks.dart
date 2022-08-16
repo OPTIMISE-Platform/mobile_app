@@ -48,7 +48,7 @@ class NetworksService {
   }
 
   static Future<List<Network>> getNetworks([List<String>? ids]) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/resources/hubs?limit=9999';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/hubs?limit=9999';
     final Map<String, String> queryParameters = {};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");

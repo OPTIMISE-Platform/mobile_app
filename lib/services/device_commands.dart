@@ -41,7 +41,7 @@ class DeviceCommandsService {
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     final url =
-        (dotenv.env["API_URL"] ?? 'localhost') + '/device-command/commands/batch?timeout=25s&prefer_event_value=' + preferEventValue.toString();
+        '${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue';
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
