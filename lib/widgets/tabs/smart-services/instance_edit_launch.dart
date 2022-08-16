@@ -46,6 +46,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
   List<SmartServiceParameterOption> _filterOptions(SmartServiceExtendedParameter p) {
     return (p.options ?? []).where((o) {
@@ -87,13 +88,18 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                 child: Text(e.label),
               ))
           .toList();
-      return DropdownButton<dynamic>(
-          key: ValueKey(i.toString()),
-          items: items,
-          value: p.value,
-          onChanged: (value) => setState(() => p.value = value),
-          hint: Text(p.label),
-          isExpanded: true);
+      return DropdownButtonFormField<dynamic>(
+        key: ValueKey(i.toString()),
+        items: items,
+        value: p.value,
+        onChanged: (value) => setState(() => p.value = value),
+        hint: Text(p.label),
+        isExpanded: true,
+        validator: (value) {
+          if (value == null && !p.optional) return "Missing value";
+          return null;
+        },
+      );
     }
 
     switch (p.type) {
@@ -112,23 +118,28 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           autovalidateMode: AutovalidateMode.always,
           validator: (value) {
             if (value == null) {
-              return "no empty values";
+              if (!p.optional) {
+                return "Missing value";
+              }
+              return null;
             }
             if (value.contains(".") || value.contains(",")) {
-              return "no decimal numbers";
+              return "No decimal numbers";
             }
             try {
               int.parse(value);
             } catch (e) {
-              return "invalid number";
+              return "Invalid number";
             }
           },
           onChanged: (value) {
+            final old = p.value;
             try {
               p.value = int.parse(value);
             } catch (e) {
               _logger.d("error parsing user input");
             }
+            if (old == null) setState(() {});
           },
         );
       case ContentVariable.float:
@@ -145,18 +156,26 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
           autovalidateMode: AutovalidateMode.always,
           validator: (value) {
+            if (value == null) {
+              if (!p.optional) {
+                return "Missing value";
+              }
+              return null;
+            }
             try {
-              double.parse(value ?? "");
+              double.parse(value);
             } catch (e) {
-              return "no decimal value";
+              return "No decimal value";
             }
           },
           onChanged: (value) {
+            final old = p.value;
             try {
               p.value = double.parse(value);
             } catch (e) {
               _logger.d("error parsing user input");
             }
+            if (old == null) setState(() {});
           },
         );
       case ContentVariable.string:
@@ -165,12 +184,15 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           hintText: p.label,
           initialValue: (sub == null ? null : subValue ?? "") ?? (p.value != null && p.value is! List ? p.value : null) ?? p.default_value ?? "",
           onChanged: (newValue) {
+            final old = p.value;
             if (sub != null) {
               (p.value as List)[sub] = newValue;
             } else {
               p.value = newValue = newValue;
             }
+            if (old == null || (old is String && old.isEmpty) || newValue.isEmpty) setState(() {});
           },
+          validator: p.optional ? null : (value) => value == null || value.isEmpty ? "Missing value" : null,
         );
       case ContentVariable.boolean:
         return Row(children: [
@@ -179,11 +201,13 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             key: ValueKey(i.toString() + sub.toString()),
             onChanged: (bool newValue) {
               setState(() {
+                final old = p.value;
                 if (sub != null) {
                   (p.value as List)[sub] = newValue;
                 } else {
                   p.value = newValue = newValue;
                 }
+                if (old == null) setState(() {});
               });
             },
             value: (sub == null ? null : subValue ?? false) ?? (p.value != null && p.value is! List ? p.value : null) ?? p.default_value ?? false,
@@ -272,52 +296,56 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
       }
     }
     configs.add(const SizedBox(height: 100)); // prevent FAB overlap
-    final appBar = MyAppBar((widget.instance != null ? "Edit" : "Launch") + " Release");
+    final appBar = MyAppBar("${widget.instance != null ? "Edit" : "Launch"} Release");
+    final valid = _formKey.currentState?.validate() ?? false;
     return Scaffold(
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            if (widget.instance == null) {
-              final nameDescription = await showPlatformDialog(
-                  context: context,
-                  builder: (_) {
-                    final result = {"name": widget.release.name, "description": widget.release.description};
-                    return PlatformAlertDialog(
-                      title: const Text("Set Name and Description"),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          PlatformTextFormField(
-                            hintText: "Name",
-                            initialValue: widget.release.name,
-                            onChanged: (newValue) => result["name"] = newValue,
-                          ),
-                          PlatformTextFormField(
-                            hintText: "Description",
-                            maxLines: 8,
-                            minLines: 8,
-                            initialValue: widget.release.description,
-                            onChanged: (newValue) => result["description"] = newValue,
-                          ),
-                        ],
-                      ),
-                      actions: <Widget>[
-                        PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                        PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
-                      ],
-                    );
-                  });
-              if (nameDescription == null) return;
+          onPressed: !valid
+              ? null
+              : () async {
+                  if (widget.instance == null) {
+                    final nameDescription = await showPlatformDialog(
+                        context: context,
+                        builder: (_) {
+                          final result = {"name": widget.release.name, "description": widget.release.description};
+                          return PlatformAlertDialog(
+                            title: const Text("Set Name and Description"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                PlatformTextFormField(
+                                  hintText: "Name",
+                                  initialValue: widget.release.name,
+                                  onChanged: (newValue) => result["name"] = newValue,
+                                ),
+                                PlatformTextFormField(
+                                  hintText: "Description",
+                                  maxLines: 8,
+                                  minLines: 8,
+                                  initialValue: widget.release.description,
+                                  onChanged: (newValue) => result["description"] = newValue,
+                                ),
+                              ],
+                            ),
+                            actions: <Widget>[
+                              PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
+                              PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                            ],
+                          );
+                        });
+                    if (nameDescription == null) return;
 
-              await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
-                  nameDescription["name"], nameDescription["description"]);
-              Navigator.pop(context);
-            } else {
-              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
-                  releaseId: widget.release.id);
-            }
-            Navigator.pop(this.context);
-          },
-          backgroundColor: MyTheme.appColor,
+                    await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
+                        nameDescription["name"], nameDescription["description"]);
+                    Navigator.pop(context);
+                  } else {
+                    await SmartServiceService.updateInstanceParameters(
+                        widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
+                        releaseId: widget.release.id);
+                  }
+                  Navigator.pop(this.context);
+                },
+          backgroundColor: valid ? MyTheme.appColor : Colors.grey,
           label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: MyTheme.textColor)),
           icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: MyTheme.textColor),
         ),
@@ -326,6 +354,6 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             body: Scrollbar(
                 child: parameters == null
                     ? Center(child: PlatformCircularProgressIndicator())
-                    : ListView.builder(itemCount: configs.length, itemBuilder: (_, i) => configs[i]))));
+                    : Form(key: _formKey, child: ListView.builder(itemCount: configs.length, itemBuilder: (_, i) => configs[i])))));
   }
 }

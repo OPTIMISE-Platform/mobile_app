@@ -84,6 +84,7 @@ SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(Map<String
       json['value_label'] as String?,
       json['characteristic_id'] as String?,
       json['characteristic'] == null ? null : Characteristic.fromJson(json['characteristic']),
+      json['optional'] as bool,
     );
 
 Map<String, dynamic> _$SmartServiceExtendedParameterToJson(SmartServiceExtendedParameter instance) => <String, dynamic>{
@@ -98,6 +99,7 @@ Map<String, dynamic> _$SmartServiceExtendedParameterToJson(SmartServiceExtendedP
       'value_label': instance.value_label,
       'characteristic_id': instance.characteristic_id,
       'characteristic': instance.characteristic.toJson(),
+      'optional': instance.optional,
     };
 
 SmartServiceInstance _$SmartServiceInstanceFromJson(Map<String, dynamic> json) => SmartServiceInstance(
