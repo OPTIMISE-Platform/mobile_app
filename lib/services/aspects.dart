@@ -48,7 +48,7 @@ class AspectsService {
   }
 
   static Future<List<Aspect>> getAspects() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-repository/aspects';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-repository/aspects';
 
     final headers = await Auth().getHeaders();
     await initOptions();

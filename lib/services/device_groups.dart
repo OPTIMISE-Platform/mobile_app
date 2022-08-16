@@ -54,7 +54,7 @@ class DeviceGroupsService {
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/resources/device-groups';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/device-groups';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
@@ -74,10 +74,9 @@ class DeviceGroupsService {
   }
 
   static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group) async {
-    _logger.d("Saving device group: " + group.id);
+    _logger.d("Saving device group: ${group.id}");
 
-    final uri =
-        (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + group.id + "?update-only-same-origin-attributes=" + appOrigin;
+    final uri = "${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/device-groups/${group.id}?update-only-same-origin-attributes=$appOrigin";
 
     final encoded = json.encode(group.toJson());
 
@@ -93,12 +92,12 @@ class DeviceGroupsService {
   }
 
   static Future<DeviceGroup> createDeviceGroup(String name) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/device-groups/';
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
-    final resp = await dio.post<dynamic?>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
+    final resp = await dio.post<dynamic>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
     if (resp.statusCode == null || resp.statusCode! > 299) {
       throw UnexpectedStatusCodeException(resp.statusCode);
     }
@@ -107,7 +106,7 @@ class DeviceGroupsService {
   }
 
   static Future<void> deleteDeviceGroup(String id) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/device-groups/' + id;
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/device-groups/$id';
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -121,7 +120,7 @@ class DeviceGroupsService {
   }
 
   static Future<DeviceGroupHelperResponse> getMatchingDevicesForGroup(List<String> deviceIds, int limit, int offset, String search) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-selection/device-group-helper';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-selection/device-group-helper';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
     queryParameters["offset"] = offset.toString();

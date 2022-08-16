@@ -15,7 +15,6 @@
  */
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
@@ -33,7 +32,7 @@ import '../../../shared/toast.dart';
 class Chart extends StatefulWidget {
   final DeviceState _state;
 
-  Chart(this._state, {Key? key}) : super(key: key);
+  const Chart(this._state, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _ChartState();

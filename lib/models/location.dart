@@ -64,11 +64,11 @@ class Location {
     final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {
-      _logger.e("Could not load Location image: Response code was: " + resp.statusCode.toString() + ". ID: " + id + ", URL: " + image);
+      _logger.e("Could not load Location image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
       return this;
     }
     if (resp.data == null) {
-      _logger.e("Could not load Location image: response was null. ID: " + id + ", URL: " + image);
+      _logger.e("Could not load Location image: response was null. ID: $id, URL: $image");
       return this;
     }
     final b64 = const Base64Decoder().convert(resp.data!);

@@ -33,7 +33,7 @@ const Direction down = 270;
 
 @immutable
 class ExpandableFab extends StatefulWidget {
-  ExpandableFab({
+  const ExpandableFab({
     Key? key,
     this.initialOpen,
     this.toggleStream,
@@ -57,7 +57,7 @@ class ExpandableFab extends StatefulWidget {
   final Direction direction;
 
   @override
-  _ExpandableFabState createState() => _ExpandableFabState();
+  State<StatefulWidget> createState() => _ExpandableFabState();
 }
 
 class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProviderStateMixin {
@@ -180,8 +180,8 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
           child: FloatingActionButton(
             backgroundColor: widget.backgroundColor,
             onPressed: _toggle,
-            child: widget.icon,
             elevation: widget.elevation,
+            child: widget.icon,
           ),
         ),
       ),

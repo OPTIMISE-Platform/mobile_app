@@ -54,8 +54,7 @@ class FcmTokenService {
   }
 
   static registerFcmToken(String token) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/fcm-tokens/' + token;
+    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -74,8 +73,7 @@ class FcmTokenService {
   }
 
   static deregisterFcmToken(String token) async {
-    final url = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/notifications-v2/fcm-tokens/' + token;
+    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {

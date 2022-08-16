@@ -37,7 +37,7 @@ class GroupEditDevices extends StatefulWidget {
     printer: SimplePrinter(),
   );
 
-  GroupEditDevices(this._stateGroupIndex, {Key? key}) : super(key: key) {}
+  GroupEditDevices(this._stateGroupIndex, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _GroupEditDevicesState();
@@ -161,9 +161,9 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
               },
             ),
       Positioned(
-        child: _fab(),
         right: 15,
         bottom: 15,
+        child: _fab(),
       ),
     ]);
   }
@@ -177,7 +177,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
         });
         await DeviceGroupsService.saveDeviceGroup(AppState().deviceGroups[widget._stateGroupIndex]);
         AppState().notifyListeners();
-        if (_delegateOpen) Navigator.pop(context, true);
+        if (_delegateOpen && mounted) Navigator.pop(context, true);
         Navigator.pop(context);
       },
       backgroundColor: MyTheme.appColor,
@@ -247,6 +247,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
             : Column(children: [
                 PlatformWidget(
                   cupertino: (_, __) => Container(
+                    padding: MyTheme.inset,
                     child: CupertinoSearchTextField(
                       onChanged: (query) => _searchChanged(query, false),
                       style: TextStyle(color: MyTheme.textColor),
@@ -254,7 +255,6 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
                       restorationId: "cupertino-device-search",
                       controller: _cupertinoSearchController.value,
                     ),
-                    padding: MyTheme.inset,
                   ),
                 ),
                 Expanded(child: _buildListWidget())

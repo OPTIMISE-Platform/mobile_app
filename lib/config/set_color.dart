@@ -38,15 +38,15 @@ class FunctionConfigSetColor implements FunctionConfig {
                 displayThumbColor: false,
                 portraitOnly: false,
                 paletteType: PaletteType.hueWheel,
-                labelTypes: [],
+                labelTypes: const [],
               ),
-              Row(children: [
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 _getQuickButton(Colors.red, setState),
                 _getQuickButton(Colors.green, setState),
                 _getQuickButton(Colors.blue, setState),
                 _getQuickButton(Colors.white, setState),
                 _getQuickButton(const Color.fromARGB(255, 253, 244, 220), setState),
-              ], mainAxisAlignment: MainAxisAlignment.center)
+              ])
             ]));
   }
 
@@ -75,10 +75,10 @@ class FunctionConfigSetColor implements FunctionConfig {
       return Colors.white;
     }
     if (value is! Map<String, dynamic>) {
-      throw ArgumentException("value is not map: " + value.toString());
+      throw ArgumentException("value is not map: $value");
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+      throw ArgumentException("value does not contains keys r, b and g: $value");
     }
     return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
   }

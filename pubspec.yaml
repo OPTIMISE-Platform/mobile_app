@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 0.0.98+98
+version: 0.0.99+99
 
 environment:
   sdk: ">=2.16.0 <3.0.0"
@@ -40,6 +40,7 @@ dependencies:
   logger: ^1.1.0
   flutter_secure_storage: ^5.0.2
   json_annotation: ^4.4.0
+  dio: ^4.0.6
   dio_cache_interceptor: ^3.2.6
   dio_cache_interceptor_hive_store: ^3.1.1
   path_provider: ^2.0.9
@@ -49,6 +50,7 @@ dependencies:
       url: https://github.com/tahiti-web-design/openidconnect_flutter
       path: openidconnect
       ref: feat/keycloak-logout-support
+  openidconnect_platform_interface: ^1.0.12
   connectivity_plus: ^2.2.1
   crypto: ^3.0.1
   fluttertoast: ^8.0.9
@@ -66,6 +68,7 @@ dependencies:
   flutter_native_splash: ^2.1.6
   tutorial_coach_mark: ^1.2.2
   eraser: ^2.0.1
+  http: ^0.13.5
 
 dev_dependencies:
   flutter_test:

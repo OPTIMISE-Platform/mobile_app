@@ -99,13 +99,13 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final _appBar = MyAppBar(_loginChecked ? "Login" : "Loading");
+    final appBar = MyAppBar(_loginChecked ? "Login" : "Loading");
     return Consumer<Auth>(
       builder: (context, auth, child) {
         return auth.loggedIn
             ? const DeviceTabs()
             : PlatformScaffold(
-                appBar: _appBar.getAppBar(context, [MyAppBar.settings(context)]),
+                appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
                 body: auth.loggingIn || !_loginChecked
                     ? Center(child: PlatformCircularProgressIndicator())
                     : Container(
@@ -126,8 +126,8 @@ class _HomeState extends State<Home> {
                               cupertino: (context, __) =>
                                   Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField()), _visibilityButton()])),
                           PlatformElevatedButton(
-                            child: const Text("Login"),
                             onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(),
+                            child: const Text("Login"),
                           ),
                         ])),
                       ));

@@ -105,7 +105,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
           final newName = await showPlatformDialog(
               context: context,
               builder: (context) => PlatformAlertDialog(
-                    title: Text("Edit " + location.name),
+                    title: Text("Edit ${location.name}"),
                     content: PlatformTextFormField(controller: titleController),
                     actions: [
                       PlatformDialogAction(
@@ -135,7 +135,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
           final deleted = await showPlatformDialog(
               context: context,
               builder: (context) => PlatformAlertDialog(
-                    title: Text("Do you want to permanently delete location '" + location.name + "'?"),
+                    title: Text("Do you want to permanently delete location '${location.name}'?"),
                     actions: [
                       PlatformDialogAction(
                         child: PlatformText('Cancel'),

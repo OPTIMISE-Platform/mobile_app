@@ -74,8 +74,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   final _cupertinoSearchController = RestorableTextEditingController();
 
-  DeviceTabsState() {}
-
   _searchChanged(String search) {
     if (filter.query == search) {
       return;
@@ -433,7 +431,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
           if (_bottomBarIndex != tabFavorites) {
             filterActions.add(PopupMenuOption(
-                label: (filter.favorites == true ? '✓ ' : '') + 'Favorites',
+                label: '${filter.favorites == true ? '✓ ' : ''}Favorites',
                 onTap: (_) => setState(() {
                       filter.favorites = filter.favorites == true ? null : true;
                       switchBottomBar(_bottomBarIndex, true);
@@ -464,9 +462,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             options: filterActions,
             icon: PlatformIconButton(
               icon: Badge(
-                child: Icon(Icons.filter_alt, color: isCupertino(context) ? MyTheme.appColor : null),
                 badgeContent: Text(filterCount.toString()),
                 showBadge: filterCount > 0,
+                child: Icon(Icons.filter_alt, color: isCupertino(context) ? MyTheme.appColor : null),
               ),
               cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
               material: (_, __) => MaterialIconButtonData(disabledColor: MyTheme.textColor),
@@ -510,6 +508,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     PlatformWidget(
                       cupertino: !hideSearch
                           ? (_, __) => Container(
+                                padding: MyTheme.inset,
                                 child: CupertinoSearchTextField(
                                   onChanged: (query) => _searchChanged(query),
                                   style: TextStyle(color: MyTheme.textColor),
@@ -517,7 +516,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                                   restorationId: "cupertino-device-search",
                                   controller: _cupertinoSearchController.value,
                                 ),
-                                padding: MyTheme.inset,
                               )
                           : null,
                     ),
@@ -534,17 +532,17 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         case tabNetworks:
                           return const DeviceListByNetwork();
                         case tabFavorites:
-                          return DeviceListFavorites();
+                          return const DeviceListFavorites();
                         default:
                           return Center(
-                              child: Row(children: [
+                              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                             const Icon(
                               Icons.error,
                               color: MyTheme.errorColor,
                             ),
                             SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
                             const Text("not implemented")
-                          ], mainAxisAlignment: MainAxisAlignment.center));
+                          ]));
                       }
                     })()),
                   ]),

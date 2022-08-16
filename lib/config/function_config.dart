@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
@@ -62,7 +61,7 @@ String formatValue(dynamic value) {
             e == null)
         ? roundNumbersString(preferredNotnull)
         : preferredNotnull is num
-            ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
+            ? "${roundNumbersString(minList(value))} - ${roundNumbersString(maxList(value))}"
             : "-";
   } else {
     return value == null || (value is List && value.isEmpty) ? "-" : roundNumbersString(value);
@@ -104,9 +103,9 @@ class FunctionConfigDefault implements FunctionConfig {
       _walkTree(context, "", characteristic, value ?? characteristic.value, setState);
 
       final column = Column(
-        children: _fields,
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
+        children: _fields,
       );
       return SingleChildScrollView(
           child: PlatformWidget(
@@ -120,13 +119,13 @@ class FunctionConfigDefault implements FunctionConfig {
 
   _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value, void Function(void Function()) setState) {
     switch (characteristic.type) {
-      case ContentVariable.FLOAT:
+      case ContentVariable.float:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
-          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
               return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -175,22 +174,23 @@ class FunctionConfigDefault implements FunctionConfig {
               return "no decimal value";
             }
             if (characteristic.min_value != null && doubleValue < characteristic.min_value!) {
-              return "value smaller than " + characteristic.min_value.toString();
+              return "value smaller than ${characteristic.min_value}";
             }
             if (characteristic.max_value != null && doubleValue > characteristic.max_value!) {
-              return "value bigger than " + characteristic.max_value.toString();
+              return "value bigger than ${characteristic.max_value}";
             }
+            return null;
           }, (v) => double.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true, decimal: true)));
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.INTEGER:
+      case ContentVariable.integer:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
-          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
               return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -241,16 +241,17 @@ class FunctionConfigDefault implements FunctionConfig {
               return "invalid number";
             }
             if (characteristic.min_value != null && intValue < characteristic.min_value!) {
-              return "value smaller than " + characteristic.min_value!.toInt().toString();
+              return "value smaller than ${characteristic.min_value!.toInt()}";
             }
             if (characteristic.max_value != null && intValue > characteristic.max_value!) {
-              return "value bigger than " + characteristic.max_value!.toInt().toString();
+              return "value bigger than ${characteristic.max_value!.toInt()}";
             }
+            return null;
           }, (v) => int.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true)));
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.STRING:
+      case ContentVariable.string:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -277,7 +278,7 @@ class FunctionConfigDefault implements FunctionConfig {
         }
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.BOOLEAN:
+      case ContentVariable.boolean:
         if (value is List) value = value[0];
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
@@ -285,7 +286,7 @@ class FunctionConfigDefault implements FunctionConfig {
         _fields.add(Row(children: [
           Expanded(
               child: Text(
-            characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : ""),
+            characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : ""),
             textAlign: TextAlign.left,
           )),
           StatefulBuilder(
@@ -302,18 +303,18 @@ class FunctionConfigDefault implements FunctionConfig {
         ]));
         _insertValueIntoResult(value, path, ignoreExisting: true);
         break;
-      case ContentVariable.STRUCTURE:
+      case ContentVariable.structure:
         final dynamic existingValue = _getValue(path);
         if (existingValue != null) value = existingValue;
         characteristic.sub_characteristics?.forEach((sub) {
           var subPath = sub.name;
           if (path.isNotEmpty) {
-            subPath = path + "." + subPath;
+            subPath = "$path.$subPath";
           }
           _walkTree(context, subPath, sub, value != null ? value[sub.name] ?? sub.value : sub.value, setState);
         });
         break;
-      case ContentVariable.LIST:
+      case ContentVariable.list:
         _fields.add(const Divider());
         final bool hasStarElement = characteristic.sub_characteristics != null &&
             characteristic.sub_characteristics!.isNotEmpty &&
@@ -338,9 +339,9 @@ class FunctionConfigDefault implements FunctionConfig {
         for (var i = 0; i < (characteristic.sub_characteristics?.length ?? 0); i++) {
           final sub = characteristic.sub_characteristics![i];
           if (sub.name != "*") {
-            var subPath = "[" + (hasStarElement ? i - 1 : i).toString() + "]";
+            var subPath = "[${hasStarElement ? i - 1 : i}]";
             if (path.isNotEmpty) {
-              subPath = path + "." + subPath;
+              subPath = "$path.$subPath";
             }
             _walkTree(context, subPath, sub,
                 value != null ? (value is List ? (value.length > i ? value[i] : null) : value[sub.name]) ?? sub.value : sub.value, setState);
@@ -469,7 +470,7 @@ class FunctionConfigDefault implements FunctionConfig {
         ),
       ),
       cupertino: (_, __) => CupertinoTextFormFieldData(
-        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")),
+        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")),
       ),
     );
   }

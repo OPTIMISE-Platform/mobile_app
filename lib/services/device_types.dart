@@ -51,8 +51,7 @@ class DeviceTypesService {
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/device-manager/device-types/' + id;
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/device-types/$id';
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -65,7 +64,7 @@ class DeviceTypesService {
       _logger.d("Using cached device type");
     }
 
-    if (resp.data == null || resp.data == "null") {
+    if (resp.data == null || (resp.data is String && (resp.data as String) == "null")) {
       return null;
     }
 

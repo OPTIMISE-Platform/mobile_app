@@ -42,21 +42,21 @@ class FunctionConfigGetColor implements FunctionConfig {
           alignment: AlignmentDirectional.center,
           children: [
             ShaderMask(
-              child: const Icon(Icons.palette, color: Colors.black), //maximum contrast
               shaderCallback: (Rect bounds) =>
                   LinearGradient(colors: value.map((e) => _getColor(e)).toList(growable: false), begin: Alignment.topLeft, end: Alignment.bottomRight)
                       .createShader(bounds.deflate(MediaQuery.textScaleFactorOf(context) * 8.5)),
               blendMode: BlendMode.srcATop,
+              child: const Icon(Icons.palette, color: Colors.black),
             ),
             const Icon(Icons.palette_outlined, color: Colors.grey),
           ],
         );
       }
-      _logger.w("value is not map or list: " + value.toString());
+      _logger.w("value is not map or list: $value");
       return null;
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      _logger.w("value does not contains keys r, b and g: " + value.toString());
+      _logger.w("value does not contains keys r, b and g: $value");
       return null;
     }
     return Stack(
@@ -88,7 +88,7 @@ class FunctionConfigGetColor implements FunctionConfig {
 
   Color _getColor(Map<String, dynamic> value) {
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+      throw ArgumentException("value does not contains keys r, b and g: $value");
     }
     return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
   }

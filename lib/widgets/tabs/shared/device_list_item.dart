@@ -39,7 +39,6 @@ class DeviceListItem extends StatefulWidget {
   final int _stateDeviceIndex;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
-  FavorizeButton? _favorizeButton;
 
   DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
 
@@ -53,6 +52,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
   );
 
   bool _expanded = false;
+  FavorizeButton? _favorizeButton;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +129,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               }
                               assert(responses.length == 1);
                               if (responses[0].status_code != 200) {
-                                final err = "Error running command: " + responses[0].message.toString();
+                                final err = "Error running command: ${responses[0].message}";
                                 Toast.showErrorToast(context, err);
                                 _logger.e(err);
                                 return;
@@ -142,7 +142,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               }
                               assert(responses.length == 1);
                               if (responses[0].status_code != 200) {
-                                final err = "Error running command: " + responses[0].message.toString();
+                                final err = "Error running command: ${responses[0].message}";
                                 Toast.showErrorToast(context, err);
                                 element.transitioning = false;
                                 state.notifyListeners();
@@ -165,17 +165,17 @@ class _DeviceListItemState extends State<DeviceListItem> {
             alignment: Alignment.centerLeft,
             padding: const EdgeInsets.only(left: MyTheme.insetSize),
             position: BadgePosition.topEnd(),
-            child: Text(
-              device.displayName,
-            ),
             badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
             showBadge: connectionStatus == DeviceConnectionStatus.offline,
             badgeColor: Colors.transparent,
             elevation: 0,
+            child: Text(
+              device.displayName,
+            ),
           ));
       columnWidgets.add(ListTile(
         title: title,
-        leading: widget._favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
+        leading: _favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
         trailing: trailingWidgets.isEmpty ? null : trailingWidgets.length == 1
             ? trailingWidgets[0]
             : PlatformIconButton(
@@ -194,8 +194,8 @@ class _DeviceListItemState extends State<DeviceListItem> {
         columnWidgets.add(
           ListTile(
               title: Wrap(
-            children: trailingWidgets,
             alignment: WrapAlignment.spaceEvenly,
+            children: trailingWidgets,
           )),
         );
       }
@@ -205,8 +205,8 @@ class _DeviceListItemState extends State<DeviceListItem> {
           duration: const Duration(milliseconds: 75),
           alignment: Alignment.topLeft,
           child: Column(
-            children: columnWidgets,
             mainAxisSize: MainAxisSize.min,
+            children: columnWidgets,
           ));
     });
   }
@@ -228,7 +228,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         ],
         colorShadow: MyTheme.appColor,
         onClickTarget: (focus) {
-          widget._favorizeButton!.click();
+          _favorizeButton!.click();
         },
         alignSkip: Alignment.topRight,
       ).show(context: context);

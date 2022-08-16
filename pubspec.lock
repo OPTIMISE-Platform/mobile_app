@@ -240,7 +240,7 @@ packages:
     source: hosted
     version: "0.7.4"
   dio:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: dio
       url: "https://pub.dartlang.org"
@@ -486,7 +486,7 @@ packages:
     source: hosted
     version: "2.2.3"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
       url: "https://pub.dartlang.org"
@@ -663,7 +663,7 @@ packages:
     source: git
     version: "1.0.21"
   openidconnect_platform_interface:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: openidconnect_platform_interface
       url: "https://pub.dartlang.org"

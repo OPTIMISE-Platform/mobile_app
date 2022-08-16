@@ -64,9 +64,9 @@ class DevicesService {
     await initOptions();
 
     final body = filter.toBody(limit, offset);
-    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/permissions/query/v3/query';
+    final uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/query';
     final encoded = json.encode(body);
-    _logger.d("Devices: " + encoded);
+    _logger.d("Devices: $encoded");
     resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
 
 
@@ -84,9 +84,9 @@ class DevicesService {
   }
 
   static Future<void> saveDevice(DeviceInstance device) async {
-    _logger.d("Saving device: " + device.id);
+    _logger.d("Saving device: ${device.id}");
 
-    final uri = (dotenv.env["API_URL"] ?? 'localhost') + '/device-manager/devices/' + device.id + "?update-only-same-origin-attributes=" + sharedOrigin + "," + appOrigin;
+    final uri = "${dotenv.env["API_URL"] ?? 'localhost'}'/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
 
     final encoded = json.encode(device.toJson());
 
@@ -103,8 +103,7 @@ class DevicesService {
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
   static Future<int> getTotalDevices(DeviceSearchFilter filter) async {
-    String uri = (dotenv.env["API_URL"] ?? 'localhost') +
-        '/permissions/query/v3/total/devices';
+    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
     if (filter.query.isNotEmpty) {

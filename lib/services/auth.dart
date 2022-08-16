@@ -44,10 +44,7 @@ class Auth extends ChangeNotifier {
 
   static final _httpClient = http.Client();
   OpenIdConnectClient? _client;
-  final String _discoveryUrl = (dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost') +
-      '/auth/realms/' +
-      (dotenv.env['KEYCLOAK_REALM'] ?? 'master') +
-      "/.well-known/openid-configuration";
+  final String _discoveryUrl = "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/'${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
 
   bool loggedIn = false;
 
@@ -62,14 +59,14 @@ class Auth extends ChangeNotifier {
             discoveryDocumentUrl: _discoveryUrl,
             clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
             redirectUrl: kIsWeb
-                ? Uri.base.scheme + "://" + Uri.base.host + ":" + Uri.base.port.toString() + "/callback.html"
+                ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
                 : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
             scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
             autoRefresh: false,
           );
           loggedIn = _client?.identity != null;
           _client?.changes.listen((event) async {
-            _logger.d(event.type.toString() + ": " + event.message.toString());
+            _logger.d("${event.type}: ${event.message}");
             switch (event.type) {
               case AuthEventTypes.Refresh:
               case AuthEventTypes.Success:
@@ -90,7 +87,7 @@ class Auth extends ChangeNotifier {
             }
           });
         } catch (e) {
-          _logger.e("Could not setup client: " + e.toString());
+          _logger.e("Could not setup client: $e");
         }
       } else {
         _logger.d("Postponing real init(): Currently offline");
@@ -127,7 +124,7 @@ class Auth extends ChangeNotifier {
       try {
         token = await _client?.loginWithPassword(userName: user, password: pw, prompts: ["none"]);
       } catch (e) {
-        _logger.e("Login failed: " + e.toString());
+        _logger.e("Login failed: $e");
         rethrow;
       }
 
@@ -186,7 +183,7 @@ class Auth extends ChangeNotifier {
     if (!(await refreshToken())) {
       return {};
     }
-    return {"Authorization": "Bearer " + await getToken()};
+    return {"Authorization": "Bearer ${await getToken()}"};
   }
 
   Future<bool> refreshToken({bool skipLock = false}) async {

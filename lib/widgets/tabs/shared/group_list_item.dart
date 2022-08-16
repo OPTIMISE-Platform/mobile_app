@@ -36,9 +36,7 @@ class GroupListItem extends StatelessWidget {
     return Consumer<AppState>(builder: (context, state, child) {
       return ListTile(
           title: Text(state.deviceGroups[_stateGroupIndex].name),
-          subtitle: Text(state.deviceGroups[_stateGroupIndex].device_ids.length.toString() +
-              " Device" +
-              (state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : "")),
+          subtitle: Text("${state.deviceGroups[_stateGroupIndex].device_ids.length} Device${state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : ""}"),
           /*
           trailing: Container(
             height: MediaQuery.of(context).textScaleFactor * 48,

@@ -88,7 +88,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   static queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
-    _logger.d("Queuing message " + message.messageId.toString());
+    _logger.d("Queuing message ${message.messageId}");
     final remoteMessageMap = remoteMessageToMap(message);
 
     switch (remoteMessageMap["data"]["type"]) {
@@ -167,17 +167,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get loggingIn => Auth().loggingIn;
 
-  init(BuildContext context) async {
+  init() async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
-    await loadDeviceClasses(context);
-    await loadDeviceTypes(context);
-    await loadNestedFunctions(context);
-    await loadAspects(context);
+    await loadDeviceClasses();
+    await loadDeviceTypes();
+    await loadNestedFunctions();
+    await loadAspects();
     await initMessaging();
     _initialized = true;
   }
 
-  loadDeviceClasses(BuildContext context) async {
+  loadDeviceClasses() async {
     final locked = _deviceClassesMutex.isLocked;
     await _deviceClassesMutex.acquire();
     if (locked) {
@@ -196,7 +196,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     return _deviceClassesMutex.isLocked;
   }
 
-  loadDeviceTypes(BuildContext context) async {
+  loadDeviceTypes() async {
     final locked = _deviceTypesPermSearchMutex.isLocked;
     await _deviceTypesPermSearchMutex.acquire();
     if (locked) {
@@ -209,7 +209,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _deviceTypesPermSearchMutex.release();
   }
 
-  loadNestedFunctions(BuildContext context) async {
+  loadNestedFunctions() async {
     final locked = _nestedFunctionsMutex.isLocked;
     await _nestedFunctionsMutex.acquire();
     if (locked) {
@@ -222,7 +222,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _nestedFunctionsMutex.release();
   }
 
-  updateTotalDevices(BuildContext context) async {
+  updateTotalDevices() async {
     await _totalDevicesMutex.protect(() async {
       final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
       if (total != totalDevices) {
@@ -243,7 +243,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
-    await updateTotalDevices(context);
+    await updateTotalDevices();
     await loadDevices(context);
   }
 
@@ -264,7 +264,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     if (!_initialized) {
-      await init(context);
+      await init();
     }
 
     late final List<DeviceInstance> newDevices;
@@ -272,7 +272,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       newDevices = await DevicesService.getDevices(limit, _deviceOffset, _deviceSearchFilter);
     } catch (e) {
-      _logger.e("Could not get devices: " + e.toString());
+      _logger.e("Could not get devices: $e");
       Toast.showErrorToast(context, "Could not load devices");
       notifyListeners(); // missing loadingDevices() change otherwise
       _devicesMutex.release();
@@ -282,10 +282,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
-      await loadStates(context, newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
+      await loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
     }
     if (totalDevices <= _deviceOffset) {
-      await updateTotalDevices(context); // when loadDevices called directly
+      await updateTotalDevices(); // when loadDevices called directly
     }
     _devicesMutex.release();
     notifyListeners();
@@ -299,7 +299,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     return _allDevicesLoaded;
   }
 
-  loadDeviceType(BuildContext context, String id, [bool force = false]) async {
+  loadDeviceType(String id, [bool force = false]) async {
     if (!force && deviceTypes.containsKey(id)) {
       return;
     }
@@ -310,10 +310,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     deviceTypes[id] = t;
   }
 
-  loadStates(BuildContext context, List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
+  loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
-      await loadDeviceType(context, element.device_type_id);
+      await loadDeviceType(element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
       if (element.getConnectionStatus() == DeviceConnectionStatus.offline) {
@@ -336,22 +336,18 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } on NoNetworkException {
       _logger.e("failed to loadStates: currently offline");
       result = [];
-      for (var _ in commandCallbacks) {
-        result.add(DeviceCommandResponse(200, null));
-      }
+      commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
     } catch (e) {
-      _logger.e("failed to loadStates: " + e.toString());
+      _logger.e("failed to loadStates: $e");
       result = [];
-      for (var _ in commandCallbacks) {
-        result.add(DeviceCommandResponse(200, null));
-      }
+      commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
     }
     assert(result.length == commandCallbacks.length);
     for (var i = 0; i < commandCallbacks.length; i++) {
       if (result[i].status_code == 200) {
         commandCallbacks[i].callback(result[i].message);
       } else {
-        _logger.e(result[i].status_code.toString() + ": " + result[i].message);
+        _logger.e("${result[i].status_code}: ${result[i].message}");
         commandCallbacks[i].callback(null);
       }
     }
@@ -375,7 +371,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         try {
           response = await NotificationsService.getNotifications(limit, offset);
         } catch (e) {
-          _logger.e("Could not load notifications: " + e.toString());
+          _logger.e("Could not load notifications: $e");
           return;
         }
         final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
@@ -387,7 +383,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       const err = "Could not load notifications";
       if (context != null) Toast.showErrorToast(context, err);
-      _logger.e(err + ": " + e.toString());
+      _logger.e("$err: $e");
     } finally {
       _notificationsMutex.release();
     }
@@ -463,18 +459,18 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         try {
           await FcmTokenService.deregisterFcmToken(fcmToken!);
         } catch (e) {
-          _logger.e("Could not deregister FCM: " + e.toString());
+          _logger.e("Could not deregister FCM: $e");
         }
       }
       fcmToken = token;
 
-      _logger.d("firebase token: " + fcmToken.toString());
+      _logger.d("firebase token: $fcmToken");
       if (fcmToken != null) {
         try {
           await FcmTokenService.registerFcmToken(fcmToken!);
           if (!kIsWeb) messaging.subscribeToTopic("announcements");
         } catch (e) {
-          _logger.e("Could not setup FCM: " + e.toString());
+          _logger.e("Could not setup FCM: $e");
         }
       } else {
         _logger.e("FCM token is null");
@@ -508,7 +504,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         notifyListeners();
         break;
       default:
-        _logger.e("Got message of unknown type: " + data["type"]);
+        _logger.e("Got message of unknown type: ${data["type"]}");
     }
   }
 
@@ -601,7 +597,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     return _networksMutex.isLocked;
   }
 
-  loadAspects(BuildContext context) async {
+  loadAspects() async {
     final locked = _aspectsMutex.isLocked;
     await _aspectsMutex.acquire();
     if (locked) {
@@ -618,7 +614,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       await messaging.deleteToken();
     } catch (e) {
-      _logger.w("Could not delete FCM token: " + e.toString());
+      _logger.w("Could not delete FCM token: $e");
     }
     fcmToken = null;
     await _storage.delete(key: messageKey);
@@ -650,6 +646,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   @override
+  // ignore: unnecessary_overrides
   void notifyListeners() {
     super.notifyListeners();
   }

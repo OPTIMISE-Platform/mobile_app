@@ -50,8 +50,7 @@ class DeviceTypePermSearch {
     if (_service is String) {
       return [_service];
     }
-    _logger.w("unexpected type of service in device-type: " +
-        _service.runtimeType.toString());
+    _logger.w("unexpected type of service in device-type: ${_service.runtimeType}");
     return [];
   }
 
