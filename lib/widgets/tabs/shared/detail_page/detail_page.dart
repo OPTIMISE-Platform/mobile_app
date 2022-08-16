@@ -71,7 +71,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         element.transitioning = true;
       }
     }
-    WidgetsBinding.instance?.addPostFrameCallback((_) => AppState().notifyListeners());
+    WidgetsBinding.instance.addPostFrameCallback((_) => AppState().notifyListeners());
     AppState().loadStates(context, widget._stateDeviceIndex == null ? [] : [AppState().devices[widget._stateDeviceIndex!]],
         widget._stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[widget._stateDeviceGroupIndex!]]);
   }
@@ -678,13 +678,13 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         (widget._stateDeviceIndex != null && widget._stateDeviceGroupIndex != null)) {
       throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
     }
-    WidgetsBinding.instance!.addObserver(this);
-    WidgetsBinding.instance?.addPostFrameCallback((_) => _refresh(context));
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance!.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

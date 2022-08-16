@@ -41,14 +41,14 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   @override
   void dispose() {
     _fabSubscription?.cancel().then((_) => _fabSubscription = null);
-    WidgetsBinding.instance!.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance!.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override

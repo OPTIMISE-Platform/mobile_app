@@ -204,7 +204,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
       if (!_initialized) {
         AppState().devices.forEach((element) => _deviceCollection[element.id] = element);
         _selected.addAll(deviceGroup.device_ids);
-        WidgetsBinding.instance?.addPostFrameCallback((_) async {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
           await _loadMoreDevices();
           setState(() {
             _reloading = false;

@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 0.0.97+97
+version: 0.0.98+98
 
 environment:
   sdk: ">=2.16.0 <3.0.0"
@@ -34,7 +34,7 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.4
-  flutter_platform_widgets: ^1.20.0
+  flutter_platform_widgets: ^2.0.0
   url_launcher: ^6.0.20
   flutter_dotenv: ^5.0.2
   logger: ^1.1.0
@@ -57,11 +57,11 @@ dependencies:
   intl: ^0.17.0
   badges: ^2.0.2
   firebase_core: ^1.13.1
-  firebase_messaging: ^11.2.11
+  firebase_messaging: ^12.0.2
   hive: ^2.1.0
   open_file: ^3.2.1
   share_plus: ^4.0.4
-  fl_chart: ^0.50.1
+  fl_chart: ^0.55.1
   numberpicker: ^2.1.1
   flutter_native_splash: ^2.1.6
   tutorial_coach_mark: ^1.2.2
@@ -76,11 +76,11 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^1.0.0
+  flutter_lints: ^2.0.1
 
   build_runner: ^2.1.7
   json_serializable: ^6.1.4
-  flutter_launcher_icons: ^0.9.2
+  flutter_launcher_icons: ^0.10.0
 
 flutter_icons:
   android: "launcher_icon"

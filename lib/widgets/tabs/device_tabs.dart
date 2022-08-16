@@ -213,7 +213,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return Consumer<AppState>(
       builder: (context, state, child) {
         if (!_initialized) {
-          WidgetsBinding.instance?.addPostFrameCallback((_) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
             state.loadDeviceGroups(context);
             state.loadNetworks(context);
             state.loadLocations(context);

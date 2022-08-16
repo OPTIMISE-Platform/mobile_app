@@ -138,7 +138,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
       final location = state.locations[widget._stateLocationIndex];
       if (!_initialized) {
         _selected.addAll(location.device_ids);
-        WidgetsBinding.instance?.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
           state.searchDevices(filter, context);
         });
         _initialized = true;

@@ -200,7 +200,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         );
       }
 
-      WidgetsBinding.instance?.addPostFrameCallback((_) => _showTutorial(context));
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       return AnimatedSize(
           duration: const Duration(milliseconds: 75),
           alignment: Alignment.topLeft,
@@ -214,7 +214,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
   void _showTutorial(BuildContext context) {
     if (!Settings.tutorialSeen(Tutorial.deviceListItem)) {
       TutorialCoachMark(
-        context,
         targets: [
           TargetFocus(keyTarget: widget._keyFavButton, contents: [
             TargetContent(
@@ -232,7 +231,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
           widget._favorizeButton!.click();
         },
         alignSkip: Alignment.topRight,
-      ).show();
+      ).show(context: context);
       Settings.markTutorialSeen(Tutorial.deviceListItem);
     }
   }

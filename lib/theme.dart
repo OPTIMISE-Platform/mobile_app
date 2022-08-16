@@ -113,7 +113,7 @@ class MyTheme {
 
   static TargetPlatform initialPlatform = kIsWeb ? TargetPlatform.android : Platform.isIOS ? TargetPlatform.iOS : TargetPlatform.android;
   static ThemeStyle currentTheme = kIsWeb ? themeMaterial : Platform.isIOS ? themeCupertino : themeMaterial;
-  static ThemeStyle currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
+  static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
 
   static loadTheme() async {
     var val = Settings.getTheme();
@@ -170,7 +170,7 @@ class MyTheme {
         break;
       default:
         await Settings.resetThemeColor();
-        currentColor = SchedulerBinding.instance!.window.platformBrightness == Brightness.dark ? dark : light;
+        currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
     }
   }
 
