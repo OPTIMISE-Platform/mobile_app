@@ -44,7 +44,7 @@ class Auth extends ChangeNotifier {
 
   static final _httpClient = http.Client();
   OpenIdConnectClient? _client;
-  final String _discoveryUrl = "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/'${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
+  final String _discoveryUrl = "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
 
   bool loggedIn = false;
 
