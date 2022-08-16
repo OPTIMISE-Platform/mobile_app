@@ -88,7 +88,12 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
               ))
           .toList();
       return DropdownButton<dynamic>(
-          key: ValueKey(i.toString()), items: items, value: p.value, onChanged: (value) => setState(() => p.value = value), hint: Text(p.label));
+          key: ValueKey(i.toString()),
+          items: items,
+          value: p.value,
+          onChanged: (value) => setState(() => p.value = value),
+          hint: Text(p.label),
+          isExpanded: true);
     }
 
     switch (p.type) {
@@ -307,7 +312,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                   nameDescription["name"], nameDescription["description"]);
               Navigator.pop(context);
             } else {
-              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(), releaseId: widget.release.id);
+              await SmartServiceService.updateInstanceParameters(widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
+                  releaseId: widget.release.id);
             }
             Navigator.pop(this.context);
           },
