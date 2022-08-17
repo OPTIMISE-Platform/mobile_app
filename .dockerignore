@@ -1,0 +1,10 @@
+android/
+build/
+ios/
+linux/
+.git/
+.idea
+*.iml
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
