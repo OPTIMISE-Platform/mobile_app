@@ -71,6 +71,7 @@ class _HomeState extends State<Home> {
       onChanged: (value) => setState(() => _pw = value),
       onFieldSubmitted: (_) => _login(),
       initialValue: _pw,
+      autofillHints: const [AutofillHints.password],
       material: (context, _) => MaterialTextFormFieldData(
         decoration: InputDecoration(
           suffixIcon: PlatformIconButton(icon: _visibilityButton()),
@@ -120,6 +121,7 @@ class _HomeState extends State<Home> {
                             onFieldSubmitted: (_) => _login(),
                             initialValue: _user,
                             autofocus: true,
+                            autofillHints: const [AutofillHints.username],
                           ),
                           PlatformWidget(
                               material: (_, __) => _passwordField(),
