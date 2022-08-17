@@ -31,6 +31,7 @@ jobs:
           echo "VERSION=$v" >> .env
           echo "DISTRIBUTOR=github" >> .env
           echo "VERSION=$v" >> $GITHUB_ENV
+          echo '${{ secrets.FIREBASE_WEB }}' > web/firebase-messaging-sw.js
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
