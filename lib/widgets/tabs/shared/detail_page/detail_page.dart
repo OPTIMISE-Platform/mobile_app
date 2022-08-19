@@ -457,8 +457,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           functionWidgets.insert(
             element.functionId,
             ListTile(
-                onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || element.value is! num
+                onLongPress: () => _displayTimestamp(element, states, context),
+                onTap: device == null || element.value is! num
                     ? null
                     : () => Navigator.push(
                         context,
@@ -484,8 +484,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           functionWidgets.insert(
             element.functionId,
             ListTile(
-                onTap: () => _displayTimestamp(element, states, context),
-                onLongPress: device == null || element.value is! num
+                onLongPress: () => _displayTimestamp(element, states, context),
+                onTap: device == null || element.value is! num
                     ? null
                     : () => Navigator.push(
                         context,
@@ -537,7 +537,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           element.functionId,
           ListTile(
             title: Text(_getTitle(element)),
-            onLongPress: device == null || element.value is! num
+            onTap: device == null || element.value is! num
                 ? null
                 : () => Navigator.push(
                     context,
