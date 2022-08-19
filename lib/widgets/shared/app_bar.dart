@@ -48,6 +48,7 @@ class MyAppBar {
               context,
               platformPageRoute(
                 context: context,
+                settings: const RouteSettings(name: NotificationList.preferredRouteName),
                 builder: (context) => const NotificationList(),
               ),
             );

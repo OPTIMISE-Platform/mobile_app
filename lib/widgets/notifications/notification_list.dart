@@ -27,6 +27,8 @@ import '../../app_state.dart';
 import '../shared/app_bar.dart';
 
 class NotificationList extends StatefulWidget {
+  static const preferredRouteName = "notifications";
+
   const NotificationList({Key? key}) : super(key: key);
 
   @override

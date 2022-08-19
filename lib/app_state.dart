@@ -21,6 +21,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
@@ -45,6 +46,7 @@ import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
+import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
 
@@ -534,10 +536,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     _messageIdToDisplay = null;
-    notifications[idx].show(context);
-    notifications[idx].isRead = true;
-    await updateNotifications(context, idx);
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (ModalRoute.of(context)?.settings.name != NotificationList.preferredRouteName) {
+        Navigator.push(context, platformPageRoute(context: context,
+            settings: const RouteSettings(name: NotificationList.preferredRouteName),
+            builder: (context) => const NotificationList()));
+      }
+      notifications[idx].show(context);
+      notifications[idx].isRead = true;
+      await updateNotifications(context, idx);
+      notifyListeners();
+    });
   }
 
   loadDeviceGroups(BuildContext context) async {
