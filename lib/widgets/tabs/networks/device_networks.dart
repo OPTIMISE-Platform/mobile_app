@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
@@ -104,13 +105,18 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                 return Column(children: [
                                   const Divider(),
                                   ListTile(
-                                      title: Text(state.networks[i].name),
-                                      leading: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline
-                                          ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                              Tooltip(
-                                                  message: "Network is offline", child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor))
-                                            ])
-                                          : null,
+                                      title: Container(
+                                          alignment: Alignment.centerLeft,
+                                          child: Badge(
+                                            alignment: Alignment.centerLeft,
+                                            padding: const EdgeInsets.only(left: MyTheme.insetSize),
+                                            position: BadgePosition.topEnd(),
+                                            badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
+                                            showBadge: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
+                                            badgeColor: Colors.transparent,
+                                            elevation: 0,
+                                            child: Text(state.networks[i].name),
+                                          )),
                                       subtitle: Text(
                                           "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
                                       onTap: (state.networks[i].device_local_ids ?? []).isEmpty
