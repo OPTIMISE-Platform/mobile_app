@@ -113,6 +113,7 @@ class MyAppState extends State<MyApp> {
               ],
               home: const Home(),
               material: (_, __) => MaterialAppData(
+                title: "OPTIMISE",
                 theme: MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme,
               ),
               cupertino: (_, __) => MyTheme.cupertinoAppData,
