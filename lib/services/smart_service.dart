@@ -223,6 +223,7 @@ class SmartServiceService {
     if (addUsableFlag) {
       queryParameters["add-usable-flag"] = "true";
     }
+    queryParameters["rights"] = "x";
 
     final headers = await Auth().getHeaders();
     await initOptions();
