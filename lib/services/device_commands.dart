@@ -60,6 +60,8 @@ class DeviceCommandsService {
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);
 
+    final List<DeviceCommand> cloudRetries = [];
+
     map.entries.forEach((network) {
       final service = network.key?.localService;
       String url;
@@ -71,12 +73,23 @@ class DeviceCommandsService {
       url += "/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
       futures.add(_runCommands(network.value, url).then((value) {
         for (int i = 0; i < network.value.length; i++) {
-          resp[commands.indexOf(network.value[i])] = value[i];
+          if (value[i].status_code != 513) {
+            resp[commands.indexOf(network.value[i])] = value[i];
+          } else {
+            cloudRetries.add(network.value[i]);
+          }
         }
       }));
     });
 
     await Future.wait(futures);
+    if (cloudRetries.isNotEmpty) {
+      final url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
+      final retryRes = await _runCommands(cloudRetries, url);
+      for (int i = 0; i < retryRes.length; i++) {
+        resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
+      }
+    }
     return resp.map((e) => e ?? DeviceCommandResponse(502, "upstream reply null")).toList();
   }
 
