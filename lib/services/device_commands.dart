@@ -71,7 +71,7 @@ class DeviceCommandsService {
         url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
       }
       url += "/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
-      futures.add(_runCommands(network.value, url).then((value) {
+      futures.add(_runCommands(network.value, url, service == null).then((value) {
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
             resp[commands.indexOf(network.value[i])] = value[i];
@@ -79,13 +79,15 @@ class DeviceCommandsService {
             cloudRetries.add(network.value[i]);
           }
         }
+      }).onError((_, __) {
+        cloudRetries.addAll(network.value);
       }));
     });
 
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
       final url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
-      final retryRes = await _runCommands(cloudRetries, url);
+      final retryRes = await _runCommands(cloudRetries, url, true);
       for (int i = 0; i < retryRes.length; i++) {
         resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
       }
@@ -93,14 +95,14 @@ class DeviceCommandsService {
     return resp.map((e) => e ?? DeviceCommandResponse(502, "upstream reply null")).toList();
   }
 
-  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url) async {
+  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url, bool sendToken) async {
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
     }
     final headers = await Auth().getHeaders();
 
-    final resp = await _client.post(uri, headers: headers, body: json.encode(commands));
+    final resp = await _client.post(uri, headers: sendToken ? headers : null, body: json.encode(commands));
 
     if (resp.statusCode > 200) {
       throw UnexpectedStatusCodeException(resp.statusCode);
