@@ -14,8 +14,11 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -49,6 +52,7 @@ import 'package:mobile_app/shared/remote_message_encoder.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
+import 'package:nsd/nsd.dart';
 
 import 'models/device_class.dart';
 import 'models/device_command_response.dart';
@@ -62,7 +66,9 @@ const messageKey = "messages";
 
 class AppState extends ChangeNotifier with WidgetsBindingObserver {
   static final _instance = AppState._internal();
+
   factory AppState() => _instance;
+
   AppState._internal() {
     WidgetsBinding.instance.addObserver(this);
     if (kIsWeb) {
@@ -176,6 +182,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     await loadNestedFunctions();
     await loadAspects();
     await initMessaging();
+    _manageNetworkDiscovery();
     _initialized = true;
   }
 
@@ -538,9 +545,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _messageIdToDisplay = null;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (ModalRoute.of(context)?.settings.name != NotificationList.preferredRouteName) {
-        Navigator.push(context, platformPageRoute(context: context,
-            settings: const RouteSettings(name: NotificationList.preferredRouteName),
-            builder: (context) => const NotificationList()));
+        Navigator.push(
+            context,
+            platformPageRoute(
+                context: context,
+                settings: const RouteSettings(name: NotificationList.preferredRouteName),
+                builder: (context) => const NotificationList()));
       }
       notifications[idx].show(context);
       notifications[idx].isRead = true;
@@ -597,6 +607,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     networks.addAll(await NetworksService.getNetworks());
+    _mergeDiscoveredServicesWithNetworks();
     notifyListeners();
 
     _networksMutex.release();
@@ -618,6 +629,50 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     _aspectsMutex.release();
   }
+
+  Discovery? _discovery;
+  StreamSubscription? _discoverySubscription;
+
+  _manageNetworkDiscovery() async {
+    if (kIsWeb) return; // no mDNS in browser
+    if (_discovery == null) {
+      final res = await Connectivity().checkConnectivity();
+      if (res == ConnectivityResult.ethernet || res == ConnectivityResult.wifi) {
+        _startNetworkDiscovery();
+      }
+    }
+
+    _discoverySubscription ??= Connectivity().onConnectivityChanged.listen((event) {
+        if (event == ConnectivityResult.ethernet || event == ConnectivityResult.wifi) {
+          _startNetworkDiscovery();
+        } else {
+          _stopNetworkDiscovery();
+        }
+      });
+  }
+
+  _startNetworkDiscovery() async {
+    if (_discovery != null) return;
+    _discovery = await startDiscovery('_snrgy._tcp');
+    _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
+  }
+
+  _mergeDiscoveredServicesWithNetworks() {
+    _discovery?.services.forEach((service) {
+      final nI = networks.indexWhere((n) => n.id == utf8.decode((service.txt?["serial"] ?? Uint8List(0)).map((e) => e.toInt()).toList()));
+      if (nI != -1) {
+        networks[nI].localService = service;
+      }
+    });
+  }
+
+  _stopNetworkDiscovery(){
+    if (_discovery == null) return;
+    stopDiscovery(_discovery!);
+    networks.forEach((n) => n.localService = null);
+    _discovery = null;
+  }
+
 
   onLogout() async {
     try {
@@ -652,6 +707,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifications.clear();
     _notificationInited = false;
     _messageIdToDisplay = null;
+    
+    _stopNetworkDiscovery();
   }
 
   @override

@@ -54,5 +54,11 @@
 		<string>This app needs access to location when open.</string>
 		<key>NSLocationAlwaysUsageDescription</key>
 		<string>This app needs access to location when in the background.</string>
+		<key>NSLocalNetworkUsageDescription</key>
+        <string>Required to discover local network devices</string>
+        <key>NSBonjourServices</key>
+        <array>
+            <string>_snrgy._tcp</string>
+        </array>
 	</dict>
 </plist>

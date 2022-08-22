@@ -17,6 +17,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/device_state.dart';
+import 'package:nsd/nsd.dart';
 
 import 'device_instance.dart';
 
@@ -28,6 +29,7 @@ class Network {
   Annotations? annotations;
   bool shared;
   List<String>? device_local_ids;
+  Service? localService;
 
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];

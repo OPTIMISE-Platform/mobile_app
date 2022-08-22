@@ -728,6 +728,48 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.5.0"
+  nsd:
+    dependency: "direct main"
+    description:
+      name: nsd
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.2.3"
+  nsd_android:
+    dependency: transitive
+    description:
+      name: nsd_android
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.2.2"
+  nsd_ios:
+    dependency: transitive
+    description:
+      name: nsd_ios
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.3"
+  nsd_macos:
+    dependency: transitive
+    description:
+      name: nsd_macos
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.3"
+  nsd_platform_interface:
+    dependency: transitive
+    description:
+      name: nsd_platform_interface
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.5.1"
+  nsd_windows:
+    dependency: transitive
+    description:
+      name: nsd_windows
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "2.0.1"
   numberpicker:
     dependency: "direct main"
     description:

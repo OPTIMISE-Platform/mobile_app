@@ -49,7 +49,7 @@ android {
 
     defaultConfig {
         applicationId "org.infai.optimise.mobile_app"
-        minSdkVersion 19
+        minSdkVersion 21
         targetSdkVersion 33
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

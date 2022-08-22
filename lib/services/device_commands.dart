@@ -23,7 +23,9 @@ import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/network.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
 import '../widgets/shared/toast.dart';
@@ -40,8 +42,45 @@ class DeviceCommandsService {
 
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
-    final url =
-        '${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue';
+    final Map<Network?, List<DeviceCommand>> map = {};
+    final networks = AppState().networks;
+    final devices = AppState().devices;
+
+    commands.forEach((e) {
+      if (e.device_id == null) return _insert(map, null, e, <DeviceCommand>[]);
+      final deviceIndex = devices.indexWhere((d) => d.id == e.device_id);
+      if (deviceIndex == -1) return _insert(map, null, e, <DeviceCommand>[]);
+      final localDeviceId = devices[deviceIndex].local_id;
+      final networkIndex = networks.indexWhere((n) => n.device_local_ids?.contains(localDeviceId) == true);
+      if (networkIndex == -1) return _insert(map, null, e, <DeviceCommand>[]);
+      if (networks[networkIndex].localService == null) return _insert(map, null, e, <DeviceCommand>[]);
+      _insert(map, networks[networkIndex], e, <DeviceCommand>[]);
+    });
+
+    final List<Future> futures = [];
+    final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);
+
+    map.entries.forEach((network) {
+      final service = network.key?.localService;
+      String url;
+      if (service != null) {
+        url = "http://${service.host!}:${service.port!}";
+      } else {
+        url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
+      }
+      url += "/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
+      futures.add(_runCommands(network.value, url).then((value) {
+        for (int i = 0; i < network.value.length; i++) {
+          resp[commands.indexOf(network.value[i])] = value[i];
+        }
+      }));
+    });
+
+    await Future.wait(futures);
+    return resp.map((e) => e ?? DeviceCommandResponse(502, "upstream reply null")).toList();
+  }
+
+  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url) async {
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
@@ -76,5 +115,12 @@ class DeviceCommandsService {
       return false;
     }
     return true;
+  }
+
+  static void _insert(Map<dynamic, List<dynamic>> m, dynamic key, dynamic value, List<dynamic> ifNotExisting) {
+    if (!m.containsKey(key)) {
+      m[key] = ifNotExisting;
+    }
+    m[key]!.add(value);
   }
 }
