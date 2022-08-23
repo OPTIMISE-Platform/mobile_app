@@ -145,7 +145,13 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                                   _selected = i;
                                                 });
                                               });
-                                            })
+                                            },
+                                      trailing: state.networks[i].localService == null
+                                          ? null
+                                          : (const Tooltip(
+                                              message: "In local network",
+                                              triggerMode: TooltipTriggerMode.tap,
+                                              child: Icon(Icons.lan_outlined))))
                                 ]);
                               },
                             )

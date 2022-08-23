@@ -497,7 +497,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                 subtitle: subtitle.isEmpty ? null : Text(subtitle),
                 trailing: element.transitioning
                     ? Container(
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 -12),
+                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                         padding: const EdgeInsets.only(right: 12),
                         child: PlatformCircularProgressIndicator())
                     : functionConfig.displayValue(element.value, context) != null
@@ -523,7 +523,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                                       states,
                                     ),
                             child: functionConfig.displayValue(element.value, context) ??
-                                Text("${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}"),
+                                Text(
+                                    "${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}"),
                           )),
           );
         }
@@ -603,6 +604,9 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
       }
       if (device != null) {
+        if (device.network?.localService != null) {
+          trailingHeader.add(const Tooltip(message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined)));
+        }
         trailingHeader.add(FavorizeButton(widget._stateDeviceIndex!, null));
       } else {
         trailingHeader.add(FavorizeButton(null, widget._stateDeviceGroupIndex));
