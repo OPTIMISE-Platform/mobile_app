@@ -15,6 +15,7 @@
  */
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -22,6 +23,7 @@ import 'package:mobile_app/models/device_type.dart';
 
 import '../exceptions/argument_exception.dart';
 import 'device_command.dart';
+import 'network.dart';
 
 part 'device_instance.g.dart';
 
@@ -46,6 +48,9 @@ class DeviceInstance {
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
 
+  @JsonKey(ignore: true)
+  Network? network;
+
   DeviceInstance(this.id, this.local_id, this.name, this.attributes,
       this.device_type_id, this.annotations, this.shared, this.creator) {
     for (final attr in attributes ?? <Attribute>[]) {
@@ -54,6 +59,8 @@ class DeviceInstance {
         break;
       }
     }
+    final networkIndex = AppState().networks.indexWhere((n) => n.device_local_ids?.contains(local_id) ?? false);
+    if (networkIndex != -1) network = AppState().networks[networkIndex];
   }
 
 
@@ -69,7 +76,7 @@ class DeviceInstance {
     if (deviceType.id != device_type_id) {
       throw ArgumentException("device type has wrong id");
     }
-    states.addAll(StateHelper.getStates(deviceType, id));
+    states.addAll(StateHelper.getStates(deviceType, this));
   }
 
   List<CommandCallback> getStateFillFunctions([List<String>? limitToFunctionIds]) {

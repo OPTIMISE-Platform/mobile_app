@@ -608,6 +608,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
     networks.addAll(await NetworksService.getNetworks());
     _mergeDiscoveredServicesWithNetworks();
+    for (final network in networks) {
+      for (final device in devices) {
+        if (network.device_local_ids?.contains(device.local_id) ?? false) device.network = network;
+      }
+    }
     notifyListeners();
 
     _networksMutex.release();

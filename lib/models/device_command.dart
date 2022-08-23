@@ -16,6 +16,8 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'device_instance.dart';
+
 part 'device_command.g.dart';
 
 @JsonSerializable()
@@ -23,6 +25,7 @@ class DeviceCommand {
   String function_id;
   String? device_id, group_id, device_class_id, service_id, aspect_id;
   dynamic input;
+  DeviceInstance? deviceInstance;
 
   DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input]);
   factory DeviceCommand.fromJson(Map<String, dynamic> json) => _$DeviceCommandFromJson(json);

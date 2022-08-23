@@ -25,7 +25,6 @@ import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
 
-import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
 import '../widgets/shared/toast.dart';
@@ -43,19 +42,7 @@ class DeviceCommandsService {
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     final Map<Network?, List<DeviceCommand>> map = {};
-    final networks = AppState().networks;
-    final devices = AppState().devices;
-
-    commands.forEach((e) {
-      if (e.device_id == null) return _insert(map, null, e, <DeviceCommand>[]);
-      final deviceIndex = devices.indexWhere((d) => d.id == e.device_id);
-      if (deviceIndex == -1) return _insert(map, null, e, <DeviceCommand>[]);
-      final localDeviceId = devices[deviceIndex].local_id;
-      final networkIndex = networks.indexWhere((n) => n.device_local_ids?.contains(localDeviceId) == true);
-      if (networkIndex == -1) return _insert(map, null, e, <DeviceCommand>[]);
-      if (networks[networkIndex].localService == null) return _insert(map, null, e, <DeviceCommand>[]);
-      _insert(map, networks[networkIndex], e, <DeviceCommand>[]);
-    });
+    commands.forEach((e) => _insert(map,  e.deviceInstance?.network, e,  <DeviceCommand>[]));
 
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);

@@ -14,8 +14,8 @@
  *  limitations under the License.
  */
 
-
 import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/service.dart';
 
 import 'content_variable.dart';
@@ -27,31 +27,40 @@ class DeviceState {
   bool isControlling, transitioning = false;
   String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path;
 
-  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId, this.deviceId, this.path);
+  DeviceInstance? deviceInstance;
+
+  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId,
+      this.deviceId, this.path);
 
   DeviceCommand toCommand([dynamic value]) {
-    return DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value);
+    final command = DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value);
+    command.deviceInstance = deviceInstance;
+    return command;
   }
 }
 
 class StateHelper {
   static final Map<String, List<DeviceState>> _states = {};
 
-  static List<DeviceState> getStates(DeviceType deviceType, String deviceId) {
-    if (_states.containsKey(deviceType.id)) { // only once
+  static List<DeviceState> getStates(DeviceType deviceType, DeviceInstance device) {
+    if (_states.containsKey(deviceType.id)) {
+      // only once
       final states = _states[deviceType.id];
-      return List<DeviceState>.generate(states!.length, (i) => DeviceState(states[i].value, states[i].serviceId, states[i].serviceGroupKey,
-          states[i].functionId, states[i].aspectId, states[i].isControlling, null, null, deviceId, states[i].path));
+      return List<DeviceState>.generate(states!.length, (i) {
+        final state = DeviceState(states[i].value, states[i].serviceId, states[i].serviceGroupKey, states[i].functionId, states[i].aspectId,
+            states[i].isControlling, null, null, device.id, states[i].path);
+        state.deviceInstance = device;
+        return state;
+      });
     }
     final List<DeviceState> states = [];
     for (final service in deviceType.services) {
       for (final output in service.outputs ?? []) {
-        _addStateFromContentVariable(
-            service, output.content_variable, false, "", states, deviceId);
+        _addStateFromContentVariable(service, output.content_variable, false, "", states, device);
       }
 
       for (final input in service.inputs ?? []) {
-        _addStateFromContentVariable(service, input.content_variable, true, "", states, deviceId);
+        _addStateFromContentVariable(service, input.content_variable, true, "", states, device);
       }
     }
     _states[deviceType.id] = states;
@@ -59,13 +68,14 @@ class StateHelper {
   }
 
   static _addStateFromContentVariable(
-      Service service, ContentVariable contentVariable, bool isInput, String parentPath, List<DeviceState> states, String deviceId) async {
+      Service service, ContentVariable contentVariable, bool isInput, String parentPath, List<DeviceState> states, DeviceInstance device) async {
     final path = parentPath + (parentPath.isEmpty ? "" : ".") + (contentVariable.name ?? "");
     if (contentVariable.function_id != null) {
-      states.add(DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!,
-          contentVariable.aspect_id, isInput, null, null, deviceId, path));
+      final state = DeviceState(
+          null, service.id, service.service_group_key, contentVariable.function_id!, contentVariable.aspect_id, isInput, null, null, device.id, path);
+      state.deviceInstance = device;
+      states.add(state);
     }
-    contentVariable.sub_content_variables?.forEach(
-            (element) => _addStateFromContentVariable(service, element, isInput, path, states, deviceId));
+    contentVariable.sub_content_variables?.forEach((element) => _addStateFromContentVariable(service, element, isInput, path, states, device));
   }
 }
