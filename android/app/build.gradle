@@ -49,6 +49,7 @@ android {
 
     defaultConfig {
         applicationId "org.infai.optimise.mobile_app"
+        resValue 'string', 'label', '"OPTIMISE"'
         minSdkVersion 21
         targetSdkVersion 33
         versionCode flutterVersionCode.toInteger()
@@ -67,6 +68,14 @@ android {
     buildTypes {
         release {
             signingConfig signingConfigs.release
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            resValue 'string', 'label', '"OPTI D"'
+        }
+        profile {
+            applicationIdSuffix ".profile"
+            resValue 'string', 'label', '"OPTI P"'
         }
     }
 }
