@@ -196,7 +196,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return PlatformNavBar(
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
-          const BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Dashboard"),
+          const BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Board"),
           const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
           BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
           const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
