@@ -259,13 +259,13 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
   String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device) {
     String subtitle = "";
-    if (states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
+    if (states.any((s) => s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
       subtitle += _findAspect(AppState().aspects.values, element.aspectId)?.name ?? "MISSING_ASPECT_NAME";
     }
     if (device != null &&
         element.serviceGroupKey != null &&
         element.serviceGroupKey != "" &&
-        states.any((s) => !s.isControlling && s.functionId == element.functionId && s != element && s.aspectId == element.aspectId)) {
+        states.any((s) => s.functionId == element.functionId && s != element && s.aspectId == element.aspectId)) {
       if (subtitle.isNotEmpty) subtitle += ", ";
       subtitle += (AppState().deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
           "MISSING_SERVICE_GROUP_NAME");
