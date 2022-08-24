@@ -135,6 +135,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                         },
                       )
                     : ListView.builder(
+                        primary: PrimaryScrollController.of(context)?.hasClients != true,
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: MyTheme.inset,
                         itemCount: instances.length,

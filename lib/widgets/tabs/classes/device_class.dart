@@ -93,6 +93,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                             },
                           )
                         : ListView.builder(
+                            primary: PrimaryScrollController.of(context)?.hasClients != true,
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: MyTheme.inset,
                             itemCount: deviceClasses.length,

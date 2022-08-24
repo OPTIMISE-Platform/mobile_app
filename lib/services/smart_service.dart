@@ -35,7 +35,7 @@ class SmartServiceService {
 
   static CacheOptions? _options;
 
-  static late final Dio? _dio;
+  static Dio? _dio;
 
   static String baseUrl = '${dotenv.env["API_URL"] ?? 'localhost'}/smart-services/repository';
 

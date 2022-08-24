@@ -176,17 +176,19 @@ class _DeviceListItemState extends State<DeviceListItem> {
       columnWidgets.add(ListTile(
         title: title,
         leading: _favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
-        trailing: trailingWidgets.isEmpty ? null : trailingWidgets.length == 1
-            ? trailingWidgets[0]
-            : PlatformIconButton(
-                cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-                material: (_, __) => MaterialIconButtonData(
-                    splashRadius: 25,
+        trailing: trailingWidgets.isEmpty
+            ? null
+            : trailingWidgets.length == 1
+                ? trailingWidgets[0]
+                : PlatformIconButton(
+                    material: (_, __) => MaterialIconButtonData(
+                          splashRadius: 25,
+                        ),
                     icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
                     onPressed: () {
                       _expanded = !_expanded;
                       setState(() {});
-                    })),
+                    }),
         onTap: () => _onTap(context),
       ));
 

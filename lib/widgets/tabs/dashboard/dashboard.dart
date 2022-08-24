@@ -302,6 +302,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             //SizedBox does not work here
             height: MediaQuery.of(context).size.height - 192,
             child: ReorderableListView.builder(
+              primary: PrimaryScrollController.of(context)?.hasClients != true,
               itemCount: items.length,
               itemBuilder: (context, idx) {
                 final item = items[idx]!;

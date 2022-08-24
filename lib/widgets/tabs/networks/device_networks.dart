@@ -98,6 +98,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                               },
                             )
                           : ListView.builder(
+                              primary: PrimaryScrollController.of(context)?.hasClients != true,
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: MyTheme.inset,
                               itemCount: state.networks.length,
@@ -149,9 +150,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                       trailing: state.networks[i].localService == null
                                           ? null
                                           : (const Tooltip(
-                                              message: "In local network",
-                                              triggerMode: TooltipTriggerMode.tap,
-                                              child: Icon(Icons.lan_outlined))))
+                                              message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined))))
                                 ]);
                               },
                             )

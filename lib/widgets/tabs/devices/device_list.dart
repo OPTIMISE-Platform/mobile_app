@@ -79,6 +79,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
                             },
                           )
                         : ListView.builder(
+                            primary: PrimaryScrollController.of(context)?.hasClients != true,
                             physics: const AlwaysScrollableScrollPhysics(),
                             padding: MyTheme.inset,
                             itemCount: AppState().totalDevices,

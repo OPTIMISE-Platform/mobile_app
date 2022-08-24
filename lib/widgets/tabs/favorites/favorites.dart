@@ -108,6 +108,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
                             },
                           ))
                 : ListView.builder(
+                    primary: PrimaryScrollController.of(context)?.hasClients != true,
                     padding: MyTheme.inset,
                     itemCount: state.totalDevices + matchingGroups.length,
                     itemBuilder: (_, i) {
