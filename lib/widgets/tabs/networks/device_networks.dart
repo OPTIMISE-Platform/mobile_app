@@ -98,7 +98,6 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                               },
                             )
                           : ListView.builder(
-                              primary: PrimaryScrollController.of(context)?.hasClients != true,
                               physics: const AlwaysScrollableScrollPhysics(),
                               padding: MyTheme.inset,
                               itemCount: state.networks.length,

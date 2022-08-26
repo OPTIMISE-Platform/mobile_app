@@ -39,6 +39,7 @@ class DeviceListItem extends StatefulWidget {
   final int _stateDeviceIndex;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
+  bool _expanded = false;
 
   DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
 
@@ -51,8 +52,13 @@ class _DeviceListItemState extends State<DeviceListItem> {
     printer: SimplePrinter(),
   );
 
-  bool _expanded = false;
   FavorizeButton? _favorizeButton;
+
+  @override
+  void didUpdateWidget(DeviceListItem old) {
+    super.didUpdateWidget(old);
+    widget._expanded = old._expanded;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,15 +190,15 @@ class _DeviceListItemState extends State<DeviceListItem> {
                     material: (_, __) => MaterialIconButtonData(
                           splashRadius: 25,
                         ),
-                    icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                    icon: Icon(widget._expanded ? Icons.expand_less : Icons.expand_more),
                     onPressed: () {
-                      _expanded = !_expanded;
+                      widget._expanded = !widget._expanded;
                       setState(() {});
                     }),
         onTap: () => _onTap(context),
       ));
 
-      if (_expanded) {
+      if (widget._expanded) {
         columnWidgets.add(
           ListTile(
               title: Wrap(

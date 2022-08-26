@@ -125,7 +125,6 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
                     )
                   : Scrollbar(
                       child: ListView.builder(
-                      primary: PrimaryScrollController.of(context)?.hasClients != true,
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: MyTheme.inset,
                       itemCount: state.deviceGroups.length + 1,

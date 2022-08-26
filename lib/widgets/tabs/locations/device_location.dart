@@ -125,7 +125,6 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
                           },
                         )
                       : ListView.builder(
-                          primary: PrimaryScrollController.of(context)?.hasClients != true,
                           physics: const AlwaysScrollableScrollPhysics(),
                           padding: MyTheme.inset,
                           itemCount: state.locations.length + 1,
