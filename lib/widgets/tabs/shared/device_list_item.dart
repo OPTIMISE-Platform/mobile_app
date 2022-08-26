@@ -36,12 +36,12 @@ import '../../shared/toast.dart';
 import 'detail_page/detail_page.dart';
 
 class DeviceListItem extends StatefulWidget {
-  final int _stateDeviceIndex;
+  final DeviceInstance _device;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
   bool _expanded = false;
 
-  DeviceListItem(this._stateDeviceIndex, this._poppedCallback, {Key? key}) : super(key: key);
+  DeviceListItem(this._device, this._poppedCallback, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _DeviceListItemState();
@@ -63,7 +63,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final device = state.devices[widget._stateDeviceIndex];
+      final device = widget._device;
       final List<Widget> trailingWidgets = [];
       final filteredStates =
           device.states.where((element) => !element.isControlling && element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']);
@@ -181,7 +181,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
           ));
       columnWidgets.add(ListTile(
         title: title,
-        leading: _favorizeButton = FavorizeButton(widget._stateDeviceIndex, null, key: widget._keyFavButton),
+        leading: _favorizeButton = FavorizeButton(device, null, key: widget._keyFavButton),
         trailing: trailingWidgets.isEmpty
             ? null
             : trailingWidgets.length == 1
@@ -250,7 +250,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         platformPageRoute(
           context: context,
           builder: (context) {
-            final target = DetailPage(widget._stateDeviceIndex, null);
+            final target = DetailPage(widget._device, null);
             return target;
           },
         ));

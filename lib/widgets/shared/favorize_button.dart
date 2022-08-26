@@ -16,6 +16,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
@@ -25,12 +27,12 @@ import '../../exceptions/argument_exception.dart';
 import '../../services/devices.dart';
 
 class FavorizeButton extends StatelessWidget {
-  final int? _stateDeviceIndex;
-  final int? _stateDeviceGroupIndex;
+  final DeviceInstance? _device;
+  DeviceGroup? _group;
 
-  FavorizeButton(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key) {
-    if ((_stateDeviceIndex == null && _stateDeviceGroupIndex == null) || (_stateDeviceIndex != null && _stateDeviceGroupIndex != null)) {
-      throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
+  FavorizeButton(this._device, this._group, {Key? key}) : super(key: key) {
+    if ((_device == null && _group == null) || (_device != null && _group != null)) {
+      throw ArgumentException("Must set ONE of device or group");
     }
   }
 
@@ -39,12 +41,12 @@ class FavorizeButton extends StatelessWidget {
   }
 
   click() async {
-    if (_stateDeviceIndex != null) {
-      AppState().devices[_stateDeviceIndex!].toggleFavorite();
-      await DevicesService.saveDevice(AppState().devices[_stateDeviceIndex!]);
+    if (_device != null) {
+      _device!.toggleFavorite();
+      await DevicesService.saveDevice(_device!);
     } else {
-      AppState().deviceGroups[_stateDeviceGroupIndex!].toggleFavorite();
-      AppState().deviceGroups[_stateDeviceGroupIndex!] = await DeviceGroupsService.saveDeviceGroup(AppState().deviceGroups[_stateDeviceGroupIndex!]);
+      _group!.toggleFavorite();
+      _group = await DeviceGroupsService.saveDeviceGroup(_group!);
     }
     AppState().notifyListeners();
   }
@@ -53,14 +55,14 @@ class FavorizeButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
       final List<Widget> children = [];
-      if (_stateDeviceIndex != null ? state.devices[_stateDeviceIndex!].favorite : state.deviceGroups[_stateDeviceGroupIndex!].favorite) {
+      if (_device != null ? _device!.favorite : _group!.favorite) {
         children.add(Icon(
           Icons.star,
           color: Colors.yellow,
           size: _border ? MediaQuery.textScaleFactorOf(context) * 15 : null,
         ));
       }
-      if ((_stateDeviceIndex != null ? !state.devices[_stateDeviceIndex!].favorite : !state.deviceGroups[_stateDeviceGroupIndex!].favorite) ||
+      if ((_device != null ? !_device!.favorite : !_group!.favorite) ||
           _border) {
         children.add(const Icon(Icons.star_border, color: Colors.grey));
       }

@@ -146,7 +146,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                           return const SizedBox.shrink();
                         }
                         return Column(
-                          children: [const Divider(), DeviceListItem(i, null)],
+                          children: [const Divider(), DeviceListItem(state.devices[i], null)],
                         );
                       },
                     )),

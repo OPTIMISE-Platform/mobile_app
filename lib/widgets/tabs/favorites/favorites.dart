@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -67,20 +68,20 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
       if (state.devices.isEmpty) {
         state.loadDevices(context);
       }
-      final List<int> matchingGroups = [];
+      final List<DeviceGroup> matchingGroups = [];
       for (var i = 0; i < state.deviceGroups.length; i++) {
         if (state.deviceGroups[i].favorite) {
-          matchingGroups.add(i);
+          matchingGroups.add(state.deviceGroups[i]);
         }
       }
-      state.devices.removeWhere((element) => !element.favorite);
-      if (state.devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
+      final devices = state.devices.where((element) => element.favorite).toList();
+      if (devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       }
       return RefreshIndicator(
           onRefresh: () => state.refreshDevices(context),
           child: Scrollbar(
-            child: state.devices.isEmpty && matchingGroups.isEmpty
+            child: devices.isEmpty && matchingGroups.isEmpty
                 ? Center(
                     child: state.loadingDevices
                         ? PlatformCircularProgressIndicator()
@@ -108,22 +109,21 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
                             },
                           ))
                 : ListView.builder(
-                    primary: PrimaryScrollController.of(context)?.hasClients != true,
                     padding: MyTheme.inset,
                     itemCount: state.totalDevices + matchingGroups.length,
                     itemBuilder: (_, i) {
-                      if (i > state.devices.length + matchingGroups.length - 1) {
+                      if (i > devices.length + matchingGroups.length - 1) {
                         return const SizedBox.shrink();
                       }
-                      if (i < state.devices.length) {
+                      if (i < devices.length) {
                         return Column(
-                          children: [const Divider(), DeviceListItem(i, null)],
+                          children: [const Divider(), DeviceListItem(devices[i], null)],
                         );
                       }
                       return Column(
                         children: [
                           const Divider(),
-                          GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
+                          GroupListItem(matchingGroups.elementAt(i - devices.length), (_) {
                             final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
                             if (parentState == null) return;
                             parentState.filter.deviceGroupIds = null;

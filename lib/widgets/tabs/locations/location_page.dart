@@ -20,6 +20,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/widgets/tabs/locations/location_edit_groups.dart';
 import 'package:provider/provider.dart';
@@ -168,11 +169,11 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
-      final List<int> matchingGroups = [];
+      final List<DeviceGroup> matchingGroups = [];
       for (var i = 0; i < state.deviceGroups.length; i++) {
         if (location.device_group_ids.contains(state.deviceGroups[i].id) &&
             (widget.parentState.filter.deviceGroupIds == null || widget.parentState.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
-          matchingGroups.add(i);
+          matchingGroups.add(state.deviceGroups[i]);
         }
       }
 
@@ -239,7 +240,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                               }
                               if (i < state.devices.length) {
                                 return Column(
-                                  children: [const Divider(), DeviceListItem(i, null)],
+                                  children: [const Divider(), DeviceListItem(state.devices[i], null)],
                                 );
                               }
                               return Column(

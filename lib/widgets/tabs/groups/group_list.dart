@@ -62,7 +62,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   void _openGroupPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
     AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null), context);
-    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DetailPage(null, i)));
+    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DetailPage(null, AppState().deviceGroups[i])));
     parentState?.filter.locationIds = null;
   }
 
@@ -132,7 +132,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
                         return i < state.deviceGroups.length
                             ? Column(children: [
                                 const Divider(),
-                                GroupListItem(i, null),
+                                GroupListItem(state.deviceGroups[i], null),
                               ])
                             : Column(children: const [
                                 Divider(),

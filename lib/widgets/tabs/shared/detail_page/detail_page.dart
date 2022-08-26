@@ -22,6 +22,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/config/functions/get_timestamp.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
@@ -44,10 +45,10 @@ import '../../../shared/favorize_button.dart';
 import '../../../shared/toast.dart';
 
 class DetailPage extends StatefulWidget {
-  final int? _stateDeviceIndex;
-  final int? _stateDeviceGroupIndex;
+  final DeviceInstance? _device;
+  final DeviceGroup? _group;
 
-  const DetailPage(this._stateDeviceIndex, this._stateDeviceGroupIndex, {Key? key}) : super(key: key);
+  const DetailPage(this._device, this._group, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _DetailPageState();
@@ -60,10 +61,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
   _refresh(BuildContext context) async {
     late final List<DeviceState> states;
-    if (widget._stateDeviceIndex != null) {
-      states = AppState().devices[widget._stateDeviceIndex!].states;
+    if (widget._device != null) {
+      states = widget._device!.states;
     } else {
-      states = AppState().deviceGroups[widget._stateDeviceGroupIndex!].states;
+      states = widget._group!.states;
     }
     for (var element in states) {
       if (!element.isControlling) {
@@ -72,8 +73,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
     }
     WidgetsBinding.instance.addPostFrameCallback((_) => AppState().notifyListeners());
-    AppState().loadStates(widget._stateDeviceIndex == null ? [] : [AppState().devices[widget._stateDeviceIndex!]],
-        widget._stateDeviceGroupIndex == null ? [] : [AppState().deviceGroups[widget._stateDeviceGroupIndex!]]);
+    AppState().loadStates(widget._device == null ? [] : [widget._device!], widget._group == null ? [] : [widget._group!]);
   }
 
   _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
@@ -138,7 +138,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
 
       List<String>? refreshingMeasurementFunctionIds;
-      if (widget._stateDeviceGroupIndex != null) {
+      if (widget._group != null) {
         refreshingMeasurementFunctionIds = measuringFunctionConfig.getAllRelatedControllingFunctions();
       } else {
         refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
@@ -294,10 +294,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      if ((state.loadingDevices ||
-              (widget._stateDeviceGroupIndex != null &&
-                  (state.deviceGroups.length <= widget._stateDeviceGroupIndex! ||
-                      state.devices.length != state.deviceGroups[widget._stateDeviceGroupIndex!].device_ids.length))) &&
+      if ((state.loadingDevices || (widget._group != null && (state.devices.length != widget._group!.device_ids.length))) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
@@ -305,21 +302,13 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         return Center(child: PlatformCircularProgressIndicator());
       }
 
-      if (widget._stateDeviceIndex != null && state.devices.length - 1 < widget._stateDeviceIndex!) {
-        _logger.w("Device Page requested for device index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
-      }
-      if (widget._stateDeviceGroupIndex != null && state.deviceGroups.length - 1 < widget._stateDeviceGroupIndex!) {
-        _logger.w("Device Page requested for device group index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
-      }
-      final device = widget._stateDeviceIndex == null ? null : state.devices[widget._stateDeviceIndex!];
-      final deviceGroup = widget._stateDeviceGroupIndex == null ? null : state.deviceGroups[widget._stateDeviceGroupIndex!];
+      final device = widget._device;
+      final deviceGroup = widget._group;
       late final List<DeviceState> states;
-      if (widget._stateDeviceIndex != null) {
-        states = state.devices[widget._stateDeviceIndex!].states;
+      if (device != null) {
+        states = device.states;
       } else {
-        states = state.deviceGroups[widget._stateDeviceGroupIndex!].states;
+        states = deviceGroup!.states;
       }
 
       final connectionStatus = device?.getConnectionStatus();
@@ -352,7 +341,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             if (newName == null) return;
             device.setNickname(newName);
             try {
-              await DevicesService.saveDevice(state.devices[widget._stateDeviceIndex!]);
+              await DevicesService.saveDevice(device);
               state.notifyListeners();
             } catch (e) {
               Toast.showErrorToast(context, "Could not update device name");
@@ -385,7 +374,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             if (newName == null) return;
             deviceGroup.name = newName;
             try {
-              await DeviceGroupsService.saveDeviceGroup(state.deviceGroups[widget._stateDeviceGroupIndex!]);
+              await DeviceGroupsService.saveDeviceGroup(deviceGroup);
               state.notifyListeners();
             } catch (e) {
               Toast.showErrorToast(context, "Could not update device name");
@@ -411,7 +400,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                             cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
                             onPressed: () async {
                               await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
-                              state.deviceGroups.removeAt(widget._stateDeviceGroupIndex!);
+                              state.deviceGroups.remove(deviceGroup);
                               Navigator.pop(context, true);
                             })
                       ],
@@ -607,9 +596,9 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         if (device.network?.localService != null) {
           trailingHeader.add(const Tooltip(message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined)));
         }
-        trailingHeader.add(FavorizeButton(widget._stateDeviceIndex!, null));
+        trailingHeader.add(FavorizeButton(widget._device!, null));
       } else {
-        trailingHeader.add(FavorizeButton(null, widget._stateDeviceGroupIndex));
+        trailingHeader.add(FavorizeButton(null, widget._group));
       }
 
       return Scaffold(
@@ -618,7 +607,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               : FloatingActionButton(
                   onPressed: () async {
                     await Navigator.push(
-                        context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._stateDeviceGroupIndex!)));
+                        context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._group!)));
                     await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), context, true);
                     deviceGroup.prepareStates(true);
                     _refresh(context);
@@ -674,9 +663,9 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    if ((widget._stateDeviceIndex == null && widget._stateDeviceGroupIndex == null) ||
-        (widget._stateDeviceIndex != null && widget._stateDeviceGroupIndex != null)) {
-      throw ArgumentException("Must set ONE of _stateDeviceIndex or _stateDeviceGroupIndex");
+    if ((widget._device == null && widget._group == null) ||
+        (widget._device != null && widget._group != null)) {
+      throw ArgumentException("Must set ONE of device or group");
     }
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));

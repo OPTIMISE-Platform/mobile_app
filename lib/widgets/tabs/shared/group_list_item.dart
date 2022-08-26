@@ -18,6 +18,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
@@ -26,17 +27,17 @@ import '../../../app_state.dart';
 import '../../shared/favorize_button.dart';
 
 class GroupListItem extends StatelessWidget {
-  final int _stateGroupIndex;
+  final DeviceGroup _group;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
 
-  const GroupListItem(this._stateGroupIndex, this._poppedCallback, {Key? key}) : super(key: key);
+  const GroupListItem(this._group, this._poppedCallback, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       return ListTile(
-          title: Text(state.deviceGroups[_stateGroupIndex].name),
-          subtitle: Text("${state.deviceGroups[_stateGroupIndex].device_ids.length} Device${state.deviceGroups[_stateGroupIndex].device_ids.length > 1 || state.deviceGroups[_stateGroupIndex].device_ids.isEmpty ? "s" : ""}"),
+          title: Text(_group.name),
+          subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
           /*
           trailing: Container(
             height: MediaQuery.of(context).textScaleFactor * 48,
@@ -47,15 +48,15 @@ class GroupListItem extends StatelessWidget {
                 child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
           ),
            */
-          leading: FavorizeButton(null, _stateGroupIndex),
+          leading: FavorizeButton(null, _group),
           onTap: () {
-            state.searchDevices(DeviceSearchFilter("", null, null, null, [state.deviceGroups[_stateGroupIndex].id]), context);
+            state.searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]), context);
             final future = Navigator.push(
                 context,
                 platformPageRoute(
                   context: context,
                   builder: (context) {
-                    final target = DetailPage(null, _stateGroupIndex);
+                    final target = DetailPage(null, _group);
                     return target;
                   },
                 ));

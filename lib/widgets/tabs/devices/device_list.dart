@@ -91,7 +91,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
                               }
                               return Column(children: [
                                 const Divider(),
-                                DeviceListItem(i, null),
+                                DeviceListItem(AppState().devices[i], null),
                               ]);
                             }),
               ),

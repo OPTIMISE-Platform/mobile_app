@@ -19,7 +19,6 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mutex/mutex.dart';
@@ -32,12 +31,9 @@ import '../../shared/app_bar.dart';
 import '../shared/search_delegate.dart';
 
 class GroupEditDevices extends StatefulWidget {
-  final int _stateGroupIndex;
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
+  final DeviceGroup _group;
 
-  GroupEditDevices(this._stateGroupIndex, {Key? key}) : super(key: key);
+  GroupEditDevices(this._group, {Key? key}) : super(key: key);
 
   @override
   State<StatefulWidget> createState() => _GroupEditDevicesState();
@@ -172,10 +168,10 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
     return FloatingActionButton.extended(
       onPressed: () async {
         await _m.protect(() async {
-          AppState().deviceGroups[widget._stateGroupIndex].device_ids = _selected.toList();
-          AppState().deviceGroups[widget._stateGroupIndex].criteria = _criteria;
+          widget._group.device_ids = _selected.toList();
+          widget._group.criteria = _criteria;
         });
-        await DeviceGroupsService.saveDeviceGroup(AppState().deviceGroups[widget._stateGroupIndex]);
+        await DeviceGroupsService.saveDeviceGroup(widget._group);
         AppState().notifyListeners();
         if (_delegateOpen && mounted) Navigator.pop(context, true);
         Navigator.pop(context);
@@ -195,12 +191,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      if (state.deviceGroups.length - 1 < widget._stateGroupIndex) {
-        widget._logger.w("GroupEditDevices requested for group index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
-      }
-
-      final deviceGroup = state.deviceGroups[widget._stateGroupIndex];
+      final deviceGroup = widget._group;
       if (!_initialized) {
         AppState().devices.forEach((element) => _deviceCollection[element.id] = element);
         _selected.addAll(deviceGroup.device_ids);
