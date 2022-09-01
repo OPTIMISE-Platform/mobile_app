@@ -18,15 +18,16 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 
 class SmSeColumn extends SmSeRow {
+  @override
+  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a + b) + 1;
 
   @override
-  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a + b);
-
-  @override
-  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a > b ? a : b);
+  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a > b ? a : b) + 1;
 
   @override
   Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
-    return Column(mainAxisAlignment: MainAxisAlignment.center, children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
+    return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
   }
 }

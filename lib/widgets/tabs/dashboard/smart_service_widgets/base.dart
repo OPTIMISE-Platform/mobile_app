@@ -21,6 +21,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/image.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
@@ -47,6 +48,7 @@ const SmSeWidgetType smSeSingleValueType = "single_value";
 const SmSeWidgetType smSeRequestIconType = "request_icon";
 const SmSeWidgetType smSeLineChartType = "line_chart";
 const SmSeWidgetType smSeProcessToggleType = "process_toggle";
+const SmSeWidgetType smSeImageType = "image";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -62,7 +64,7 @@ abstract class SmartServiceModuleWidget {
   late WidgetInfo widgetInfo;
   late String instance_id;
 
-  void configure(dynamic data);
+  Future<void> configure(dynamic data);
 
   @nonVirtual
   Widget build(BuildContext context, bool onlyPreview) => SizedBox(
@@ -86,7 +88,7 @@ abstract class SmartServiceModuleWidget {
     return;
   }
 
-  static SmartServiceModuleWidget? fromModule(SmartServiceModule module) {
+  static Future<SmartServiceModuleWidget?> fromModule(SmartServiceModule module) async {
     if (module.module_type != smartServiceModuleTypeWidget) {
      _logger.w("wrong module type");
      return null;
@@ -102,14 +104,14 @@ abstract class SmartServiceModuleWidget {
     }
     final widgetInfo = WidgetInfo.fromJson(data);
     final id = widgetInfo.widget_key != null ?  (module.instance_id + "_" + widgetInfo.widget_key!) : module.id;
-    final w = fromWidgetInfo(id, widgetInfo);
+    final w = await fromWidgetInfo(id, widgetInfo);
     if (w != null) {
       w.instance_id = module.instance_id;
     }
     return w;
   }
 
-  static SmartServiceModuleWidget? fromWidgetInfo(String id, WidgetInfo data) {
+  static Future<SmartServiceModuleWidget?> fromWidgetInfo(String id, WidgetInfo data) async {
     SmartServiceModuleWidget? w;
 
     switch (data.widget_type) {
@@ -144,15 +146,18 @@ abstract class SmartServiceModuleWidget {
       case smSeProcessToggleType:
         w = SmSeProcessToggle();
         break;
+      case smSeImageType:
+        w = SmSeImage();
+        break;
 
       // ADD NEW WIDGETS ABOVE
       default:
-        _logger.w("unimplemented widget type '" + data.widget_type + "'");
+        _logger.w("unimplemented widget type '${data.widget_type}'");
         return null;
     }
     w.id = id;
     w.widgetInfo = data;
-    w.configure(data.widget_data);
+    await w.configure(data.widget_data);
 
     return w;
   }

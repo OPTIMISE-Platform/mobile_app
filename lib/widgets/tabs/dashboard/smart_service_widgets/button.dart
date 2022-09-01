@@ -43,10 +43,10 @@ class SmSeButton extends SmSeRequest {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     super.configure(data);
     if (data is! Map<String, dynamic> || data["child"] == null) return;
-    child = SmartServiceModuleWidget.fromWidgetInfo(id + "_child", WidgetInfo.fromJson(data["child"]));
+    child = await SmartServiceModuleWidget.fromWidgetInfo("${id}_child", WidgetInfo.fromJson(data["child"]));
   }
 
   @override

@@ -32,7 +32,7 @@ class SmSeText extends SmartServiceModuleWidget {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["text"] == null) return;
     text = data["text"] as String;
   }

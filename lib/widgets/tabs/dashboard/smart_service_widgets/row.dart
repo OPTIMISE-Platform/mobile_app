@@ -22,10 +22,10 @@ class SmSeRow extends SmartServiceModuleWidget {
   final List<SmartServiceModuleWidget?> children = [];
 
   @override
-  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a > b ? a : b);
+  double get height => children.map((e) => e?.height ?? 0).reduce((a, b) => a > b ? a : b)+1;
 
   @override
-  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a + b);
+  double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a + b)+1;
 
   @override
   Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
@@ -33,11 +33,11 @@ class SmSeRow extends SmartServiceModuleWidget {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["children"] == null) return;
 
     children.clear();
-    (data["children"] as List<dynamic>).asMap().forEach((i, e) => children.add(SmartServiceModuleWidget.fromWidgetInfo(id + "_" + i.toString(), WidgetInfo.fromJson(e))));
+    (data["children"] as List<dynamic>).asMap().forEach((i, e) async => children.add(await SmartServiceModuleWidget.fromWidgetInfo(id + "_" + i.toString(), WidgetInfo.fromJson(e))));
   }
 
   @override

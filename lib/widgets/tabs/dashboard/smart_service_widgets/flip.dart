@@ -48,11 +48,11 @@ class SmSeFlip extends SmartServiceModuleWidget {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["front"] == null || data["back"] == null) return;
 
-    front = SmartServiceModuleWidget.fromWidgetInfo(id + "_front", WidgetInfo.fromJson(data["front"]));
-    back = SmartServiceModuleWidget.fromWidgetInfo(id + "_back", WidgetInfo.fromJson(data["back"]));
+    front = await SmartServiceModuleWidget.fromWidgetInfo(id + "_front", WidgetInfo.fromJson(data["front"]));
+    back = await SmartServiceModuleWidget.fromWidgetInfo(id + "_back", WidgetInfo.fromJson(data["back"]));
   }
 
   @override

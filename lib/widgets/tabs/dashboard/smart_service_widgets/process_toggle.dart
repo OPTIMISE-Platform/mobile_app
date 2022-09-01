@@ -46,7 +46,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["deploymentId"] == null) return;
     _deploymentId = data["deploymentId"] as String;
   }

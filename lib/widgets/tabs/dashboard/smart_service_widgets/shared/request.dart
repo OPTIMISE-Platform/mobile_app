@@ -72,7 +72,7 @@ abstract class SmSeRequest extends SmartServiceModuleWidget {
 
   @override
   @mustCallSuper
-  void configure(dynamic data) {
+  Future<void> configure(dynamic data) async {
     if (data is! Map<String, dynamic> || data["request"] == null) return;
     request = Request.fromJson(data["request"]);
   }

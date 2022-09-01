@@ -33,7 +33,7 @@ class SmSeIcon extends SmartServiceModuleWidget {
   }
 
   @override
-  void configure(data) {
+  Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["icon_name"] == null) return;
     codePoint = iconNameToCodePoints[data["icon_name"] as String] ?? codePoint;
   }

@@ -63,7 +63,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
-      final items = modules.map((e) => SmartServiceModuleWidget.fromModule(e)).where((element) => element != null);
+      final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)).where((element) => element != null));
       _smartServiceWidgets = {};
       items.forEach((element) => _smartServiceWidgets![element!.id] = element);
       if (mounted) setState(() {});
@@ -306,7 +306,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
               itemBuilder: (context, idx) {
                 final item = items[idx]!;
                 return Dismissible(
-                    key: ValueKey(_dashboards[tabIdx].widgetAndInstanceIds.toString() + "_" + idx.toString()),
+                    key: ValueKey("${_dashboards[tabIdx].widgetAndInstanceIds}_$idx"),
                     // key needs to stay the same while dragging but change when deleting
                     background: Container(
                       alignment: Alignment.centerRight,
@@ -412,9 +412,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
           // might still create widget if not ready
           if (instance.ready) {
             // widget might have been created in the meantime
-            final modules = (await SmartServiceService.getModules(type: smartServiceModuleTypeWidget, instanceId: p.t))
+            final modules = await Future.wait((await SmartServiceService.getModules(type: smartServiceModuleTypeWidget, instanceId: p.t))
                 .map((e) => SmartServiceModuleWidget.fromModule(e))
-                .toList(growable: false);
+                .toList(growable: false));
             final j = modules.indexWhere((e) => e?.id == p.k);
             if (j == -1) {
               _dashboards[idx].widgetAndInstanceIds.removeWhere((e) => e.k == p.k);
