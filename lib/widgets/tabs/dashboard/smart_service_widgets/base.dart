@@ -22,6 +22,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.d
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
@@ -45,6 +46,7 @@ const SmSeWidgetType smSeIconType = "icon";
 const SmSeWidgetType smSeSingleValueType = "single_value";
 const SmSeWidgetType smSeRequestIconType = "request_icon";
 const SmSeWidgetType smSeLineChartType = "line_chart";
+const SmSeWidgetType smSeProcessToggleType = "process_toggle";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -138,6 +140,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeLineChartType:
         w = SmSeLineChart();
+        break;
+      case smSeProcessToggleType:
+        w = SmSeProcessToggle();
         break;
 
       // ADD NEW WIDGETS ABOVE
