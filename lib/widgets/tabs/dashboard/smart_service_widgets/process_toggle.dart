@@ -29,6 +29,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   String _deploymentId = "";
   final List<String> _instanceIds = [];
   late BuildContext _context;
+  late final Map<String, dynamic>? inputs;
 
   @override
   double height = 1;
@@ -49,6 +50,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["deploymentId"] == null) return;
     _deploymentId = data["deploymentId"] as String;
+    inputs = data["inputs"] as Map<String, dynamic>;
   }
 
   @override
@@ -70,7 +72,18 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   }
 
   Future<void> _start() async {
-    final url = "${dotenv.env["API_URL"] ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/start";
+    String url = "${dotenv.env["API_URL"] ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/start";
+    String queryParameters = "?";
+    inputs?.forEach((key, value) {
+      if (queryParameters.length > 1) {
+        queryParameters += "&";
+      }
+      queryParameters += "$key=${json.encode(value)}";
+    });
+    if (queryParameters.length > 1) {
+      url += queryParameters;
+      url = Uri.encodeFull(url);
+    }
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
