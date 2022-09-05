@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
@@ -105,7 +106,10 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     tabs.add(SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: RefreshIndicator(
-            onRefresh: () async => _refresh(),
+            onRefresh: () async {
+              HapticFeedbackProxy.lightImpact();
+              _refresh();
+            },
             child: SizedBox(
                 height: MediaQuery.of(context).size.height - 192,
                 width: MediaQuery.of(context).size.width,
@@ -297,7 +301,10 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             .toList();
 
     return RefreshIndicator(
-        onRefresh: () async => _refresh(),
+        onRefresh: () async {
+          HapticFeedbackProxy.lightImpact();
+          _refresh();
+        },
         child: Container(
             //SizedBox does not work here
             height: MediaQuery.of(context).size.height - 192,

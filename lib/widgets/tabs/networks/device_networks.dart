@@ -17,6 +17,7 @@
 import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
@@ -75,7 +76,10 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
           child: state.loadingNetworks()
               ? Center(child: PlatformCircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: () async => await _refresh(),
+                  onRefresh: () async {
+                    HapticFeedbackProxy.lightImpact();
+                    await _refresh();
+                  },
                   child: _selected == null
                       ? state.networks.isEmpty
                           ? LayoutBuilder(

@@ -25,6 +25,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_app/main.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -45,7 +46,6 @@ import '../shared/toast.dart';
 class Settings extends StatelessWidget {
   static final _format = DateFormat.yMd().add_jms();
 
-
   const Settings({Key? key}) : super(key: key);
 
   @override
@@ -62,12 +62,11 @@ class Settings extends StatelessWidget {
         ),
         const Divider(),
         ListTile(
-          title: const Text("Set Displayed Fraction Digits"),
-          onTap: () => showPlatformDialog(
-            context: context,
-            builder: getDisplayedFractionsDigitSelectDialog(state),
-          )
-        ),
+            title: const Text("Set Displayed Fraction Digits"),
+            onTap: () => showPlatformDialog(
+                  context: context,
+                  builder: getDisplayedFractionsDigitSelectDialog(state),
+                )),
         const Divider(),
         ListTile(
           title: const Text("Clear Cache"),
@@ -94,35 +93,35 @@ class Settings extends StatelessWidget {
             onTap: () => showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
-                  title: const Text("Choose Color"),
-                  actions: [
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
-                      onPressed: () => Navigator.pop(context, false),
-                    ),
-                    PlatformDialogAction(
-                        child: PlatformText('System Default'),
-                        onPressed: () async {
-                          await MyTheme.selectThemeColor(null);
-                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                          Navigator.pop(context);
-                        }),
-                    PlatformDialogAction(
-                        child: PlatformText('Dark'),
-                        onPressed: () async {
-                          await MyTheme.selectThemeColor(dark);
-                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                          Navigator.pop(context);
-                        }),
-                    PlatformDialogAction(
-                        child: PlatformText('Light'),
-                        onPressed: () async {
-                          await MyTheme.selectThemeColor(light);
-                          (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
-                          Navigator.pop(context);
-                        })
-                  ],
-                )),
+                      title: const Text("Choose Color"),
+                      actions: [
+                        PlatformDialogAction(
+                          child: PlatformText('Cancel'),
+                          onPressed: () => Navigator.pop(context, false),
+                        ),
+                        PlatformDialogAction(
+                            child: PlatformText('System Default'),
+                            onPressed: () async {
+                              await MyTheme.selectThemeColor(null);
+                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              Navigator.pop(context);
+                            }),
+                        PlatformDialogAction(
+                            child: PlatformText('Dark'),
+                            onPressed: () async {
+                              await MyTheme.selectThemeColor(dark);
+                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              Navigator.pop(context);
+                            }),
+                        PlatformDialogAction(
+                            child: PlatformText('Light'),
+                            onPressed: () async {
+                              await MyTheme.selectThemeColor(light);
+                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              Navigator.pop(context);
+                            })
+                      ],
+                    )),
           )
         ]);
       }
@@ -150,25 +149,25 @@ class Settings extends StatelessWidget {
                 final proceed = await showPlatformDialog(
                     context: context,
                     builder: (context) => PlatformAlertDialog(
-                      title: const Text("Update now?"),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Current Build: ${appUpdater.currentBuild}"),
-                          Text("Latest Build: ${appUpdater.latestBuild}"),
-                          Text("Uploaded: ${_format.format(appUpdater.updateDate.toLocal())}"),
-                          Text("Download size: ${(appUpdater.downloadSize / 1000000.0).toStringAsFixed(1)} MB"),
-                        ],
-                      ),
-                      actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
-                          onPressed: () => Navigator.pop(context, false),
-                        ),
-                        PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true))
-                      ],
-                    ));
+                          title: const Text("Update now?"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Current Build: ${appUpdater.currentBuild}"),
+                              Text("Latest Build: ${appUpdater.latestBuild}"),
+                              Text("Uploaded: ${_format.format(appUpdater.updateDate.toLocal())}"),
+                              Text("Download size: ${(appUpdater.downloadSize / 1000000.0).toStringAsFixed(1)} MB"),
+                            ],
+                          ),
+                          actions: [
+                            PlatformDialogAction(
+                              child: PlatformText('Cancel'),
+                              onPressed: () => Navigator.pop(context, false),
+                            ),
+                            PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true))
+                          ],
+                        ));
                 if (proceed != true) {
                   return;
                 }
@@ -205,9 +204,24 @@ class Settings extends StatelessWidget {
       children.addAll([
         const Divider(),
         ListTile(
+          title: const Text("Vibration"),
+          trailing: PlatformSwitch(
+            onChanged: (bool value) async {
+              await settings_service.Settings.setHapticFeedBackEnabled(value);
+              state.notifyListeners();
+              HapticFeedbackProxy.lightImpact();
+            },
+            value: settings_service.Settings.getHapticFeedBackEnabled(),
+          ),
+        )
+      ]);
+      children.addAll([
+        const Divider(),
+        ListTile(
             title: const Text("Show Debug Information"),
             onTap: () {
-              final txt = "Version: ${dotenv.env["VERSION"]}\nUsername: ${Auth().getUsername()}\nFCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}";
+              final txt =
+                  "Version: ${dotenv.env["VERSION"]}\nUsername: ${Auth().getUsername()}\nFCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}";
               showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
@@ -295,12 +309,10 @@ StatefulBuilder Function(BuildContext context) getDisplayedFractionsDigitSelectD
               textMapper: (input) => input == "-1" ? "∞" : input,
               //axis: Axis.horizontal,
               onChanged: (value) => setState(() {
-                currentDisplayedFractionDigitsSetting = value;
-                settings_service.Settings.setDisplayedFractionDigits(value);
-                state.notifyListeners();
-              })
-          )
-      ),
+                    currentDisplayedFractionDigitsSetting = value;
+                    settings_service.Settings.setDisplayedFractionDigits(value);
+                    state.notifyListeners();
+                  }))),
     );
   };
 }

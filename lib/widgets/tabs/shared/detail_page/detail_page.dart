@@ -27,6 +27,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:provider/provider.dart';
@@ -606,8 +607,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               ? null
               : FloatingActionButton(
                   onPressed: () async {
-                    await Navigator.push(
-                        context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._group!)));
+                    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._group!)));
                     await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), context, true);
                     deviceGroup.prepareStates(true);
                     _refresh(context);
@@ -618,7 +618,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           body: PlatformScaffold(
             appBar: appBar.getAppBar(context, appBarActions),
             body: RefreshIndicator(
-              onRefresh: () => _refresh(context),
+              onRefresh: () async {
+                HapticFeedbackProxy.lightImpact();
+                _refresh(context);
+              },
               child: Scrollbar(
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -663,8 +666,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    if ((widget._device == null && widget._group == null) ||
-        (widget._device != null && widget._group != null)) {
+    if ((widget._device == null && widget._group == null) || (widget._device != null && widget._group != null)) {
       throw ArgumentException("Must set ONE of device or group");
     }
     WidgetsBinding.instance.addObserver(this);

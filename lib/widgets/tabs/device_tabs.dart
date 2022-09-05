@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
@@ -205,7 +206,10 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           const BottomNavigationBarItem(icon: Icon(Icons.auto_fix_high), label: "Services"), // TODO icon
         ],
         currentIndex: _bottomBarIndex,
-        itemChanged: (i) => switchBottomBar(i, false),
+        itemChanged: (i) {
+          HapticFeedbackProxy.lightImpact();
+          switchBottomBar(i, false);
+        },
         material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
   }
 

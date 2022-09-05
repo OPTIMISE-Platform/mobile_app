@@ -19,6 +19,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 
@@ -148,7 +149,10 @@ class _NotificationListState extends State<NotificationList> {
       return PlatformScaffold(
           appBar: appBar.getAppBar(context, appBarActions),
           body: RefreshIndicator(
-              onRefresh: () => state.loadNotifications(context),
+              onRefresh: () async {
+                HapticFeedbackProxy.lightImpact();
+                state.loadNotifications(context);
+              },
               child: Scrollbar(
                   child: state.notifications.isEmpty
                       ? const Center(child: Text("No Notifications"))

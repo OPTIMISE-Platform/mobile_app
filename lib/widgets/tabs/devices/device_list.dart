@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
@@ -54,7 +55,10 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
         builder: (_, __, ___) => RefreshIndicator(
-              onRefresh: () => AppState().refreshDevices(context),
+              onRefresh: () async {
+                HapticFeedbackProxy.lightImpact();
+                AppState().refreshDevices(context);
+              },
               child: Scrollbar(
                 child: AppState().loadingDevices
                     ? Center(child: PlatformCircularProgressIndicator())

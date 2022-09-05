@@ -42,6 +42,8 @@ class Settings {
 
   static const _smartServiceDashboardsKey = "smart_service_dashboards";
 
+  static const _hapticFeedBackEnabledKey = "haptic_feedback_enabled";
+
 
   static checkInit() {
     if (!isInitialized) {
@@ -188,6 +190,16 @@ class Settings {
   static setSmartServiceDashboards(List<SmartServiceDashboard> dashboards) async {
     checkInit();
     await _box?.put(_smartServiceDashboardsKey, json.encode(dashboards)).then((value) => _box?.flush());
+  }
+
+  static bool getHapticFeedBackEnabled() {
+    checkInit();
+    return _box!.get(_hapticFeedBackEnabledKey, defaultValue: "true") == "true";
+  }
+
+  static Future<void> setHapticFeedBackEnabled(bool value) {
+    checkInit();
+    return _box!.put(_hapticFeedBackEnabledKey, value.toString());
   }
 }
 

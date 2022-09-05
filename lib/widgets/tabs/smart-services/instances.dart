@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/releases.dart';
 import 'package:mutex/mutex.dart';
@@ -112,6 +113,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
             : RefreshIndicator(
                 onRefresh: () async {
                   if (upgradingInstances.contains(true)) return;
+                  HapticFeedbackProxy.lightImpact();
                   await _refresh();
                 },
                 child: instances.isEmpty

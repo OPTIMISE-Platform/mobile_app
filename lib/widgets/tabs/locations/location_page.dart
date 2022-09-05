@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
 import '../../../models/location.dart';
+import '../../../services/haptic_feedback_proxy.dart';
 import '../../../theme.dart';
 import '../../shared/app_bar.dart';
 import '../../shared/expandable_fab.dart';
@@ -38,7 +39,6 @@ import 'location_edit_devices.dart';
 class LocationPage extends StatefulWidget {
   final int _stateLocationIndex;
   final DeviceTabsState parentState;
-
 
   const LocationPage(this._stateLocationIndex, this.parentState, {Key? key}) : super(key: key);
 
@@ -79,7 +79,8 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh(AppState().locations[widget._stateLocationIndex], context);
+    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true)
+      _refresh(AppState().locations[widget._stateLocationIndex], context);
   }
 
   @override
@@ -90,7 +91,8 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
         return Center(child: PlatformCircularProgressIndicator());
       }
 
-      if ((state.loadingDevices || state.devices.length != state.locations[widget._stateLocationIndex].device_ids.length) && !state.allDevicesLoaded) {
+      if ((state.loadingDevices || state.devices.length != state.locations[widget._stateLocationIndex].device_ids.length) &&
+          !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
         }
@@ -186,7 +188,8 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
               ActionButton(
                 onPressed: () async {
                   _toggleStreamController.add(null);
-                  await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditDevices(widget._stateLocationIndex)));
+                  await Navigator.push(
+                      context, platformPageRoute(context: context, builder: (context) => LocationEditDevices(widget._stateLocationIndex)));
                   state.searchDevices(widget.parentState.filter, context);
                 },
                 icon: Icon(Icons.sensors, color: MyTheme.textColor),
@@ -207,7 +210,10 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                     child: PlatformCircularProgressIndicator(),
                   )
                 : RefreshIndicator(
-                    onRefresh: () async => await _refresh(location, context),
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      await _refresh(location, context);
+                    },
                     child: location.device_ids.isEmpty && location.device_group_ids.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {
@@ -248,8 +254,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                                   const Divider(),
                                   GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
                                     widget.parentState.filter.locationIds = [location.id];
-                                    state.searchDevices(
-                                        widget.parentState.filter, context);
+                                    state.searchDevices(widget.parentState.filter, context);
                                   })
                                 ],
                               );

@@ -19,6 +19,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
@@ -91,7 +92,10 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
             child: releasesMutex.isLocked
                 ? Center(child: PlatformCircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: () async => await _refresh(),
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      await _refresh();
+                    },
                     child: releases.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {

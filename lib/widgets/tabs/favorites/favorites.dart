@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -79,7 +80,10 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
         WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       }
       return RefreshIndicator(
-          onRefresh: () => state.refreshDevices(context),
+          onRefresh: () async {
+            HapticFeedbackProxy.lightImpact();
+            state.refreshDevices(context);
+          },
           child: Scrollbar(
             child: devices.isEmpty && matchingGroups.isEmpty
                 ? Center(

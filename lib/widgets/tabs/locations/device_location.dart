@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
 import '../../../models/device_search_filter.dart';
+import '../../../services/haptic_feedback_proxy.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
 
@@ -103,7 +104,10 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
           child: state.loadingLocations()
               ? Center(child: PlatformCircularProgressIndicator())
               : RefreshIndicator(
-                  onRefresh: () => state.loadLocations(context),
+                  onRefresh: () async {
+                    HapticFeedbackProxy.lightImpact();
+                    state.loadLocations(context);
+                  },
                   child: state.locations.isEmpty
                       ? LayoutBuilder(
                           builder: (context, constraint) {

@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
@@ -71,7 +72,10 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
             ? Center(child: PlatformCircularProgressIndicator())
             : _selected == null
                 ? RefreshIndicator(
-                    onRefresh: () => state.loadDeviceClasses(),
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      state.loadDeviceClasses();
+                    },
                     child: state.deviceClasses.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {
@@ -101,7 +105,8 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                 const Divider(),
                                 ListTile(
                                     title: Text(deviceClasses[i].name),
-                                    subtitle: Text("${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
+                                    subtitle: Text(
+                                        "${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
                                     leading: Container(
                                       height: MediaQuery.of(context).textScaleFactor * 48,
                                       width: MediaQuery.of(context).textScaleFactor * 48,
@@ -135,8 +140,10 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                             },
                           ))
                 : RefreshIndicator(
-                    onRefresh: () =>
-                        state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true),
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true);
+                    },
                     child: ListView.builder(
                       padding: MyTheme.inset,
                       itemCount: state.totalDevices,

@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
@@ -102,7 +103,10 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
       return state.loadingDeviceGroups()
           ? Center(child: PlatformCircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: () => state.loadDeviceGroups(context),
+              onRefresh: () async {
+                HapticFeedbackProxy.lightImpact();
+                state.loadDeviceGroups(context);
+              },
               child: state.deviceGroups.isEmpty
                   ? LayoutBuilder(
                       builder: (context, constraint) {
