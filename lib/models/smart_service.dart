@@ -83,7 +83,7 @@ class SmartServiceExtendedParameter {
   SmartServiceExtendedParameter(this.id, this.label, this.description, dynamic value, this.default_value, this.multiple, this.options, this.type,
       String? value_label, this.characteristic_id, Characteristic? char, this.optional) {
     characteristic = char ?? Characteristic(id, "", type, null, null, value, null, "", options);
-    characteristic.value = value ?? default_value ?? characteristic.value;
+    characteristic.value = value ?? default_value ?? characteristic.value ?? (!optional && options?.length == 1 ? options![0].value : null);
     characteristic.value_label = value_label;
   }
 
