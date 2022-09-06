@@ -46,13 +46,13 @@ class DeviceTabs extends StatefulWidget {
 }
 
 const tabFavorites = 0;
+const tabDashboard = 1;
 const tabClasses = 2;
 const tabLocations = 3;
 const tabGroups = 4;
 const tabNetworks = 5;
 const tabDevices = 6;
 const tabSmartServices = 7;
-const tabDashboard = 1;
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
@@ -75,6 +75,17 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     }
     _fabPressedControllerStream = _fabPressedController.stream.asBroadcastStream();
     return _fabPressedControllerStream!;
+  }
+
+  final StreamController _refreshPressedController = StreamController();
+  Stream? _refreshPressedControllerStream;
+
+  Stream get refreshPressed {
+    if (_refreshPressedControllerStream != null) {
+      return _refreshPressedControllerStream!;
+    }
+    _refreshPressedControllerStream = _refreshPressedController.stream.asBroadcastStream();
+    return _refreshPressedControllerStream!;
   }
 
   final _cupertinoSearchController = RestorableTextEditingController();
@@ -203,7 +214,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
           const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
           const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
-          const BottomNavigationBarItem(icon: Icon(Icons.auto_fix_high), label: "Services"), // TODO icon
+          const BottomNavigationBarItem(icon: Icon(Icons.auto_fix_high), label: "Services"),
         ],
         currentIndex: _bottomBarIndex,
         itemChanged: (i) {
@@ -225,6 +236,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   void dispose() {
     _searchDebounce?.cancel();
     _fabPressedController.close();
+    _refreshPressedController.close();
     super.dispose();
   }
 
@@ -268,12 +280,13 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         if (kIsWeb) {
           actions.add(PlatformIconButton(
-            onPressed: () => AppState().refreshDevices(context),
+            onPressed: () => _refreshPressedController.add(null),
             icon: const Icon(Icons.refresh),
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
         }
-        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices && _bottomBarIndex != tabDashboard) { // TODO move decision to showFab etc.
+        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices && _bottomBarIndex != tabDashboard) {
+          // TODO move decision to showFab etc.
           final List<PopupMenuOption> filterActions = [];
           if (_bottomBarIndex != tabClasses && state.deviceClasses.isNotEmpty) {
             filterActions.add(PopupMenuOption(

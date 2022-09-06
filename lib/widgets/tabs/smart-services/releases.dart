@@ -16,6 +16,7 @@
 
 import 'package:badges/badges.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
@@ -86,8 +87,17 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
 
   @override
   Widget build(BuildContext context) {
+    final actions = MyAppBar.getDefaultActions(context);
+    if (kIsWeb) {
+      actions.insert(0, PlatformIconButton(
+        onPressed: () => _refresh(),
+        icon: const Icon(Icons.refresh),
+        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+      ));
+    }
+
     return PlatformScaffold(
-        appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),
+        appBar: appBar.getAppBar(context, actions),
         body: Scrollbar(
             child: releasesMutex.isLocked
                 ? Center(child: PlatformCircularProgressIndicator())

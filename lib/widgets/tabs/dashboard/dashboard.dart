@@ -29,6 +29,7 @@ import '../../../exceptions/unexpected_status_code_exception.dart';
 import '../../../shared/keyed_list.dart';
 import '../../../theme.dart';
 import '../../shared/expandable_fab.dart';
+import '../device_tabs.dart';
 
 const double heightUnit = 32;
 
@@ -49,6 +50,8 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   late final Stream _toggleStream;
   bool _newDashboardDialogOpen = false;
 
+  StreamSubscription? _refreshSubscription;
+
   DashboardState() {
     _toggleStream = _toggleStreamController.stream.asBroadcastStream();
   }
@@ -56,6 +59,8 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
+    _toggleStreamController.close();
     super.dispose();
   }
 
@@ -76,6 +81,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       length: 0,
       vsync: this,
     );
+    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+      _refresh();
+    });
   }
 
   @override

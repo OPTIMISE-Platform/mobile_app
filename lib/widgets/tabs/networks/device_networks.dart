@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:badges/badges.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -37,6 +39,7 @@ class DeviceListByNetwork extends StatefulWidget {
 class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsBindingObserver {
   int? _selected;
   bool _loading = false;
+  StreamSubscription? _refreshSubscription;
 
   _refresh() async {
     if (_selected == null) {
@@ -54,11 +57,15 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+      _refresh();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 

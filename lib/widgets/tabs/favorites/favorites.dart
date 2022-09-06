@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -37,6 +39,7 @@ class DeviceListFavorites extends StatefulWidget {
 
 class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsBindingObserver {
   final GlobalKey _keyFavButton = GlobalKey();
+  StreamSubscription? _refreshSubscription;
 
   _openFavorites(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
@@ -46,6 +49,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 
@@ -53,6 +57,9 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+      AppState().refreshDevices(context);
+    });
   }
 
   @override

@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -34,10 +36,12 @@ class DeviceListByDeviceClass extends StatefulWidget {
 
 class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with WidgetsBindingObserver {
   int? _selected;
+  StreamSubscription? _refreshSubscription;
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 
@@ -45,6 +49,15 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    _refreshSubscription = parentState?.refreshPressed.listen((_) {
+      if (_selected == null) {
+        AppState().loadDeviceClasses();
+      } else {
+        AppState().searchDevices(
+            parentState.filter, context, true);
+      }
+    });
   }
 
   @override

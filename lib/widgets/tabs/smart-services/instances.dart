@@ -42,13 +42,15 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   final List<SmartServiceInstance> instances = [];
   List<bool> upgradingInstances = [];
   Mutex instancesMutex = Mutex();
-  static StreamSubscription? _fabSubscription;
+  StreamSubscription? _fabSubscription;
+  StreamSubscription? _refreshSubscription;
   late final DeviceTabsState? parentState;
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _fabSubscription?.cancel();
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 
@@ -66,6 +68,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
               return target;
             },
           ));
+      _refresh();
+    });
+    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
       _refresh();
     });
     _refresh();

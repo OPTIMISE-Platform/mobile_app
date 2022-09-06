@@ -37,11 +37,14 @@ class GroupList extends StatefulWidget {
 }
 
 class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
-  static StreamSubscription? _fabSubscription;
+  StreamSubscription? _fabSubscription;
+  StreamSubscription? _refreshSubscription;
+  DeviceTabsState? parentState;
 
   @override
   void dispose() {
-    _fabSubscription?.cancel().then((_) => _fabSubscription = null);
+    _fabSubscription?.cancel();
+    _refreshSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -50,6 +53,39 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    _fabSubscription = parentState?.fabPressed.listen((_) async {
+      final titleController = TextEditingController(text: "");
+      String? newName;
+      await showPlatformDialog(
+          context: context,
+          builder: (_) => PlatformAlertDialog(
+                title: const Text("New Group"),
+                content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+                actions: [
+                  PlatformDialogAction(
+                    child: PlatformText('Cancel'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  PlatformDialogAction(
+                      child: PlatformText('Create'),
+                      onPressed: () {
+                        newName = titleController.value.text;
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                      })
+                ],
+              ));
+      if (newName == null) {
+        return;
+      }
+
+      AppState().deviceGroups.add(await DeviceGroupsService.createDeviceGroup(newName!));
+      _openGroupPage(AppState().deviceGroups.length - 1, parentState);
+      AppState().notifyListeners();
+    });
+    _refreshSubscription = parentState?.refreshPressed.listen((_) {
+      AppState().loadDeviceGroups(context);
+    });
   }
 
   @override
@@ -70,36 +106,6 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-      _fabSubscription ??= parentState?.fabPressed.listen((_) async {
-        final titleController = TextEditingController(text: "");
-        String? newName;
-        await showPlatformDialog(
-            context: context,
-            builder: (_) => PlatformAlertDialog(
-                  title: const Text("New Group"),
-                  content: PlatformTextFormField(controller: titleController, hintText: "Name"),
-                  actions: [
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    PlatformDialogAction(
-                        child: PlatformText('Create'),
-                        onPressed: () {
-                          newName = titleController.value.text;
-                          Navigator.popUntil(context, (route) => route.isFirst);
-                        })
-                  ],
-                ));
-        if (newName == null) {
-          return;
-        }
-
-        state.deviceGroups.add(await DeviceGroupsService.createDeviceGroup(newName!));
-        _openGroupPage(state.deviceGroups.length - 1, parentState);
-        state.notifyListeners();
-      });
       return state.loadingDeviceGroups()
           ? Center(child: PlatformCircularProgressIndicator())
           : RefreshIndicator(

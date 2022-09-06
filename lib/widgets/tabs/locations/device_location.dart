@@ -37,10 +37,13 @@ class DeviceListByLocation extends StatefulWidget {
 
 class _DeviceListByLocationState extends State<DeviceListByLocation> with WidgetsBindingObserver {
   static StreamSubscription? _fabSubscription;
+  StreamSubscription? _refreshSubscription;
+  DeviceTabsState? parentState;
 
   @override
   void dispose() {
-    _fabSubscription?.cancel().then((_) => _fabSubscription = null);
+    _fabSubscription?.cancel();
+    _refreshSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -49,6 +52,39 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    _fabSubscription = parentState?.fabPressed.listen((_) async {
+      final titleController = TextEditingController(text: "");
+      String? newName;
+      await showPlatformDialog(
+          context: context,
+          builder: (_) => PlatformAlertDialog(
+            title: const Text("New Location"),
+            content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+            actions: [
+              PlatformDialogAction(
+                child: PlatformText('Cancel'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              PlatformDialogAction(
+                  child: PlatformText('Create'),
+                  onPressed: () {
+                    newName = titleController.value.text;
+                    Navigator.popUntil(context, (route) => route.isFirst);
+                  })
+            ],
+          ));
+      if (newName == null) {
+        return;
+      }
+
+      AppState().locations.add(await LocationService.createLocation(newName!));
+      _openLocationPage(AppState().locations.length - 1, parentState);
+      AppState().notifyListeners();
+    });
+    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+      AppState().loadLocations(context);
+    });
   }
 
   @override
@@ -70,36 +106,6 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
   @override
   Widget build(BuildContext _) {
     return Consumer<AppState>(builder: (_, state, child) {
-      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-      _fabSubscription ??= parentState?.fabPressed.listen((_) async {
-        final titleController = TextEditingController(text: "");
-        String? newName;
-        await showPlatformDialog(
-            context: context,
-            builder: (_) => PlatformAlertDialog(
-                  title: const Text("New Location"),
-                  content: PlatformTextFormField(controller: titleController, hintText: "Name"),
-                  actions: [
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    PlatformDialogAction(
-                        child: PlatformText('Create'),
-                        onPressed: () {
-                          newName = titleController.value.text;
-                          Navigator.popUntil(context, (route) => route.isFirst);
-                        })
-                  ],
-                ));
-        if (newName == null) {
-          return;
-        }
-
-        state.locations.add(await LocationService.createLocation(newName!));
-        _openLocationPage(state.locations.length - 1, parentState);
-        state.notifyListeners();
-      });
       return Scrollbar(
           child: state.loadingLocations()
               ? Center(child: PlatformCircularProgressIndicator())
