@@ -57,7 +57,7 @@ class DeviceCommandsService {
       } else {
         url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
       }
-      url += "/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
+      url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue"; // TODO
       futures.add(_runCommands(network.value, url, service == null).then((value) {
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
