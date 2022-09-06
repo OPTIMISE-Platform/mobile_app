@@ -298,8 +298,12 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     configs.add(const SizedBox(height: 100)); // prevent FAB overlap
     final appBar = MyAppBar("${widget.instance != null ? "Edit" : "Launch"} Release");
     final valid = _formKey.currentState?.validate() ?? false;
+    if (_formKey.currentState == null) {
+      // redraw until able to validate form
+      WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
+    }
     return Scaffold(
-        floatingActionButton: FloatingActionButton.extended(
+        floatingActionButton: _formKey.currentState == null ? null : FloatingActionButton.extended(
           onPressed: !valid
               ? null
               : () async {
