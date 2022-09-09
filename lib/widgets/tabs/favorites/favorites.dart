@@ -57,7 +57,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().refreshDevices(context);
     });
   }

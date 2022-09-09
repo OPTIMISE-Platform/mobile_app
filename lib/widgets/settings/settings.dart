@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -26,19 +27,17 @@ import 'package:mobile_app/main.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/services/settings.dart' as settings_service;
+import 'package:numberpicker/numberpicker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import 'package:numberpicker/numberpicker.dart';
-
 import '../../app_state.dart';
+import '../../config/functions/function_config.dart';
 import '../../exceptions/no_network_exception.dart';
 import '../../services/auth.dart';
 import '../../theme.dart';
-
-import 'package:mobile_app/services/settings.dart' as settings_service;
-
 import '../shared/app_bar.dart';
 import '../shared/page_spinner.dart';
 import '../shared/toast.dart';
@@ -67,6 +66,33 @@ class Settings extends StatelessWidget {
                   context: context,
                   builder: getDisplayedFractionsDigitSelectDialog(state),
                 )),
+        const Divider(),
+        ListTile(
+            title: const Text("Edit Units"),
+            onTap: () {
+              showPlatformDialog(
+                context: context,
+                builder: (context) => PlatformAlertDialog(
+                  title: Row(children: [
+                    const Text("Edit Units"),
+                    const Spacer(),
+                    OutlinedButton(
+                        onPressed: () async {
+                          await settings_service.Settings.deleteAllFunctionPreferredCharacteristicIds();
+                          reinit();
+                          AppState().notifyListeners();
+                          AppState().pushRefresh();
+                          Toast.showConfirmationToast(context, "All Reset");
+                        },
+                        child: const Text("Reset All"))
+                  ]),
+                  content: _getFunctionPreferredCharacteristicsList(context),
+                  actions: [
+                    PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              );
+            }),
         const Divider(),
         ListTile(
           title: const Text("Clear Cache"),
@@ -290,6 +316,87 @@ class Settings extends StatelessWidget {
         ),
       );
     });
+  }
+
+  Widget _getFunctionPreferredCharacteristicsList(BuildContext context) {
+    final functions = AppState().nestedFunctions.values.where((f) => (f.concept.characteristic_ids ?? []).length > 1).toList();
+    final list = ListView.builder(
+        itemCount: functions.length,
+        itemBuilder: (context, i) {
+          final f = functions[i];
+          return ListTile(
+              title: PlatformWidget(
+                  material: (_, __) => StatefulBuilder(
+                      builder: (context, setState) => PopupMenuButton<String?>(
+                            initialValue: settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ?? f.concept.base_characteristic_id,
+                            itemBuilder: (_) => f.concept.characteristic_ids!
+                                .map(
+                                  (e) => PopupMenuItem<String?>(
+                                      value: e, child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME")),
+                                )
+                                .toList()
+                              ..add(PopupMenuItem<String?>(
+                                  value: null,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: const [Divider(), Text("Reset")],
+                                  ))),
+                            onSelected: (v) {
+                              settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, v);
+                              reinit();
+                              AppState().notifyListeners();
+                              AppState().pushRefresh();
+                              setState(() {});
+                            },
+                            child: Text(f.name),
+                          )),
+                  cupertino: (_, __) => StatefulBuilder(
+                      builder: (context, setState) => GestureDetector(
+                            onTap: () => showPlatformModalSheet(
+                                context: context,
+                                builder: (context) => CupertinoActionSheet(
+                                      actions: f.concept.characteristic_ids!
+                                          .map((e) => CupertinoActionSheetAction(
+                                                isDefaultAction: (settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ??
+                                                        f.concept.base_characteristic_id) ==
+                                                    e,
+                                                child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME"),
+                                                onPressed: () {
+                                                  settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, e);
+                                                  reinit();
+                                                  AppState().notifyListeners();
+                                                  setState(() {});
+                                                  AppState().pushRefresh();
+                                                  Navigator.pop(context);
+                                                },
+                                              ))
+                                          .toList()
+                                        ..add(CupertinoActionSheetAction(
+                                          isDestructiveAction: true,
+                                          child: const Text("Reset"),
+                                          onPressed: () {
+                                            settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, null);
+                                            reinit();
+                                            AppState().notifyListeners();
+                                            setState(() {});
+                                            AppState().pushRefresh();
+                                            Navigator.pop(context);
+                                          },
+                                        )),
+                                    )),
+                            child: Text(f.name),
+                          ))));
+        });
+    return SizedBox(
+        width: double.maxFinite,
+        height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
+        child: Scrollbar(
+            child: PlatformWidget(
+          cupertino: (_, __) => Material(
+            child: list,
+          ),
+          material: (_, __) => list,
+        )));
   }
 }
 

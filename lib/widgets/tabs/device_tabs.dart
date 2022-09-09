@@ -77,17 +77,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return _fabPressedControllerStream!;
   }
 
-  final StreamController _refreshPressedController = StreamController();
-  Stream? _refreshPressedControllerStream;
-
-  Stream get refreshPressed {
-    if (_refreshPressedControllerStream != null) {
-      return _refreshPressedControllerStream!;
-    }
-    _refreshPressedControllerStream = _refreshPressedController.stream.asBroadcastStream();
-    return _refreshPressedControllerStream!;
-  }
-
   final _cupertinoSearchController = RestorableTextEditingController();
 
   _searchChanged(String search) {
@@ -236,7 +225,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   void dispose() {
     _searchDebounce?.cancel();
     _fabPressedController.close();
-    _refreshPressedController.close();
     super.dispose();
   }
 
@@ -280,7 +268,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         if (kIsWeb) {
           actions.add(PlatformIconButton(
-            onPressed: () => _refreshPressedController.add(null),
+            onPressed: () => AppState().pushRefresh(),
             icon: const Icon(Icons.refresh),
             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));

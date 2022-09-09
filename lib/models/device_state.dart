@@ -18,6 +18,7 @@ import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/service.dart';
 
+import '../services/settings.dart';
 import 'content_variable.dart';
 import 'device_type.dart';
 
@@ -33,7 +34,15 @@ class DeviceState {
       this.deviceId, this.path);
 
   DeviceCommand toCommand([dynamic value]) {
-    final command = DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value);
+    final command = DeviceCommand(
+        functionId,
+        deviceId,
+        serviceId,
+        aspectId,
+        groupId,
+        deviceClassId,
+        value,
+        Settings.getFunctionPreferredCharacteristicId(functionId));
     command.deviceInstance = deviceInstance;
     return command;
   }

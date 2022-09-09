@@ -82,7 +82,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
       _openLocationPage(AppState().locations.length - 1, parentState);
       AppState().notifyListeners();
     });
-    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().loadLocations(context);
     });
   }

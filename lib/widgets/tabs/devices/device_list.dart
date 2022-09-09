@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -22,7 +23,6 @@ import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
 import '../../../theme.dart';
-import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
 
 class DeviceList extends StatefulWidget {
@@ -46,7 +46,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().refreshDevices(context);
     });
   }

@@ -36,6 +36,8 @@ import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/characteristics.dart';
+import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_groups.dart';
@@ -54,6 +56,8 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
 import 'package:nsd/nsd.dart';
 
+import 'models/characteristic.dart';
+import 'models/concept.dart';
 import 'models/device_class.dart';
 import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
@@ -144,6 +148,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, NestedFunction> nestedFunctions = {};
   final Mutex _nestedFunctionsMutex = Mutex();
 
+  final Map<String, Concept> concepts = {};
+  final Mutex _conceptsMutex = Mutex();
+
+  final Map<String, Characteristic> characteristics = {};
+  final Mutex _characteristicsMutex = Mutex();
+
   DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
 
   int totalDevices = 0;
@@ -177,12 +187,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   init() async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
-    await loadDeviceClasses();
-    await loadDeviceTypes();
-    await loadNestedFunctions();
-    await loadAspects();
-    await initMessaging();
     _manageNetworkDiscovery();
+    final List<Future> futures = [
+      loadDeviceClasses(),
+      loadDeviceTypes(),
+      loadNestedFunctions(),
+      loadAspects(),
+      loadConcepts(),
+      loadCharacteristics(),
+      initMessaging(),
+    ];
+    await Future.wait(futures);
     _initialized = true;
   }
 
@@ -229,6 +244,32 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     notifyListeners();
     _nestedFunctionsMutex.release();
+  }
+
+  loadConcepts() async {
+    final locked = _conceptsMutex.isLocked;
+    await _conceptsMutex.acquire();
+    if (locked) {
+      return concepts;
+    }
+    for (var element in (await ConceptsService.getConcepts())) {
+      concepts[element.id] = element;
+    }
+    notifyListeners();
+    _conceptsMutex.release();
+  }
+
+  loadCharacteristics() async {
+    final locked = _characteristicsMutex.isLocked;
+    await _characteristicsMutex.acquire();
+    if (locked) {
+      return characteristics;
+    }
+    for (var element in (await CharacteristicsService.getCharacteristics())) {
+      characteristics[element.id] = element;
+    }
+    notifyListeners();
+    _characteristicsMutex.release();
   }
 
   updateTotalDevices() async {
@@ -648,12 +689,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     _discoverySubscription ??= Connectivity().onConnectivityChanged.listen((event) {
-        if (event == ConnectivityResult.ethernet || event == ConnectivityResult.wifi) {
-          _startNetworkDiscovery();
-        } else {
-          _stopNetworkDiscovery();
-        }
-      });
+      if (event == ConnectivityResult.ethernet || event == ConnectivityResult.wifi) {
+        _startNetworkDiscovery();
+      } else {
+        _stopNetworkDiscovery();
+      }
+    });
   }
 
   _startNetworkDiscovery() async {
@@ -671,13 +712,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
 
-  _stopNetworkDiscovery(){
+  _stopNetworkDiscovery() {
     if (_discovery == null) return;
     stopDiscovery(_discovery!);
     networks.forEach((n) => n.localService = null);
     _discovery = null;
   }
-
 
   onLogout() async {
     try {
@@ -709,10 +749,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
     aspects.clear();
 
+    concepts.clear();
+
+    characteristics.clear();
+
     notifications.clear();
     _notificationInited = false;
     _messageIdToDisplay = null;
-    
+
     _stopNetworkDiscovery();
   }
 
@@ -721,4 +765,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   void notifyListeners() {
     super.notifyListeners();
   }
+
+  final StreamController _refreshPressedController = StreamController();
+  Stream? _refreshPressedControllerStream;
+
+  Stream get refreshPressed {
+    if (_refreshPressedControllerStream != null) {
+      return _refreshPressedControllerStream!;
+    }
+    _refreshPressedControllerStream = _refreshPressedController.stream.asBroadcastStream();
+    return _refreshPressedControllerStream!;
+  }
+
+  void pushRefresh() => _refreshPressedController.add(null);
 }

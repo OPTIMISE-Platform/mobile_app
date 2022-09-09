@@ -44,6 +44,7 @@ class Settings {
 
   static const _hapticFeedBackEnabledKey = "haptic_feedback_enabled";
 
+  static const _functionPreferredCharacteristicKeyPrefix = "functionPreferredCharacteristic_";
 
   static checkInit() {
     if (!isInitialized) {
@@ -200,6 +201,26 @@ class Settings {
   static Future<void> setHapticFeedBackEnabled(bool value) {
     checkInit();
     return _box!.put(_hapticFeedBackEnabledKey, value.toString());
+  }
+
+  static String? getFunctionPreferredCharacteristicId(String functionId) {
+    checkInit();
+    return _box!.get(_functionPreferredCharacteristicKeyPrefix + functionId);
+  }
+
+  static Future<void> setFunctionPreferredCharacteristicId(String functionId, String? characteristicId) async {
+    checkInit();
+    if (characteristicId != null) {
+      return await _box!.put(_functionPreferredCharacteristicKeyPrefix + functionId, characteristicId).then((value) => _box?.flush());
+    } else {
+      return await _box!.delete(_functionPreferredCharacteristicKeyPrefix + functionId).then((value) => _box?.flush());
+    }
+  }
+
+  static Future<void> deleteAllFunctionPreferredCharacteristicIds() async {
+    checkInit();
+    final futures = _box!.keys.where((e) => (e as String).startsWith(_functionPreferredCharacteristicKeyPrefix)).map((e) => _box!.delete(e));
+    return await Future.wait(futures).then((value) => _box?.flush());
   }
 }
 

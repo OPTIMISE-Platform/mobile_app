@@ -83,7 +83,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
       _openGroupPage(AppState().deviceGroups.length - 1, parentState);
       AppState().notifyListeners();
     });
-    _refreshSubscription = parentState?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().loadDeviceGroups(context);
     });
   }

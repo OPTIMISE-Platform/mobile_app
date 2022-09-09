@@ -17,11 +17,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:logger/logger.dart';
 
 import '../../models/characteristic.dart';
 
 class RGB {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
   static Widget build(BuildContext context, Characteristic characteristic) {
     var _color = _getColor(characteristic.value);
     return StatefulBuilder(
@@ -59,10 +63,13 @@ class RGB {
       return Colors.white;
     }
     if (value is! Map<String, dynamic>) {
-      throw ArgumentException("value is not map: " + value.toString());
+      _logger.w("value is not map: $value");
+      return Colors.white;
+
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: " + value.toString());
+      _logger.w("value does not contains keys r, b and g: $value");
+      return Colors.white;
     }
     return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
   }

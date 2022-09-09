@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -28,8 +30,8 @@ import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
-import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../app_state.dart';
@@ -38,6 +40,7 @@ import '../../../../models/device_command_response.dart';
 import '../../../../models/device_instance.dart';
 import '../../../../services/device_commands.dart';
 import '../../../../services/devices.dart';
+import '../../../../services/settings.dart';
 import '../../../../shared/keyed_list.dart';
 import '../../../../theme.dart';
 import '../../../shared/app_bar.dart';
@@ -59,6 +62,8 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
+
+  StreamSubscription? _refreshSubscription;
 
   _refresh(BuildContext context) async {
     late final List<DeviceState> states;
@@ -444,6 +449,12 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               state.aspectId == element.aspectId);
         }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
+          String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
+          String? unit;
+          if (preferred != null) {
+            unit = state.characteristics[preferred]?.display_unit;
+          }
+          unit ??= state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "";
           functionWidgets.insert(
             element.functionId,
             ListTile(
@@ -465,7 +476,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                       ? PlatformCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
                           Text(
-                              "${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}",
+                              "${formatValue(element.value)} ${unit}",
                               style: const TextStyle(fontStyle: FontStyle.italic)),
                 )),
           );
@@ -671,11 +682,15 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     }
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
+      _refresh(context);
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 

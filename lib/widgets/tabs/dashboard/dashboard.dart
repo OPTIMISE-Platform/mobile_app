@@ -25,11 +25,11 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../app_state.dart';
 import '../../../exceptions/unexpected_status_code_exception.dart';
 import '../../../shared/keyed_list.dart';
 import '../../../theme.dart';
 import '../../shared/expandable_fab.dart';
-import '../device_tabs.dart';
 
 const double heightUnit = 32;
 
@@ -81,7 +81,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       length: 0,
       vsync: this,
     );
-    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();
     });
   }

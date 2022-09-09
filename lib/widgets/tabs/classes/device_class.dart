@@ -50,10 +50,10 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-    _refreshSubscription = parentState?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       if (_selected == null) {
         AppState().loadDeviceClasses();
-      } else {
+      } else if (parentState != null) {
         AppState().searchDevices(
             parentState.filter, context, true);
       }

@@ -24,22 +24,29 @@ import 'package:mobile_app/config/functions/set_off_state.dart';
 import 'package:mobile_app/config/functions/set_on_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
-import '../../app_state.dart';
 import '../../models/characteristic.dart';
 import '../../shared/math_list.dart';
 import 'get_color.dart';
 import 'get_on_off_state.dart';
 import 'get_temperature.dart';
 
-final Map<String?, FunctionConfig> functionConfigs = {
-  dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfigGetOnOffState()..init(),
-  dotenv.env['FUNCTION_SET_ON_STATE']: FunctionConfigSetOnState()..init(),
-  dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfigSetOffState()..init(),
-  dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor()..init(),
-  dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor()..init(),
-  dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp()..init(),
-  dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature()..init(),
-};
+Map<String?, FunctionConfig> functionConfigs = _specialConfigs();
+
+reinit() {
+  functionConfigs = _specialConfigs();
+}
+
+Map<String?, FunctionConfig> _specialConfigs() {
+  return {
+    dotenv.env['FUNCTION_GET_ON_OFF_STATE']: FunctionConfigGetOnOffState()..init(),
+    dotenv.env['FUNCTION_SET_ON_STATE']: FunctionConfigSetOnState()..init(),
+    dotenv.env['FUNCTION_SET_OFF_STATE']: FunctionConfigSetOffState()..init(),
+    dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor()..init(),
+    dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor()..init(),
+    dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp()..init(),
+    dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature()..init(),
+  };
+}
 
 String roundNumbersString(dynamic value) {
   int fractionDigits = Settings.getDisplayedFractionDigits();
@@ -90,7 +97,12 @@ abstract class FunctionConfig {
   }
 
   init() {
-    characteristic = AppState().nestedFunctions[functionId]?.concept.base_characteristic?.clone();
+    final String? preferred = Settings.getFunctionPreferredCharacteristicId(functionId);
+    if (preferred != null) {
+      characteristic = AppState().characteristics[preferred]?.clone();
+    } else {
+      characteristic = AppState().nestedFunctions[functionId]?.concept.base_characteristic?.clone();
+    }
   }
 }
 

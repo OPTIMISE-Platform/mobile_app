@@ -23,11 +23,11 @@ part 'device_command.g.dart';
 @JsonSerializable()
 class DeviceCommand {
   String function_id;
-  String? device_id, group_id, device_class_id, service_id, aspect_id;
+  String? device_id, group_id, device_class_id, service_id, aspect_id, characteristic_id;
   dynamic input;
   DeviceInstance? deviceInstance;
 
-  DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input]);
+  DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input, this.characteristic_id]);
   factory DeviceCommand.fromJson(Map<String, dynamic> json) => _$DeviceCommandFromJson(json);
   Map<String, dynamic> toJson() => _$DeviceCommandToJson(this);
 }

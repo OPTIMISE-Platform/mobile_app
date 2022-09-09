@@ -24,6 +24,7 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/releases.dart';
 import 'package:mutex/mutex.dart';
 
+import '../../../app_state.dart';
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
 import '../device_tabs.dart';
@@ -70,7 +71,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
           ));
       _refresh();
     });
-    _refreshSubscription = (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.refreshPressed.listen((_) {
+    _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();
     });
     _refresh();

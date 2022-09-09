@@ -22,8 +22,7 @@ part of 'device_command.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
-    DeviceCommand(
+DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) => DeviceCommand(
       json['function_id'] as String,
       json['device_id'] as String?,
       json['service_id'] as String?,
@@ -31,10 +30,10 @@ DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
       json['group_id'] as String?,
       json['device_class_id'] as String?,
       json['input'],
+      json['input_characteristic_id'] as String?,
     );
 
-Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) => <String, dynamic>{
       'function_id': instance.function_id,
       'device_id': instance.device_id,
       'group_id': instance.group_id,
@@ -42,4 +41,5 @@ Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
       'service_id': instance.service_id,
       'aspect_id': instance.aspect_id,
       'input': instance.input,
+      'characteristic_id': instance.characteristic_id,
     };
