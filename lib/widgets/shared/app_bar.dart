@@ -67,7 +67,7 @@ class MyAppBar {
           context,
           platformPageRoute(
             context: context,
-            builder: (context) => const Settings(),
+            builder: (context) => Settings(),
           ),
         );
       },

@@ -45,7 +45,9 @@ import '../shared/toast.dart';
 class Settings extends StatelessWidget {
   static final _format = DateFormat.yMd().add_jms();
 
-  const Settings({Key? key}) : super(key: key);
+  Settings({Key? key}) : super(key: key);
+
+  String _functionSearch = "";
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +88,7 @@ class Settings extends StatelessWidget {
                         },
                         child: const Text("Reset All"))
                   ]),
-                  content: _getFunctionPreferredCharacteristicsList(context),
+                  content: StatefulBuilder(builder: (context, setState) => _getFunctionPreferredCharacteristicsList(context, setState)),
                   actions: [
                     PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
                   ],
@@ -318,85 +320,104 @@ class Settings extends StatelessWidget {
     });
   }
 
-  Widget _getFunctionPreferredCharacteristicsList(BuildContext context) {
-    final functions = AppState().nestedFunctions.values.where((f) => (f.concept.characteristic_ids ?? []).length > 1).toList();
+  Widget _getFunctionPreferredCharacteristicsList(BuildContext context, StateSetter setState) {
+    final functions = AppState()
+        .nestedFunctions
+        .values
+        .where((f) => (f.concept.characteristic_ids ?? []).length > 1 && f.name.toLowerCase().contains(_functionSearch.toLowerCase()))
+        .toList();
     final list = ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         itemCount: functions.length,
         itemBuilder: (context, i) {
           final f = functions[i];
           return ListTile(
               title: PlatformWidget(
-                  material: (_, __) => StatefulBuilder(
-                      builder: (context, setState) => PopupMenuButton<String?>(
-                            initialValue: settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ?? f.concept.base_characteristic_id,
-                            itemBuilder: (_) => f.concept.characteristic_ids!
-                                .map(
-                                  (e) => PopupMenuItem<String?>(
-                                      value: e, child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME")),
-                                )
-                                .toList()
-                              ..add(PopupMenuItem<String?>(
-                                  value: null,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: const [Divider(), Text("Reset")],
-                                  ))),
-                            onSelected: (v) {
-                              settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, v);
-                              reinit();
-                              AppState().notifyListeners();
-                              AppState().pushRefresh();
-                              setState(() {});
-                            },
-                            child: Text(f.name),
-                          )),
-                  cupertino: (_, __) => StatefulBuilder(
-                      builder: (context, setState) => GestureDetector(
-                            onTap: () => showPlatformModalSheet(
-                                context: context,
-                                builder: (context) => CupertinoActionSheet(
-                                      actions: f.concept.characteristic_ids!
-                                          .map((e) => CupertinoActionSheetAction(
-                                                isDefaultAction: (settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ??
-                                                        f.concept.base_characteristic_id) ==
-                                                    e,
-                                                child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME"),
-                                                onPressed: () {
-                                                  settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, e);
-                                                  reinit();
-                                                  AppState().notifyListeners();
-                                                  setState(() {});
-                                                  AppState().pushRefresh();
-                                                  Navigator.pop(context);
-                                                },
-                                              ))
-                                          .toList()
-                                        ..add(CupertinoActionSheetAction(
-                                          isDestructiveAction: true,
-                                          child: const Text("Reset"),
-                                          onPressed: () {
-                                            settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, null);
-                                            reinit();
-                                            AppState().notifyListeners();
-                                            setState(() {});
-                                            AppState().pushRefresh();
-                                            Navigator.pop(context);
-                                          },
-                                        )),
+                  material: (_, __) => PopupMenuButton<String?>(
+                        initialValue: settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ?? f.concept.base_characteristic_id,
+                        itemBuilder: (_) => f.concept.characteristic_ids!
+                            .map(
+                              (e) =>
+                                  PopupMenuItem<String?>(value: e, child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME")),
+                            )
+                            .toList()
+                          ..add(PopupMenuItem<String?>(
+                              value: null,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: const [Divider(), Text("Reset")],
+                              ))),
+                        onSelected: (v) {
+                          settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, v);
+                          reinit();
+                          AppState().notifyListeners();
+                          AppState().pushRefresh();
+                          setState(() {});
+                        },
+                        child: Text(f.name),
+                      ),
+                  cupertino: (_, __) => GestureDetector(
+                        onTap: () => showPlatformModalSheet(
+                            context: context,
+                            builder: (context) => CupertinoActionSheet(
+                                  actions: f.concept.characteristic_ids!
+                                      .map((e) => CupertinoActionSheetAction(
+                                            isDefaultAction: (settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ??
+                                                    f.concept.base_characteristic_id) ==
+                                                e,
+                                            child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME"),
+                                            onPressed: () {
+                                              settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, e);
+                                              reinit();
+                                              AppState().notifyListeners();
+                                              setState(() {});
+                                              AppState().pushRefresh();
+                                              Navigator.pop(context);
+                                            },
+                                          ))
+                                      .toList()
+                                    ..add(CupertinoActionSheetAction(
+                                      isDestructiveAction: true,
+                                      child: const Text("Reset"),
+                                      onPressed: () {
+                                        settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, null);
+                                        reinit();
+                                        AppState().notifyListeners();
+                                        setState(() {});
+                                        AppState().pushRefresh();
+                                        Navigator.pop(context);
+                                      },
                                     )),
-                            child: Text(f.name),
-                          ))));
+                                )),
+                        child: Text(f.name),
+                      )));
         });
-    return SizedBox(
+    final column = SizedBox(
         width: double.maxFinite,
-        height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
-        child: Scrollbar(
-            child: PlatformWidget(
-          cupertino: (_, __) => Material(
-            child: list,
-          ),
-          material: (_, __) => list,
-        )));
+        height: MediaQuery.of(context).size.height,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+              padding: MyTheme.inset,
+              child: TextFormField(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.search),
+                  labelText: 'Search',
+                ),
+                onChanged: (filter) {
+                  _functionSearch = filter;
+                  setState(() {});
+                },
+                initialValue: _functionSearch,
+              )),
+          Expanded(child: Scrollbar(child: list))
+        ]));
+    return PlatformWidget(
+      cupertino: (_, __) => Material(
+        child: column,
+      ),
+      material: (_, __) => column,
+    );
   }
 }
 
