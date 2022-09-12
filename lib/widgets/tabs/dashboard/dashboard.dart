@@ -403,7 +403,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             .widgetAndInstanceIds
             .map((e) {
               if (_smartServiceWidgets!.containsKey(e.k)) {
-                return _smartServiceWidgets![e];
+                return _smartServiceWidgets![e.k];
               } else {
                 missingIds.add(e);
                 return null;

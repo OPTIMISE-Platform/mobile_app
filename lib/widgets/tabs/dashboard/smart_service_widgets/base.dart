@@ -24,6 +24,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dar
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/image.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_forecast.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
@@ -49,6 +50,7 @@ const SmSeWidgetType smSeRequestIconType = "request_icon";
 const SmSeWidgetType smSeLineChartType = "line_chart";
 const SmSeWidgetType smSeProcessToggleType = "process_toggle";
 const SmSeWidgetType smSeImageType = "image";
+const SmSeWidgetType smSePvForecastType = "pv_forecast";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -148,6 +150,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeImageType:
         w = SmSeImage();
+        break;
+      case smSePvForecastType:
+        w = SmSePvForecast();
         break;
 
       // ADD NEW WIDGETS ABOVE
