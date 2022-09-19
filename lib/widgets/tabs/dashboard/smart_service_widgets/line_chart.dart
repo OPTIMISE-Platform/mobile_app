@@ -99,7 +99,7 @@ class SmSeLineChart extends SmSeRequest {
     } else {
       final List<dynamic> respArr = json.decode(resp.body);
       if (respArr.isEmpty) return;
-      if (respArr[0] is! List || respArr.isEmpty) return;
+      if (respArr[0] is! List || respArr[0].isEmpty) return;
       if (respArr[0][0] is List) {
         int linesAdded = 0;
         for (int i = 0; i < respArr.length; i++) {
