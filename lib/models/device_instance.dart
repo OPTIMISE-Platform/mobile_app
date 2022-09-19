@@ -51,8 +51,7 @@ class DeviceInstance {
   @JsonKey(ignore: true)
   Network? network;
 
-  DeviceInstance(this.id, this.local_id, this.name, this.attributes,
-      this.device_type_id, this.annotations, this.shared, this.creator) {
+  DeviceInstance(this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator) {
     for (final attr in attributes ?? <Attribute>[]) {
       if (attr.key == attributeNickname) {
         _nickname = attr.value;
@@ -63,14 +62,13 @@ class DeviceInstance {
     if (networkIndex != -1) network = AppState().networks[networkIndex];
   }
 
-
-  factory DeviceInstance.fromJson(Map<String, dynamic> json) =>
-      _$DeviceInstanceFromJson(json);
+  factory DeviceInstance.fromJson(Map<String, dynamic> json) => _$DeviceInstanceFromJson(json);
 
   Map<String, dynamic> toJson() => _$DeviceInstanceToJson(this);
 
   prepareStates(DeviceType deviceType) {
-    if (states.isNotEmpty) { // only once
+    if (states.isNotEmpty) {
+      // only once
       return;
     }
     if (deviceType.id != device_type_id) {
@@ -122,28 +120,52 @@ class DeviceInstance {
     setFavorite(!favorite);
   }
 
-  DeviceConnectionStatus getConnectionStatus() {
-    if (annotations == null) {
+  DeviceConnectionStatus get connectionStatus {
+    if (annotations?.connected == null) {
       return DeviceConnectionStatus.unknown;
     }
-    if (annotations!.connected) {
+    if (annotations!.connected!) {
       return DeviceConnectionStatus.online;
     } else {
       return DeviceConnectionStatus.offline;
     }
   }
 
+  set connectionStatus(DeviceConnectionStatus connectionStatus) {
+    switch (connectionStatus) {
+      case DeviceConnectionStatus.unknown:
+        if (annotations?.connected != null) {
+          annotations!.connected = null;
+        }
+        break;
+      case DeviceConnectionStatus.online:
+        if (annotations != null) {
+          annotations!.connected = true;
+        } else {
+          annotations = Annotations(true);
+        }
+        break;
+      case DeviceConnectionStatus.offline:
+        if (annotations != null) {
+          annotations!.connected = false;
+        } else {
+          annotations = Annotations(false);
+        }
+        break;
+    }
+  }
+
   String get displayName => _nickname ?? name;
 
   setNickname(String val) {
-      _nickname = val;
-      final i = attributes?.indexWhere((element) => element.key == attributeNickname);
-      if (i != null && i != -1) {
-        attributes![i].value = val;
-      } else {
-        attributes ??= [];
-        attributes!.add(Attribute(attributeNickname, val, sharedOrigin));
-      }
+    _nickname = val;
+    final i = attributes?.indexWhere((element) => element.key == attributeNickname);
+    if (i != null && i != -1) {
+      attributes![i].value = val;
+    } else {
+      attributes ??= [];
+      attributes!.add(Attribute(attributeNickname, val, sharedOrigin));
+    }
   }
 }
 

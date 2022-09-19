@@ -44,10 +44,10 @@ class Network {
 
 
   DeviceConnectionStatus getConnectionStatus() {
-    if (annotations == null) {
+    if (annotations?.connected == null) {
       return DeviceConnectionStatus.unknown;
     }
-    if (annotations!.connected) {
+    if (annotations!.connected!) {
       return DeviceConnectionStatus.online;
     } else {
       return DeviceConnectionStatus.offline;

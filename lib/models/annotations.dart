@@ -20,7 +20,7 @@ part 'annotations.g.dart';
 
 @JsonSerializable()
 class Annotations {
-  bool connected;
+  bool? connected;
 
   Annotations(this.connected);
   factory Annotations.fromJson(Map<String, dynamic> json) => _$AnnotationsFromJson(json);

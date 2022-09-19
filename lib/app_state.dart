@@ -47,6 +47,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
@@ -333,6 +334,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
       await loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
+      await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices);
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(); // when loadDevices called directly
@@ -366,7 +368,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       await loadDeviceType(element.device_type_id);
       element.prepareStates(deviceTypes[element.device_type_id]!);
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
-      if (element.getConnectionStatus() == DeviceConnectionStatus.offline) {
+      if (element.connectionStatus == DeviceConnectionStatus.offline) {
         callbacks.forEach((element) => element.callback(null));
       } else {
         commandCallbacks.addAll(callbacks);
@@ -650,10 +652,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     networks.addAll(await NetworksService.getNetworks());
     _mergeDiscoveredServicesWithNetworks();
     for (final network in networks) {
-      for (final device in devices) {
-        if (network.device_local_ids?.contains(device.local_id) ?? false) device.network = network;
-      }
+      final networkDevices = devices.where((device) => network.device_local_ids?.contains(device.local_id) ?? false);
+      networkDevices.forEach((d) => d.network = network);
     }
+    await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
     notifyListeners();
 
     _networksMutex.release();

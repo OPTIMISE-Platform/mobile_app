@@ -90,10 +90,10 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               ?.display_name),
                       icon: functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.displayValue(element.value, context) ??
                           const Icon(Icons.help_outline),
-                      onPressed: device.getConnectionStatus() == DeviceConnectionStatus.offline
+                      onPressed: device.connectionStatus == DeviceConnectionStatus.offline
                           ? null
                           : () async {
-                              if (device.getConnectionStatus() == DeviceConnectionStatus.offline) {
+                              if (device.connectionStatus == DeviceConnectionStatus.offline) {
                                 Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
                                 return;
                               }
@@ -163,7 +163,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         ));
       });
 
-      final connectionStatus = device.getConnectionStatus();
+      final connectionStatus = device.connectionStatus;
       final List<Widget> columnWidgets = [];
       final Widget title = Container(
           alignment: Alignment.centerLeft,
