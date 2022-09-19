@@ -53,7 +53,7 @@ class DevicesService {
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {

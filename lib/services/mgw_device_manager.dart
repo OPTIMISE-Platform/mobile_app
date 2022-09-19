@@ -23,7 +23,7 @@ import '../models/network.dart';
 import '../shared/keyed_list.dart';
 
 class MgwDeviceManager {
-  static final dio = Dio();
+  static final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
 
   static Future<void> updateDeviceConnectionStatusFromMgw(Iterable<DeviceInstance> devices) async {
     final KeyedList<Network?, DeviceInstance> devicesByNetwork = KeyedList();

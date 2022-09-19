@@ -17,9 +17,9 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
@@ -31,7 +31,7 @@ import '../widgets/shared/toast.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {
-  static final _client = http.Client();
+  static final _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -57,7 +57,7 @@ class DeviceCommandsService {
       } else {
         url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
       }
-      url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue"; // TODO
+      url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
       futures.add(_runCommands(network.value, url, service == null).then((value) {
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
@@ -74,7 +74,12 @@ class DeviceCommandsService {
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
       final url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
-      final retryRes = await _runCommands(cloudRetries, url, true);
+      List<DeviceCommandResponse> retryRes;
+      try {
+        retryRes = await _runCommands(cloudRetries, url, true);
+      } catch (e) {
+        retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length, (index) => DeviceCommandResponse(502, e.toString()));
+      }
       for (int i = 0; i < retryRes.length; i++) {
         resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
       }
@@ -83,21 +88,20 @@ class DeviceCommandsService {
   }
 
   static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url, bool sendToken) async {
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
     final headers = await Auth().getHeaders();
 
-    final resp = await _client.post(uri, headers: sendToken ? headers : null, body: json.encode(commands));
+    final Response<List<dynamic>> resp;
 
-    if (resp.statusCode > 200) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+    try {
+      resp = await _dio.post<List<dynamic>>(url, options: Options(headers: sendToken ? headers : null), data: json.encode(commands));
+    } on DioError catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(e.response?.statusCode);
+      }
+      rethrow;
     }
 
-    final List<dynamic> l = json.decode(resp.body);
-
-    return List<DeviceCommandResponse>.generate(l.length, (index) => DeviceCommandResponse.fromJson(l[index]));
+    return List<DeviceCommandResponse>.generate(resp.data!.length, (index) => DeviceCommandResponse.fromJson(resp.data![index]));
   }
 
   /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false

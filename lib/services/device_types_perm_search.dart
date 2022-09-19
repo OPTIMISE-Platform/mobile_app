@@ -57,7 +57,7 @@ class DeviceTypesPermSearchService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));

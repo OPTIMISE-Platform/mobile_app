@@ -690,11 +690,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       }
     }
 
-    _discoverySubscription ??= Connectivity().onConnectivityChanged.listen((event) {
+    _discoverySubscription ??= Connectivity().onConnectivityChanged.listen((event) async {
       if (event == ConnectivityResult.ethernet || event == ConnectivityResult.wifi) {
-        _startNetworkDiscovery();
+        await _startNetworkDiscovery();
       } else {
-        _stopNetworkDiscovery();
+        await _stopNetworkDiscovery();
       }
     });
   }
@@ -714,9 +714,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     });
   }
 
-  _stopNetworkDiscovery() {
+  _stopNetworkDiscovery() async {
     if (_discovery == null) return;
-    stopDiscovery(_discovery!);
+    _discovery!.dispose();
+    await stopDiscovery(_discovery!);
     networks.forEach((n) => n.localService = null);
     _discovery = null;
   }
@@ -759,7 +760,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _notificationInited = false;
     _messageIdToDisplay = null;
 
-    _stopNetworkDiscovery();
+    await _stopNetworkDiscovery();
   }
 
   @override

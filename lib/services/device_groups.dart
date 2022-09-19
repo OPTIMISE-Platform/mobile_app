@@ -50,7 +50,7 @@ class DeviceGroupsService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {

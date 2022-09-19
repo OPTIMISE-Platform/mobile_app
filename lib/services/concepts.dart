@@ -62,7 +62,7 @@ class ConceptsService {
 
       final headers = await Auth().getHeaders();
       await initOptions();
-      final dio = Dio()
+      final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
         ..interceptors.add(DioCacheInterceptor(options: _options!));
       final Response<List<dynamic>?> resp;
       try {

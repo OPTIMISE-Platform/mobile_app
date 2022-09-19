@@ -47,7 +47,7 @@ class DeviceTypesService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
 
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {

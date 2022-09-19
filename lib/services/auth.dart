@@ -15,11 +15,11 @@
  */
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
@@ -42,9 +42,14 @@ class Auth extends ChangeNotifier {
   final _m = Mutex();
   final _clientSetupMutex = Mutex();
 
-  static final _httpClient = http.Client();
+  static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000));
+  static DateTime? _lastOnlineCheck;
+  static const Duration _checkCacheDuration = Duration(seconds: 30);
+  static bool _checkCache = false;
+
   OpenIdConnectClient? _client;
-  final String _discoveryUrl = "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
+  final String _discoveryUrl =
+      "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
 
   bool loggedIn = false;
 
@@ -91,11 +96,13 @@ class Auth extends ChangeNotifier {
         }
       } else {
         _logger.d("Postponing real init(): Currently offline");
-        final token = await OpenIdIdentity.load();
-        if (token != null) {
-          _logger.d("Using token from storage, assuming still valid");
-          loggedIn = true;
-          notifyListeners();
+        if (!loggedIn) {
+          final token = await OpenIdIdentity.load();
+          if (token != null) {
+            _logger.d("Using token from storage, assuming still valid");
+            loggedIn = true;
+            notifyListeners();
+          }
         }
       }
     });
@@ -228,15 +235,18 @@ class Auth extends ChangeNotifier {
     if (await (Connectivity().checkConnectivity()) == ConnectivityResult.none) {
       return false;
     }
-    var uri = Uri.parse(_discoveryUrl);
-    if (_discoveryUrl.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
+    if (_lastOnlineCheck != null && DateTime.now().difference(_lastOnlineCheck!) < _checkCacheDuration) {
+      return _checkCache;
     }
     try {
-      final resp = await _httpClient.get(uri);
-      return resp.statusCode == 200;
+      final resp = await _dio.get(_discoveryUrl);
+      _checkCache = resp.statusCode == 200;
+      return _checkCache;
     } catch (e) {
-      return false;
+      _checkCache = false;
+      return _checkCache;
+    } finally {
+      _lastOnlineCheck = DateTime.now();
     }
   }
 }

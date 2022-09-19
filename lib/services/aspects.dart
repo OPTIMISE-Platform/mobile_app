@@ -52,10 +52,10 @@ class AspectsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000, headers: headers))..interceptors.add(DioCacheInterceptor(options: _options!));
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
+      resp = await dio.get<List<dynamic>?>(uri);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
