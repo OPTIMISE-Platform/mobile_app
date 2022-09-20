@@ -19,6 +19,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -83,6 +84,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       });
     }
   }
+
+  static final connectionManager = ConnectionManager();
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -294,8 +297,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
-    await updateTotalDevices();
-    await loadDevices(context);
+    await Future.wait(<Future>[
+      updateTotalDevices(),
+      loadDevices(context),
+    ]);
   }
 
   refreshDevices(BuildContext context) async {
@@ -333,8 +338,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
-      await loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']);
-      await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices);
+      await Future.wait(<Future>[
+        loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']),
+        MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices)
+      ]);
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(); // when loadDevices called directly

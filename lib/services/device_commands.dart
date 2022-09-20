@@ -18,6 +18,7 @@ import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
@@ -25,13 +26,16 @@ import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
 import '../widgets/shared/toast.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {
-  static final _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
+  static final _dioH1 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
+  static final _dio2H2 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -42,7 +46,7 @@ class DeviceCommandsService {
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     final Map<Network?, List<DeviceCommand>> map = {};
-    commands.forEach((e) => _insert(map,  e.deviceInstance?.network, e,  <DeviceCommand>[]));
+    commands.forEach((e) => _insert(map, e.deviceInstance?.network, e, <DeviceCommand>[]));
 
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);
@@ -51,14 +55,17 @@ class DeviceCommandsService {
 
     map.entries.forEach((network) {
       final service = network.key?.localService;
+      Dio dio;
       String url;
       if (service != null) {
         url = "http://${service.host!}:${service.port!}";
+        dio = _dioH1;
       } else {
         url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
+        dio = _dio2H2;
       }
       url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
-      futures.add(_runCommands(network.value, url, service == null).then((value) {
+      futures.add(_runCommands(network.value, url, service == null, dio).then((value) {
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
             resp[commands.indexOf(network.value[i])] = value[i];
@@ -70,13 +77,13 @@ class DeviceCommandsService {
         cloudRetries.addAll(network.value);
       }));
     });
-
+    final DateTime start = DateTime.now();
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
       final url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
       List<DeviceCommandResponse> retryRes;
       try {
-        retryRes = await _runCommands(cloudRetries, url, true);
+        retryRes = await _runCommands(cloudRetries, url, true, _dio2H2);
       } catch (e) {
         retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length, (index) => DeviceCommandResponse(502, e.toString()));
       }
@@ -84,16 +91,17 @@ class DeviceCommandsService {
         resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
       }
     }
+    _logger.d("runCommands ${DateTime.now().difference(start)}");
     return resp.map((e) => e ?? DeviceCommandResponse(502, "upstream reply null")).toList();
   }
 
-  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url, bool sendToken) async {
+  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url, bool sendToken, Dio dio) async {
     final headers = await Auth().getHeaders();
 
     final Response<List<dynamic>> resp;
 
     try {
-      resp = await _dio.post<List<dynamic>>(url, options: Options(headers: sendToken ? headers : null), data: json.encode(commands));
+      resp = await dio.post<List<dynamic>>(url, options: Options(headers: sendToken ? headers : null), data: json.encode(commands));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);

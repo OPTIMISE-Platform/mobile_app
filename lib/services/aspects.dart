@@ -17,11 +17,13 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
@@ -52,7 +54,9 @@ class AspectsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000, headers: headers))..interceptors.add(DioCacheInterceptor(options: _options!));
+    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000, headers: headers))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri);

@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
@@ -23,6 +24,10 @@ import '../models/network.dart';
 import '../shared/keyed_list.dart';
 
 class MgwDeviceManager {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
   static final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
 
   static Future<void> updateDeviceConnectionStatusFromMgw(Iterable<DeviceInstance> devices) async {
@@ -34,7 +39,9 @@ class MgwDeviceManager {
         futures.add(_updateFromMgw(network!, devices));
       }
     });
+    final start = DateTime.now();
     await Future.wait(futures);
+    _logger.d("updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
   }
 
   static Future<void> _updateFromMgw(Network network, Iterable<DeviceInstance> devices) async {

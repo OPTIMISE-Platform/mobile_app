@@ -17,11 +17,13 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
@@ -47,7 +49,9 @@ class DeviceTypesService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
 
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {

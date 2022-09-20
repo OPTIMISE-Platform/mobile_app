@@ -42,17 +42,42 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 Future main() async {
+  final start = DateTime.now();
   await dotenv.load(fileName: ".env");
+  print("dotenv init took ${DateTime.now().difference(start)}");
+
+  var sub = DateTime.now();
   await Settings.init();
+  print("Settings init took ${DateTime.now().difference(sub)}");
+
+  sub = DateTime.now();
   await MyTheme.loadTheme();
+  print("MyTheme init took ${DateTime.now().difference(sub)}");
+
+  sub = DateTime.now();
   await findSystemLocale();
+  print("findSystemLocale init took ${DateTime.now().difference(sub)}");
+
+  sub = DateTime.now();
   await initializeDateFormatting(Intl.systemLocale, null);
+  print("initializeDateFormatting init took ${DateTime.now().difference(sub)}");
+
+  sub = DateTime.now();
   WidgetsFlutterBinding.ensureInitialized();
+  print("WidgetsFlutterBinding init took ${DateTime.now().difference(sub)}");
+
+  sub = DateTime.now();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  print("Firebase init took ${DateTime.now().difference(sub)}");
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  sub = DateTime.now();
   await Auth().init();
+  print("Auth init took ${DateTime.now().difference(sub)}");
+
+  print("App init took ${DateTime.now().difference(start)}");
   runApp(RootRestorationScope(
       restorationId: "root",
       child: MultiProvider(

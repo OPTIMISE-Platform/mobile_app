@@ -19,12 +19,14 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import 'auth.dart';
@@ -50,7 +52,9 @@ class DeviceGroupsService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {
@@ -105,7 +109,7 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = Http2Adapter(AppState.connectionManager);
     final Response<dynamic> resp;
     try {
       resp = await dio.post<dynamic>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
@@ -123,7 +127,7 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
+    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = Http2Adapter(AppState.connectionManager);
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioError catch (e) {

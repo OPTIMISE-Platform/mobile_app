@@ -16,6 +16,7 @@
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -42,7 +43,8 @@ class Auth extends ChangeNotifier {
   final _m = Mutex();
   final _clientSetupMutex = Mutex();
 
-  static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000));
+  static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+    ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);
   static bool _checkCache = false;
@@ -60,6 +62,7 @@ class Auth extends ChangeNotifier {
       }
       if (await _serverAvailable()) {
         try {
+          final start = DateTime.now();
           _client = await OpenIdConnectClient.create(
             discoveryDocumentUrl: _discoveryUrl,
             clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
@@ -69,6 +72,7 @@ class Auth extends ChangeNotifier {
             scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
             autoRefresh: false,
           );
+          _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
           loggedIn = _client?.identity != null;
           _client?.changes.listen((event) async {
             _logger.d("${event.type}: ${event.message}");
@@ -190,7 +194,7 @@ class Auth extends ChangeNotifier {
     if (!(await refreshToken())) {
       return {};
     }
-    return {"Authorization": "Bearer ${await getToken()}"};
+    return {"authorization": "Bearer ${await getToken()}"};
   }
 
   Future<bool> refreshToken({bool skipLock = false}) async {
@@ -232,6 +236,7 @@ class Auth extends ChangeNotifier {
   }
 
   Future<bool> _serverAvailable() async {
+    final start = DateTime.now();
     if (await (Connectivity().checkConnectivity()) == ConnectivityResult.none) {
       return false;
     }
@@ -247,6 +252,7 @@ class Auth extends ChangeNotifier {
       return _checkCache;
     } finally {
       _lastOnlineCheck = DateTime.now();
+      _logger.d("_serverAvailable ${DateTime.now().difference(start)}");
     }
   }
 }

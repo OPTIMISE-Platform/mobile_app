@@ -17,11 +17,13 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import 'auth.dart';
 
@@ -31,6 +33,7 @@ class LocationService {
   );
 
   static CacheOptions? _options;
+  static late Dio _dio;
 
   static initOptions() async {
     if (_options != null) {
@@ -45,6 +48,9 @@ class LocationService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   }
 
   static Future<List<Future<Location>>> getLocations() async {
@@ -54,10 +60,9 @@ class LocationService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await _dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
@@ -78,10 +83,9 @@ class LocationService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final Response<dynamic> resp;
     try {
-      resp = await dio.put<dynamic>(uri, options: Options(headers: headers), data: location.toJson());
+      resp = await _dio.put<dynamic>(uri, options: Options(headers: headers), data: location.toJson());
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
@@ -97,10 +101,9 @@ class LocationService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     final Response<dynamic> resp;
     try {
-      resp = await dio.post<dynamic>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
+      resp = await _dio.post<dynamic>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
@@ -115,9 +118,8 @@ class LocationService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!));
     try {
-      await dio.delete(uri, options: Options(headers: headers));
+      await _dio.delete(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);

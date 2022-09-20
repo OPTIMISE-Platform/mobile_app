@@ -19,11 +19,13 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
+import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import '../models/device_search_filter.dart';
@@ -53,7 +55,9 @@ class DevicesService {
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))..interceptors.add(DioCacheInterceptor(options: _options!));
+    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
   }
 
   static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {
@@ -66,7 +70,9 @@ class DevicesService {
     _logger.d("Devices: $encoded");
     final Response<List<dynamic>?> resp;
     try {
+      final DateTime start = DateTime.now();
       resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
+      _logger.d("getDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
@@ -116,7 +122,9 @@ class DevicesService {
     await initOptions();
     final Response<int> resp;
     try {
+      final DateTime start = DateTime.now();
       resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
+      _logger.d("getTotalDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode);

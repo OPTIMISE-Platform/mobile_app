@@ -247,7 +247,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
           child: Padding(
             padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-            child: const Icon(Icons.auto_fix_high, color: Colors.white), // TODO icon
+            child: const Icon(Icons.auto_fix_high, color: Colors.white),
           ),
         ),
         title: Text(widget.release.name),
