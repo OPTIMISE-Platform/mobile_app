@@ -55,28 +55,26 @@ class Characteristic {
 
   final List<Widget> _fields = [];
 
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, StateSetter setState) {
     if (characteristicConfigs.containsKey(id)) {
       return characteristicConfigs[id]!(context, this);
     }
 
-    return StatefulBuilder(builder: (_, setState) {
-      _fields.clear();
-      _walkTree(context, "", this, value ?? value, setState);
+    _fields.clear();
+    _walkTree(context, "", this, value ?? value, setState);
 
-      final column = Column(
-        children: _fields,
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-      );
-      return SingleChildScrollView(
-          child: PlatformWidget(
-        cupertino: (_, __) => Material(
-          child: column,
-        ),
-        material: (_, __) => column,
-      ));
-    });
+    final column = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: _fields,
+    );
+    return SingleChildScrollView(
+        child: PlatformWidget(
+      cupertino: (_, __) => Material(
+        child: column,
+      ),
+      material: (_, __) => column,
+    ));
   }
 
   _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value, void Function(void Function()) setState) {
@@ -87,7 +85,7 @@ class Characteristic {
         if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
-          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
               return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -95,7 +93,7 @@ class Characteristic {
                     width: MediaQuery.of(context).size.width,
                     child: PlatformSlider(
                       onChanged: (double newValue) {
-                        _insertValueIntoResult(newValue, path);
+                        _insertValueIntoResult(newValue, path, setState);
                         setState(() => value = newValue);
                       },
                       max: characteristic.max_value!,
@@ -124,7 +122,7 @@ class Characteristic {
                         .toList(),
                     onChanged: (v) => setState(() {
                       value = v;
-                      _insertValueIntoResult(v, path);
+                      _insertValueIntoResult(v, path, setState);
                     }),
                   ))));
         } else {
@@ -136,14 +134,14 @@ class Characteristic {
               return "no decimal value";
             }
             if (characteristic.min_value != null && doubleValue < characteristic.min_value!) {
-              return "value smaller than " + characteristic.min_value.toString();
+              return "value smaller than ${characteristic.min_value}";
             }
             if (characteristic.max_value != null && doubleValue > characteristic.max_value!) {
-              return "value bigger than " + characteristic.max_value.toString();
+              return "value bigger than ${characteristic.max_value}";
             }
-          }, (v) => double.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true, decimal: true)));
+          }, (v) => double.parse(v ?? ""), setState, const TextInputType.numberWithOptions(signed: true, decimal: true)));
         }
-        _insertValueIntoResult(value, path, ignoreExisting: true);
+        _insertValueIntoResult(value, path, setState, ignoreExisting: true);
         break;
       case ContentVariable.integer:
         if (value is List) value = value[0];
@@ -151,7 +149,7 @@ class Characteristic {
         if (existingValue != null) value = existingValue;
         _fields.add(const Divider());
         if (characteristic.min_value != null && characteristic.max_value != null) {
-          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")));
+          _fields.add(Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")));
           _fields.add(StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
               return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -159,7 +157,7 @@ class Characteristic {
                     width: MediaQuery.of(context).size.width,
                     child: PlatformSlider(
                       onChanged: (double newValue) {
-                        _insertValueIntoResult(newValue.toInt(), path);
+                        _insertValueIntoResult(newValue.toInt(), path, setState);
                         setState(() => value = newValue.toInt());
                       },
                       max: characteristic.max_value!,
@@ -184,7 +182,7 @@ class Characteristic {
                         .toList(),
                     onChanged: (v) => setState(() {
                       value = v;
-                      _insertValueIntoResult(v, path);
+                      _insertValueIntoResult(v, path, setState);
                     }),
                   ))));
         } else {
@@ -202,14 +200,14 @@ class Characteristic {
               return "invalid number";
             }
             if (characteristic.min_value != null && intValue < characteristic.min_value!) {
-              return "value smaller than " + characteristic.min_value!.toInt().toString();
+              return "value smaller than ${characteristic.min_value!.toInt()}";
             }
             if (characteristic.max_value != null && intValue > characteristic.max_value!) {
-              return "value bigger than " + characteristic.max_value!.toInt().toString();
+              return "value bigger than ${characteristic.max_value!.toInt()}";
             }
-          }, (v) => int.parse(v ?? ""), const TextInputType.numberWithOptions(signed: true)));
+          }, (v) => int.parse(v ?? ""), setState, const TextInputType.numberWithOptions(signed: true)));
         }
-        _insertValueIntoResult(value, path, ignoreExisting: true);
+        _insertValueIntoResult(value, path, setState, ignoreExisting: true);
         break;
       case ContentVariable.string:
         if (value is List) value = value[0];
@@ -230,13 +228,13 @@ class Characteristic {
                         .toList(),
                     onChanged: (v) => setState(() {
                       value = v;
-                      _insertValueIntoResult(v, path);
+                      _insertValueIntoResult(v, path, setState);
                     }),
                   ))));
         } else {
-          _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v));
+          _fields.add(defaultTextFormField(characteristic, value, path, null, (v) => v, setState));
         }
-        _insertValueIntoResult(value, path, ignoreExisting: true);
+        _insertValueIntoResult(value, path, setState, ignoreExisting: true);
         break;
       case ContentVariable.boolean:
         if (value is List) value = value[0];
@@ -246,14 +244,14 @@ class Characteristic {
         _fields.add(Row(children: [
           Expanded(
               child: Text(
-            characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : ""),
+            characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : ""),
             textAlign: TextAlign.left,
           )),
           StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
               return PlatformSwitch(
                 onChanged: (bool newValue) {
-                  _insertValueIntoResult(newValue, path);
+                  _insertValueIntoResult(newValue, path, setState);
                   setState(() => value = newValue);
                 },
                 value: value ?? false,
@@ -261,7 +259,7 @@ class Characteristic {
             },
           ),
         ]));
-        _insertValueIntoResult(value, path, ignoreExisting: true);
+        _insertValueIntoResult(value, path, setState, ignoreExisting: true);
         break;
       case ContentVariable.structure:
         final dynamic existingValue = _getValue(path);
@@ -269,7 +267,7 @@ class Characteristic {
         characteristic.sub_characteristics?.forEach((sub) {
           var subPath = sub.name;
           if (path.isNotEmpty) {
-            subPath = path + "." + subPath;
+            subPath = "$path.$subPath";
           }
           _walkTree(context, subPath, sub, value != null ? value[sub.name] ?? sub.value : sub.value, setState);
         });
@@ -299,9 +297,9 @@ class Characteristic {
         for (var i = 0; i < (characteristic.sub_characteristics?.length ?? 0); i++) {
           final sub = characteristic.sub_characteristics![i];
           if (sub.name != "*") {
-            var subPath = "[" + (hasStarElement ? i - 1 : i).toString() + "]";
+            var subPath = "[${hasStarElement ? i - 1 : i}]";
             if (path.isNotEmpty) {
-              subPath = path + "." + subPath;
+              subPath = "$path.$subPath";
             }
             _walkTree(context, subPath, sub,
                 value != null ? (value is List ? (value.length > i ? value[i] : null) : value[sub.name]) ?? sub.value : sub.value, setState);
@@ -310,8 +308,11 @@ class Characteristic {
     }
   }
 
-  _insertValueIntoResult(dynamic value, String path, {bool ignoreExisting = false}) {
+  _insertValueIntoResult(dynamic value, String path, StateSetter setState, {bool ignoreExisting = false}) {
     if (path == "") {
+      if (this.value != value) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
+      }
       this.value = value;
       return;
     }
@@ -336,10 +337,17 @@ class Characteristic {
       int i = int.parse(pathParts[pathParts.length - 1].replaceFirst("[", "").replaceFirst("]", ""));
       if (subResult.length <= i) {
         subResult.insert(i, value);
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
       } else if (subResult[i] == null || !ignoreExisting) {
+        if (subResult[i] != value) {
+          WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
+        }
         subResult[i] = value;
       }
     } else if (subResult[pathParts[pathParts.length - 1]] == null || !ignoreExisting) {
+      if (subResult[pathParts[pathParts.length - 1]] != value) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => setState(() {}));
+      }
       subResult[pathParts[pathParts.length - 1]] = value;
     }
   }
@@ -371,8 +379,8 @@ class Characteristic {
     }
   }
 
-  PlatformTextFormField defaultTextFormField(
-      Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator, dynamic Function(String?) parse,
+  PlatformTextFormField defaultTextFormField(Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator,
+      dynamic Function(String?) parse, StateSetter setState,
       [TextInputType? keyboardType]) {
     return PlatformTextFormField(
       hintText: characteristic.name,
@@ -382,7 +390,7 @@ class Characteristic {
       validator: validator,
       onChanged: (value) {
         try {
-          _insertValueIntoResult(parse(value), path);
+          _insertValueIntoResult(parse(value), path, setState);
         } catch (e) {
           _logger.d("error parsing user input");
         }
@@ -394,7 +402,7 @@ class Characteristic {
         ),
       ),
       cupertino: (_, __) => CupertinoTextFormFieldData(
-        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (" + characteristic.display_unit + ")") : "")),
+        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")),
       ),
     );
   }

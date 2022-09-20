@@ -66,7 +66,7 @@ String formatValue(dynamic value) {
             e == null)
         ? roundNumbersString(preferredNotnull)
         : preferredNotnull is num
-            ? roundNumbersString(minList(value)) + " - " + roundNumbersString(maxList(value))
+            ? "${roundNumbersString(minList(value))} - ${roundNumbersString(maxList(value))}"
             : "-";
   } else {
     return value == null || (value is List && value.isEmpty) ? "-" : roundNumbersString(value);
@@ -89,11 +89,11 @@ abstract class FunctionConfig {
   }
 
   @nonVirtual
-  Widget? build(BuildContext context, [dynamic value]) {
+  Widget? build(BuildContext context, StateSetter setState, [dynamic value]) {
     if (value != null) {
       characteristic?.value = value;
     }
-    return characteristic?.build(context);
+    return characteristic?.build(context, setState);
   }
 
   init() {

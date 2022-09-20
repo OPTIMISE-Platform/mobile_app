@@ -171,7 +171,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
     dynamic input;
     if (function.hasInput()) {
-      Widget? content = functionConfig.build(context, transitioningStates.length == 1 ? states[transitioningStates[0]].value : null);
+      Widget? content = functionConfig.build(context, setState, transitioningStates.length == 1 ? states[transitioningStates[0]].value : null);
       if (content == null) {
         const err = "Function Config missing build()";
         Toast.showErrorToast(context, err, const Duration(milliseconds: 750));
