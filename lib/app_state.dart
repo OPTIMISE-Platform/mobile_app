@@ -18,7 +18,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -83,6 +82,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         _handleRemoteMessageCommand(event.data["data"]);
       });
     }
+    _manageNetworkDiscovery();
   }
 
   static final connectionManager = ConnectionManager();
@@ -191,7 +191,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   init() async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
-    _manageNetworkDiscovery();
     final List<Future> futures = [
       loadDeviceClasses(),
       loadDeviceTypes(),
@@ -686,47 +685,22 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Discovery? _discovery;
-  StreamSubscription? _discoverySubscription;
 
   _manageNetworkDiscovery() async {
     if (kIsWeb) return; // no mDNS in browser
-    if (_discovery == null) {
-      final res = await Connectivity().checkConnectivity();
-      if (res == ConnectivityResult.ethernet || res == ConnectivityResult.wifi) {
-        _startNetworkDiscovery();
-      }
-    }
-
-    _discoverySubscription ??= Connectivity().onConnectivityChanged.listen((event) async {
-      if (event == ConnectivityResult.ethernet || event == ConnectivityResult.wifi) {
-        await _startNetworkDiscovery();
-      } else {
-        await _stopNetworkDiscovery();
-      }
-    });
-  }
-
-  _startNetworkDiscovery() async {
     if (_discovery != null) return;
     _discovery = await startDiscovery('_snrgy._tcp');
     _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
   }
 
   _mergeDiscoveredServicesWithNetworks() {
+    networks.forEach((n) => n.localService = null);
     _discovery?.services.forEach((service) {
       final nI = networks.indexWhere((n) => n.id == utf8.decode((service.txt?["serial"] ?? Uint8List(0)).map((e) => e.toInt()).toList()));
       if (nI != -1) {
         networks[nI].localService = service;
       }
     });
-  }
-
-  _stopNetworkDiscovery() async {
-    if (_discovery == null) return;
-    _discovery!.dispose();
-    await stopDiscovery(_discovery!);
-    networks.forEach((n) => n.localService = null);
-    _discovery = null;
   }
 
   onLogout() async {
@@ -766,8 +740,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifications.clear();
     _notificationInited = false;
     _messageIdToDisplay = null;
-
-    await _stopNetworkDiscovery();
   }
 
   @override
