@@ -55,9 +55,9 @@ class Characteristic {
 
   final List<Widget> _fields = [];
 
-  Widget build(BuildContext context, StateSetter setState) {
-    if (characteristicConfigs.containsKey(id)) {
-      return characteristicConfigs[id]!(context, this);
+  Widget build(BuildContext context, StateSetter setState, {bool skipConfig = false}) {
+    if (!skipConfig && characteristicConfigs.containsKey(id)) {
+      return characteristicConfigs[id]!(context, this, setState);
     }
 
     _fields.clear();

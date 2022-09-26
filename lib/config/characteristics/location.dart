@@ -23,49 +23,47 @@ import '../../shared/location.dart';
 import '../../theme.dart';
 
 class Location {
-  static Widget build(BuildContext context, Characteristic characteristic) {
+  static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
     FormattedLocation? initial;
     bool init = false;
-    return StatefulBuilder(builder: (context, setState) {
-      if (!init) {
-        init = true;
-        if (characteristic.value != null && characteristic.value["Latitude"] != null && characteristic.value["Longitude"] != null) {
-          initial = FormattedLocation.fromLatLng(
-              lat: characteristic.value["Latitude"], lon: characteristic.value["Longitude"], displayName: characteristic.value_label ?? "");
-        } else {
-          determinePosition().then((value) {
-            if (value != null) {
-              initial = FormattedLocation.fromLatLng(
-                  lat: value.latitude, lon: value.longitude, geojson: GeoGeometry.point(LatLng(value.latitude, value.longitude), MyTheme.appColor));
-            } else {
-              const latitude = 51.338527718877394;
-              const longitude = 12.38074998525586;
-              initial = FormattedLocation.fromLatLng(
-                  lat: latitude,
-                  lon: longitude,
-                  geojson: GeoGeometry.point(LatLng(latitude, longitude), MyTheme.appColor),
-                  displayName: "Augustusplatz, Leipzig");
-            }
-            characteristic.value = {"Latitude": initial!.lat, "Longitude": initial!.lon};
-            characteristic.value_label = initial!.displayName;
-            setState(() {});
-          });
-        }
+    if (!init) {
+      init = true;
+      if (characteristic.value != null && characteristic.value["Latitude"] != null && characteristic.value["Longitude"] != null) {
+        initial = FormattedLocation.fromLatLng(
+            lat: characteristic.value["Latitude"], lon: characteristic.value["Longitude"], displayName: characteristic.value_label ?? "");
+      } else {
+        determinePosition().then((value) {
+          if (value != null) {
+            initial = FormattedLocation.fromLatLng(
+                lat: value.latitude, lon: value.longitude, geojson: GeoGeometry.point(LatLng(value.latitude, value.longitude), MyTheme.appColor));
+          } else {
+            const latitude = 51.338527718877394;
+            const longitude = 12.38074998525586;
+            initial = FormattedLocation.fromLatLng(
+                lat: latitude,
+                lon: longitude,
+                geojson: GeoGeometry.point(LatLng(latitude, longitude), MyTheme.appColor),
+                displayName: "Augustusplatz, Leipzig");
+          }
+          characteristic.value = {"Latitude": initial!.lat, "Longitude": initial!.lon};
+          characteristic.value_label = initial!.displayName;
+          setState(() {});
+        });
       }
+    }
 
-      return initial == null
-          ? Center(
-              child: PlatformCircularProgressIndicator(),
-            )
-          : OpenMapPicker(
-              initialValue: initial,
-              options: OpenMapOptions(center: LatLng(initial!.lat, initial!.lon)),
-              decoration: const InputDecoration(hintText: "Pick location"),
-              onChanged: (FormattedLocation? newValue) {
-                characteristic.value = {"Latitude": newValue?.lat, "Longitude": newValue?.lon};
-                characteristic.value_label = newValue?.displayName;
-              },
-            );
-    });
+    return initial == null
+        ? Center(
+            child: PlatformCircularProgressIndicator(),
+          )
+        : OpenMapPicker(
+            initialValue: initial,
+            options: OpenMapOptions(center: LatLng(initial!.lat, initial!.lon)),
+            decoration: const InputDecoration(hintText: "Pick location"),
+            onChanged: (FormattedLocation? newValue) {
+              characteristic.value = {"Latitude": newValue?.lat, "Longitude": newValue?.lon};
+              characteristic.value_label = newValue?.displayName;
+            },
+          );
   }
 }

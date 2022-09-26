@@ -26,36 +26,33 @@ class RGB {
     printer: SimplePrinter(),
   );
 
-  static Widget build(BuildContext context, Characteristic characteristic) {
+  static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
     var _color = _getColor(characteristic.value);
-    return StatefulBuilder(
-        builder: (context, setState) {
-          void setter(Color c) => setState(() {
-            _color = c;
-            characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
-          });
-          return Column(mainAxisSize: MainAxisSize.min, children: [
-            ColorPicker(
-              pickerColor: _color,
-              onColorChanged: (c) {
-                _color = c;
-                characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
-              },
-              enableAlpha: false,
-              displayThumbColor: false,
-              portraitOnly: false,
-              paletteType: PaletteType.hueWheel,
-              labelTypes: [],
-            ),
-            Row(children: [
-              _getQuickButton(Colors.red, setter),
-              _getQuickButton(Colors.green, setter),
-              _getQuickButton(Colors.blue, setter),
-              _getQuickButton(Colors.white, setter),
-              _getQuickButton(const Color.fromARGB(255, 253, 244, 220), setter),
-            ], mainAxisAlignment: MainAxisAlignment.center)
-          ]);
+    void setter(Color c) => setState(() {
+          _color = c;
+          characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
         });
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      ColorPicker(
+        pickerColor: _color,
+        onColorChanged: (c) {
+          _color = c;
+          characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
+        },
+        enableAlpha: false,
+        displayThumbColor: false,
+        portraitOnly: false,
+        paletteType: PaletteType.hueWheel,
+        labelTypes: [],
+      ),
+      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        _getQuickButton(Colors.red, setter),
+        _getQuickButton(Colors.green, setter),
+        _getQuickButton(Colors.blue, setter),
+        _getQuickButton(Colors.white, setter),
+        _getQuickButton(const Color.fromARGB(255, 253, 244, 220), setter),
+      ])
+    ]);
   }
 
   static Color _getColor(dynamic value) {
@@ -65,7 +62,6 @@ class RGB {
     if (value is! Map<String, dynamic>) {
       _logger.w("value is not map: $value");
       return Colors.white;
-
     }
     if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
       _logger.w("value does not contains keys r, b and g: $value");

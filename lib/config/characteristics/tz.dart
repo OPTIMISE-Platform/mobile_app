@@ -15,17 +15,20 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:mobile_app/config/characteristics/tz.dart';
-import 'package:mobile_app/models/characteristic.dart';
+import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
-import 'location.dart';
-import 'rgb.dart';
+import '../../models/characteristic.dart';
 
-
-final Map<String?, Widget Function(BuildContext context, Characteristic characteristic, StateSetter setState)> characteristicConfigs = {
-  dotenv.env['CHARACTERISTIC_RGB']: RGB.build,
-  dotenv.env['CHARACTERISTIC_LOCATION_EPSG4326']: Location.build,
-  dotenv.env['CHARACTERISTIC_TIMEZONE']: TZ.build,
-};
-
+class TZ {
+  static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
+    if (characteristic.value == null) {
+      FlutterNativeTimezone.getLocalTimezone().then((value) {
+        if (characteristic.value == null) {
+          characteristic.value = value;
+          setState(() {});
+        }
+      });
+    }
+    return characteristic.build(context, setState, skipConfig: true);
+  }
+}
