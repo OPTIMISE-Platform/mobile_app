@@ -16,11 +16,13 @@
 
 import 'dart:convert';
 
+import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
@@ -69,7 +71,7 @@ class DeviceClass {
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
+      ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
     final resp = await dio.get<String?>(image,
         options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {

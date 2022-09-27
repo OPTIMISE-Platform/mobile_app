@@ -16,10 +16,12 @@
 
 import 'dart:convert';
 
+import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -57,7 +59,7 @@ class DevicesService {
     );
     _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
+      ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
   }
 
   static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {

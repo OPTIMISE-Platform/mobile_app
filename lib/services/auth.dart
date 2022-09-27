@@ -15,6 +15,7 @@
  */
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/cupertino.dart';
@@ -44,7 +45,7 @@ class Auth extends ChangeNotifier {
   final _clientSetupMutex = Mutex();
 
   static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
-    ..httpClientAdapter = Http2Adapter(AppState.connectionManager);
+    ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);
   static bool _checkCache = false;
