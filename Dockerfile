@@ -1,4 +1,4 @@
-FROM fischerscode/flutter:3.0.5 AS builder
+FROM fischerscode/flutter:3.3.2 AS builder
 
 RUN mkdir app
 WORKDIR app
