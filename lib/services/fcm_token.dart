@@ -14,19 +14,16 @@
  *  limitations under the License.
  */
 
-import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:dio_http2_adapter/dio_http2_adapter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
+import '../shared/http_client_adapter.dart';
 import 'auth.dart';
 
 class FcmTokenService {
@@ -53,7 +50,7 @@ class FcmTokenService {
       allowPostMethod: true,
     );
 
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
+    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = AppHttpClientAdapter();
   }
 
   static registerFcmToken(String token) async {

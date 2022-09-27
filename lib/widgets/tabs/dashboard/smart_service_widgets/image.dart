@@ -16,19 +16,16 @@
 
 import 'dart:convert';
 
-import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:dio_http2_adapter/dio_http2_adapter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
-import '../../../../app_state.dart';
 import '../../../../services/auth.dart';
 import '../../../../services/cache_helper.dart';
 import '../../../../shared/base64_response_decoder.dart';
+import '../../../../shared/http_client_adapter.dart';
 
 class SmSeImage extends SmSeRequest {
   bool _cachable = false;
@@ -81,7 +78,7 @@ class SmSeImage extends SmSeRequest {
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
+      ..httpClientAdapter = AppHttpClientAdapter();
 
     Map<String, String> headers = {};
     if (request.need_token) {

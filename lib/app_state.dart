@@ -16,7 +16,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';

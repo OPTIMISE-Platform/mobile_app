@@ -14,19 +14,16 @@
  *  limitations under the License.
  */
 
-import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:dio_http2_adapter/dio_http2_adapter.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
-import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
+import '../shared/http_client_adapter.dart';
 import 'auth.dart';
 
 class FunctionsService {
@@ -57,7 +54,7 @@ class FunctionsService {
     await initOptions();
     final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
+      ..httpClientAdapter = AppHttpClientAdapter();
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));

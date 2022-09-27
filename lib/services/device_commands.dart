@@ -17,27 +17,24 @@
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
-import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
 
-import '../app_state.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
+import '../shared/http_client_adapter.dart';
 import '../widgets/shared/toast.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {
   static final _dioH1 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
   static final _dio2H2 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
-    ..httpClientAdapter = kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
+    ..httpClientAdapter = AppHttpClientAdapter();
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
