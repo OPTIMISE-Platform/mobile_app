@@ -31,7 +31,7 @@ class SmSePvForecast extends SmSeRequest {
   final List<String> _recommendations = [];
 
   @override
-  double get height => 5.0 + _recommendations.length;
+  double get height => 6.0 + _recommendations.length;
 
   @override
   double width = 5;
