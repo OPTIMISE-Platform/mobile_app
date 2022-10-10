@@ -442,11 +442,16 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
         Iterable<DeviceState>? controllingStates;
         if (controllingFunctions != null) {
-          controllingStates = states.where((state) =>
-              state.isControlling &&
-              controllingFunctions.contains(state.functionId) &&
-              state.serviceGroupKey == element.serviceGroupKey &&
-              state.aspectId == element.aspectId);
+          controllingStates = states
+              .where((state) =>
+                  state.isControlling &&
+                  controllingFunctions.contains(state.functionId) &&
+                  state.serviceGroupKey == element.serviceGroupKey &&
+                  state.aspectId == element.aspectId)
+              .where((cs) {
+            var functionConfig = functionConfigs[cs.functionId] ?? FunctionConfigDefault(cs.functionId);
+            return functionConfig.getRelatedControllingFunction(element.value) != null;
+          });
         }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
           String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
@@ -475,9 +480,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   child: element.transitioning
                       ? PlatformCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
-                          Text(
-                              "${formatValue(element.value)} ${unit}",
-                              style: const TextStyle(fontStyle: FontStyle.italic)),
+                          Text("${formatValue(element.value)} ${unit}", style: const TextStyle(fontStyle: FontStyle.italic)),
                 )),
           );
         } else {
