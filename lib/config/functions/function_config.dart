@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/config/functions/get_battery.dart';
 import 'package:mobile_app/config/functions/get_timestamp.dart';
 import 'package:mobile_app/config/functions/set_color.dart';
 import 'package:mobile_app/config/functions/set_off_state.dart';
@@ -28,6 +29,7 @@ import '../../models/characteristic.dart';
 import '../../shared/math_list.dart';
 import 'get_color.dart';
 import 'get_on_off_state.dart';
+import 'get_power_injection_limit.dart';
 import 'get_temperature.dart';
 
 Map<String?, FunctionConfig> functionConfigs = _specialConfigs();
@@ -45,6 +47,9 @@ Map<String?, FunctionConfig> _specialConfigs() {
     dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor()..init(),
     dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp()..init(),
     dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature()..init(),
+    dotenv.env['FUNCTION_GET_LOWER_POWER_INJECTION_LIMIT']: FunctionConfigGetLowerPowerInjectionLimit(),
+    dotenv.env['FUNCTION_GET_UPPER_POWER_INJECTION_LIMIT']: FunctionConfigGetUpperPowerInjectionLimit(),
+    dotenv.env['FUNCTION_GET_BATTERY_LEVEL']: FunctionConfigGetBatteryLevel(),
   };
 }
 
