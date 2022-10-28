@@ -451,12 +451,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  deleteNotification(BuildContext context, int index) async {
+  deleteNotifications(BuildContext context, List<String> ids) async {
     try {
-      await NotificationsService.deleteNotifications([notifications[index].id]);
+      await NotificationsService.deleteNotifications(ids);
     } catch (e) {
       _logger.e(e.toString());
-      Toast.showErrorToast(context, "Could not delete notification");
+      Toast.showErrorToast(context, "Could not delete notifications");
     }
     // notifications.removeAt(index);
     // notifyListeners(); Expect change propagation through FCM

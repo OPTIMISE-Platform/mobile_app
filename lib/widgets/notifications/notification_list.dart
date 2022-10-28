@@ -129,11 +129,7 @@ class _NotificationListState extends State<NotificationList> {
                 ),
               );
               if (confirmed is bool && confirmed) {
-                final List<Future> futures = [];
-                for (var element in _selected) {
-                  futures.add(state.deleteNotification(this.context, state.notifications.indexOf(element)));
-                }
-                await Future.wait(futures);
+                await state.deleteNotifications(this.context, _selected.map((e) => e.id).toList(growable: false));
                 setState(() {
                   _selected.clear();
                   _selectionMode = false;
@@ -175,7 +171,7 @@ class _NotificationListState extends State<NotificationList> {
                                       ),
                                     ),
                                     direction: DismissDirection.endToStart,
-                                    onDismissed: (_) => state.deleteNotification(context, i),
+                                    onDismissed: (_) => state.deleteNotifications(context, [state.notifications[i].id]),
                                     key: ValueKey<String>(state.notifications[i].id),
                                     child: ListTile(
                                       leading: !_selectionMode
