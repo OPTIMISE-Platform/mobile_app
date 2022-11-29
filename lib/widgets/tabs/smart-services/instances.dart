@@ -145,70 +145,75 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                     : ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: MyTheme.inset,
-                        itemCount: instances.length,
+                        itemCount: instances.length + 1,
                         itemBuilder: (context, i) {
                           if (i == instances.length - 1 && !allInstancesLoaded) {
                             _loadInstances();
                           }
-                          return Column(children: [
-                            const Divider(),
-                            ListTile(
-                              title: Container(
-                                  alignment: Alignment.centerLeft,
-                                  child: Badge(
-                                    alignment: Alignment.centerLeft,
-                                    padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                    position: BadgePosition.topEnd(),
-                                    badgeContent: instances[i].error != null
-                                        ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
-                                        : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                    showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
-                                    badgeColor: Colors.transparent,
-                                    elevation: 0,
-                                    child: Text(instances[i].name),
-                                  )),
-                              onTap: () async {
-                                await Navigator.push(
-                                    context,
-                                    platformPageRoute(
-                                      context: context,
-                                      builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
-                                    ));
-                                _refresh();
-                              },
-                              trailing: instances[i].new_release_id == null
-                                  ? null
-                                  : upgradingInstances[i]
-                                      ? PlatformCircularProgressIndicator()
-                                      : IconButton(
-                                          icon: const Icon(Icons.upgrade),
-                                          onPressed: () async {
-                                            setState(() {
-                                              upgradingInstances[i] = true;
-                                            });
-                                            final p = await SmartServiceService.prepareUpgrade(instances[i]);
-                                            if (!p.t) {
-                                              await SmartServiceService.updateInstanceParameters(
-                                                  instances[i].id, p.k.map((e) => e.toSmartServiceParameter()).toList(),
-                                                  releaseId: instances[i].new_release_id);
-                                            } else {
-                                              final release = await SmartServiceService.getRelease(instances[i].new_release_id!);
-                                              await Navigator.push(
-                                                  context,
-                                                  platformPageRoute(
-                                                      context: context,
-                                                      builder: (context) => SmartServicesReleaseLaunch(
-                                                            release,
-                                                            instance: instances[i],
-                                                            parameters: p.k,
-                                                          )));
-                                            }
-                                            upgradingInstances[i] = false;
-                                            if (!upgradingInstances.contains(true)) _refresh();
-                                          },
-                                        ),
-                            )
-                          ]);
+                          return i < instances.length
+                              ? Column(children: [
+                                  const Divider(),
+                                  ListTile(
+                                    title: Container(
+                                        alignment: Alignment.centerLeft,
+                                        child: Badge(
+                                          alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.only(left: MyTheme.insetSize),
+                                          position: BadgePosition.topEnd(),
+                                          badgeContent: instances[i].error != null
+                                              ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
+                                              : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
+                                          showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
+                                          badgeColor: Colors.transparent,
+                                          elevation: 0,
+                                          child: Text(instances[i].name),
+                                        )),
+                                    onTap: () async {
+                                      await Navigator.push(
+                                          context,
+                                          platformPageRoute(
+                                            context: context,
+                                            builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
+                                          ));
+                                      _refresh();
+                                    },
+                                    trailing: instances[i].new_release_id == null
+                                        ? null
+                                        : upgradingInstances[i]
+                                            ? PlatformCircularProgressIndicator()
+                                            : IconButton(
+                                                icon: const Icon(Icons.upgrade),
+                                                onPressed: () async {
+                                                  setState(() {
+                                                    upgradingInstances[i] = true;
+                                                  });
+                                                  final p = await SmartServiceService.prepareUpgrade(instances[i]);
+                                                  if (!p.t) {
+                                                    await SmartServiceService.updateInstanceParameters(
+                                                        instances[i].id, p.k.map((e) => e.toSmartServiceParameter()).toList(),
+                                                        releaseId: instances[i].new_release_id);
+                                                  } else {
+                                                    final release = await SmartServiceService.getRelease(instances[i].new_release_id!);
+                                                    await Navigator.push(
+                                                        context,
+                                                        platformPageRoute(
+                                                            context: context,
+                                                            builder: (context) => SmartServicesReleaseLaunch(
+                                                                  release,
+                                                                  instance: instances[i],
+                                                                  parameters: p.k,
+                                                                )));
+                                                  }
+                                                  upgradingInstances[i] = false;
+                                                  if (!upgradingInstances.contains(true)) _refresh();
+                                                },
+                                              ),
+                                  )
+                                ])
+                              : Column(children: const [
+                                  Divider(),
+                                  ListTile(),
+                                ]);
                         },
                       )));
   }
