@@ -53,7 +53,7 @@ class SmartServiceService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    _dio = Dio(BaseOptions(connectTimeout: 15000, sendTimeout: 5000, receiveTimeout: 10000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..httpClientAdapter = AppHttpClientAdapter();
   }
