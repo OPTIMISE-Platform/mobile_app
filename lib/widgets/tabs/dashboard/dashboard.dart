@@ -71,7 +71,10 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       final modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
       final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)).where((element) => element != null));
       _smartServiceWidgets = {};
-      items.forEach((element) => _smartServiceWidgets![element!.id] = element);
+      items.forEach((element) {
+        if (element == null) return;
+        _smartServiceWidgets![element.id] = element;
+      });
       if (mounted) setState(() {});
       _refresh();
     });
