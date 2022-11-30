@@ -205,7 +205,7 @@ class SmSeLineChart extends SmSeRequest {
     }
     final stats = Stats.fromData(nums);
     int precision = 0;
-    if (stats.standardDeviation > 0) {
+    if (stats.standardDeviation > 1) {
       precision = 1;
     } else {
       num std = stats.standardDeviation;

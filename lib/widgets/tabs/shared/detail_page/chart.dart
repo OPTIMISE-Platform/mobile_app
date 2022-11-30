@@ -315,7 +315,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
     }
     final stats = Stats.fromData(nums);
     int precision = 0;
-    if (stats.standardDeviation > 0) {
+    if (stats.standardDeviation > 1) {
       precision = 1;
     } else {
       num std = stats.standardDeviation;
