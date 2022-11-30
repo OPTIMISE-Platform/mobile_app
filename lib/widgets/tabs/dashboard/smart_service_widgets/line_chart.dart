@@ -20,6 +20,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
+import 'package:stats/stats.dart';
 
 import '../../../../shared/keyed_list.dart';
 import '../../../../theme.dart';
@@ -117,13 +118,15 @@ class SmSeLineChart extends SmSeRequest {
   }
 
   void _add2D(List<dynamic> values, {int colorOffset = 0}) {
+    final precision = calcPrecision(values);
     List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
     final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
       timestamps.add(values[i][0]);
       for (int j = 1; j < values[i].length; j++) {
-        if (values[i][j] != null) lineSpots[j - 1].add(FlSpot(t, values[i][j] is int ? values[i][j].toDouble() : values[i][j]));
+        if (values[i][j] != null)
+          lineSpots[j - 1].add(FlSpot(t, double.parse((values[i][j] is int ? values[i][j].toDouble() : values[i][j]).toStringAsFixed(precision))));
       }
     }
     _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
@@ -193,5 +196,24 @@ class SmSeLineChart extends SmSeRequest {
       right = j;
     }
     return Pair(left, right);
+  }
+
+  int calcPrecision(List<dynamic> values) {
+    final List<double> nums = [];
+    for (int i = 0; i < values.length; i++) {
+      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
+    }
+    final stats = Stats.fromData(nums);
+    int precision = 0;
+    if (stats.standardDeviation > 0) {
+      precision = 1;
+    } else {
+      num std = stats.standardDeviation;
+      while (std < 1) {
+        std *= 10;
+        precision++;
+      }
+    }
+    return precision;
   }
 }

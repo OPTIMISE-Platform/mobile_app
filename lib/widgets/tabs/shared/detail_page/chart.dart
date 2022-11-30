@@ -20,8 +20,8 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
-import 'package:mobile_app/services/settings.dart';
 import 'package:mutex/mutex.dart';
+import 'package:stats/stats.dart';
 
 import '../../../../models/db_query.dart';
 import '../../../../theme.dart';
@@ -93,7 +93,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       }
       final List<FlSpot> newSpots = [];
       _allValuesEqual = true;
-      int fractionDigits = Settings.getDisplayedFractionDigits();
+      int fractionDigits = calcPrecision(data);
       for (final point in data) {
         if (point.length == 2 && point[0] != null && point[1] is num) {
           double val = point[1] is int ? point[1].toDouble() : point[1] as double;
@@ -306,5 +306,24 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                   ),
                   swapAnimationDuration: const Duration(milliseconds: 400),
                 )));
+  }
+
+  int calcPrecision(List<dynamic> values) {
+    final List<double> nums = [];
+    for (int i = 0; i < values.length; i++) {
+      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
+    }
+    final stats = Stats.fromData(nums);
+    int precision = 0;
+    if (stats.standardDeviation > 0) {
+      precision = 1;
+    } else {
+      num std = stats.standardDeviation;
+      while (std < 1) {
+        std *= 10;
+        precision++;
+      }
+    }
+    return precision;
   }
 }

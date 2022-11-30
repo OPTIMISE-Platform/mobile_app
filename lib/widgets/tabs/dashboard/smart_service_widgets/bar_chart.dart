@@ -103,8 +103,8 @@ class SmSeBarChart extends SmSeLineChart {
     return parentFlexible ? Expanded(child: w) : w;
   }
 
-  @override
   void _add2D(List<dynamic> values, {int colorOffset = 0}) {
+    final precision = calcPrecision(values);
     final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
       final t = DateTime
@@ -118,7 +118,7 @@ class SmSeBarChart extends SmSeLineChart {
               .toList(growable: false)
               .asMap()
               .entries
-              .map<BarChartRodData>((e) => BarChartRodData(toY: e.value is int ? e.value.toDouble() : e.value ?? 0, color: getLineColor(e.key)))
+              .map<BarChartRodData>((e) => BarChartRodData(toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)), color: getLineColor(e.key)))
               .toList(growable: false)));
     }
     setDateFormat(timestamps);
