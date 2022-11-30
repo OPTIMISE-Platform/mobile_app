@@ -18,13 +18,16 @@ import 'dart:convert';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
+import '../../../../shared/keyed_list.dart';
 import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSeLineChart extends SmSeRequest {
   final List<LineChartBarData> _lines = [];
+  DateFormat dateFormat = MyTheme.formatHHMM;
 
   @override
   double height = 5;
@@ -67,7 +70,7 @@ class SmSeLineChart extends SmSeRequest {
                           final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
                           return Container(
                               padding: const EdgeInsets.only(top: 3),
-                              child: Text(MyTheme.formatHHMM.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                              child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
                         }),
                   ),
                   leftTitles: AxisTitles(
@@ -115,9 +118,10 @@ class SmSeLineChart extends SmSeRequest {
 
   void _add2D(List<dynamic> values, {int colorOffset = 0}) {
     List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
-
+    final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
+      timestamps.add(values[i][0]);
       for (int j = 1; j < values[i].length; j++) {
         if (values[i][j] != null) lineSpots[j - 1].add(FlSpot(t, values[i][j] is int ? values[i][j].toDouble() : values[i][j]));
       }
@@ -125,12 +129,69 @@ class SmSeLineChart extends SmSeRequest {
     _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
           dotData: FlDotData(show: false),
           spots: e.value,
-          color: _getLineColor(e.key + colorOffset),
+          color: getLineColor(e.key + colorOffset),
         )));
+    setDateFormat(timestamps);
   }
 
-  Color _getLineColor(int i) {
+  Color getLineColor(int i) {
     const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
     return colors[i % colors.length];
+  }
+
+  void setDateFormat(List<String> timestamps) {
+    final similarities = _similarity(timestamps);
+    final left = similarities.k;
+    var right = similarities.t;
+    if (timestamps.isEmpty) {
+      dateFormat = MyTheme.formatHHMM;
+    } else {
+      right += timestamps[0].length - 19; // no further precision than seconds
+    }
+    if (right < 2) {
+      if (left >= 17) {
+        dateFormat = MyTheme.formatSS;
+      } else {
+        dateFormat = MyTheme.formatMMSS;
+      }
+    } else if (right <= 5) {
+      if (left >= 14) {
+        dateFormat = MyTheme.formatMM;
+      } else {
+        dateFormat = MyTheme.formatHHMM;
+      }
+    } else if (right <= 8) {
+      if (left >= 11) {
+        dateFormat = MyTheme.formatHH;
+      } else {
+        dateFormat = MyTheme.formatEHH;
+      }
+    } else {
+      dateFormat = MyTheme.formatE;
+    }
+  }
+
+  Pair<int, int> _similarity(List<String> timestamps) {
+    if (timestamps.isEmpty) {
+      return Pair(0, 0);
+    }
+    final l = timestamps[0].length;
+    int left = l;
+    int right = l;
+    for (int i = 1; i < timestamps.length; i++) {
+      assert(timestamps[i].length == l);
+      int j = 0;
+      while (j <= left && timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j)) {
+        j++;
+      }
+      left = j;
+
+      j = 0;
+      while (j <= right && timestamps[i].codeUnitAt(l - 1 - j) == timestamps[0].codeUnitAt(l - 1 - j)) {
+        j++;
+      }
+      right = j;
+    }
+    return Pair(left, right);
   }
 }

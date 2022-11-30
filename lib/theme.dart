@@ -43,7 +43,13 @@ class MyTheme {
   static const double insetSize = 12.0;
   static const EdgeInsets inset = EdgeInsets.all(insetSize);
 
+  static final formatSS = DateFormat.s();
+  static final formatMM = DateFormat.m();
+  static final formatMMSS = DateFormat.ms();
+  static final formatHH = DateFormat.H();
   static final formatHHMM = DateFormat.Hm();
+  static final formatE = DateFormat.E();
+  static final formatEHH = DateFormat.E().add_H();
   static final formatEHHMM = DateFormat.E().add_Hm();
 
   static ThemeData materialTheme = ThemeData(
