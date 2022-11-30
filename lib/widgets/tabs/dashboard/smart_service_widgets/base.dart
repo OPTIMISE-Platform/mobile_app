@@ -34,6 +34,7 @@ import 'package:mutex/mutex.dart';
 
 import '../../../../models/smart_service.dart';
 import '../dashboard.dart';
+import 'bar_chart.dart';
 import 'button.dart';
 
 typedef SmSeWidgetType = String;
@@ -51,6 +52,7 @@ const SmSeWidgetType smSeLineChartType = "line_chart";
 const SmSeWidgetType smSeProcessToggleType = "process_toggle";
 const SmSeWidgetType smSeImageType = "image";
 const SmSeWidgetType smSePvForecastType = "pv_forecast";
+const SmSeWidgetType smSeBarChartType = "bar_chart";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -153,6 +155,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSePvForecastType:
         w = SmSePvForecast();
+        break;
+      case smSeBarChartType:
+        w = SmSeBarChart();
         break;
 
       // ADD NEW WIDGETS ABOVE
