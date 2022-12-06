@@ -17,8 +17,8 @@
 import 'package:json_annotation/json_annotation.dart';
 
 import '../shared/keyed_list.dart';
-import 'content_variable.dart';
 import 'characteristic.dart';
+import 'content_variable.dart';
 
 part 'smart_service.g.dart';
 
@@ -93,7 +93,11 @@ class SmartServiceExtendedParameter {
 
   SmartServiceParameter toSmartServiceParameter() {
     if (value != null && options != null) {
-      value_label = options!.firstWhere((element) => element.value == value).label;
+      if (value is List) {
+        value_label = options!.where((element) => (value as List).contains(element.value)).map((e) => e.label).join(", ");
+      } else {
+        value_label = options!.firstWhere((element) => element.value == value).label;
+      }
     }
     return SmartServiceParameter(id, value, label, value_label);
   }
@@ -123,7 +127,8 @@ class SmartServiceInstance {
   bool? deleting;
   List<SmartServiceParameter>? parameters;
 
-  SmartServiceInstance(this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.error, this.ready, this.parameters, this.deleting, this.new_release_id);
+  SmartServiceInstance(this.description, this.design_id, this.id, this.name, this.release_id, this.user_id, this.error, this.ready, this.parameters,
+      this.deleting, this.new_release_id);
 
   factory SmartServiceInstance.fromJson(Map<String, dynamic> json) => _$SmartServiceInstanceFromJson(json);
 
