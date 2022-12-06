@@ -51,6 +51,7 @@ class MyTheme {
   static final formatE = DateFormat.E();
   static final formatEHH = DateFormat.E().add_H();
   static final formatEHHMM = DateFormat.E().add_Hm();
+  static final formatMMM = DateFormat.MMM();
 
   static ThemeData materialTheme = ThemeData(
       cupertinoOverrideTheme: cupertinoTheme,
@@ -193,5 +194,11 @@ class MyTheme {
 
   static bool get canChangeColorTheme {
     return currentTheme == themeMaterial;
+  }
+
+  /// Retrieve a nice color. Colors are rotated based on i
+  static Color getSomeColor(int i) {
+    const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
+    return colors[i % colors.length];
   }
 }

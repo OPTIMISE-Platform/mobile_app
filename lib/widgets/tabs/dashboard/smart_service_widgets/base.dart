@@ -23,6 +23,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dar
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/image.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pie_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_forecast.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
@@ -53,6 +54,7 @@ const SmSeWidgetType smSeProcessToggleType = "process_toggle";
 const SmSeWidgetType smSeImageType = "image";
 const SmSeWidgetType smSePvForecastType = "pv_forecast";
 const SmSeWidgetType smSeBarChartType = "bar_chart";
+const SmSeWidgetType smSePieChartType = "pie_chart";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -158,6 +160,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeBarChartType:
         w = SmSeBarChart();
+        break;
+      case smSePieChartType:
+        w = SmSePieChart();
         break;
 
       // ADD NEW WIDGETS ABOVE
