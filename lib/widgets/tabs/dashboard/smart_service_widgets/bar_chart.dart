@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 
 import '../../../../theme.dart';
+import '../../../shared/indicator.dart';
 import '../dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
@@ -54,52 +55,54 @@ class SmSeBarChart extends SmSeLineChart {
     final Widget w = _barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
-        height: height * heightUnit - MyTheme.insetSize,
-        padding:
-        const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-        child: BarChart(
-          BarChartData(
-            borderData: FlBorderData(show: false),
-            barGroups: _barGroups,
-            titlesData: FlTitlesData(
-              show: true,
-              rightTitles: AxisTitles(
-                sideTitles: SideTitles(showTitles: false),
-              ),
-              topTitles: AxisTitles(
-                sideTitles: SideTitles(
-                  showTitles: false,
-                ),
-              ),
-              bottomTitles: AxisTitles(
-                sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 14,
-                    getTitlesWidget: (val, meta) {
-                      if (val == meta.max || val == meta.min) {
-                        return const SizedBox.shrink();
-                      }
-                      final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                      return Container(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                    }),
-              ),
-              leftTitles: AxisTitles(
-                sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 18,
-                    getTitlesWidget: (val, meta) {
-                      if (val == meta.max || val == meta.min) {
-                        return const SizedBox.shrink();
-                      }
-                      return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                    }),
-              ),
-            ),
-          ),
-          swapAnimationDuration: const Duration(milliseconds: 400),
-        ));
+            height: height * heightUnit - MyTheme.insetSize,
+            padding:
+                const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+            child: BarChart(
+              BarChartData(
+                  borderData: FlBorderData(show: false),
+                  barGroups: _barGroups,
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: false,
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 14,
+                          getTitlesWidget: (val, meta) {
+                            if (val == meta.max || val == meta.min) {
+                              return const SizedBox.shrink();
+                            }
+                            final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
+                            return Container(
+                                padding: const EdgeInsets.only(top: 3),
+                                child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                          }),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 18,
+                          getTitlesWidget: (val, meta) {
+                            if (val == meta.max || val == meta.min) {
+                              return const SizedBox.shrink();
+                            }
+                            return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                          }),
+                    ),
+                  ),
+                  barTouchData: BarTouchData(touchTooltipData: BarTouchTooltipData(getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                     BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))
+                  ))),
+              swapAnimationDuration: const Duration(milliseconds: 400),
+            ));
     return parentFlexible ? Expanded(child: w) : w;
   }
 
@@ -107,9 +110,7 @@ class SmSeBarChart extends SmSeLineChart {
     final precision = calcPrecision(values);
     final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
-      final t = DateTime
-          .parse(values[i][0])
-          .millisecondsSinceEpoch;
+      final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
       timestamps.add(values[i][0]);
       _barGroups.add(BarChartGroupData(
           x: t,
@@ -118,7 +119,9 @@ class SmSeBarChart extends SmSeLineChart {
               .toList(growable: false)
               .asMap()
               .entries
-              .map<BarChartRodData>((e) => BarChartRodData(toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)), color: getLineColor(e.key)))
+              .map<BarChartRodData>((e) => BarChartRodData(
+                  toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
+                  color: MyTheme.getSomeColor(e.key)))
               .toList(growable: false)));
     }
     setDateFormat(timestamps);

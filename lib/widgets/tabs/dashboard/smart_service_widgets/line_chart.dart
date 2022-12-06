@@ -29,12 +29,22 @@ import '../dashboard.dart';
 class SmSeLineChart extends SmSeRequest {
   final List<LineChartBarData> _lines = [];
   DateFormat dateFormat = MyTheme.formatHHMM;
+  final List<String> titles = [];
 
   @override
   double height = 5;
 
   @override
   double width = 5;
+
+  @override
+  @mustCallSuper
+  Future<void> configure(dynamic data) async {
+    super.configure(data);
+    if (data is! Map<String, dynamic> || data["titles"] == null) return;
+    titles.clear();
+    (data["titles"] as List).forEach((element) => titles.add(element as String));
+  }
 
   @override
   Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
@@ -87,7 +97,14 @@ class SmSeLineChart extends SmSeRequest {
                   ),
                 ),
                 lineTouchData: LineTouchData(
-                    enabled: !previewOnly, touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
+                    enabled: !previewOnly,
+                    touchTooltipData: LineTouchTooltipData(
+                        fitInsideVertically: true,
+                        fitInsideHorizontally: true,
+                        getTooltipItems: (spots) => spots
+                            .map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
+                                TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
+                            .toList())),
               ),
               swapAnimationDuration: const Duration(milliseconds: 400),
             ));
@@ -132,14 +149,9 @@ class SmSeLineChart extends SmSeRequest {
     _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
           dotData: FlDotData(show: false),
           spots: e.value,
-          color: getLineColor(e.key + colorOffset),
+          color: MyTheme.getSomeColor(e.key + colorOffset),
         )));
     setDateFormat(timestamps);
-  }
-
-  Color getLineColor(int i) {
-    const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
-    return colors[i % colors.length];
   }
 
   void setDateFormat(List<String> timestamps) {
@@ -169,13 +181,15 @@ class SmSeLineChart extends SmSeRequest {
       } else {
         dateFormat = MyTheme.formatEHH;
       }
+    } else if (right == 14) {
+      dateFormat = MyTheme.formatMMM;
     } else {
       dateFormat = MyTheme.formatE;
     }
   }
 
   Pair<int, int> _similarity(List<String> timestamps) {
-    if (timestamps.isEmpty) {
+    if (timestamps.isEmpty || timestamps.length == 1) {
       return Pair(0, 0);
     }
     final l = timestamps[0].length;
@@ -201,7 +215,7 @@ class SmSeLineChart extends SmSeRequest {
   int calcPrecision(List<dynamic> values) {
     final List<double> nums = [];
     for (int i = 0; i < values.length; i++) {
-      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
+      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e ?? 0));
     }
     final stats = Stats.fromData(nums);
     int precision = 0;
