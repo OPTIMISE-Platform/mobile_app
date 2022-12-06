@@ -198,7 +198,7 @@ class MyTheme {
 
   /// Retrieve a nice color. Colors are rotated based on i
   static Color getSomeColor(int i) {
-    const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
+    const List<Color> colors = [MyTheme.appColor, ...Colors.primaries, ...Colors.accents];
     return colors[i % colors.length];
   }
 }
