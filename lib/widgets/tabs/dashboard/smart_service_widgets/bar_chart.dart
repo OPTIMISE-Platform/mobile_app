@@ -97,9 +97,10 @@ class SmSeBarChart extends SmSeLineChart {
                           }),
                     ),
                   ),
-                  barTouchData: BarTouchData(touchTooltipData: BarTouchTooltipData(getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                     BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))
-                  ))),
+                  barTouchData: BarTouchData(
+                      touchTooltipData: BarTouchTooltipData(
+                          getTooltipItem: (group, groupIndex, rod, rodIndex) =>
+                              BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
               swapAnimationDuration: const Duration(milliseconds: 400),
             ));
     return parentFlexible ? Expanded(child: w) : w;
@@ -111,17 +112,21 @@ class SmSeBarChart extends SmSeLineChart {
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
       timestamps.add(values[i][0]);
-      _barGroups.add(BarChartGroupData(
+      final rods = (values[i] as List)
+          .skip(1)
+          .where((element) => element != 0.0 && element != null && element != 0)
+          .toList(growable: false)
+          .asMap()
+          .entries
+          .map<BarChartRodData>((e) => BarChartRodData(
+              toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)), color: MyTheme.getSomeColor(e.key)))
+          .toList(growable: false);
+      if (rods.isNotEmpty) {
+        _barGroups.add(BarChartGroupData(
           x: t,
-          barRods: (values[i] as List)
-              .skip(1)
-              .toList(growable: false)
-              .asMap()
-              .entries
-              .map<BarChartRodData>((e) => BarChartRodData(
-                  toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
-                  color: MyTheme.getSomeColor(e.key)))
-              .toList(growable: false)));
+          barRods: rods,
+        ));
+      }
     }
     setDateFormat(timestamps);
   }
