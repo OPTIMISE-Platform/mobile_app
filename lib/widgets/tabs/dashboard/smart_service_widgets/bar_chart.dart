@@ -21,7 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 
 import '../../../../theme.dart';
-import '../../../shared/indicator.dart';
 import '../dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
@@ -89,7 +88,7 @@ class SmSeBarChart extends SmSeLineChart {
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                           showTitles: true,
-                          reservedSize: 18,
+                          reservedSize: 24,
                           getTitlesWidget: (val, meta) {
                             if (val == meta.max || val == meta.min) {
                               return const SizedBox.shrink();

@@ -87,7 +87,7 @@ class SmSeLineChart extends SmSeRequest {
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                         showTitles: true,
-                        reservedSize: 18,
+                        reservedSize: 24,
                         getTitlesWidget: (val, meta) {
                           if (val == meta.max || val == meta.min) {
                             return const SizedBox.shrink();
