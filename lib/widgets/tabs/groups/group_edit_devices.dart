@@ -183,6 +183,12 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
   }
 
   @override
+  void initState() {
+    super.initState();
+    AppState().devices.map((e) => _deviceCollection[e.id] = e);
+  }
+
+  @override
   void dispose() {
     _searchDebounce?.cancel();
     super.dispose();
