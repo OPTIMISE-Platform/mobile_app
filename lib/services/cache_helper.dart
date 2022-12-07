@@ -32,12 +32,12 @@ class CacheHelper {
     return sha1.convert(bytes).toString();
   }
 
-  static Future<String?> getCacheFile() async {
+  static Future<String?> getCacheFile({String customSuffix = ""}) async {
     final dir = await getCacheDir();
     if (dir == null) {
       return null;
     }
-    return "${dir.path}/cache.box";
+    return "${dir.path}/cache${customSuffix}.box";
   }
 
   static Future<Directory?> getCacheDir() async {

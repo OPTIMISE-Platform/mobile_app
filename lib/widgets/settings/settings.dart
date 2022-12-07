@@ -22,14 +22,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile_app/main.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:numberpicker/numberpicker.dart';
-import 'package:open_file/open_file.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -43,8 +41,6 @@ import '../shared/page_spinner.dart';
 import '../shared/toast.dart';
 
 class Settings extends StatelessWidget {
-  static final _format = DateFormat.yMd().add_jms();
-
   Settings({Key? key}) : super(key: key);
 
   String _functionSearch = "";
@@ -54,8 +50,6 @@ class Settings extends StatelessWidget {
     const appBar = MyAppBar("Settings");
 
     return Consumer<AppState>(builder: (context, state, _) {
-      final appUpdater = AppUpdater();
-
       final List<Widget> children = [
         ListTile(
           title: const Text("Switch Style"),
@@ -154,15 +148,15 @@ class Settings extends StatelessWidget {
         ]);
       }
 
-      if (appUpdater.updateSupported) {
+      if (AppUpdater.updateSupported) {
         children.addAll([
           const Divider(),
           ListTile(
             title: const Text("Check Updates"),
             onTap: () async {
-              late final bool updateAvailable;
+              late final bool? updateAvailable;
               try {
-                updateAvailable = await appUpdater.updateAvailable();
+                updateAvailable = await AppUpdater.updateAvailable();
               } on NoNetworkException {
                 Toast.showWarningToast(context, "Currently offline");
                 return;
@@ -170,60 +164,14 @@ class Settings extends StatelessWidget {
                 Toast.showErrorToast(context, "Error checking for updates");
                 return;
               }
-              if (!updateAvailable) {
+              if (updateAvailable == false) {
                 Toast.showConfirmationToast(context, "Already up to date!");
                 return;
+              } else if (updateAvailable == null) {
+                Toast.showWarningToast(context, "Please check again later");
+                return;
               } else {
-                final proceed = await showPlatformDialog(
-                    context: context,
-                    builder: (context) => PlatformAlertDialog(
-                          title: const Text("Update now?"),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Current Build: ${appUpdater.currentBuild}"),
-                              Text("Latest Build: ${appUpdater.latestBuild}"),
-                              Text("Uploaded: ${_format.format(appUpdater.updateDate.toLocal())}"),
-                              Text("Download size: ${(appUpdater.downloadSize / 1000000.0).toStringAsFixed(1)} MB"),
-                            ],
-                          ),
-                          actions: [
-                            PlatformDialogAction(
-                              child: PlatformText('Cancel'),
-                              onPressed: () => Navigator.pop(context, false),
-                            ),
-                            PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, true))
-                          ],
-                        ));
-                if (proceed != true) {
-                  return;
-                }
-                final stream = appUpdater.downloadUpdate().asBroadcastStream();
-                stream.listen(null, onDone: () => OpenFile.open(appUpdater.localFile));
-                await showPlatformDialog(
-                  context: context,
-                  builder: (context) => PlatformAlertDialog(
-                    title: const Text("Update"),
-                    content: StreamBuilder<double>(
-                        stream: stream,
-                        initialData: 0,
-                        builder: (context, snapshot) {
-                          return Column(mainAxisSize: MainAxisSize.min, children: [
-                            LinearProgressIndicator(value: snapshot.data! / 100),
-                            Text("${snapshot.data!.toStringAsFixed(2)} %"),
-                          ]);
-                        }),
-                    actions: [
-                      StreamBuilder<double>(
-                          stream: stream,
-                          initialData: 0,
-                          builder: (context, snapshot) => PlatformDialogAction(
-                              onPressed: snapshot.data == 100 ? () => OpenFile.open(appUpdater.localFile) : null,
-                              child: PlatformText(snapshot.data == 100 ? 'Install' : 'Downloading...')))
-                    ],
-                  ),
-                );
+                AppUpdater.showUpdateDialog(context);
               }
             },
           ),

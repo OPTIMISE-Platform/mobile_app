@@ -21,6 +21,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
 
+import '../../services/app_update.dart';
+import '../../theme.dart';
 import '../notifications/notification_list.dart';
 
 class MyAppBar {
@@ -33,10 +35,7 @@ class MyAppBar {
       builder: (_, __, ___) {
         AppState().initNotifications(context);
         AppState().checkMessageDisplay(context);
-        final unread = AppState().notifications
-            .where((element) => !element.isRead)
-            .toList(growable: false)
-            .length;
+        final unread = AppState().notifications.where((element) => !element.isRead).toList(growable: false).length;
         return PlatformIconButton(
           icon: Badge(
             badgeContent: Text(unread.toString()),
@@ -59,6 +58,19 @@ class MyAppBar {
     );
   }
 
+  static Widget _updateIcon(BuildContext context) {
+    bool hasUpdate = false;
+    final future = AppUpdater.updateAvailable(cacheAge: const Duration(days: 1));
+    return StatefulBuilder(builder: (context, setState) {
+      future.then((value) => {
+            if (value != null && value != hasUpdate) {setState(() => hasUpdate = value)}
+          });
+      return !hasUpdate
+          ? const SizedBox.shrink()
+          : UpdateIcon();
+    });
+  }
+
   static Widget settings(BuildContext context) {
     return PlatformIconButton(
       icon: Icon(PlatformIcons(context).settings),
@@ -77,6 +89,7 @@ class MyAppBar {
 
   static List<Widget> getDefaultActions(BuildContext context) {
     final List<Widget> actions = [
+      _updateIcon(context),
       _notifications(context),
       settings(context),
     ];
@@ -85,18 +98,55 @@ class MyAppBar {
 
   PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions, Widget? leading]) {
     return PlatformAppBar(
-      title: PlatformWidget(material: (_, __) => Text(_title, overflow: TextOverflow.fade),
+      title: PlatformWidget(
+          material: (_, __) => Text(_title, overflow: TextOverflow.fade),
           cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white), overflow: TextOverflow.fade)),
-      cupertino: (_, __) =>
-          CupertinoNavigationBarData(
-            // Issue with cupertino where a bar with no transparency
-            // will push the list down. Adding some alpha value fixes it (in a hacky way)
-            backgroundColor: Colors.black,
-          ),
+      cupertino: (_, __) => CupertinoNavigationBarData(
+        // Issue with cupertino where a bar with no transparency
+        // will push the list down. Adding some alpha value fixes it (in a hacky way)
+        backgroundColor: Colors.black,
+      ),
       trailingActions: [
         ...trailingActions ?? [],
       ],
       leading: leading,
     );
+  }
+}
+
+class UpdateIcon extends StatefulWidget {
+  @override
+  _UpdateIconState createState() => _UpdateIconState();
+}
+
+class _UpdateIconState extends State<UpdateIcon> with SingleTickerProviderStateMixin {
+  late Animation<Color?> animation;
+  late AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(duration: const Duration(seconds: 1, milliseconds: 200), vsync: this);
+    animation = ColorTween(begin: MyTheme.textColor!, end: MyTheme.appColor).animate(controller)
+      ..addListener(() {
+        setState(() {
+          // The state that has changed here is the animation object’s value.
+        });
+      });
+    controller.repeat(reverse: true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(Icons.system_update_alt, color: animation.value),
+      onPressed: () => AppUpdater.showUpdateDialog(context),
+    );
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
   }
 }
