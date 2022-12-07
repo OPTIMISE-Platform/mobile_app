@@ -15,6 +15,7 @@
  */
 
 import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/service.dart';
 
@@ -29,11 +30,12 @@ class DeviceState {
   String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path;
 
   DeviceInstance? deviceInstance;
+  DeviceGroup? deviceGroup;
 
   DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId,
       this.deviceId, this.path);
 
-  DeviceCommand toCommand([dynamic value]) {
+  DeviceCommand toCommand([dynamic value, DeviceGroup? deviceGroup]) {
     final command = DeviceCommand(
         functionId,
         deviceId,
@@ -44,6 +46,7 @@ class DeviceState {
         value,
         Settings.getFunctionPreferredCharacteristicId(functionId));
     command.deviceInstance = deviceInstance;
+    command.deviceGroup = deviceGroup ?? this.deviceGroup;
     return command;
   }
 }

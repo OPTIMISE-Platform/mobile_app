@@ -609,6 +609,9 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         }
         trailingHeader.add(FavorizeButton(widget._device!, null));
       } else {
+        if (deviceGroup?.network?.localService != null) {
+          trailingHeader.add(const Tooltip(message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined)));
+        }
         trailingHeader.add(FavorizeButton(null, widget._group));
       }
 

@@ -25,6 +25,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/models/network.dart';
 
 import '../services/cache_helper.dart';
 import '../shared/base64_response_decoder.dart';
@@ -47,6 +48,9 @@ class DeviceGroup {
 
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
+
+  @JsonKey(ignore: true)
+  Network? network;
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -73,7 +77,9 @@ class DeviceGroup {
       return this;
     }
     await initOptions();
-    final dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = AppHttpClientAdapter();
+    final dio = Dio()
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..httpClientAdapter = AppHttpClientAdapter();
     final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       _logger.e("Could not load deviceGroup image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
@@ -88,7 +94,14 @@ class DeviceGroup {
     return this;
   }
 
-  DeviceGroup(this.id, this.name, this.criteria, this.image, this.device_ids, this.attributes);
+  DeviceGroup(this.id, this.name, this.criteria, this.image, this.device_ids, this.attributes) {
+    final networkIndex = AppState()
+        .networks
+        .indexWhere((n) => device_ids.every((String groupDeviceId) => (n.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57)) as bool));
+    if (networkIndex != -1) {
+      network = AppState().networks[networkIndex];
+    }
+  }
 
   factory DeviceGroup.fromJson(Map<String, dynamic> json) {
     final c = _$DeviceGroupFromJson(json);
@@ -114,8 +127,10 @@ class DeviceGroup {
               element.aspectId == criterion.aspect_id &&
               element.deviceClassId == criterion.device_class_id) ==
           -1) {
-        states.add(DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
-            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null));
+        final state = DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
+            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null);
+        state.deviceGroup = this;
+        states.add(state);
       }
     }
   }
@@ -129,7 +144,7 @@ class DeviceGroup {
       if (states[i].isControlling) {
         continue;
       }
-      result.add(CommandCallback(states[i].toCommand(), (value) {
+      result.add(CommandCallback(states[i].toCommand(null, this), (value) {
         if (value is List && value.length == 1) {
           states[i].value = value[0];
         } else {

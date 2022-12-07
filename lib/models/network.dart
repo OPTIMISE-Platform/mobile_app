@@ -28,13 +28,13 @@ class Network {
   String id, name, creator;
   Annotations? annotations;
   bool shared;
-  List<String>? device_local_ids;
+  List<String>? device_local_ids, device_ids;
   Service? localService;
 
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
 
-  Network(this.id, this.name,  this.annotations, this.shared, this.creator, this.device_local_ids);
+  Network(this.id, this.name,  this.annotations, this.shared, this.creator, this.device_local_ids, this.device_ids);
 
 
   factory Network.fromJson(Map<String, dynamic> json) =>

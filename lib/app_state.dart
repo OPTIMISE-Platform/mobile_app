@@ -503,7 +503,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (message.data["type"] != notificationUpdateType) {
       return; //safety check
     }
-    _messageIdToDisplay = app.Notification.fromJson(json.decode(message.data["payload"])).id;
+    _messageIdToDisplay = app.Notification
+        .fromJson(json.decode(message.data["payload"]))
+        .id;
   }
 
   _handleFcmTokenRefresh(String token) async {
@@ -592,7 +594,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     _messageIdToDisplay = null;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (ModalRoute.of(context)?.settings.name != NotificationList.preferredRouteName) {
+      if (ModalRoute
+          .of(context)
+          ?.settings
+          .name != NotificationList.preferredRouteName) {
         Navigator.push(
             context,
             platformPageRoute(
@@ -659,6 +664,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     for (final network in networks) {
       final networkDevices = devices.where((device) => network.device_local_ids?.contains(device.local_id) ?? false);
       networkDevices.forEach((d) => d.network = network);
+      for (final group in deviceGroups) {
+        if (group.device_ids.every((String groupDeviceId) => (network.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57)) as bool)) {
+          group.network = network;
+        }
+      }
     }
     await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
     notifyListeners();

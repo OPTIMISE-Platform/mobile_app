@@ -15,6 +15,7 @@
  */
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/models/device_group.dart';
 
 import 'device_instance.dart';
 
@@ -26,6 +27,7 @@ class DeviceCommand {
   String? device_id, group_id, device_class_id, service_id, aspect_id, characteristic_id;
   dynamic input;
   DeviceInstance? deviceInstance;
+  DeviceGroup? deviceGroup;
 
   DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input, this.characteristic_id]);
   factory DeviceCommand.fromJson(Map<String, dynamic> json) => _$DeviceCommandFromJson(json);

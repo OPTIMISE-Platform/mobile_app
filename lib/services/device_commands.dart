@@ -45,7 +45,13 @@ class DeviceCommandsService {
     if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
 
     final Map<Network?, List<DeviceCommand>> map = {};
-    commands.forEach((e) => _insert(map, e.deviceInstance?.network, e, <DeviceCommand>[]));
+    commands.forEach((e) {
+      if (e.deviceInstance != null) {
+        _insert(map, e.deviceInstance?.network, e, <DeviceCommand>[]);
+      } else if (e.deviceGroup != null) {
+        _insert(map, e.deviceGroup?.network, e, <DeviceCommand>[]);
+      }
+    });
 
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);
