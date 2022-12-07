@@ -39,11 +39,10 @@ const attributeNickname = "$sharedOrigin/nickname";
 @JsonSerializable()
 class DeviceInstance {
   String id, local_id, name, device_type_id, creator;
+  String? display_name;
   List<Attribute>? attributes;
   Annotations? annotations;
   bool shared;
-  @JsonKey(ignore: true)
-  String? _nickname;
 
   @JsonKey(ignore: true)
   final List<DeviceState> states = [];
@@ -51,13 +50,7 @@ class DeviceInstance {
   @JsonKey(ignore: true)
   Network? network;
 
-  DeviceInstance(this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator) {
-    for (final attr in attributes ?? <Attribute>[]) {
-      if (attr.key == attributeNickname) {
-        _nickname = attr.value;
-        break;
-      }
-    }
+  DeviceInstance(this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator, this.display_name) {
     final networkIndex = AppState().networks.indexWhere((n) => n.device_local_ids?.contains(local_id) ?? false);
     if (networkIndex != -1) network = AppState().networks[networkIndex];
   }
@@ -155,10 +148,9 @@ class DeviceInstance {
     }
   }
 
-  String get displayName => _nickname ?? name;
+  String get displayName => display_name ?? name;
 
   setNickname(String val) {
-    _nickname = val;
     final i = attributes?.indexWhere((element) => element.key == attributeNickname);
     if (i != null && i != -1) {
       attributes![i].value = val;
@@ -166,6 +158,7 @@ class DeviceInstance {
       attributes ??= [];
       attributes!.add(Attribute(attributeNickname, val, sharedOrigin));
     }
+    display_name = val;
   }
 }
 

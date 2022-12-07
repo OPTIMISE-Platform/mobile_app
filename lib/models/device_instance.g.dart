@@ -22,27 +22,23 @@ part of 'device_instance.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-DeviceInstance _$DeviceInstanceFromJson(Map<String, dynamic> json) =>
-    DeviceInstance(
+DeviceInstance _$DeviceInstanceFromJson(Map<String, dynamic> json) => DeviceInstance(
       json['id'] as String,
       json['local_id'] as String,
       json['name'] as String,
-      (json['attributes'] as List<dynamic>?)
-          ?.map((e) => Attribute.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      (json['attributes'] as List<dynamic>?)?.map((e) => Attribute.fromJson(e as Map<String, dynamic>)).toList(),
       json['device_type_id'] as String,
-      json['annotations'] == null
-          ? null
-          : Annotations.fromJson(json['annotations'] as Map<String, dynamic>),
+      json['annotations'] == null ? null : Annotations.fromJson(json['annotations'] as Map<String, dynamic>),
       json['shared'] as bool,
       json['creator'] as String,
+      json['display_name'] as String?,
     );
 
-Map<String, dynamic> _$DeviceInstanceToJson(DeviceInstance instance) =>
-    <String, dynamic>{
+Map<String, dynamic> _$DeviceInstanceToJson(DeviceInstance instance) => <String, dynamic>{
       'id': instance.id,
       'local_id': instance.local_id,
       'name': instance.name,
+      'display_name': instance.display_name,
       'device_type_id': instance.device_type_id,
       'creator': instance.creator,
       'attributes': instance.attributes,
