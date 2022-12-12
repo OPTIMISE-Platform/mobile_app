@@ -29,6 +29,8 @@ class Network {
   Annotations? annotations;
   bool shared;
   List<String>? device_local_ids, device_ids;
+
+  @JsonKey(ignore: true)
   Service? localService;
 
   @JsonKey(ignore: true)

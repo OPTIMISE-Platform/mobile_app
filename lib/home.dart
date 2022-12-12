@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
@@ -51,6 +52,7 @@ class _HomeState extends State<Home> {
       await Auth().login(_user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
+      await CacheHelper.refreshCache();
     } on AuthenticationException catch (e) {
       if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
         Toast.showErrorToast(context, "Invalid user credentials");

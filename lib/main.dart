@@ -25,6 +25,7 @@ import "package:intl/intl_standalone.dart" if (dart.library.html) "package:intl/
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
@@ -76,6 +77,8 @@ Future main() async {
   sub = DateTime.now();
   await Auth().init();
   print("Auth init took ${DateTime.now().difference(sub)}");
+
+  CacheHelper.scheduleCacheUpdates();
 
   print("App init took ${DateTime.now().difference(start)}");
   runApp(RootRestorationScope(

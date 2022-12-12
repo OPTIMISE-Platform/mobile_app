@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/annotations.dart';
@@ -22,6 +23,7 @@ import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
 
 import '../exceptions/argument_exception.dart';
+import '../shared/isar.dart';
 import 'device_command.dart';
 import 'network.dart';
 
@@ -37,20 +39,32 @@ const attributeFavorite = "$appOrigin/favorite";
 const attributeNickname = "$sharedOrigin/nickname";
 
 @JsonSerializable()
+@collection
 class DeviceInstance {
-  String id, local_id, name, device_type_id, creator;
+  @Index(type: IndexType.hash)
+  String id, local_id;
+  String name, device_type_id, creator;
+
+  @Index(caseSensitive: false)
   String? display_name;
   List<Attribute>? attributes;
   Annotations? annotations;
   bool shared;
 
   @JsonKey(ignore: true)
+  Id isarId = -1;
+
+  @JsonKey(ignore: true)
+  @ignore
   final List<DeviceState> states = [];
 
   @JsonKey(ignore: true)
+  @ignore
   Network? network;
 
-  DeviceInstance(this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator, this.display_name) {
+  DeviceInstance(
+      this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator, this.display_name) {
+    isarId = fastHash(id);
     final networkIndex = AppState().networks.indexWhere((n) => n.device_local_ids?.contains(local_id) ?? false);
     if (networkIndex != -1) network = AppState().networks[networkIndex];
   }
@@ -92,6 +106,7 @@ class DeviceInstance {
     return result;
   }
 
+  @Index()
   bool get favorite {
     final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
     return i != null && i != -1;
@@ -100,7 +115,7 @@ class DeviceInstance {
   setFavorite(bool val) {
     if (val) {
       attributes ??= [];
-      attributes!.add(Attribute(attributeFavorite, "true", appOrigin));
+      attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
     } else {
       final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
       if (i != null && i != -1) {
@@ -113,6 +128,8 @@ class DeviceInstance {
     setFavorite(!favorite);
   }
 
+  @JsonKey(ignore: true)
+  @ignore
   DeviceConnectionStatus get connectionStatus {
     if (annotations?.connected == null) {
       return DeviceConnectionStatus.unknown;
@@ -124,6 +141,7 @@ class DeviceInstance {
     }
   }
 
+  @JsonKey(ignore: true)
   set connectionStatus(DeviceConnectionStatus connectionStatus) {
     switch (connectionStatus) {
       case DeviceConnectionStatus.unknown:
@@ -135,19 +153,20 @@ class DeviceInstance {
         if (annotations != null) {
           annotations!.connected = true;
         } else {
-          annotations = Annotations(true);
+          annotations = Annotations.New(true);
         }
         break;
       case DeviceConnectionStatus.offline:
         if (annotations != null) {
           annotations!.connected = false;
         } else {
-          annotations = Annotations(false);
+          annotations = Annotations.New(false);
         }
         break;
     }
   }
 
+  @ignore
   String get displayName => display_name ?? name;
 
   setNickname(String val) {
@@ -156,7 +175,7 @@ class DeviceInstance {
       attributes![i].value = val;
     } else {
       attributes ??= [];
-      attributes!.add(Attribute(attributeNickname, val, sharedOrigin));
+      attributes!.add(Attribute.New(attributeNickname, val, sharedOrigin));
     }
     display_name = val;
   }
@@ -165,5 +184,6 @@ class DeviceInstance {
 class CommandCallback {
   DeviceCommand command;
   Function(dynamic value) callback;
+
   CommandCallback(this.command, this.callback);
 }

@@ -164,7 +164,7 @@ class DeviceGroup {
   setFavorite(bool val) {
     if (val) {
       attributes ??= [];
-      attributes!.add(Attribute(attributeFavorite, "true", appOrigin));
+      attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
     } else {
       final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
       if (i != null && i != -1) {

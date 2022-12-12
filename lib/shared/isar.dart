@@ -15,18 +15,24 @@
  */
 
 import 'package:isar/isar.dart';
-import 'package:json_annotation/json_annotation.dart';
 
-part 'annotations.g.dart';
+import '../models/device_instance.dart';
 
-@JsonSerializable()
-@embedded
-class Annotations {
-  bool? connected;
+final isar = Isar.openSync([DeviceInstanceSchema]);
 
-  Annotations();
+/// FNV-1a 64bit hash algorithm optimized for Dart Strings
+/// Adopted from https://isar.dev/recipes/string_ids.html
+int fastHash(String string) {
+  var hash = 0xcbf29ce484222325;
 
-  Annotations.New(this.connected);
-  factory Annotations.fromJson(Map<String, dynamic> json) => _$AnnotationsFromJson(json);
-  Map<String, dynamic> toJson() => _$AnnotationsToJson(this);
+  var i = 0;
+  while (i < string.length) {
+    final codeUnit = string.codeUnitAt(i++);
+    hash ^= codeUnit >> 8;
+    hash *= 0x100000001b3;
+    hash ^= codeUnit & 0xFF;
+    hash *= 0x100000001b3;
+  }
+
+  return hash;
 }

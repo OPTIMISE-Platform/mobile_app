@@ -46,6 +46,8 @@ class Settings {
 
   static const _functionPreferredCharacteristicKeyPrefix = "functionPreferredCharacteristic_";
 
+  static const _cacheUpdatedAtPrefix = "cacheUpdated_";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -222,6 +224,21 @@ class Settings {
     final futures = _box!.keys.where((e) => (e as String).startsWith(_functionPreferredCharacteristicKeyPrefix)).map((e) => _box!.delete(e));
     return await Future.wait(futures).then((value) => _box?.flush());
   }
+
+  static Future<void> setCacheUpdated(String cache) {
+    checkInit();
+    return _box!.put(_cacheUpdatedAtPrefix + cache, DateTime.now().millisecondsSinceEpoch.toString());
+  }
+
+  static DateTime? getCacheUpdated(String cache) {
+    checkInit();
+    final ms = _box!.get(_cacheUpdatedAtPrefix + cache);
+    if (ms == null) {
+      return null;
+    }
+    return DateTime.fromMillisecondsSinceEpoch(int.parse(ms));
+  }
+
 }
 
 enum Tutorial { addFavoriteButton, deviceListItem }

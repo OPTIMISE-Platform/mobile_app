@@ -91,10 +91,10 @@ class Settings extends StatelessWidget {
             }),
         const Divider(),
         ListTile(
-          title: const Text("Clear Cache"),
+          title: const Text("Refresh Cache"),
           onTap: () async {
-            await CacheHelper.clearCache();
-            Toast.showConfirmationToast(context, "Cache cleared, please restart App");
+            await CacheHelper.refreshCache();
+            Toast.showConfirmationToast(context, "Cache refreshed, please restart App");
           },
         ),
         const Divider(),

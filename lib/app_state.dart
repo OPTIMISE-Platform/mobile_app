@@ -35,6 +35,7 @@ import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/characteristics.dart';
 import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -324,7 +325,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     late final List<DeviceInstance> newDevices;
     const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(limit, _deviceOffset, _deviceSearchFilter);
+      newDevices = await DevicesService.getDevices(limit, _deviceOffset, _deviceSearchFilter, devices.isNotEmpty ? devices.last : null);
     } catch (e) {
       _logger.e("Could not get devices: $e");
       Toast.showErrorToast(context, "Could not load devices");
@@ -749,6 +750,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifications.clear();
     _notificationInited = false;
     _messageIdToDisplay = null;
+    CacheHelper.clearCache();
   }
 
   @override

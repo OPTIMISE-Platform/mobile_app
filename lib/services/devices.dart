@@ -20,7 +20,9 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
@@ -28,6 +30,7 @@ import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import '../models/device_search_filter.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 import 'auth.dart';
 
 class DevicesService {
@@ -35,35 +38,55 @@ class DevicesService {
     printer: SimplePrinter(),
   );
 
-  static late final Dio? _dio;
+  static Dio? _dio;
   static CacheOptions? _options;
+  static String? _cacheFile;
 
   static initOptions() async {
-    if (_options != null && _dio != null) {
-      return;
-    }
-
-    String? cacheFile = await CacheHelper.getCacheFile();
-
-    _options = CacheOptions(
-      store: HiveCacheStore(cacheFile),
-      policy: CachePolicy.refreshForceCache,
+    _cacheFile ??= await CacheHelper.getCacheFile();
+    _options ??= CacheOptions(
+      store: HiveCacheStore(_cacheFile),
       hitCacheOnErrorExcept: [401, 403],
-      maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    _dio ??= Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter) async {
-    final headers = await Auth().getHeaders();
+  static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter, DeviceInstance? lastDevice, {bool forceBackend = false}) async {
+    final start = DateTime.now();
     await initOptions();
 
-    final body = filter.toBody(limit, offset);
+    final collection =  isar.collection<DeviceInstance>();
+
+    if (!forceBackend && await collection.count() >= AppState().totalDevices) {
+      final devices = await filter.isarQuery(limit, offset, collection).build().findAll();
+      _logger.d("Getting devices from local DB took ${DateTime.now().difference(start)}");
+      Future.delayed(const Duration(seconds: 2), () async {
+        final refreshDeviceIds = devices.where((element) => element.network?.localService == null).map((e) => e.id).toList(growable: false);
+        if (refreshDeviceIds.isEmpty) {
+          return;
+        }
+        final refreshFilter =  DeviceSearchFilter("");
+        refreshFilter.deviceIds = refreshDeviceIds;
+        final refreshedDevices = await getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true);
+        refreshedDevices.forEach((d1) {
+          final i = AppState().devices.indexWhere((d2) => d1.id == d2.id);
+          if (i == -1) return;
+          AppState().devices[i] = d1;
+        });
+        await isar.writeTxn(() async {
+          await collection.putAll(refreshedDevices);
+        });
+      });
+      return devices;
+    }
+    final headers = await Auth().getHeaders();
+
+    final body = filter.toBody(limit, offset, lastDevice);
     final uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/query';
     final encoded = json.encode(body);
     _logger.d("Devices: $encoded");
@@ -84,7 +107,13 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    return List<DeviceInstance>.generate(l.length, (index) => DeviceInstance.fromJson(l[index]));
+    final devices = List<DeviceInstance>.generate(l.length, (index) => DeviceInstance.fromJson(l[index]));
+    _logger.d("Getting devices from remote DB took ${DateTime.now().difference(start)}");
+
+    await isar.writeTxn(() async {
+      await collection.putAll(devices);
+    });
+    return devices;
   }
 
   static Future<void> saveDevice(DeviceInstance device) async {
@@ -106,6 +135,9 @@ class DevicesService {
       rethrow;
     }
 
+    await isar.writeTxn(() async {
+      await isar.collection<DeviceInstance>().put(device);
+    });
     return;
   }
 

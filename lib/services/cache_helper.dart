@@ -21,9 +21,20 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/device_instance.dart';
+import '../shared/isar.dart';
+import 'devices.dart';
+
 class CacheHelper {
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
   static String bodyCacheIDBuilder(RequestOptions request) {
     List<int> bytes = utf8.encode(request.method + request.uri.toString());
     if (request.data != null) {
@@ -57,5 +68,52 @@ class CacheHelper {
   static clearCache() async {
     final cacheFile = (await getCacheFile());
     HiveCacheStore(cacheFile).clean();
+    await isar.writeTxn(() async {
+      await isar.deviceInstances.clear();
+    });
+
+  }
+
+  static refreshCache() async {
+    await Future.wait([_refreshDevices(Duration.zero, reschedule: false)]);
+  }
+
+  static scheduleCacheUpdates() {
+    _scheduleRefreshDevices();
+  }
+
+  static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
+    await Future.delayed(wait);
+    var allDevicesLoaded = false;
+    var deviceOffset = 0;
+    DeviceInstance? last;
+    await isar.writeTxn(() async {
+      await isar.deviceInstances.clear();
+    });
+    while (!allDevicesLoaded) {
+      late final List<DeviceInstance> newDevices;
+      const limit = 5000;
+      try {
+        newDevices = await DevicesService.getDevices(limit, deviceOffset, DeviceSearchFilter(""), last, forceBackend: true);
+      } catch (e) {
+        _logger.e("Could not get devices: $e");
+      }
+      allDevicesLoaded = newDevices.length < limit;
+      deviceOffset += newDevices.length;
+      last = newDevices.isNotEmpty ? newDevices.last : null;
+    }
+    await Settings.setCacheUpdated("devices");
+    if (reschedule) {
+      _refreshDevices(const Duration(days: 1));
+    }
+  }
+
+  static _scheduleRefreshDevices() {
+    final dt = Settings.getCacheUpdated("devices");
+    if (dt == null) {
+      _refreshDevices(Duration.zero);
+    } else {
+      _refreshDevices(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+    }
   }
 }
