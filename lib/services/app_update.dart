@@ -31,7 +31,7 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mutex/mutex.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../exceptions/no_network_exception.dart';
