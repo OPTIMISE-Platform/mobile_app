@@ -60,9 +60,9 @@ class DevicesService {
     final start = DateTime.now();
     await initOptions();
 
-    final collection =  isar.collection<DeviceInstance>();
+    final collection =  isar?.collection<DeviceInstance>();
 
-    if (!forceBackend && await collection.count() >= AppState().totalDevices) {
+    if (!forceBackend && isar != null && collection != null && await collection.count() >= AppState().totalDevices) {
       final devices = await filter.isarQuery(limit, offset, collection).build().findAll();
       _logger.d("Getting devices from local DB took ${DateTime.now().difference(start)}");
       Future.delayed(const Duration(seconds: 2), () async {
@@ -78,7 +78,7 @@ class DevicesService {
           if (i == -1) return;
           AppState().devices[i] = d1;
         });
-        await isar.writeTxn(() async {
+        await isar!.writeTxn(() async {
           await collection.putAll(refreshedDevices);
         });
       });
@@ -110,9 +110,11 @@ class DevicesService {
     final devices = List<DeviceInstance>.generate(l.length, (index) => DeviceInstance.fromJson(l[index]));
     _logger.d("Getting devices from remote DB took ${DateTime.now().difference(start)}");
 
-    await isar.writeTxn(() async {
-      await collection.putAll(devices);
-    });
+    if (isar != null && collection != null) {
+      await isar!.writeTxn(() async {
+        await collection.putAll(devices);
+      });
+    }
     return devices;
   }
 
@@ -135,9 +137,11 @@ class DevicesService {
       rethrow;
     }
 
-    await isar.writeTxn(() async {
-      await isar.collection<DeviceInstance>().put(device);
-    });
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.collection<DeviceInstance>().put(device);
+      });
+    }
     return;
   }
 

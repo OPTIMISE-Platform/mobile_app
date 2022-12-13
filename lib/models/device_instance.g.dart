@@ -13,9 +13,9 @@ extension GetDeviceInstanceCollection on Isar {
   IsarCollection<DeviceInstance> get deviceInstances => this.collection();
 }
 
-const DeviceInstanceSchema = CollectionSchema(
+var DeviceInstanceSchema = CollectionSchema(
   name: r'DeviceInstance',
-  id: -8399428298092944646,
+  id: int.parse('-8399428298092944646'),
   properties: {
     r'annotations': PropertySchema(
       id: 0,
@@ -77,7 +77,7 @@ const DeviceInstanceSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: -3268401673993471357,
+      id: int.parse('-3268401673993471357'),
       name: r'id',
       unique: false,
       replace: false,
@@ -90,7 +90,7 @@ const DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'local_id': IndexSchema(
-      id: 3920594403020751642,
+      id: int.parse('3920594403020751642'),
       name: r'local_id',
       unique: false,
       replace: false,
@@ -103,7 +103,7 @@ const DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'display_name': IndexSchema(
-      id: -7654124764797891805,
+      id: int.parse('-7654124764797891805'),
       name: r'display_name',
       unique: false,
       replace: false,
@@ -116,7 +116,7 @@ const DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'favorite': IndexSchema(
-      id: 4264748667377999100,
+      id: int.parse('4264748667377999100'),
       name: r'favorite',
       unique: false,
       replace: false,

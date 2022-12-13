@@ -14,16 +14,18 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 
 import '../models/device_instance.dart';
 
-final isar = Isar.openSync([DeviceInstanceSchema]);
+final Isar? isar = kIsWeb ? null : Isar.openSync([DeviceInstanceSchema]);
 
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings
 /// Adopted from https://isar.dev/recipes/string_ids.html
+var base = int.parse('0xcbf29ce484222325');
 int fastHash(String string) {
-  var hash = 0xcbf29ce484222325;
+  var hash = base;
 
   var i = 0;
   while (i < string.length) {

@@ -68,10 +68,11 @@ class CacheHelper {
   static clearCache() async {
     final cacheFile = (await getCacheFile());
     HiveCacheStore(cacheFile).clean();
-    await isar.writeTxn(() async {
-      await isar.deviceInstances.clear();
-    });
-
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceInstances.clear();
+      });
+    }
   }
 
   static refreshCache() async {
@@ -87,9 +88,12 @@ class CacheHelper {
     var allDevicesLoaded = false;
     var deviceOffset = 0;
     DeviceInstance? last;
-    await isar.writeTxn(() async {
-      await isar.deviceInstances.clear();
-    });
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceInstances.clear();
+      });
+    }
     while (!allDevicesLoaded) {
       late final List<DeviceInstance> newDevices;
       const limit = 5000;
@@ -97,6 +101,7 @@ class CacheHelper {
         newDevices = await DevicesService.getDevices(limit, deviceOffset, DeviceSearchFilter(""), last, forceBackend: true);
       } catch (e) {
         _logger.e("Could not get devices: $e");
+        return;
       }
       allDevicesLoaded = newDevices.length < limit;
       deviceOffset += newDevices.length;
