@@ -20,6 +20,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -28,6 +29,7 @@ import 'package:mobile_app/services/cache_helper.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 import 'auth.dart';
 
 class DeviceGroupsService {
@@ -56,7 +58,13 @@ class DeviceGroupsService {
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<Future<DeviceGroup>>> getDeviceGroups() async {
+  static Future<List<Future<DeviceGroup>>> getDeviceGroups({bool forceBackend = false}) async {
+    final collection =  isar?.deviceGroups;
+
+    if (!forceBackend && isar != null && collection != null) {
+      return (await collection.where().sortByName().findAll()).map((e) => e.initImage()).toList();
+    }
+
     String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/device-groups';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
@@ -78,6 +86,11 @@ class DeviceGroupsService {
 
     final l = resp.data ?? [];
     final groups = List<DeviceGroup>.generate(l.length, (index) => DeviceGroup.fromJson(l[index]));
+    if (isar != null && collection != null) {
+      await isar!.writeTxn(() async {
+        await collection.putAll(groups);
+      });
+    }
     return groups.map((e) => e.initImage()).toList(growable: false);
   }
 
@@ -100,7 +113,15 @@ class DeviceGroupsService {
       rethrow;
     }
 
-    return DeviceGroup.fromJson(resp.data!);
+    final savedGroup = DeviceGroup.fromJson(resp.data!);
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceGroups.put(savedGroup);
+      });
+    }
+
+    return savedGroup;
   }
 
   static Future<DeviceGroup> createDeviceGroup(String name) async {
@@ -118,7 +139,14 @@ class DeviceGroupsService {
       }
       rethrow;
     }
-    return DeviceGroup.fromJson(resp.data).initImage();
+    final savedGroup =  DeviceGroup.fromJson(resp.data);
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceGroups.put(savedGroup);
+      });
+    }
+
+    return savedGroup.initImage();
   }
 
   static Future<void> deleteDeviceGroup(String id) async {
@@ -134,6 +162,12 @@ class DeviceGroupsService {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
       }
       rethrow;
+    }
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceGroups.delete(fastHash(id));
+      });
     }
 
     return;

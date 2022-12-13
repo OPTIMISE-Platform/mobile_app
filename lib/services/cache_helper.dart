@@ -22,7 +22,9 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -76,11 +78,12 @@ class CacheHelper {
   }
 
   static refreshCache() async {
-    await Future.wait([_refreshDevices(Duration.zero, reschedule: false)]);
+    await Future.wait([_refreshDevices(Duration.zero, reschedule: false), _refreshDeviceGroups(Duration.zero, reschedule: false)]);
   }
 
   static scheduleCacheUpdates() {
     _scheduleRefreshDevices();
+    _scheduleRefreshDeviceGroups();
   }
 
   static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
@@ -119,6 +122,37 @@ class CacheHelper {
       _refreshDevices(Duration.zero);
     } else {
       _refreshDevices(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+    }
+  }
+
+  static Future<void> _refreshDeviceGroups(Duration wait, {bool reschedule = true}) async {
+    await Future.delayed(wait);
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceGroups.clear();
+      });
+    }
+
+    try {
+      await DeviceGroupsService.getDeviceGroups(forceBackend: true);
+    } catch (e) {
+      _logger.e("Could not get devices: $e");
+      return;
+    }
+
+    await Settings.setCacheUpdated("deviceGroups");
+    if (reschedule) {
+      _refreshDeviceGroups(const Duration(days: 1));
+    }
+  }
+
+  static _scheduleRefreshDeviceGroups() {
+    final dt = Settings.getCacheUpdated("deviceGroups");
+    if (dt == null) {
+      _refreshDeviceGroups(Duration.zero);
+    } else {
+      _refreshDeviceGroups(dt.add(const Duration(days: 1)).difference(DateTime.now()));
     }
   }
 }

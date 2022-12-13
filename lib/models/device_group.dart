@@ -21,6 +21,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
@@ -30,6 +31,7 @@ import 'package:mobile_app/models/network.dart';
 import '../services/cache_helper.dart';
 import '../shared/base64_response_decoder.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 import 'attribute.dart';
 import 'device_instance.dart';
 import 'device_state.dart';
@@ -37,20 +39,31 @@ import 'device_state.dart';
 part 'device_group.g.dart';
 
 @JsonSerializable()
+@collection
 class DeviceGroup {
-  String id, name, image;
+  @Index(type: IndexType.hash)
+  String id;
+  @Index(caseSensitive: false)
+  String name;
+  String image;
   List<DeviceGroupCriteria> criteria;
   List<String> device_ids;
   List<Attribute>? attributes;
 
   @JsonKey(ignore: true)
+  @ignore
   Widget? imageWidget;
 
   @JsonKey(ignore: true)
+  @ignore
   final List<DeviceState> states = [];
 
   @JsonKey(ignore: true)
+  @ignore
   Network? network;
+
+  @JsonKey(ignore: true)
+  Id isarId = -1;
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -95,6 +108,7 @@ class DeviceGroup {
   }
 
   DeviceGroup(this.id, this.name, this.criteria, this.image, this.device_ids, this.attributes) {
+    isarId = fastHash(id);
     final networkIndex = AppState()
         .networks
         .indexWhere((n) => device_ids.every((String groupDeviceId) => (n.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57)) as bool));
@@ -156,6 +170,7 @@ class DeviceGroup {
     return result;
   }
 
+  @Index()
   bool get favorite {
     final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
     return i != null && i != -1;
@@ -179,10 +194,11 @@ class DeviceGroup {
 }
 
 @JsonSerializable()
+@embedded
 class DeviceGroupCriteria {
-  String aspect_id, device_class_id, function_id, interaction;
+  String aspect_id = "", device_class_id = "", function_id = "", interaction = "";
 
-  DeviceGroupCriteria(this.aspect_id, this.device_class_id, this.function_id, this.interaction);
+  DeviceGroupCriteria();
 
   factory DeviceGroupCriteria.fromJson(Map<String, dynamic> json) => _$DeviceGroupCriteriaFromJson(json);
 

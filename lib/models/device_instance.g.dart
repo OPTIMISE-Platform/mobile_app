@@ -13,7 +13,7 @@ extension GetDeviceInstanceCollection on Isar {
   IsarCollection<DeviceInstance> get deviceInstances => this.collection();
 }
 
-var DeviceInstanceSchema = CollectionSchema(
+final DeviceInstanceSchema = CollectionSchema(
   name: r'DeviceInstance',
   id: int.parse('-8399428298092944646'),
   properties: {
