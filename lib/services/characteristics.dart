@@ -40,7 +40,7 @@ class CharacteristicsService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.refreshForceCache,
+      policy: CachePolicy.forceCache,
       hitCacheOnErrorExcept: [401, 403],
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
