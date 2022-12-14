@@ -93,14 +93,16 @@ class CacheHelper {
     ]);
   }
 
-  static scheduleCacheUpdates() {
+  static scheduleCacheUpdates() async {
     if (isar == null) {
       return;
     }
-    _scheduleRefreshDevices();
-    _scheduleRefreshDeviceGroups();
-    _scheduleRefreshNetworks();
-    _scheduleRefreshLocations();
+    await  Future.wait([
+    _scheduleRefreshDevices(),
+    _scheduleRefreshDeviceGroups(),
+    _scheduleRefreshNetworks(),
+    _scheduleRefreshLocations(),
+    ]);
   }
 
   static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
@@ -133,12 +135,17 @@ class CacheHelper {
     }
   }
 
-  static _scheduleRefreshDevices() {
+  static Future<void> _scheduleRefreshDevices() async {
     final dt = Settings.getCacheUpdated("devices");
     if (dt == null) {
-      _refreshDevices(Duration.zero);
+      await _refreshDevices(Duration.zero);
     } else {
-      _refreshDevices(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
+      if (delay.isNegative) {
+        await _refreshDevices(delay);
+      } else {
+        _refreshDevices(delay);
+      }
     }
   }
 
@@ -164,12 +171,17 @@ class CacheHelper {
     }
   }
 
-  static _scheduleRefreshDeviceGroups() {
+  static Future<void> _scheduleRefreshDeviceGroups() async {
     final dt = Settings.getCacheUpdated("deviceGroups");
     if (dt == null) {
-      _refreshDeviceGroups(Duration.zero);
+      await _refreshDeviceGroups(Duration.zero);
     } else {
-      _refreshDeviceGroups(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
+      if (delay.isNegative) {
+        await _refreshDeviceGroups(delay);
+      } else {
+        _refreshDeviceGroups(delay);
+      }
     }
   }
 
@@ -198,12 +210,17 @@ class CacheHelper {
     }
   }
 
-  static _scheduleRefreshNetworks() {
+  static Future<void> _scheduleRefreshNetworks() async {
     final dt = Settings.getCacheUpdated("networks");
     if (dt == null) {
-      _refreshNetworks(Duration.zero);
+      await _refreshNetworks(Duration.zero);
     } else {
-      _refreshNetworks(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
+      if (delay.isNegative) {
+        await _refreshNetworks(delay);
+      } else {
+        _refreshNetworks(delay);
+      }
     }
   }
 
@@ -232,12 +249,17 @@ class CacheHelper {
     }
   }
 
-  static _scheduleRefreshLocations() {
+  static Future<void> _scheduleRefreshLocations() async {
     final dt = Settings.getCacheUpdated("locations");
     if (dt == null) {
-      _refreshLocations(Duration.zero);
+      await _refreshLocations(Duration.zero);
     } else {
-      _refreshLocations(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
+      if (delay.isNegative) {
+        await _refreshLocations(delay);
+      } else {
+        _refreshLocations(delay);
+      }
     }
   }
 }

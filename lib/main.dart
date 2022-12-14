@@ -78,7 +78,9 @@ Future main() async {
   await Auth().init();
   print("Auth init took ${DateTime.now().difference(sub)}");
 
-  CacheHelper.scheduleCacheUpdates();
+  sub = DateTime.now();
+  await CacheHelper.scheduleCacheUpdates();
+  print("Cache init took ${DateTime.now().difference(sub)}");
 
   print("App init took ${DateTime.now().difference(start)}");
   runApp(RootRestorationScope(
