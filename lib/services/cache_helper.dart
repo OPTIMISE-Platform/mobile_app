@@ -24,6 +24,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/networks.dart';
@@ -33,6 +34,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/device_instance.dart';
 import '../shared/isar.dart';
 import 'devices.dart';
+import 'locations.dart';
 
 class CacheHelper {
   static final _logger = Logger(
@@ -83,7 +85,12 @@ class CacheHelper {
     if (isar == null) {
       return;
     }
-    await Future.wait([_refreshDevices(Duration.zero, reschedule: false), _refreshDeviceGroups(Duration.zero, reschedule: false), _refreshNetworks(Duration.zero, reschedule: false)]);
+    await Future.wait([
+      _refreshDevices(Duration.zero, reschedule: false),
+      _refreshDeviceGroups(Duration.zero, reschedule: false),
+      _refreshNetworks(Duration.zero, reschedule: false),
+      _refreshLocations(Duration.zero, reschedule: false)
+    ]);
   }
 
   static scheduleCacheUpdates() {
@@ -93,6 +100,7 @@ class CacheHelper {
     _scheduleRefreshDevices();
     _scheduleRefreshDeviceGroups();
     _scheduleRefreshNetworks();
+    _scheduleRefreshLocations();
   }
 
   static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
@@ -186,7 +194,7 @@ class CacheHelper {
 
     await Settings.setCacheUpdated("networks");
     if (reschedule) {
-      _refreshDeviceGroups(const Duration(days: 1));
+      _refreshNetworks(const Duration(days: 1));
     }
   }
 
@@ -196,6 +204,40 @@ class CacheHelper {
       _refreshNetworks(Duration.zero);
     } else {
       _refreshNetworks(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+    }
+  }
+
+  static Future<void> _refreshLocations(Duration wait, {bool reschedule = true}) async {
+    if (isar == null) {
+      return;
+    }
+    await Future.delayed(wait);
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.locations.clear();
+      });
+    }
+
+    try {
+      await LocationService.getLocations(forceBackend: true);
+    } catch (e) {
+      _logger.e("Could not get locations: $e");
+      return;
+    }
+
+    await Settings.setCacheUpdated("locations");
+    if (reschedule) {
+      _refreshLocations(const Duration(days: 1));
+    }
+  }
+
+  static _scheduleRefreshLocations() {
+    final dt = Settings.getCacheUpdated("locations");
+    if (dt == null) {
+      _refreshLocations(Duration.zero);
+    } else {
+      _refreshLocations(dt.add(const Duration(days: 1)).difference(DateTime.now()));
     }
   }
 }

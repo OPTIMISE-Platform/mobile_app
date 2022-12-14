@@ -18,12 +18,14 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 import 'auth.dart';
 
 class LocationService {
@@ -52,7 +54,11 @@ class LocationService {
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<Future<Location>>> getLocations() async {
+  static Future<List<Future<Location>>> getLocations({bool forceBackend = false}) async {
+    if (!forceBackend && isar != null) {
+      return (await isar!.locations.where().sortByName().findAll()).map((e) => e.initImage()).toList();
+    }
+
     String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/locations';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
@@ -74,6 +80,11 @@ class LocationService {
 
     final l = resp.data ?? [];
     final locations = List<Location>.generate(l.length, (index) => Location.fromJson(l[index]));
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.locations.putAll(locations);
+      });
+    }
     return locations.map((e) => e.initImage()).toList(growable: false);
   }
 
@@ -92,7 +103,13 @@ class LocationService {
       rethrow;
     }
 
-    return Location.fromJson(resp.data).initImage();
+    final savedLocation = Location.fromJson(resp.data);
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.locations.put(savedLocation);
+      });
+    }
+    return savedLocation.initImage();
   }
 
   static Future<Location> createLocation(String name) async {
@@ -109,7 +126,13 @@ class LocationService {
       }
       rethrow;
     }
-    return Location.fromJson(resp.data).initImage();
+    final savedLocation = Location.fromJson(resp.data);
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.locations.put(savedLocation);
+      });
+    }
+    return savedLocation.initImage();
   }
 
   static Future<void> deleteLocation(String id) async {
@@ -124,6 +147,12 @@ class LocationService {
         throw UnexpectedStatusCodeException(e.response?.statusCode);
       }
       rethrow;
+    }
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.locations.delete(fastHash(id));
+      });
     }
 
     return;

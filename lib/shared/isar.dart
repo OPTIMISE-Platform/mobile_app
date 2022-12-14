@@ -17,11 +17,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 
 import '../models/device_instance.dart';
 
-final Isar? isar = kIsWeb ? null : Isar.openSync([DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema]);
+final Isar? isar = kIsWeb ? null : Isar.openSync([DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema]);
 
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings
 /// Adopted from https://isar.dev/recipes/string_ids.html

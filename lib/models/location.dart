@@ -20,22 +20,33 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/widgets.dart';
+import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 
 import '../services/cache_helper.dart';
 import '../shared/base64_response_decoder.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 
 part 'location.g.dart';
 
 @JsonSerializable()
+@collection
 class Location {
-  String id, name, description, image;
+  @Index(type: IndexType.hash)
+  String id;
+  @Index(caseSensitive: false)
+  String name;
+  String description, image;
   List<String> device_ids, device_group_ids;
 
   @JsonKey(ignore: true)
+  @ignore
   Widget? imageWidget;
+
+  @JsonKey(ignore: true)
+  Id isarId = -1;
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -78,7 +89,9 @@ class Location {
   }
 
 
-  Location(this.id, this.name, this.description, this.image, this.device_ids, this.device_group_ids);
+  Location(this.id, this.name, this.description, this.image, this.device_ids, this.device_group_ids) {
+    isarId = fastHash(id);
+  }
   factory Location.fromJson(Map<String, dynamic> json) => _$LocationFromJson(json);
   Map<String, dynamic> toJson() => _$LocationToJson(this);
 }
