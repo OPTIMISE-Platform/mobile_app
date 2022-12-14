@@ -59,13 +59,14 @@ class MyAppBar {
   }
 
   static Widget _updateIcon(BuildContext context) {
-    bool hasUpdate = false;
-    final future = AppUpdater.updateAvailable(cacheAge: const Duration(days: 1));
+    bool? hasUpdate = AppUpdater.updateAvailableSync(cacheAge: const Duration(days: 1));
+
+    final future = hasUpdate != null ? null : AppUpdater.updateAvailable(cacheAge: const Duration(days: 1));
     return StatefulBuilder(builder: (context, setState) {
-      future.then((value) => {
+      future?.then((value) => {
             if (value != null && value != hasUpdate) {setState(() => hasUpdate = value)}
           });
-      return !hasUpdate
+      return hasUpdate != true
           ? const SizedBox.shrink()
           : UpdateIcon();
     });

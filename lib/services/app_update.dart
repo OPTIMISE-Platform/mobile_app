@@ -82,6 +82,12 @@ class AppUpdater {
     return false;
   }
 
+  static bool? updateAvailableSync({Duration cacheAge = Duration.zero}) {
+    if (_foundUpdate != null && _foundUpdateAt != null && _foundUpdateAt!.add(cacheAge).isAfter(DateTime.now())) {
+      return _foundUpdate;
+    }
+  }
+
   static Future<bool?> updateAvailable({Duration cacheAge = Duration.zero}) async {
     if (!updateSupported) return false;
 
@@ -99,7 +105,7 @@ class AppUpdater {
 
       final cacheFile = await CacheHelper.getCacheFile(customSuffix: "_appUpdater_");
 
-      if (cacheFile != null && cacheAge.inMicroseconds == Duration.zero.inMicroseconds) {
+      if (cacheFile != null && cacheAge == Duration.zero) {
         HiveCacheStore(cacheFile).clean();
       }
 
