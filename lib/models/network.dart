@@ -14,29 +14,43 @@
  *  limitations under the License.
  */
 
+import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:nsd/nsd.dart';
 
+import '../shared/isar.dart';
 import 'device_instance.dart';
 
 part 'network.g.dart';
 
 @JsonSerializable()
+@collection
 class Network {
-  String id, name, creator;
+  @Index(type: IndexType.hash)
+  String id;
+  @Index(caseSensitive: false)
+  String name;
+  String creator;
   Annotations? annotations;
   bool shared;
   List<String>? device_local_ids, device_ids;
 
   @JsonKey(ignore: true)
+  Id isarId = -1;
+
+  @JsonKey(ignore: true)
+  @ignore
   Service? localService;
 
   @JsonKey(ignore: true)
+  @ignore
   final List<DeviceState> states = [];
 
-  Network(this.id, this.name,  this.annotations, this.shared, this.creator, this.device_local_ids, this.device_ids);
+  Network(this.id, this.name,  this.annotations, this.shared, this.creator, this.device_local_ids, this.device_ids) {
+    isarId = fastHash(id);
+  }
 
 
   factory Network.fromJson(Map<String, dynamic> json) =>

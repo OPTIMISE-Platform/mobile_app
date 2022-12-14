@@ -24,7 +24,9 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -72,18 +74,25 @@ class CacheHelper {
     HiveCacheStore(cacheFile).clean();
     if (isar != null) {
       await isar!.writeTxn(() async {
-        await isar!.deviceInstances.clear();
+        await isar!.clear();
       });
     }
   }
 
   static refreshCache() async {
-    await Future.wait([_refreshDevices(Duration.zero, reschedule: false), _refreshDeviceGroups(Duration.zero, reschedule: false)]);
+    if (isar == null) {
+      return;
+    }
+    await Future.wait([_refreshDevices(Duration.zero, reschedule: false), _refreshDeviceGroups(Duration.zero, reschedule: false), _refreshNetworks(Duration.zero, reschedule: false)]);
   }
 
   static scheduleCacheUpdates() {
+    if (isar == null) {
+      return;
+    }
     _scheduleRefreshDevices();
     _scheduleRefreshDeviceGroups();
+    _scheduleRefreshNetworks();
   }
 
   static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
@@ -137,7 +146,7 @@ class CacheHelper {
     try {
       await DeviceGroupsService.getDeviceGroups(forceBackend: true);
     } catch (e) {
-      _logger.e("Could not get devices: $e");
+      _logger.e("Could not get deviceGroups: $e");
       return;
     }
 
@@ -153,6 +162,40 @@ class CacheHelper {
       _refreshDeviceGroups(Duration.zero);
     } else {
       _refreshDeviceGroups(dt.add(const Duration(days: 1)).difference(DateTime.now()));
+    }
+  }
+
+  static Future<void> _refreshNetworks(Duration wait, {bool reschedule = true}) async {
+    if (isar == null) {
+      return;
+    }
+    await Future.delayed(wait);
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.networks.clear();
+      });
+    }
+
+    try {
+      await NetworksService.getNetworks(null, true);
+    } catch (e) {
+      _logger.e("Could not get networks: $e");
+      return;
+    }
+
+    await Settings.setCacheUpdated("networks");
+    if (reschedule) {
+      _refreshDeviceGroups(const Duration(days: 1));
+    }
+  }
+
+  static _scheduleRefreshNetworks() {
+    final dt = Settings.getCacheUpdated("networks");
+    if (dt == null) {
+      _refreshNetworks(Duration.zero);
+    } else {
+      _refreshNetworks(dt.add(const Duration(days: 1)).difference(DateTime.now()));
     }
   }
 }

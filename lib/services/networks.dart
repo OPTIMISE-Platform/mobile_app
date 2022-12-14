@@ -18,12 +18,14 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/network.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/isar.dart';
 import 'auth.dart';
 
 class NetworksService {
@@ -48,7 +50,12 @@ class NetworksService {
     );
   }
 
-  static Future<List<Network>> getNetworks([List<String>? ids]) async {
+  static Future<List<Network>> getNetworks([List<String>? ids, bool forceBackend = false]) async {
+    if (!forceBackend && isar != null) {
+      return isar!.networks.where().sortByName().findAll();
+    }
+
+
     String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/hubs?limit=9999';
     final Map<String, String> queryParameters = {};
     if (ids != null && ids.isNotEmpty) {
@@ -74,6 +81,12 @@ class NetworksService {
     }
 
     final l = resp.data ?? [];
-    return List<Network>.generate(l.length, (index) => Network.fromJson(l[index]));
+    final networks = List<Network>.generate(l.length, (index) => Network.fromJson(l[index]));
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.networks.putAll(networks);
+      });
+    }
+    return networks;
   }
 }
