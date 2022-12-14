@@ -48,10 +48,10 @@ class FunctionConfigGetOnOffState extends FunctionConfig {
     if ((value is bool && value) || (value is List && !value.contains(false))) {
       return dotenv.env['FUNCTION_SET_OFF_STATE'];
     }
-    if ((value is bool && !value) || (value is List && !value.contains(true))) {
+    //if ((value is bool && !value) || (value is List && !value.contains(true))) {
       return dotenv.env['FUNCTION_SET_ON_STATE'];
-    }
-    return null;
+    //}
+    //return null;
   }
 
   @override
