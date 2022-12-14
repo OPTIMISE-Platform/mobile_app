@@ -135,7 +135,7 @@ class DeviceSearchFilter {
 
     List<String>? allDeviceIds;
     if ((allDeviceIds = _allDeviceIds) != null) {
-      isarQ = isarQ.idMatches(allDeviceIds!.join("|"));
+      isarQ = isarQ.anyOf(allDeviceIds!, (q, String e) => q.idEqualTo(e));
     }
 
     if (networkIds != null) {
