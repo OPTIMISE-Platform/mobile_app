@@ -28,6 +28,7 @@ import 'package:mutex/mutex.dart';
 
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../../shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
@@ -100,7 +101,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
         appBar: appBar.getAppBar(context, actions),
         body: Scrollbar(
             child: releasesMutex.isLocked
-                ? Center(child: PlatformCircularProgressIndicator())
+                ? const Center(child: DelayedCircularProgressIndicator())
                 : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();

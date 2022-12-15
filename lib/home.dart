@@ -19,6 +19,7 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
@@ -110,7 +111,7 @@ class _HomeState extends State<Home> {
             : PlatformScaffold(
                 appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
                 body: auth.loggingIn || !_loginChecked
-                    ? Center(child: PlatformCircularProgressIndicator())
+                    ? Center(child: const DelayedCircularProgressIndicator())
                     : Container(
                         padding: MyTheme.inset * 3,
                         child: SingleChildScrollView(

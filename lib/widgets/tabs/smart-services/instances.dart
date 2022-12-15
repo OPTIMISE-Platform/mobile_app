@@ -27,6 +27,7 @@ import 'package:mutex/mutex.dart';
 import '../../../app_state.dart';
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../device_tabs.dart';
 import 'instance_details.dart';
 import 'instance_edit_launch.dart';
@@ -115,7 +116,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   Widget build(BuildContext context) {
     return Scrollbar(
         child: instancesMutex.isLocked
-            ? Center(child: PlatformCircularProgressIndicator())
+            ? const Center(child: DelayedCircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: () async {
                   if (upgradingInstances.contains(true)) return;
@@ -180,7 +181,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                     trailing: instances[i].new_release_id == null
                                         ? null
                                         : upgradingInstances[i]
-                                            ? PlatformCircularProgressIndicator()
+                                            ? const DelayedCircularProgressIndicator()
                                             : IconButton(
                                                 icon: const Icon(Icons.upgrade),
                                                 onPressed: () async {

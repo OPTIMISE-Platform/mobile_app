@@ -17,12 +17,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app_state.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../shared/device_list_item.dart';
 
 class DeviceList extends StatefulWidget {
@@ -69,7 +69,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
               },
               child: Scrollbar(
                 child: AppState().loadingDevices
-                    ? Center(child: PlatformCircularProgressIndicator())
+                    ? const Center(child: DelayedCircularProgressIndicator())
                     : AppState().devices.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {

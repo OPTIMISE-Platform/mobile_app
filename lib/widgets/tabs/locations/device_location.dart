@@ -26,6 +26,7 @@ import '../../../app_state.dart';
 import '../../../models/device_search_filter.dart';
 import '../../../services/haptic_feedback_proxy.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../device_tabs.dart';
 
 class DeviceListByLocation extends StatefulWidget {
@@ -108,7 +109,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
     return Consumer<AppState>(builder: (_, state, child) {
       return Scrollbar(
           child: state.loadingLocations()
-              ? Center(child: PlatformCircularProgressIndicator())
+              ? const Center(child: DelayedCircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () async {
                     HapticFeedbackProxy.lightImpact();

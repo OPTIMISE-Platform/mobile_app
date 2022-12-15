@@ -22,6 +22,7 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../../shared/expandable_text.dart';
 import 'instance_edit_launch.dart';
 
@@ -152,7 +153,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                 ]..addAll(MyAppBar.getDefaultActions(context))),
             body: Scrollbar(
               child: widget.instance.parameters == null
-                  ? Center(child: PlatformCircularProgressIndicator())
+                  ? const Center(child: DelayedCircularProgressIndicator())
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: MyTheme.inset,

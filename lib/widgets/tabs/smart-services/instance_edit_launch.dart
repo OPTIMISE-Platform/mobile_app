@@ -26,6 +26,7 @@ import 'package:multiselect/multiselect.dart';
 
 import '../../../models/smart_service.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../../shared/expandable_text.dart';
 
 class SmartServicesReleaseLaunch extends StatefulWidget {
@@ -357,7 +358,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),
             body: Scrollbar(
                 child: parameters == null
-                    ? Center(child: PlatformCircularProgressIndicator())
+                    ? const Center(child: DelayedCircularProgressIndicator())
                     : Form(key: _formKey, child: ListView.builder(itemCount: configs.length, itemBuilder: (_, i) => configs[i])))));
   }
 }

@@ -26,6 +26,7 @@ import 'package:stats/stats.dart';
 import '../../../../models/db_query.dart';
 import '../../../../theme.dart';
 import '../../../shared/app_bar.dart';
+import '../../../shared/delay_circular_progress_indicator.dart';
 import '../../../shared/toast.dart';
 
 class Chart extends StatefulWidget {
@@ -246,14 +247,14 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       PlatformIconButton(
         onPressed: _refreshing ? null : () =>
             _refresh(context, _range),
-        icon: _refreshing ? PlatformCircularProgressIndicator() : const Icon(Icons.refresh),
+        icon: _refreshing ? const DelayedCircularProgressIndicator() : const Icon(Icons.refresh),
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )
     ];
     return PlatformScaffold(
         appBar: _appBar.getAppBar(context, appBarActions),
         body: _spots == null
-            ? Center(child: PlatformCircularProgressIndicator())
+            ? const Center(child: DelayedCircularProgressIndicator())
             : Container(
                 padding: const EdgeInsets.only(left: MyTheme.insetSize, right: MyTheme.insetSize, top: MyTheme.insetSize),
                 child: LineChart(

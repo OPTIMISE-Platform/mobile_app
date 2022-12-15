@@ -44,6 +44,7 @@ import '../../../../services/settings.dart';
 import '../../../../shared/keyed_list.dart';
 import '../../../../theme.dart';
 import '../../../shared/app_bar.dart';
+import '../../../shared/delay_circular_progress_indicator.dart';
 import '../../../shared/expandable_text.dart';
 import '../../../shared/favorize_button.dart';
 import '../../../shared/toast.dart';
@@ -305,7 +306,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
         }
-        return Center(child: PlatformCircularProgressIndicator());
+        return Center(child: DelayedCircularProgressIndicator());
       }
 
       final device = widget._device;
@@ -474,7 +475,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                   padding: const EdgeInsets.only(right: 12),
                   child: element.transitioning
-                      ? PlatformCircularProgressIndicator()
+                      ? DelayedCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
                           Text("${formatValue(element.value)} ${unit}", style: const TextStyle(fontStyle: FontStyle.italic)),
                 )),
@@ -499,7 +500,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                     ? Container(
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                         padding: const EdgeInsets.only(right: 12),
-                        child: PlatformCircularProgressIndicator())
+                        child: DelayedCircularProgressIndicator())
                     : functionConfig.displayValue(element.value, context) != null
                         ? PlatformIconButton(
                             cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
@@ -548,7 +549,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                     )),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
-                ? Container(padding: const EdgeInsets.only(right: 12), child: PlatformCircularProgressIndicator())
+                ? Container(padding: const EdgeInsets.only(right: 12), child: DelayedCircularProgressIndicator())
                 : PlatformIconButton(
                     cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
                     material: (_, __) => MaterialIconButtonData(splashRadius: 25),

@@ -16,7 +16,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
@@ -34,6 +33,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dar
 import 'package:mutex/mutex.dart';
 
 import '../../../../models/smart_service.dart';
+import '../../../shared/delay_circular_progress_indicator.dart';
 import '../dashboard.dart';
 import 'bar_chart.dart';
 import 'button.dart';
@@ -75,7 +75,7 @@ abstract class SmartServiceModuleWidget {
   @nonVirtual
   Widget build(BuildContext context, bool onlyPreview) => SizedBox(
       height: height * heightUnit,
-      child: _refreshing.isLocked ? Center(child: PlatformCircularProgressIndicator()) : buildInternal(context, onlyPreview, false));
+      child: _refreshing.isLocked ? const Center(child: DelayedCircularProgressIndicator()) : buildInternal(context, onlyPreview, false));
 
   @protected
   Widget buildInternal(BuildContext context, bool onlyPreview, bool parentFlexible);

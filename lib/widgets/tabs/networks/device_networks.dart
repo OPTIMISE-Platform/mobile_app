@@ -26,6 +26,7 @@ import '../../../app_state.dart';
 import '../../../models/device_instance.dart';
 import '../../../models/device_search_filter.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
 
@@ -81,7 +82,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
       final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
       return Scrollbar(
           child: state.loadingNetworks()
-              ? Center(child: PlatformCircularProgressIndicator())
+              ? const Center(child: DelayedCircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: () async {
                     HapticFeedbackProxy.lightImpact();
@@ -166,8 +167,8 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                             )
                       : state.devices.isEmpty
                           ? state.loadingDevices || _loading
-                              ? Center(
-                                  child: PlatformCircularProgressIndicator(),
+                              ? const Center(
+                                  child: DelayedCircularProgressIndicator(),
                                 )
                               : const Center(child: Text("No Devices"))
                           : ListView.builder(

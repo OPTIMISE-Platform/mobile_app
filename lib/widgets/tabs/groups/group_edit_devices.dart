@@ -28,6 +28,7 @@ import '../../../app_state.dart';
 import '../../../models/device_instance.dart';
 import '../../../theme.dart';
 import '../../shared/app_bar.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../shared/search_delegate.dart';
 
 class GroupEditDevices extends StatefulWidget {
@@ -99,14 +100,14 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
   Widget _buildListWidget() {
     return Stack(children: [
       _reloading
-          ? Row(children: [Expanded(child: Center(child: PlatformCircularProgressIndicator()))])
+          ? Row(children: const [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
           : ListView.builder(
               padding: MyTheme.inset,
               itemCount: _candidates.length + _selected.length + (_allCandidatesLoaded ? 0 : 1),
               itemBuilder: (_, i) {
                 if (i == _candidates.length + _selected.length - 1 && !_allCandidatesLoaded) {
                   _loadMoreDevices();
-                  return Row(children: [Expanded(child: Center(child: PlatformCircularProgressIndicator()))]);
+                  return Row(children: const [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]);
                 }
                 if (i > _candidates.length + _selected.length - 1) {
                   return const SizedBox.shrink();
@@ -239,7 +240,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
         ]),
         body: _reloading
             ? Center(
-                child: PlatformCircularProgressIndicator(),
+                child: const DelayedCircularProgressIndicator(),
               )
             : Column(children: [
                 PlatformWidget(

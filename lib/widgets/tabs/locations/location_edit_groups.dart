@@ -23,6 +23,7 @@ import 'package:provider/provider.dart';
 import '../../../app_state.dart';
 import '../../../theme.dart';
 import '../../shared/app_bar.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 
 class LocationEditGroups extends StatefulWidget {
   final int _stateLocationIndex;
@@ -45,7 +46,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.locations.length - 1 < widget._stateLocationIndex) {
         widget._logger.w("LocationEditGroups requested for location index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
+        return const Center(child: DelayedCircularProgressIndicator());
       }
 
       final location = state.locations[widget._stateLocationIndex];
@@ -70,7 +71,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
               appBar: MyAppBar(location.name).getAppBar(context, MyAppBar.getDefaultActions(context)),
               body: state.loadingDeviceGroups()
                   ? Center(
-                child: PlatformCircularProgressIndicator(),
+                child: const DelayedCircularProgressIndicator(),
               )
                   : ListView.builder(
                 padding: MyTheme.inset,

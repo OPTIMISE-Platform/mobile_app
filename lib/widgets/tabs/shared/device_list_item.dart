@@ -31,6 +31,7 @@ import '../../../models/device_instance.dart';
 import '../../../services/device_commands.dart';
 import '../../../services/settings.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../../shared/favorize_button.dart';
 import '../../shared/toast.dart';
 import 'detail_page/detail_page.dart';
@@ -72,7 +73,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
           width: MediaQuery.of(context).textScaleFactor * 50,
           margin: EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
           child: element.transitioning
-              ? Center(child: PlatformCircularProgressIndicator())
+              ? const Center(child: DelayedCircularProgressIndicator())
               : element.value == null
                   ? Center(
                       child: Tooltip(

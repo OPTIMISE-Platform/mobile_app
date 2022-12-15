@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 import '../../../app_state.dart';
 import '../../../models/device_search_filter.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
@@ -107,7 +108,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       return state.loadingDeviceGroups()
-          ? Center(child: PlatformCircularProgressIndicator())
+          ? const Center(child: DelayedCircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: () async {
                 HapticFeedbackProxy.lightImpact();

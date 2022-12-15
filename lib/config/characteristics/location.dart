@@ -15,12 +15,12 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 
 import '../../models/characteristic.dart';
 import '../../shared/location.dart';
 import '../../theme.dart';
+import '../../widgets/shared/delay_circular_progress_indicator.dart';
 
 class Location {
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
@@ -53,8 +53,8 @@ class Location {
     }
 
     return initial == null
-        ? Center(
-            child: PlatformCircularProgressIndicator(),
+        ? const Center(
+            child: DelayedCircularProgressIndicator(),
           )
         : OpenMapPicker(
             initialValue: initial,

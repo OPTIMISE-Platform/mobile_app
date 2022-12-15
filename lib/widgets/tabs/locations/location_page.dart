@@ -30,6 +30,7 @@ import '../../../models/location.dart';
 import '../../../services/haptic_feedback_proxy.dart';
 import '../../../theme.dart';
 import '../../shared/app_bar.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../../shared/expandable_fab.dart';
 import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
@@ -88,7 +89,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.locations.length - 1 < widget._stateLocationIndex) {
         _logger.w("Location Page requested for location index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
+        return const Center(child: DelayedCircularProgressIndicator());
       }
 
       if ((state.loadingDevices || state.devices.length != state.locations[widget._stateLocationIndex].device_ids.length) &&
@@ -207,7 +208,7 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
             appBar: MyAppBar(location.name).getAppBar(context, appBarActions),
             body: state.loadingDevices || state.loadingDeviceGroups()
                 ? Center(
-                    child: PlatformCircularProgressIndicator(),
+                    child: const DelayedCircularProgressIndicator(),
                   )
                 : RefreshIndicator(
                     onRefresh: () async {

@@ -15,28 +15,32 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
-import 'app_bar.dart';
-import 'delay_circular_progress_indicator.dart';
-
-
-
-class PageSpinner extends StatelessWidget {
-  final String _title;
-
-  const PageSpinner(this._title, {Key? key}) : super(key: key);
+class DelayedCircularProgressIndicator extends StatefulWidget {
+  const DelayedCircularProgressIndicator({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final appBar = MyAppBar(_title);
-    return PlatformScaffold(
-      //backgroundColor: MyTheme.appColor,
-      appBar: appBar.getAppBar(context),
-      body: const Center(
-          child: DelayedCircularProgressIndicator(),
-      ),
-    );
-  }
+  State<StatefulWidget> createState() => _DelayedCircularProgressIndicatorState();
 }
 
+class _DelayedCircularProgressIndicatorState extends State<DelayedCircularProgressIndicator> {
+  bool _show = false;
+  Future? _f;
+
+  @override
+  void initState() {
+    super.initState();
+    _f = Future.delayed(const Duration(milliseconds: 200)).then((_) => setState(() => _show=true));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _f?.ignore();
+  }
+
+  @override
+  Widget build(BuildContext context) => _show ? PlatformCircularProgressIndicator() : const SizedBox.shrink();
+}

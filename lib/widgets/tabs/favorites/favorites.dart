@@ -26,6 +26,7 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 import '../../../app_state.dart';
 import '../../../services/settings.dart';
 import '../../../theme.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../device_tabs.dart';
 import '../shared/device_list_item.dart';
 import '../shared/group_list_item.dart';
@@ -95,7 +96,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
             child: devices.isEmpty && matchingGroups.isEmpty
                 ? Center(
                     child: state.loadingDevices
-                        ? PlatformCircularProgressIndicator()
+                        ? const DelayedCircularProgressIndicator()
                         : LayoutBuilder(
                             builder: (context, constraint) {
                               return SingleChildScrollView(

@@ -27,6 +27,7 @@ import 'package:provider/provider.dart';
 import '../../../app_state.dart';
 import '../../../theme.dart';
 import '../../shared/app_bar.dart';
+import '../../shared/delay_circular_progress_indicator.dart';
 import '../shared/search_delegate.dart';
 
 class LocationEditDevices extends StatefulWidget {
@@ -132,7 +133,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.locations.length - 1 < widget._stateLocationIndex) {
         widget._logger.w("LocationEditDevices requested for location index that is not in AppState");
-        return Center(child: PlatformCircularProgressIndicator());
+        return const Center(child: DelayedCircularProgressIndicator());
       }
 
       final location = state.locations[widget._stateLocationIndex];
@@ -172,8 +173,8 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
           ...MyAppBar.getDefaultActions(context)
         ]),
         body: state.devices.isEmpty && state.loadingDevices
-            ? Center(
-                child: PlatformCircularProgressIndicator(),
+            ? const Center(
+                child: DelayedCircularProgressIndicator(),
               )
             : Column(children: [
                 PlatformWidget(
