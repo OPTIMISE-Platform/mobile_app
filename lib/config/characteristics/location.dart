@@ -28,7 +28,7 @@ class Location {
     bool init = false;
     if (!init) {
       init = true;
-      if (characteristic.value != null && characteristic.value["Latitude"] != null && characteristic.value["Longitude"] != null) {
+      if (characteristic.value != null && characteristic.value != "" && characteristic.value["Latitude"] != null && characteristic.value["Longitude"] != null) {
         initial = FormattedLocation.fromLatLng(
             lat: characteristic.value["Latitude"], lon: characteristic.value["Longitude"], displayName: characteristic.value_label ?? "");
       } else {

@@ -79,21 +79,13 @@ class SmartServiceExtendedParameter {
   ContentType type;
   String? characteristic_id;
 
-  @JsonKey(ignore: true)
-  late Characteristic characteristic;
+  Characteristic? characteristic;
 
   SmartServiceExtendedParameter(this.id, this.label, this.description, dynamic value, this.default_value, this.multiple, this.options, this.type,
-      String? value_label, this.characteristic_id, this.optional) {
-    characteristic = Characteristic(id, "", type, null, null, value, null, "", options);
-    characteristic.value = value ?? default_value ?? characteristic.value ?? (!optional && options?.length == 1 ? options![0].value : null);
-    characteristic.value_label = value_label;
-  }
-
-  SmartServiceExtendedParameter.withCharacteristic(this.id, this.label, this.description, dynamic value, this.default_value, this.multiple, this.options, this.type,
-      String? value_label, this.characteristic_id, Characteristic? char, this.optional) {
-    characteristic = char ?? Characteristic(id, "", type, null, null, value, null, "", options);
-    characteristic.value = value ?? default_value ?? characteristic.value ?? (!optional && options?.length == 1 ? options![0].value : null);
-    characteristic.value_label = value_label;
+      String? value_label, this.characteristic_id, this.characteristic, this.optional) {
+    characteristic = characteristic ?? Characteristic(id, "", type, null, null, value, null, "", options);
+    characteristic!.value = value ?? default_value ?? characteristic!.value ?? (!optional && options?.length == 1 ? options![0].value : null);
+    characteristic!.value_label = value_label;
   }
 
   factory SmartServiceExtendedParameter.fromJson(Map<String, dynamic> json) => _$SmartServiceExtendedParameterFromJson(json);
@@ -112,19 +104,19 @@ class SmartServiceExtendedParameter {
   }
 
   dynamic get value {
-    return characteristic.value;
+    return characteristic?.value;
   }
 
   set value(dynamic v) {
-    characteristic.value = v;
+    characteristic?.value = v;
   }
 
   String? get value_label {
-    return characteristic.value_label;
+    return characteristic?.value_label;
   }
 
   set value_label(String? v) {
-    characteristic.value_label = v;
+    characteristic?.value_label = v;
   }
 }
 

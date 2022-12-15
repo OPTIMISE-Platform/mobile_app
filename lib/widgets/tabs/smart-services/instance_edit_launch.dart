@@ -62,8 +62,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     final p = parameters![i];
     final dynamic subValue = sub != null ? (p.value as List)[sub] : null;
 
-    if (p.characteristic_id != null) {
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.label), p.characteristic.build(context, setState)]);
+    if (p.characteristic_id != null && p.characteristic != null) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.label), p.characteristic!.build(context, setState)]);
     }
 
     if (p.multiple && p.options != null) {

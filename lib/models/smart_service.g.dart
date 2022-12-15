@@ -84,6 +84,10 @@ SmartServiceExtendedParameter _$SmartServiceExtendedParameterFromJson(
       json['type'] as String,
       json['value_label'] as String?,
       json['characteristic_id'] as String?,
+      json['characteristic'] == null
+          ? null
+          : Characteristic.fromJson(
+              json['characteristic'] as Map<String, dynamic>),
       json['optional'] as bool,
     );
 
@@ -99,6 +103,7 @@ Map<String, dynamic> _$SmartServiceExtendedParameterToJson(
       'options': instance.options,
       'type': instance.type,
       'characteristic_id': instance.characteristic_id,
+      'characteristic': instance.characteristic,
       'value': instance.value,
       'value_label': instance.value_label,
     };
