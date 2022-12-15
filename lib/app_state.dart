@@ -91,6 +91,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       handleQueuedMessages();
+      _manageNetworkDiscovery().then((_) => _mergeDiscoveredServicesWithNetworks());
     }
   }
 
