@@ -5,7 +5,7 @@
 import FlutterMacOS
 import Foundation
 
-import connectivity_plus_macos
+import connectivity_plus
 import firebase_core
 import firebase_messaging
 import flutter_native_timezone
@@ -14,7 +14,7 @@ import geolocator_apple
 import isar_flutter_libs
 import nsd_macos
 import path_provider_macos
-import share_plus_macos
+import share_plus
 import url_launcher_macos
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
