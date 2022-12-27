@@ -17,10 +17,10 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -49,7 +49,7 @@ class DeviceClassesService {
   }
 
   static Future<List<DeviceClass>> getDeviceClasses() async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/api-aggregator/device-class-uses';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
 
     final headers = await Auth().getHeaders();

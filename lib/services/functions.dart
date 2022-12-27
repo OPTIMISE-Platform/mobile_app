@@ -17,10 +17,10 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -49,7 +49,7 @@ class FunctionsService {
   }
 
   static Future<List<NestedFunction>> getNestedFunctions() async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/api-aggregator/nested-function-infos';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/nested-function-infos';
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))

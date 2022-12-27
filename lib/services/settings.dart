@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile_app/exceptions/settings_exception.dart';
 import 'package:mobile_app/models/smart_service.dart';
@@ -47,6 +48,10 @@ class Settings {
   static const _functionPreferredCharacteristicKeyPrefix = "functionPreferredCharacteristic_";
 
   static const _cacheUpdatedAtPrefix = "cacheUpdated_";
+
+  static const _keycloakUrlKey = "keycloak_url";
+  static const _keycloakRedirectKey = "keycloak_redirect";
+  static const _apiUrlKey = "api_url";
 
   static checkInit() {
     if (!isInitialized) {
@@ -239,6 +244,47 @@ class Settings {
     return DateTime.fromMillisecondsSinceEpoch(int.parse(ms));
   }
 
+  static String? getKeycloakUrl() {
+    checkInit();
+    return _box!.get(_keycloakUrlKey) ?? dotenv.env["KEYCLOAK_URL"];
+  }
+
+  static Future<void> setKeycloakUrl(String? value) {
+    checkInit();
+    if (value == null) {
+      return _box!.delete(_keycloakUrlKey);
+    } else {
+      return _box!.put(_keycloakUrlKey, value);
+    }
+  }
+
+  static String? getKeycloakRedirect() {
+    checkInit();
+    return _box!.get(_keycloakRedirectKey) ?? dotenv.env["KEYCLOAK_REDIRECT"];
+  }
+
+  static Future<void> setKeycloakRedirect(String? value) {
+    checkInit();
+    if (value == null) {
+      return _box!.delete(_keycloakRedirectKey);
+    } else {
+      return _box!.put(_keycloakRedirectKey, value);
+    }
+  }
+
+  static String? getApiUrl() {
+    checkInit();
+    return _box!.get(_apiUrlKey) ?? dotenv.env["API_URL"];
+  }
+
+  static Future<void> setApiUrl(String? value) {
+    checkInit();
+    if (value == null) {
+      return _box!.delete(_apiUrlKey);
+    } else {
+      return _box!.put(_apiUrlKey, value);
+    }
+  }
 }
 
 enum Tutorial { addFavoriteButton, deviceListItem }

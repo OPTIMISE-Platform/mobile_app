@@ -17,17 +17,18 @@
 
 import 'dart:convert';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/db_query.dart';
+import 'package:mobile_app/services/settings.dart';
+
 import 'auth.dart';
 
 class DbQueryService {
   static final _client = http.Client();
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {
-    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/db/v3/queries';
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/queries';
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");

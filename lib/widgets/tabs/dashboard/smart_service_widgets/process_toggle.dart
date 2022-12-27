@@ -17,9 +17,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 import '../../../../services/auth.dart';
 
@@ -55,7 +55,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
 
   @override
   Future<void> refreshInternal() async {
-    final url = "${dotenv.env["API_URL"] ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/instances";
+    final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/instances";
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
       uri = uri.replace(scheme: "https");
@@ -72,7 +72,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   }
 
   Future<void> _start() async {
-    String url = "${dotenv.env["API_URL"] ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/start";
+    String url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/start";
     String queryParameters = "?";
     inputs?.forEach((key, value) {
       if (queryParameters.length > 1) {
@@ -97,7 +97,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
 
   Future<void> _stop() async {
     final List<Future> futures = _instanceIds.map((e) {
-      final url = "${dotenv.env["API_URL"] ?? 'localhost'}/process/engine/v2/process-instances/$e";
+      final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/process-instances/$e";
       var uri = Uri.parse(url);
       if (url.startsWith("https://")) {
         uri = uri.replace(scheme: "https");

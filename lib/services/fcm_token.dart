@@ -17,10 +17,10 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -54,7 +54,7 @@ class FcmTokenService {
   }
 
   static registerFcmToken(String token) async {
-    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -78,7 +78,7 @@ class FcmTokenService {
   }
 
   static deregisterFcmToken(String token) async {
-    final url = '${dotenv.env["API_URL"] ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {

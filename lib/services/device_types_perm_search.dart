@@ -17,10 +17,10 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -49,7 +49,7 @@ class DeviceTypesPermSearchService {
   }
 
   static Future<List<DeviceTypePermSearch>> getDeviceTypes([List<String>? ids]) async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/device-types';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/device-types';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     if (ids != null && ids.isNotEmpty) {

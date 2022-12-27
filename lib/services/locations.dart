@@ -17,11 +17,11 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -59,7 +59,7 @@ class LocationService {
       return (await isar!.locations.where().sortByName().findAll()).map((e) => e.initImage()).toList();
     }
 
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/resources/locations';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/locations';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
@@ -89,7 +89,7 @@ class LocationService {
   }
 
   static Future<Location> saveLocation(Location location) async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/locations/${location.id}';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/${location.id}';
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -113,7 +113,7 @@ class LocationService {
   }
 
   static Future<Location> createLocation(String name) async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/locations/';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/';
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -136,7 +136,7 @@ class LocationService {
   }
 
   static Future<void> deleteLocation(String id) async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/locations/$id';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/$id';
 
     final headers = await Auth().getHeaders();
     await initOptions();

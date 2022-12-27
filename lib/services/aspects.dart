@@ -17,10 +17,10 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -50,7 +50,7 @@ class AspectsService {
   }
 
   static Future<List<Aspect>> getAspects() async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/device-repository/aspects';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/aspects';
 
     final headers = await Auth().getHeaders();
     await initOptions();

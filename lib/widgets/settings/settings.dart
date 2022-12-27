@@ -197,8 +197,12 @@ class Settings extends StatelessWidget {
         ListTile(
             title: const Text("Show Debug Information"),
             onTap: () {
-              final txt =
-                  "Version: ${dotenv.env["VERSION"]}\nUsername: ${Auth().getUsername()}\nFCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}";
+              final txt = "Version: ${dotenv.env["VERSION"]}\n"
+                  "Username: ${Auth().getUsername()}\n"
+                  "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
+                  "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
+                  "Keycloak Redirect: ${settings_service.Settings.getKeycloakRedirect()}\n"
+                  "Api Url: ${settings_service.Settings.getApiUrl()}\n";
               showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
@@ -235,6 +239,74 @@ class Settings extends StatelessWidget {
           ),
         ]);
       }
+
+      children.addAll([
+        const Divider(),
+        ListTile(
+          title: const Text("Server Settings"),
+          onTap: () async {
+            String? keycloakUrl = settings_service.Settings.getKeycloakUrl();
+            String? keycloakRedirect = settings_service.Settings.getKeycloakRedirect();
+            String? apiUrl = settings_service.Settings.getApiUrl();
+
+            await showPlatformDialog(
+              context: context,
+              builder: (context) => PlatformAlertDialog(
+                title: const Text("Edit Server Settings"),
+                content: Column(
+                  children: [
+                    PlatformTextFormField(
+                        hintText: "Keycloak Url",
+
+                        initialValue: keycloakUrl,
+                        keyboardType: TextInputType.url,
+                        autovalidateMode: AutovalidateMode.always,
+                        onChanged: (value) {
+                          keycloakUrl = value;
+                        }),
+                    PlatformTextFormField(
+                        hintText: "Keycloak Redirect",
+                        initialValue: keycloakRedirect,
+                        keyboardType: TextInputType.url,
+                        autovalidateMode: AutovalidateMode.always,
+                        onChanged: (value) {
+                          keycloakRedirect = value;
+                        }),
+                    PlatformTextFormField(
+                        hintText: "Api Url",
+                        initialValue: apiUrl,
+                        keyboardType: TextInputType.url,
+                        autovalidateMode: AutovalidateMode.always,
+                        onChanged: (value) {
+                          apiUrl = value;
+                        }),
+                  ],
+                ),
+                actions: [
+                  PlatformDialogAction(
+                      child: const Text("Reset"),
+                      onPressed: () async {
+                        await settings_service.Settings.setKeycloakUrl(null);
+                        await settings_service.Settings.setKeycloakRedirect(null);
+                        await settings_service.Settings.setApiUrl(null);
+                        Toast.showConfirmationToast(context, "Reset done, consider logging out");
+                        Navigator.pop(context);
+                      }),
+                  PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                  PlatformDialogAction(
+                      child: const Text("Save"),
+                      onPressed: () async {
+                        await settings_service.Settings.setKeycloakUrl(keycloakUrl);
+                        await settings_service.Settings.setKeycloakRedirect(keycloakRedirect);
+                        await settings_service.Settings.setApiUrl(apiUrl);
+                        Navigator.pop(context);
+                      }),
+                ],
+              ),
+            );
+          },
+        ),
+      ]);
 
       if (state.loggedIn) {
         children.addAll([

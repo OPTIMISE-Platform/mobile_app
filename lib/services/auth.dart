@@ -24,6 +24,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/fcm_token.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
@@ -51,7 +52,7 @@ class Auth extends ChangeNotifier {
 
   OpenIdConnectClient? _client;
   final String _discoveryUrl =
-      "${dotenv.env['KEYCLOAK_URL'] ?? 'https://localhost'}/auth/realms/${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
+      "${Settings.getKeycloakUrl() ?? 'https://localhost'}/auth/realms/${dotenv.env['KEYCLOAK_REALM'] ?? 'master'}/.well-known/openid-configuration";
 
   bool loggedIn = false;
 
@@ -68,7 +69,7 @@ class Auth extends ChangeNotifier {
             clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
             redirectUrl: kIsWeb
                 ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
-                : dotenv.env['KEYCLOAK_REDIRECT'] ?? "https://localhost",
+                : Settings.getKeycloakRedirect() ?? "https://localhost",
             scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
             autoRefresh: false,
           );

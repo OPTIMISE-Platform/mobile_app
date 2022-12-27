@@ -19,12 +19,12 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
@@ -87,7 +87,7 @@ class DevicesService {
     final headers = await Auth().getHeaders();
 
     final body = filter.toBody(limit, offset, lastDevice);
-    final uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/query';
+    final uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/query';
     final encoded = json.encode(body);
     _logger.d("Devices: $encoded");
     final Response<List<dynamic>?> resp;
@@ -122,7 +122,7 @@ class DevicesService {
     _logger.d("Saving device: ${device.id}");
 
     final uri =
-        "${dotenv.env["API_URL"] ?? 'localhost'}/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
+        "${Settings.getApiUrl() ?? 'localhost'}/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
 
     final encoded = json.encode(device.toJson());
 
@@ -147,7 +147,7 @@ class DevicesService {
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
   static Future<int> getTotalDevices(DeviceSearchFilter filter) async {
-    String uri = '${dotenv.env["API_URL"] ?? 'localhost'}/permissions/query/v3/total/devices';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
     if (filter.query.isNotEmpty) {

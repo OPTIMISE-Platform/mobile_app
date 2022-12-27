@@ -19,11 +19,11 @@ import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/no_network_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
@@ -66,7 +66,7 @@ class DeviceCommandsService {
         url = "http://${service.host!}:${service.port!}";
         dio = _dioH1;
       } else {
-        url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command";
+        url = "${Settings.getApiUrl() ?? 'localhost'}/device-command";
         dio = _dio2H2;
       }
       url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
@@ -85,7 +85,7 @@ class DeviceCommandsService {
     final DateTime start = DateTime.now();
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
-      final url = "${dotenv.env["API_URL"] ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
+      final url = "${Settings.getApiUrl() ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
       List<DeviceCommandResponse> retryRes;
       try {
         retryRes = await _runCommands(cloudRetries, url, true, _dio2H2);

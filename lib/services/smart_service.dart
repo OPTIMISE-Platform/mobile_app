@@ -19,10 +19,10 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -38,7 +38,7 @@ class SmartServiceService {
 
   static late Dio _dio;
 
-  static String baseUrl = '${dotenv.env["API_URL"] ?? 'localhost'}/smart-services/repository';
+  static String baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/smart-services/repository';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
