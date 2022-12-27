@@ -98,6 +98,7 @@ class SmSeBarChart extends SmSeLineChart {
                     ),
                   ),
                   barTouchData: BarTouchData(
+                    enabled: !previewOnly,
                       touchTooltipData: BarTouchTooltipData(
                           getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                               BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),

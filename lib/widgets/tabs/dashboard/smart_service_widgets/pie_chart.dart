@@ -31,6 +31,7 @@ class SmSePieChart extends SmSeRequest {
   final List<PieChartSectionData> _sections = [];
   final List<double> nums = [];
   final List<String> titles = [];
+  final List<int> _active_sections = [];
   DateFormat dateFormat = MyTheme.formatHHMM;
   int touchedIndex = -1;
   double sum = 0;
@@ -72,16 +73,16 @@ class SmSePieChart extends SmSeRequest {
             child: StatefulBuilder(builder: (context, setState) {
               _buildSections();
               final List<Widget> legendWidgets = [];
-              if (titles.length == nums.length) {
-                titles.asMap().forEach((key, value) {
+              if (_active_sections.isNotEmpty) {
+                _active_sections.forEach((i) {
                   legendWidgets.addAll([
                     GestureDetector(
-                        onTapDown: (_) => setState(() => touchedIndex = key),
-                        onTapUp: (_) => setState(() => touchedIndex = -1),
-                        onTapCancel: () => setState(() => touchedIndex = -1),
+                        onTapDown: previewOnly ? null : (_) => setState(() => touchedIndex = _active_sections.indexOf(i)),
+                        onTapUp: previewOnly ? null : (_) => setState(() => touchedIndex = -1),
+                        onTapCancel: previewOnly ? null : () => setState(() => touchedIndex = -1),
                         child: Indicator(
-                          color: MyTheme.getSomeColor(key),
-                          text: "$value${_allZero ? "" : (" (${(nums[key] * 100 / sum).toStringAsFixed(1)}%)")}",
+                          color: MyTheme.getSomeColor(i),
+                          text: "${titles[i]}${_allZero ? "" : (" (${(nums[i] * 100 / sum).toStringAsFixed(1)}%)")}",
                           textColor: MyTheme.textColor!,
                           isSquare: false,
                         )),
@@ -99,21 +100,30 @@ class SmSePieChart extends SmSeRequest {
                     PieChartData(
                       borderData: FlBorderData(show: false),
                       pieTouchData: PieTouchData(
-                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                          setState(() {
-                            if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
-                              touchedIndex = -1;
-                              return;
-                            }
-                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
-                          });
-                        },
+                        enabled: !previewOnly,
+                        touchCallback: previewOnly
+                            ? null
+                            : (FlTouchEvent event, pieTouchResponse) {
+                                setState(() {
+                                  if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
+                                    touchedIndex = -1;
+                                    return;
+                                  }
+                                  touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                                });
+                              },
                       ),
                       sections: _sections,
                     ),
                     swapAnimationDuration: const Duration(milliseconds: 100),
                   ),
-                  Center(child: showSum ? Text("${sum.toStringAsFixed(precision)}${sumUnit != null ? " $sumUnit" : ""}", textScaleFactor: 2,) : const SizedBox.shrink())
+                  Center(
+                      child: showSum
+                          ? Text(
+                              "${sum.toStringAsFixed(precision)}${sumUnit != null ? " $sumUnit" : ""}",
+                              textScaleFactor: 2,
+                            )
+                          : const SizedBox.shrink())
                 ])),
                 const SizedBox(height: 8),
                 PlatformWidget(
@@ -171,10 +181,18 @@ class SmSePieChart extends SmSeRequest {
 
   void _buildSections({int colorOffset = 0}) {
     _sections.clear();
+    final List<int> tmpActiveSections = [];
     _sections.addAll(nums.asMap().entries.map((e) {
-      final isTouched = e.key == touchedIndex;
+      bool isTouched = false;
+      if (touchedIndex != -1) {
+        isTouched = touchedIndex == _active_sections.indexWhere((element) => element == e.key);
+      }
       final fontSize = isTouched ? 16.0 : 11.0;
       final radius = isTouched ? 60.0 : 50.0;
+      final value = double.parse(e.value.toStringAsFixed(precision)) + (_allZero ? 1 : 0);
+      if (value > 0) {
+        tmpActiveSections.add(e.key);
+      }
       return PieChartSectionData(
         title: (e.value).toStringAsFixed(precision),
         radius: radius,
@@ -182,10 +200,13 @@ class SmSePieChart extends SmSeRequest {
           fontSize: fontSize,
           overflow: TextOverflow.clip,
         ),
-        value: double.parse(e.value.toStringAsFixed(precision)) + (_allZero ? 1 : 0),
+        value: value,
         color: MyTheme.getSomeColor(e.key + colorOffset),
       );
-    }));
+    }).where((element) => element.value > 0));
+    _active_sections.clear();
+    _active_sections.addAll(tmpActiveSections);
+    height = 5.0 + _active_sections.length;
   }
 
   int calcPrecision(List<double> nums) {
