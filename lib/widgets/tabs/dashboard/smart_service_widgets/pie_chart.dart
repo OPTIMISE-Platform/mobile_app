@@ -36,6 +36,8 @@ class SmSePieChart extends SmSeRequest {
   double sum = 0;
   int precision = 1;
   bool _allZero = false;
+  bool showSum = false;
+  String? sumUnit;
 
   @override
   double height = 5;
@@ -51,6 +53,12 @@ class SmSePieChart extends SmSeRequest {
     titles.clear();
     (data["titles"] as List).forEach((element) => titles.add(element as String));
     height += titles.length;
+    if (data["showSum"] != null) {
+      showSum = data["showSum"] as bool;
+    }
+    if (data["sumUnit"] != null) {
+      sumUnit = data["sumUnit"];
+    }
   }
 
   @override
@@ -86,24 +94,27 @@ class SmSePieChart extends SmSeRequest {
               final legend = Column(mainAxisAlignment: MainAxisAlignment.end, crossAxisAlignment: CrossAxisAlignment.start, children: legendWidgets);
               return Column(children: [
                 Expanded(
-                    child: PieChart(
-                  PieChartData(
-                    borderData: FlBorderData(show: false),
-                    pieTouchData: PieTouchData(
-                      touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                        setState(() {
-                          if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
-                            touchedIndex = -1;
-                            return;
-                          }
-                          touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
-                        });
-                      },
+                    child: Stack(children: [
+                  PieChart(
+                    PieChartData(
+                      borderData: FlBorderData(show: false),
+                      pieTouchData: PieTouchData(
+                        touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                          setState(() {
+                            if (!event.isInterestedForInteractions || pieTouchResponse == null || pieTouchResponse.touchedSection == null) {
+                              touchedIndex = -1;
+                              return;
+                            }
+                            touchedIndex = pieTouchResponse.touchedSection!.touchedSectionIndex;
+                          });
+                        },
+                      ),
+                      sections: _sections,
                     ),
-                    sections: _sections,
+                    swapAnimationDuration: const Duration(milliseconds: 100),
                   ),
-                  swapAnimationDuration: const Duration(milliseconds: 100),
-                )),
+                  Center(child: showSum ? Text("${sum.toStringAsFixed(precision)}${sumUnit != null ? " $sumUnit" : ""}", textScaleFactor: 2,) : const SizedBox.shrink())
+                ])),
                 const SizedBox(height: 8),
                 PlatformWidget(
                   cupertino: (_, __) => Material(child: legend),
