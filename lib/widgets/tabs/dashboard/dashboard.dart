@@ -320,6 +320,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
             //SizedBox does not work here
             height: MediaQuery.of(context).size.height - 192,
             child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
               itemCount: items.length,
               itemBuilder: (context, idx) {
                 final item = items[idx]!;
@@ -342,7 +343,19 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                       Settings.setSmartServiceDashboards(_dashboards);
                       if (mounted) setState(() {});
                     },
-                    child: Card(child: item.build(context, false)));
+                    child: Card(
+                        child: Stack(children: [
+                      item.build(context, false),
+                      Positioned(
+                          right: 8,
+                          top: 4,
+                          child: ReorderableDragStartListener(
+                            index: idx,
+                            child: _dashboards[tabIdx].widgetAndInstanceIds.length > 1
+                                ? const Icon(Icons.reorder, color: Colors.grey)
+                                : const SizedBox.shrink(),
+                          ))
+                    ])));
               },
               onReorder: (int oldIndex, int newIndex) async {
                 final tmp = items[oldIndex];
