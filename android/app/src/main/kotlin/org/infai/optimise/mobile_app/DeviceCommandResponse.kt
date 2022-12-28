@@ -16,7 +16,67 @@
 
 package org.infai.optimise.mobile_app
 
-class DeviceCommandResponse {
-    val status_code: Int = -1
-    val message: Any? = null
+import com.google.gson.*
+
+class DeviceCommandResponse(id: String) {
+    var status_code: Int = -1
+    var message: Any? = null
+
+    companion object {
+        fun fromJSONList(json: String): MutableList<DeviceCommandResponse> {
+            val arr = JsonParser.parseString(json).asJsonArray
+            val l = mutableListOf<DeviceCommandResponse>()
+            for (e in arr) {
+                l.add(DeviceCommandResponse(e.toString()))
+            }
+            return l
+        }
+
+        fun toJSONList(l: List<DeviceCommandResponse>): String {
+            val arr = JsonArray()
+            for (e in l) {
+                arr.add(e.getJSONTree())
+            }
+            return arr.toString()
+        }
+    }
+
+    init {
+        val base = JsonParser.parseString(id).asJsonObject
+        if (base.get("status_code") != null && !base.get("status_code").isJsonNull)
+            status_code = base.get("status_code").asInt
+        if (base.get("message") != null && !base.get("message").isJsonNull) {
+            val tmp = base.get("message")
+            if (tmp.isJsonPrimitive) {
+                val tmpP = tmp.asJsonPrimitive
+                if (tmpP.isBoolean)
+                    message = tmpP.asBoolean
+                if (tmpP.isNumber)
+                    message = tmpP.asDouble
+                if (tmpP.isString)
+                    message = tmpP.asString
+            }
+        }
+    }
+
+    fun toJSON(): String {
+        return getJSONTree().toString()
+    }
+
+    private fun getJSONTree(): JsonObject {
+        val obj = JsonObject()
+
+        obj.add("status_code", JsonPrimitive(status_code))
+        if (message != null) {
+            if (message is Boolean)
+                obj.add("message", JsonPrimitive(message as Boolean))
+            if (message is Int)
+                obj.add("message", JsonPrimitive(message as Int))
+            if (message is Float)
+                obj.add("message", JsonPrimitive(message as Float))
+            if (message is String)
+                obj.add("message", JsonPrimitive(message as String))
+        }
+        return obj
+    }
 }

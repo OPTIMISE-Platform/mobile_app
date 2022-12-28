@@ -62,7 +62,7 @@ class AppControlsProviderService() : ControlsProviderService() {
             ).invokeMethod("getToggleStateless", null, handler)
         }
         val flow = FlowAdapters.toFlowPublisher(processor)
-        flow.subscribe(LogSubscriber("ALL"))
+        // Uncomment for Debugging flow.subscribe(LogSubscriber("ALL"))
         return flow;
     }
 
@@ -96,7 +96,8 @@ class AppControlsProviderService() : ControlsProviderService() {
             MethodChannel(
                 it.binaryMessenger,
                 "flutter/controlMethodChannel"
-            ).invokeMethod("getToggleStates", Gson().toJson(states), statefulResultHandler)
+            ).invokeMethod("getToggleStates",
+                DeviceState.toJSONList(states), statefulResultHandler)
         }
 
         return FlowAdapters.toFlowPublisher(updateProcessor);
@@ -125,14 +126,14 @@ class AppControlsProviderService() : ControlsProviderService() {
                 "flutter/controlMethodChannel"
             ).invokeMethod(
                 "setToggle",
-                Gson().toJson(state),
+                state.toJSON(),
                 ToggleResultHandler(updateProcessor, pi, state, consumer)
             )
         }
     }
 
     init {
-        FlowAdapters.toFlowPublisher(updateProcessor).subscribe(LogSubscriber("UPD"))
+        // Uncomment for Debugging FlowAdapters.toFlowPublisher(updateProcessor).subscribe(LogSubscriber("UPD"))
     }
 }
 
@@ -142,8 +143,7 @@ private class StatelessResultHandler(
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
-        val states: Array<DeviceState> =
-            Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
+        val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
             processor.onNext(state.statelessToggleControl(pi))
         }
@@ -171,7 +171,7 @@ private class ToggleStreamHandler(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "toggleEvent" -> {
-                val state = Gson().fromJson(call.arguments.toString(), DeviceState::class.java)
+                val state = DeviceState(call.arguments.toString())
                 if (!controlIds.contains(state.getId())) {
                     return
                 }
@@ -188,8 +188,7 @@ private class StatefulResultHandler(
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
-        val states: Array<DeviceState> =
-            Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
+        val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
             processor.onNext(state.statefulToggleControl(pi))
         }
@@ -214,8 +213,7 @@ private class ToggleResultHandler(
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
-        val responses: Array<DeviceCommandResponse> =
-            Gson().fromJson(result.toString(), Array<DeviceCommandResponse>::class.java)
+        val responses = DeviceCommandResponse.fromJSONList(result.toString())
         for (response in responses) {
             if (response.status_code == 200) {
                 val control = state.statefulToggleControl(pi)

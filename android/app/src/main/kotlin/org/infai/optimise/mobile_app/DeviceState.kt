@@ -23,7 +23,10 @@ import android.service.controls.DeviceTypes
 import android.service.controls.templates.ControlButton
 import android.service.controls.templates.ToggleTemplate
 import androidx.annotation.RequiresApi
-import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
 
 class DeviceState {
     var deviceId: String? = null
@@ -40,28 +43,70 @@ class DeviceState {
     var value: Any? = null
     var isControlling: Boolean = false
     var transitioning: Boolean = false
+    
+    companion object {
+        fun fromJSONList(json: String): MutableList<DeviceState> {
+            val arr = JsonParser.parseString(json).asJsonArray
+            val l = mutableListOf<DeviceState>()
+            for (e in arr) {
+                l.add(DeviceState(e.toString()))
+            }
+            return l
+        }
+        
+        fun toJSONList(l: List<DeviceState>): String {
+            val arr = JsonArray()
+            for (e in l) {
+                arr.add(e.getJSONTree())
+            }
+            return arr.toString()
+        }
+    }
 
 
     fun getId(): String {
-        var tree = Gson().toJsonTree(this).asJsonObject;
-        tree.remove("value")
-        tree.remove("isControlling")
-        tree.remove("transitioning")
+        var tree = getJSONTree()
+        if (tree.has("value"))
+            tree.remove("value")
+        if (tree.has("isControlling"))
+            tree.remove("isControlling")
+        if (tree.has("transitioning"))
+            tree.remove("transitioning")
         return tree.toString()
     }
 
     constructor(id: String) {
-        val base = Gson().fromJson(id, DeviceState::class.java)
-        deviceId = base.deviceId
-        groupId = base.groupId
-        functionId = base.functionId
-        aspectId = base.aspectId
-        path = base.path
-        deviceClassId = base.deviceClassId
-        serviceGroupKey = base.serviceGroupKey
-        serviceId = base.serviceId
-        name = base.name
-        serviceGroupName = base.serviceGroupName
+        val base = JsonParser.parseString(id).asJsonObject
+
+        if (base.get("deviceId") != null && !base.get("deviceId").isJsonNull)
+            deviceId = base.get("deviceId").asString
+
+        if (base.get("groupId") != null && !base.get("groupId").isJsonNull)
+            groupId = base.get("groupId").asString
+
+        if (base.get("functionId") != null && !base.get("functionId").isJsonNull)
+            functionId = base.get("functionId").asString
+
+        if (base.get("aspectId") != null && !base.get("aspectId").isJsonNull)
+            aspectId = base.get("aspectId").asString
+
+        if (base.get("path") != null && !base.get("path").isJsonNull)
+            path = base.get("path").asString
+
+        if (base.get("deviceClassId") != null && !base.get("deviceClassId").isJsonNull)
+            deviceClassId = base.get("deviceClassId").asString
+
+        if (base.get("serviceGroupKey") != null && !base.get("serviceGroupKey").isJsonNull)
+            serviceGroupKey = base.get("serviceGroupKey").asString
+
+        if (base.get("serviceId") != null && !base.get("serviceId").isJsonNull)
+            serviceId = base.get("serviceId").asString
+
+        if (base.get("name") != null && !base.get("name").isJsonNull)
+            name = base.get("name").asString
+
+        if (base.get("serviceGroupName") != null && !base.get("serviceGroupName").isJsonNull)
+            serviceGroupName = base.get("serviceGroupName").asString
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -111,5 +156,41 @@ class DeviceState {
                 )
             )
             .build()
+    }
+
+    fun toJSON(): String {
+        return getJSONTree().toString()
+    }
+
+    private fun getJSONTree(): JsonObject {
+        val obj = JsonObject()
+
+        if (deviceId != null)
+            obj.add("deviceId", JsonPrimitive(deviceId))
+        if (groupId != null)
+            obj.add("groupId", JsonPrimitive(groupId))
+        if (functionId != null)
+            obj.add("functionId", JsonPrimitive(functionId))
+        if (aspectId != null)
+            obj.add("aspectId", JsonPrimitive(aspectId))
+        if (path != null)
+            obj.add("path", JsonPrimitive(path))
+        if (deviceClassId != null)
+            obj.add("deviceClassId", JsonPrimitive(deviceClassId))
+        if (serviceGroupKey != null)
+            obj.add("serviceGroupKey", JsonPrimitive(serviceGroupKey))
+        if (serviceId != null)
+            obj.add("serviceId", JsonPrimitive(serviceId))
+        if (name != null)
+            obj.add("name", JsonPrimitive(name))
+        if (serviceGroupName != null)
+            obj.add("serviceGroupName", JsonPrimitive(serviceGroupName))
+        if (value != null)
+            obj.add("value", JsonPrimitive(value as? Boolean))
+        if (isControlling != null)
+            obj.add("isControlling", JsonPrimitive(isControlling))
+        if (transitioning != null)
+            obj.add("transitioning", JsonPrimitive(transitioning))
+        return obj
     }
 }
