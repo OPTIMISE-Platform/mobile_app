@@ -125,7 +125,7 @@ class DeviceState {
             // Required: Usually the room where the control is located
             .setSubtitle(subtitle)
             // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
+            .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
             .build()
     }
 
@@ -145,7 +145,7 @@ class DeviceState {
             // Required: Usually the room where the control is located
             .setSubtitle(subtitle)
             // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
+            .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
             .setStatus(Control.STATUS_OK)
             .setControlTemplate(
                 ToggleTemplate(
