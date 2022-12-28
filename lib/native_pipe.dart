@@ -20,9 +20,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/shared/isar.dart';
 
 import 'app_state.dart';
+import 'config/functions/function_config.dart';
 import 'models/device_state.dart';
 
 class NativePipe {
@@ -34,20 +36,57 @@ class NativePipe {
         case "getToggleStateless":
           final devices = await isar!.deviceInstances.where().findAll();
           final List<Future> futures = [];
-          devices.forEach((element) => futures.add(AppState()
-              .loadDeviceType(element.device_type_id)
-              .then((value) => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
+          devices.forEach((element) =>
+              futures.add(AppState()
+                  .loadDeviceType(element.device_type_id)
+                  .then((value) => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
           await Future.wait(futures);
-          return json.encode(devices.map((e) => e.states).expand((e) => e).where((e) => e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).toList());
+          final resp = json
+              .encode(devices.map((e) => e.states).expand((e) => e).where((e) => e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).toList());
+          return resp;
+        case "setToggle":
+          final DeviceState state = DeviceState.fromJson(json.decode(call.arguments));
+          final device = await isar!.deviceInstances.where().idEqualTo(state.deviceId!).findFirst();
+          await AppState().loadDeviceType(device!.device_type_id);
+          await device.prepareStates(AppState().deviceTypes[device.device_type_id]!);
+          final controllingFunction = functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(!(state.value as bool));
+          final controllingStates = device.states
+              .where((s) =>
+          s.isControlling &&
+              s.functionId == controllingFunction &&
+              s.serviceGroupKey == state.serviceGroupKey &&
+              s.aspectId == state.aspectId)
+              .toList();
+          if (controllingStates.isEmpty) {
+            throw "Found no controlling service, check device type!";
+          }
+          if (controllingStates.length > 1) {
+            throw "Found more than one controlling service, check device type!";
+          }
+          return json.encode(await DeviceCommandsService.runCommands([controllingStates[0].toCommand()]));
+        case "getToggleStates":
+          final List<dynamic> ljson = json.decode(call.arguments);
+          final states = List.generate(ljson.length, (index) => DeviceState.fromJson(ljson[index] as Map<String, dynamic>)).toList();
+          final res = await DeviceCommandsService.runCommands(states.map((e) => e.toCommand()).toList());
+          for (var i = 0; i < states.length; i++) {
+            if (res[i].status_code == 200) {
+              states[i].value = res[i].message[0];
+            }
+          }
+          return json.encode(states);
         default:
           throw MissingPluginException("not implemented");
       }
     });
   }
-  
-  static void handleDeviceStateUpdate(DeviceState state) {
+
+  static void handleDeviceStateUpdate(DeviceState state) async {
     if (state.deviceId != null && state.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
-      controlMethodChannel.invokeMethod("toggleEvent", json.encode(state));
+      try {
+        await controlMethodChannel.invokeMethod("toggleEvent", json.encode(state));
+      } on MissingPluginException {
+        // pass
+      }
     }
   }
 }

@@ -32,7 +32,6 @@ class DeviceState {
   dynamic value;
   String functionId;
   bool isControlling, transitioning = false;
-  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path, name, serviceGroupName;
 
   @JsonKey(ignore: true)
   DeviceInstance? _deviceInstance;
@@ -56,6 +55,8 @@ class DeviceState {
     _deviceGroup = instance;
     name = deviceGroup?.name;
   }
+
+  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path, name, serviceGroupName;
 
   DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId,
       this.deviceId, this.path, this.serviceGroupName) {

@@ -46,9 +46,9 @@ class DeviceCommandsService {
 
     final Map<Network?, List<DeviceCommand>> map = {};
     commands.forEach((e) {
-      if (e.deviceInstance != null) {
+      if (e.deviceInstance != null || e.device_id != null) {
         _insert(map, e.deviceInstance?.network, e, <DeviceCommand>[]);
-      } else if (e.deviceGroup != null) {
+      } else if (e.deviceGroup != null || e.group_id != null) {
         _insert(map, e.deviceGroup?.network, e, <DeviceCommand>[]);
       }
     });

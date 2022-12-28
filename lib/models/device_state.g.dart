@@ -20,14 +20,14 @@ DeviceState _$DeviceStateFromJson(Map<String, dynamic> json) => DeviceState(
       json['serviceGroupName'] as String?,
     )
       ..transitioning = json['transitioning'] as bool
-      ..name = json['name'] as String?
       ..deviceInstance = json['deviceInstance'] == null
           ? null
           : DeviceInstance.fromJson(
               json['deviceInstance'] as Map<String, dynamic>)
       ..deviceGroup = json['deviceGroup'] == null
           ? null
-          : DeviceGroup.fromJson(json['deviceGroup'] as Map<String, dynamic>);
+          : DeviceGroup.fromJson(json['deviceGroup'] as Map<String, dynamic>)
+      ..name = json['name'] as String?;
 
 Map<String, dynamic> _$DeviceStateToJson(DeviceState instance) =>
     <String, dynamic>{
@@ -35,6 +35,8 @@ Map<String, dynamic> _$DeviceStateToJson(DeviceState instance) =>
       'functionId': instance.functionId,
       'isControlling': instance.isControlling,
       'transitioning': instance.transitioning,
+      'deviceInstance': instance.deviceInstance,
+      'deviceGroup': instance.deviceGroup,
       'serviceId': instance.serviceId,
       'serviceGroupKey': instance.serviceGroupKey,
       'aspectId': instance.aspectId,
@@ -44,6 +46,4 @@ Map<String, dynamic> _$DeviceStateToJson(DeviceState instance) =>
       'path': instance.path,
       'name': instance.name,
       'serviceGroupName': instance.serviceGroupName,
-      'deviceInstance': instance.deviceInstance,
-      'deviceGroup': instance.deviceGroup,
     };

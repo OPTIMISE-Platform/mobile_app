@@ -22,11 +22,8 @@ import android.content.Intent
 import android.os.Build
 import android.service.controls.Control
 import android.service.controls.ControlsProviderService
-import android.service.controls.DeviceTypes
 import android.service.controls.actions.BooleanAction
 import android.service.controls.actions.ControlAction
-import android.service.controls.templates.ControlButton
-import android.service.controls.templates.ToggleTemplate
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.google.gson.Gson
@@ -40,11 +37,9 @@ import java.util.function.Consumer
 
 
 @RequiresApi(Build.VERSION_CODES.R)
-class AppControlsProviderService : ControlsProviderService() {
+class AppControlsProviderService() : ControlsProviderService() {
 
-    private var updatePublisher: ReplayProcessor<Control>? = null
-
-    var enabled = false;
+    private var updateProcessor: ReplayProcessor<Control> = ReplayProcessor.create()
 
     override fun createPublisherForAllAvailable(): Flow.Publisher<Control> {
         val context: Context = baseContext
@@ -66,10 +61,13 @@ class AppControlsProviderService : ControlsProviderService() {
                 "flutter/controlMethodChannel"
             ).invokeMethod("getToggleStateless", null, handler)
         }
-        return FlowAdapters.toFlowPublisher(processor)
+        val flow = FlowAdapters.toFlowPublisher(processor)
+        flow.subscribe(LogSubscriber("ALL"))
+        return flow;
     }
 
     override fun createPublisherFor(controlIds: MutableList<String>): Flow.Publisher<Control> {
+        Log.d("AppControlsProviderSe..", "createPublisherFor: Requested for ${controlIds}}")
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
         val pi =
@@ -79,10 +77,8 @@ class AppControlsProviderService : ControlsProviderService() {
                 i,
                 PendingIntent.FLAG_IMMUTABLE
             )
-        if (updatePublisher == null) {
-            updatePublisher = ReplayProcessor.create()
-        }
-        val toggleStreamHandler = ToggleStreamHandler(updatePublisher!!, pi, controlIds)
+
+        val toggleStreamHandler = ToggleStreamHandler(updateProcessor, pi, controlIds)
 
         AndroidPipe.flutterEngine?.dartExecutor?.let {
             MethodChannel(
@@ -91,86 +87,65 @@ class AppControlsProviderService : ControlsProviderService() {
             ).setMethodCallHandler(toggleStreamHandler)
         }
 
-        return FlowAdapters.toFlowPublisher(updatePublisher);
+        val statefulResultHandler = StatefulResultHandler(updateProcessor, pi)
+        val states = mutableListOf<DeviceState>()
+        for (controlId in controlIds) {
+            states.add(DeviceState(controlId))
+        }
+        AndroidPipe.flutterEngine?.dartExecutor?.let {
+            MethodChannel(
+                it.binaryMessenger,
+                "flutter/controlMethodChannel"
+            ).invokeMethod("getToggleStates", Gson().toJson(states), statefulResultHandler)
+        }
+
+        return FlowAdapters.toFlowPublisher(updateProcessor);
     }
 
     override fun performControlAction(
         controlId: String, action: ControlAction, consumer: Consumer<Int>
     ) {
-
-
-        /* First, locate the control identified by the controlId. Once it is located, you can
-         * interpret the action appropriately for that specific device. For instance, the following
-         * assumes that the controlId is associated with a light, and the light can be turned on
-         * or off.
-         */
-
-        consumer.accept(ControlAction.RESPONSE_OK)
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
-
         val pi =
             PendingIntent.getActivity(
-                context, -1 /*CONTROL_REQUEST_CODE*/, i,
+                context,
+                -1 /*CONTROL_REQUEST_CODE*/,
+                i,
                 PendingIntent.FLAG_IMMUTABLE
             )
 
-        enabled = !enabled
-
-        val control =
-            Control.StatefulBuilder("switch-0", pi)
-                // Required: The name of the control
-                .setTitle("switch-0")
-                // Required: Usually the room where the control is located
-                .setSubtitle("")
-                // Required: Type of device, i.e., thermostat, light, switch
-                .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(
-                    ToggleTemplate(
-                        "", ControlButton(
-                            !enabled,
-                            "Toggle switch"
-                        )
-                    )
-                )
-                .build()
-        updatePublisher!!.onNext(control);
-
-
+        val state = DeviceState(controlId)
         if (action is BooleanAction) {
-
-
-            // Inform SystemUI that the action has been received and is being processed
-            consumer.accept(ControlAction.RESPONSE_OK)
-
-            // In this example, action.getNewState() will have the requested action: true for “On”,
-            // false for “Off”.
-
-            /* This is where application logic/network requests would be invoked to update the state of
-             * the device.
-             * After updating, the application should use the publisher to update SystemUI with the new
-             * state.
-             */
-
+            state.value = action.newState
         }
+        AndroidPipe.flutterEngine?.dartExecutor?.let {
+            MethodChannel(
+                it.binaryMessenger,
+                "flutter/controlMethodChannel"
+            ).invokeMethod(
+                "setToggle",
+                Gson().toJson(state),
+                ToggleResultHandler(updateProcessor, pi, state, consumer)
+            )
+        }
+    }
+
+    init {
+        FlowAdapters.toFlowPublisher(updateProcessor).subscribe(LogSubscriber("UPD"))
     }
 }
 
 private class StatelessResultHandler(
     val processor: FlowableProcessor<Control>,
-    val pi: PendingIntent
+    val pi: PendingIntent,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
         val states: Array<DeviceState> =
             Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
         for (state in states) {
-            Log.d(
-                "StatelessResultHandler",
-                "Publishing " + state.name + " (" + state.serviceGroupName + ")"
-            )
-            processor.onNext(statelessControl(state))
+            processor.onNext(state.statelessToggleControl(pi))
         }
         processor.onComplete()
     }
@@ -184,27 +159,6 @@ private class StatelessResultHandler(
         Log.e("StatelessResultHandler", "ERROR: Not Implemented")
         processor.onError(Throwable("Not Implemented"))
     }
-
-    @RequiresApi(Build.VERSION_CODES.R)
-    fun statelessControl(state: DeviceState): Control {
-        var subtitle = ""
-        var title = ""
-        if (state.name != null) {
-            title = state.name!!
-        }
-        if (state.serviceGroupName != null) {
-            subtitle = state.serviceGroupName!!
-        }
-        return Control.StatelessBuilder(state.deviceId + state.serviceId, pi)
-            // Required: The name of the control
-            .setTitle(title)
-            // Required: Usually the room where the control is located
-            .setSubtitle(subtitle)
-            // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
-            .build()
-    }
-
 }
 
 private class ToggleStreamHandler(
@@ -218,44 +172,68 @@ private class ToggleStreamHandler(
         when (call.method) {
             "toggleEvent" -> {
                 val state = Gson().fromJson(call.arguments.toString(), DeviceState::class.java)
-                val id = state.deviceId + state.serviceId
-                if (!controlIds.contains(id)) {
+                if (!controlIds.contains(state.getId())) {
                     return
                 }
-                processor.onNext(statefulControl(state))
+                processor.onNext(state.statefulToggleControl(pi))
             }
             else -> result.notImplemented()
         }
     }
+}
 
+private class StatefulResultHandler(
+    val processor: FlowableProcessor<Control>,
+    val pi: PendingIntent,
+) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
-    fun statefulControl(state: DeviceState): Control {
-        var title = ""
-        var subtitle = ""
-        if (state.name != null) {
-            title = state.name!!
+    override fun success(result: Any?) {
+        val states: Array<DeviceState> =
+            Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
+        for (state in states) {
+            processor.onNext(state.statefulToggleControl(pi))
         }
-        if (state.serviceGroupName != null) {
-            subtitle = state.serviceGroupName!!
-        }
-        return Control.StatefulBuilder(state.deviceId + state.serviceId, pi)
-            // Required: The name of the control
-            .setTitle(title)
-            // Required: Usually the room where the control is located
-            .setSubtitle(subtitle)
-            // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
-            .setStatus(Control.STATUS_OK)
-            .setControlTemplate(
-                ToggleTemplate(
-                    "", ControlButton(
-                        state.value.toString().toBoolean(),
-                        "Toggle switch"
-                    )
-                )
-            )
-            .build()
     }
 
+    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+        Log.e("StatefulResultHandler", "ERROR: ($errorCode) $errorMessage")
+        processor.onError(Throwable(errorCode))
+    }
 
+    override fun notImplemented() {
+        Log.e("StatefulResultHandler", "ERROR: Not Implemented")
+        processor.onError(Throwable("Not Implemented"))
+    }
+}
+
+private class ToggleResultHandler(
+    val processor: FlowableProcessor<Control>,
+    val pi: PendingIntent,
+    val state: DeviceState,
+    val consumer: Consumer<Int>,
+) : MethodChannel.Result {
+    @RequiresApi(Build.VERSION_CODES.R)
+    override fun success(result: Any?) {
+        val responses: Array<DeviceCommandResponse> =
+            Gson().fromJson(result.toString(), Array<DeviceCommandResponse>::class.java)
+        for (response in responses) {
+            if (response.status_code == 200) {
+                val control = state.statefulToggleControl(pi)
+                processor.onNext(control)
+                consumer.accept(ControlAction.RESPONSE_OK)
+            } else {
+                consumer.accept(ControlAction.RESPONSE_FAIL)
+            }
+        }
+    }
+
+    override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
+        Log.e("StatelessResultHandler", "ERROR: ($errorCode) $errorMessage")
+        processor.onError(Throwable(errorCode))
+    }
+
+    override fun notImplemented() {
+        Log.e("StatelessResultHandler", "ERROR: Not Implemented")
+        processor.onError(Throwable("Not Implemented"))
+    }
 }
