@@ -23,6 +23,7 @@ import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
 
 import '../exceptions/argument_exception.dart';
+import '../native_pipe.dart';
 import '../shared/isar.dart';
 import 'device_command.dart';
 import 'network.dart';
@@ -101,6 +102,7 @@ class DeviceInstance {
           states[i].value = value;
         }
         states[i].transitioning = false;
+        NativePipe.handleDeviceStateUpdate(states[i]);
       }));
     }
     return result;

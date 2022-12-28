@@ -30,9 +30,9 @@ import android.service.controls.templates.ToggleTemplate
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.google.gson.Gson
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.reactivex.processors.FlowableProcessor
-import io.reactivex.processors.PublishProcessor
 import io.reactivex.processors.ReplayProcessor
 import org.reactivestreams.FlowAdapters
 import java.util.concurrent.Flow
@@ -42,7 +42,7 @@ import java.util.function.Consumer
 @RequiresApi(Build.VERSION_CODES.R)
 class AppControlsProviderService : ControlsProviderService() {
 
-    private lateinit var updatePublisher: ReplayProcessor<Control>
+    private var updatePublisher: ReplayProcessor<Control>? = null
 
     var enabled = false;
 
@@ -50,14 +50,14 @@ class AppControlsProviderService : ControlsProviderService() {
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
         val pi =
-                PendingIntent.getActivity(
-                        context,
-                        -1 /*CONTROL_REQUEST_CODE*/,
-                        i,
-                        PendingIntent.FLAG_IMMUTABLE
-                )
+            PendingIntent.getActivity(
+                context,
+                -1 /*CONTROL_REQUEST_CODE*/,
+                i,
+                PendingIntent.FLAG_IMMUTABLE
+            )
 
-        val processor = PublishProcessor.create<Control>()
+        val processor = ReplayProcessor.create<Control>()
 
         val handler = StatelessResultHandler(processor, pi)
         AndroidPipe.flutterEngine?.dartExecutor?.let {
@@ -71,11 +71,6 @@ class AppControlsProviderService : ControlsProviderService() {
 
     override fun createPublisherFor(controlIds: MutableList<String>): Flow.Publisher<Control> {
         val context: Context = baseContext
-        /* Fill in details for the activity related to this device. On long press,
-         * this Intent will be launched in a bottomsheet. Please design the activity
-         * accordingly to fit a more limited space (about 2/3 screen height).
-         */
-        // val i = Intent(this, CustomSettingsActivity::class.java)
         val i = Intent(this, MainActivity::class.java)
         val pi =
             PendingIntent.getActivity(
@@ -84,31 +79,17 @@ class AppControlsProviderService : ControlsProviderService() {
                 i,
                 PendingIntent.FLAG_IMMUTABLE
             )
-        updatePublisher = ReplayProcessor.create()
+        if (updatePublisher == null) {
+            updatePublisher = ReplayProcessor.create()
+        }
+        val toggleStreamHandler = ToggleStreamHandler(updatePublisher!!, pi, controlIds)
 
-
-        val control =
-            Control.StatefulBuilder("switch-0", pi)
-                // Required: The name of the control
-                .setTitle("switch-0")
-                // Required: Usually the room where the control is located
-                .setSubtitle("")
-                // Required: Type of device, i.e., thermostat, light, switch
-                .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(ToggleTemplate("",  ControlButton(
-                    enabled,
-                    "Toggle switch"
-                ) ))
-                .build()
-
-        updatePublisher.onNext(control)
-
-
-        // If you have other controls, check that they have been selected here
-
-        // Uses the Reactive Streams API
-        updatePublisher.onNext(control)
+        AndroidPipe.flutterEngine?.dartExecutor?.let {
+            MethodChannel(
+                it.binaryMessenger,
+                "flutter/controlMethodChannel"
+            ).setMethodCallHandler(toggleStreamHandler)
+        }
 
         return FlowAdapters.toFlowPublisher(updatePublisher);
     }
@@ -145,12 +126,16 @@ class AppControlsProviderService : ControlsProviderService() {
                 // Required: Type of device, i.e., thermostat, light, switch
                 .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
                 .setStatus(Control.STATUS_OK)
-                .setControlTemplate(ToggleTemplate("",  ControlButton(
-                    !enabled,
-                    "Toggle switch"
-                ) ))
+                .setControlTemplate(
+                    ToggleTemplate(
+                        "", ControlButton(
+                            !enabled,
+                            "Toggle switch"
+                        )
+                    )
+                )
                 .build()
-        updatePublisher.onNext(control);
+        updatePublisher!!.onNext(control);
 
 
         if (action is BooleanAction) {
@@ -172,21 +157,19 @@ class AppControlsProviderService : ControlsProviderService() {
     }
 }
 
-private class StatelessResultHandler: MethodChannel.Result {
-
-    val processor: FlowableProcessor<Control>
+private class StatelessResultHandler(
+    val processor: FlowableProcessor<Control>,
     val pi: PendingIntent
-
-    constructor(flow: FlowableProcessor<Control>, pi: PendingIntent) {
-        this.processor = flow
-        this.pi = pi
-    }
-
+) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
-        val states: Array<DeviceState> = Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
+        val states: Array<DeviceState> =
+            Gson().fromJson(result.toString(), Array<DeviceState>::class.java)
         for (state in states) {
-            Log.d("StatelessResultHandler", "Publishing " + state.name + " ("+state.serviceGroupName+")")
+            Log.d(
+                "StatelessResultHandler",
+                "Publishing " + state.name + " (" + state.serviceGroupName + ")"
+            )
             processor.onNext(statelessControl(state))
         }
         processor.onComplete()
@@ -218,23 +201,36 @@ private class StatelessResultHandler: MethodChannel.Result {
             // Required: Usually the room where the control is located
             .setSubtitle(subtitle)
             // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
+            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
             .build()
     }
 
 }
 
-/*
-@RequiresApi(Build.VERSION_CODES.R)
+private class ToggleStreamHandler(
+    val processor: FlowableProcessor<Control>,
+    val pi: PendingIntent,
+    val controlIds: MutableList<String>
+) : MethodChannel.MethodCallHandler {
+
+    @RequiresApi(Build.VERSION_CODES.R)
+    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "toggleEvent" -> {
+                val state = Gson().fromJson(call.arguments.toString(), DeviceState::class.java)
+                val id = state.deviceId + state.serviceId
+                if (!controlIds.contains(id)) {
+                    return
+                }
+                processor.onNext(statefulControl(state))
+            }
+            else -> result.notImplemented()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.R)
     fun statefulControl(state: DeviceState): Control {
-        val i = Intent(this, MainActivity::class.java)
-        val pi =
-            PendingIntent.getActivity(
-                context,
-                -1 /*CONTROL_REQUEST_CODE*/,
-                i,
-                PendingIntent.FLAG_IMMUTABLE
-            )
+        var title = ""
         var subtitle = ""
         if (state.name != null) {
             title = state.name!!
@@ -243,21 +239,23 @@ private class StatelessResultHandler: MethodChannel.Result {
             subtitle = state.serviceGroupName!!
         }
         return Control.StatefulBuilder(state.deviceId + state.serviceId, pi)
-                // Required: The name of the control
-                .setTitle(title)
-                // Required: Usually the room where the control is located
-                .setSubtitle(subtitle)
-                // Required: Type of device, i.e., thermostat, light, switch
-                .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(
-                    ToggleTemplate(
-                        "", ControlButton(
-                            state.value.toString().toBoolean(),
-                            "Toggle switch"
-                        )
+            // Required: The name of the control
+            .setTitle(title)
+            // Required: Usually the room where the control is located
+            .setSubtitle(subtitle)
+            // Required: Type of device, i.e., thermostat, light, switch
+            .setDeviceType(DeviceTypes.TYPE_LIGHT) // For example, DeviceTypes.TYPE_THERMOSTAT
+            .setStatus(Control.STATUS_OK)
+            .setControlTemplate(
+                ToggleTemplate(
+                    "", ControlButton(
+                        state.value.toString().toBoolean(),
+                        "Toggle switch"
                     )
                 )
-                .build()
+            )
+            .build()
     }
- */
+
+
+}

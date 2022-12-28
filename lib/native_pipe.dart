@@ -23,6 +23,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/shared/isar.dart';
 
 import 'app_state.dart';
+import 'models/device_state.dart';
 
 class NativePipe {
   static const MethodChannel controlMethodChannel = MethodChannel("flutter/controlMethodChannel");
@@ -42,5 +43,11 @@ class NativePipe {
           throw MissingPluginException("not implemented");
       }
     });
+  }
+  
+  static void handleDeviceStateUpdate(DeviceState state) {
+    if (state.deviceId != null && state.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+      controlMethodChannel.invokeMethod("toggleEvent", json.encode(state));
+    }
   }
 }
