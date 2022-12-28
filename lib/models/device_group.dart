@@ -142,7 +142,7 @@ class DeviceGroup {
               element.deviceClassId == criterion.device_class_id) ==
           -1) {
         final state = DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
-            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null);
+            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null, null);
         state.deviceGroup = this;
         states.add(state);
       }

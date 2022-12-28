@@ -21,6 +21,7 @@ import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -64,6 +65,7 @@ import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
 import 'models/device_search_filter.dart';
 import 'models/device_type.dart';
+import 'native_pipe.dart';
 
 const notificationUpdateType = "put notification";
 const notificationDeleteManyType = "delete notifications";
@@ -83,6 +85,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       });
     }
     _manageNetworkDiscovery();
+    NativePipe.init();
   }
 
   static final connectionManager = ConnectionManager();
@@ -358,7 +361,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     return _allDevicesLoaded;
   }
 
-  loadDeviceType(String id, [bool force = false]) async {
+  Future<void> loadDeviceType(String id, [bool force = false]) async {
     if (!force && deviceTypes.containsKey(id)) {
       return;
     }
@@ -484,7 +487,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   initMessaging() async {
-    await messaging.requestPermission();
+    try {
+      await messaging.requestPermission();
+    } catch(e) {
+      _logger.w(e);
+      return;
+    }
 
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 

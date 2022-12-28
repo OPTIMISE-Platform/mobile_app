@@ -14,37 +14,61 @@
  *  limitations under the License.
  */
 
+import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/service.dart';
+import 'package:mobile_app/models/service_group.dart';
 
 import '../services/settings.dart';
 import 'content_variable.dart';
 import 'device_type.dart';
 
+part 'device_state.g.dart';
+
+@JsonSerializable()
 class DeviceState {
   dynamic value;
   String functionId;
   bool isControlling, transitioning = false;
-  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path;
+  String? serviceId, serviceGroupKey, aspectId, groupId, deviceClassId, deviceId, path, name, serviceGroupName;
 
-  DeviceInstance? deviceInstance;
-  DeviceGroup? deviceGroup;
+  @JsonKey(ignore: true)
+  DeviceInstance? _deviceInstance;
+  @JsonKey(ignore: true)
+  DeviceGroup? _deviceGroup;
+
+  DeviceInstance? get deviceInstance {
+    return _deviceInstance;
+  }
+
+  set deviceInstance(DeviceInstance? instance) {
+    _deviceInstance = instance;
+    name = deviceInstance?.display_name;
+  }
+
+  DeviceGroup? get deviceGroup {
+    return _deviceGroup;
+  }
+
+  set deviceGroup(DeviceGroup? instance) {
+    _deviceGroup = instance;
+    name = deviceGroup?.name;
+  }
 
   DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, this.aspectId, this.isControlling, this.groupId, this.deviceClassId,
-      this.deviceId, this.path);
+      this.deviceId, this.path, this.serviceGroupName) {
+    name = deviceInstance?.display_name ?? deviceGroup?.name;
+  }
+
+  factory DeviceState.fromJson(Map<String, dynamic> json) => _$DeviceStateFromJson(json);
+
+  Map<String, dynamic> toJson() => _$DeviceStateToJson(this);
 
   DeviceCommand toCommand([dynamic value, DeviceGroup? deviceGroup]) {
     final command = DeviceCommand(
-        functionId,
-        deviceId,
-        serviceId,
-        aspectId,
-        groupId,
-        deviceClassId,
-        value,
-        Settings.getFunctionPreferredCharacteristicId(functionId));
+        functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value, Settings.getFunctionPreferredCharacteristicId(functionId));
     command.deviceInstance = deviceInstance;
     command.deviceGroup = deviceGroup ?? this.deviceGroup;
     return command;
@@ -60,34 +84,37 @@ class StateHelper {
       final states = _states[deviceType.id];
       return List<DeviceState>.generate(states!.length, (i) {
         final state = DeviceState(states[i].value, states[i].serviceId, states[i].serviceGroupKey, states[i].functionId, states[i].aspectId,
-            states[i].isControlling, null, null, device.id, states[i].path);
+            states[i].isControlling, null, null, device.id, states[i].path, states[i].serviceGroupName);
         state.deviceInstance = device;
         return state;
       });
     }
     final List<DeviceState> states = [];
     for (final service in deviceType.services) {
+      final serviceGroupName =
+          deviceType.service_groups?.firstWhere((e) => e.key == service.service_group_key, orElse: () => ServiceGroup("", "", "")).name;
       for (final output in service.outputs ?? []) {
-        _addStateFromContentVariable(service, output.content_variable, false, "", states, device);
+        _addStateFromContentVariable(service, output.content_variable, false, "", states, device, serviceGroupName);
       }
 
       for (final input in service.inputs ?? []) {
-        _addStateFromContentVariable(service, input.content_variable, true, "", states, device);
+        _addStateFromContentVariable(service, input.content_variable, true, "", states, device, serviceGroupName);
       }
     }
     _states[deviceType.id] = states;
     return states;
   }
 
-  static _addStateFromContentVariable(
-      Service service, ContentVariable contentVariable, bool isInput, String parentPath, List<DeviceState> states, DeviceInstance device) async {
+  static _addStateFromContentVariable(Service service, ContentVariable contentVariable, bool isInput, String parentPath, List<DeviceState> states,
+      DeviceInstance device, String? serviceGroupName) async {
     final path = parentPath + (parentPath.isEmpty ? "" : ".") + (contentVariable.name ?? "");
     if (contentVariable.function_id != null) {
-      final state = DeviceState(
-          null, service.id, service.service_group_key, contentVariable.function_id!, contentVariable.aspect_id, isInput, null, null, device.id, path);
+      final state = DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!, contentVariable.aspect_id, isInput, null,
+          null, device.id, path, serviceGroupName);
       state.deviceInstance = device;
       states.add(state);
     }
-    contentVariable.sub_content_variables?.forEach((element) => _addStateFromContentVariable(service, element, isInput, path, states, device));
+    contentVariable.sub_content_variables
+        ?.forEach((element) => _addStateFromContentVariable(service, element, isInput, path, states, device, serviceGroupName));
   }
 }

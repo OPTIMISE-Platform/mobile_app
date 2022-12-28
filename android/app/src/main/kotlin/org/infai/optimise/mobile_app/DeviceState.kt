@@ -16,16 +16,18 @@
 
 package org.infai.optimise.mobile_app
 
-import android.os.Build
-import androidx.annotation.RequiresApi
-import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
-
-class MainActivity : FlutterActivity() {
-    @RequiresApi(Build.VERSION_CODES.R)
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-
-        AndroidPipe.flutterEngine = flutterEngine
-    }
+class DeviceState {
+    var value: Object? = null
+    var functionId: String = ""
+    var isControlling: Boolean = false
+    var transitioning: Boolean  = false
+    var serviceId: String? = null
+    var serviceGroupKey: String? = null
+    var aspectId: String? = null
+    var groupId: String? = null
+    var deviceClassId: String? = null
+    var deviceId: String? = null
+    var path: String? = null
+    var name: String? = null
+    var serviceGroupName: String? = null
 }
