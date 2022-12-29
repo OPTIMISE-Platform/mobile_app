@@ -26,7 +26,6 @@ import android.service.controls.actions.BooleanAction
 import android.service.controls.actions.ControlAction
 import android.util.Log
 import androidx.annotation.RequiresApi
-import com.google.gson.Gson
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.reactivex.processors.FlowableProcessor
@@ -63,7 +62,7 @@ class AppControlsProviderService() : ControlsProviderService() {
         }
         val flow = FlowAdapters.toFlowPublisher(processor)
         // Uncomment for Debugging flow.subscribe(LogSubscriber("ALL"))
-        return flow;
+        return flow
     }
 
     override fun createPublisherFor(controlIds: MutableList<String>): Flow.Publisher<Control> {
@@ -100,7 +99,7 @@ class AppControlsProviderService() : ControlsProviderService() {
                 DeviceState.toJSONList(states), statefulResultHandler)
         }
 
-        return FlowAdapters.toFlowPublisher(updateProcessor);
+        return FlowAdapters.toFlowPublisher(updateProcessor)
     }
 
     override fun performControlAction(
