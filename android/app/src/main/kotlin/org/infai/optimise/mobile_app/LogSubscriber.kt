@@ -20,12 +20,12 @@ class LogSubscriber(val name: String) : Flow.Subscriber<Control> {
 
     override fun onNext(item: Control?) {
         var log = "${item?.controlId}"
-        if(item?.controlTemplate is ToggleTemplate) {
+        if (item?.controlTemplate is ToggleTemplate) {
             log += ": ${(item.controlTemplate as ToggleTemplate).isChecked}"
         }
         Log.d(
-            "LogSubscriber $name",
-            log
+                "LogSubscriber $name",
+                log
         )
     }
 

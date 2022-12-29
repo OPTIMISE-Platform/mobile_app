@@ -44,20 +44,20 @@ class AppControlsProviderService() : ControlsProviderService() {
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
         val pi =
-            PendingIntent.getActivity(
-                context,
-                -1 /*CONTROL_REQUEST_CODE*/,
-                i,
-                PendingIntent.FLAG_IMMUTABLE
-            )
+                PendingIntent.getActivity(
+                        context,
+                        -1 /*CONTROL_REQUEST_CODE*/,
+                        i,
+                        PendingIntent.FLAG_IMMUTABLE
+                )
 
         val processor = ReplayProcessor.create<Control>()
 
         val handler = StatelessResultHandler(processor, pi)
         AndroidPipe.flutterEngine?.dartExecutor?.let {
             MethodChannel(
-                it.binaryMessenger,
-                "flutter/controlMethodChannel"
+                    it.binaryMessenger,
+                    "flutter/controlMethodChannel"
             ).invokeMethod("getToggleStateless", null, handler)
         }
         val flow = FlowAdapters.toFlowPublisher(processor)
@@ -70,19 +70,19 @@ class AppControlsProviderService() : ControlsProviderService() {
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
         val pi =
-            PendingIntent.getActivity(
-                context,
-                -1 /*CONTROL_REQUEST_CODE*/,
-                i,
-                PendingIntent.FLAG_IMMUTABLE
-            )
+                PendingIntent.getActivity(
+                        context,
+                        -1 /*CONTROL_REQUEST_CODE*/,
+                        i,
+                        PendingIntent.FLAG_IMMUTABLE
+                )
 
         val toggleStreamHandler = ToggleStreamHandler(updateProcessor, pi, controlIds)
 
         AndroidPipe.flutterEngine?.dartExecutor?.let {
             MethodChannel(
-                it.binaryMessenger,
-                "flutter/controlMethodChannel"
+                    it.binaryMessenger,
+                    "flutter/controlMethodChannel"
             ).setMethodCallHandler(toggleStreamHandler)
         }
 
@@ -93,27 +93,27 @@ class AppControlsProviderService() : ControlsProviderService() {
         }
         AndroidPipe.flutterEngine?.dartExecutor?.let {
             MethodChannel(
-                it.binaryMessenger,
-                "flutter/controlMethodChannel"
+                    it.binaryMessenger,
+                    "flutter/controlMethodChannel"
             ).invokeMethod("getToggleStates",
-                DeviceState.toJSONList(states), statefulResultHandler)
+                    DeviceState.toJSONList(states), statefulResultHandler)
         }
 
         return FlowAdapters.toFlowPublisher(updateProcessor)
     }
 
     override fun performControlAction(
-        controlId: String, action: ControlAction, consumer: Consumer<Int>
+            controlId: String, action: ControlAction, consumer: Consumer<Int>
     ) {
         val context: Context = baseContext
         val i = Intent(this, MainActivity::class.java)
         val pi =
-            PendingIntent.getActivity(
-                context,
-                -1 /*CONTROL_REQUEST_CODE*/,
-                i,
-                PendingIntent.FLAG_IMMUTABLE
-            )
+                PendingIntent.getActivity(
+                        context,
+                        -1 /*CONTROL_REQUEST_CODE*/,
+                        i,
+                        PendingIntent.FLAG_IMMUTABLE
+                )
 
         val state = DeviceState(controlId)
         if (action is BooleanAction) {
@@ -121,12 +121,12 @@ class AppControlsProviderService() : ControlsProviderService() {
         }
         AndroidPipe.flutterEngine?.dartExecutor?.let {
             MethodChannel(
-                it.binaryMessenger,
-                "flutter/controlMethodChannel"
+                    it.binaryMessenger,
+                    "flutter/controlMethodChannel"
             ).invokeMethod(
-                "setToggle",
-                state.toJSON(),
-                ToggleResultHandler(updateProcessor, pi, state, consumer)
+                    "setToggle",
+                    state.toJSON(),
+                    ToggleResultHandler(updateProcessor, pi, state, consumer)
             )
         }
     }
@@ -137,8 +137,8 @@ class AppControlsProviderService() : ControlsProviderService() {
 }
 
 private class StatelessResultHandler(
-    val processor: FlowableProcessor<Control>,
-    val pi: PendingIntent,
+        val processor: FlowableProcessor<Control>,
+        val pi: PendingIntent,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
@@ -161,9 +161,9 @@ private class StatelessResultHandler(
 }
 
 private class ToggleStreamHandler(
-    val processor: FlowableProcessor<Control>,
-    val pi: PendingIntent,
-    val controlIds: MutableList<String>
+        val processor: FlowableProcessor<Control>,
+        val pi: PendingIntent,
+        val controlIds: MutableList<String>
 ) : MethodChannel.MethodCallHandler {
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -176,14 +176,15 @@ private class ToggleStreamHandler(
                 }
                 processor.onNext(state.statefulToggleControl(pi))
             }
+
             else -> result.notImplemented()
         }
     }
 }
 
 private class StatefulResultHandler(
-    val processor: FlowableProcessor<Control>,
-    val pi: PendingIntent,
+        val processor: FlowableProcessor<Control>,
+        val pi: PendingIntent,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
@@ -205,10 +206,10 @@ private class StatefulResultHandler(
 }
 
 private class ToggleResultHandler(
-    val processor: FlowableProcessor<Control>,
-    val pi: PendingIntent,
-    val state: DeviceState,
-    val consumer: Consumer<Int>,
+        val processor: FlowableProcessor<Control>,
+        val pi: PendingIntent,
+        val state: DeviceState,
+        val consumer: Consumer<Int>,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {

@@ -29,7 +29,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 
-class DeviceState {
+class DeviceState(id: String) {
     var deviceId: String? = null
     var groupId: String? = null
     var functionId: String? = null
@@ -44,7 +44,7 @@ class DeviceState {
     var value: Any? = null
     var isControlling: Boolean = false
     var transitioning: Boolean = false
-    
+
     companion object {
         fun fromJSONList(json: String): MutableList<DeviceState> {
             val arr = JsonParser.parseString(json).asJsonArray
@@ -54,7 +54,7 @@ class DeviceState {
             }
             return l
         }
-        
+
         fun toJSONList(l: List<DeviceState>): String {
             val arr = JsonArray()
             for (e in l) {
@@ -66,7 +66,7 @@ class DeviceState {
 
 
     fun getId(): String {
-        var tree = getJSONTree()
+        val tree = getJSONTree()
         if (tree.has("value"))
             tree.remove("value")
         if (tree.has("isControlling"))
@@ -76,39 +76,28 @@ class DeviceState {
         return tree.toString()
     }
 
-    constructor(id: String) {
+    init {
         val base = JsonParser.parseString(id).asJsonObject
-
         if (base.get("deviceId") != null && !base.get("deviceId").isJsonNull)
             deviceId = base.get("deviceId").asString
-
         if (base.get("groupId") != null && !base.get("groupId").isJsonNull)
             groupId = base.get("groupId").asString
-
         if (base.get("functionId") != null && !base.get("functionId").isJsonNull)
             functionId = base.get("functionId").asString
-
         if (base.get("aspectId") != null && !base.get("aspectId").isJsonNull)
             aspectId = base.get("aspectId").asString
-
         if (base.get("path") != null && !base.get("path").isJsonNull)
             path = base.get("path").asString
-
         if (base.get("deviceClassId") != null && !base.get("deviceClassId").isJsonNull)
             deviceClassId = base.get("deviceClassId").asString
-
         if (base.get("serviceGroupKey") != null && !base.get("serviceGroupKey").isJsonNull)
             serviceGroupKey = base.get("serviceGroupKey").asString
-
         if (base.get("serviceId") != null && !base.get("serviceId").isJsonNull)
             serviceId = base.get("serviceId").asString
-
         if (base.get("name") != null && !base.get("name").isJsonNull)
             name = base.get("name").asString
-
         if (base.get("serviceGroupName") != null && !base.get("serviceGroupName").isJsonNull)
             serviceGroupName = base.get("serviceGroupName").asString
-
         if (base.get("value") != null && !base.get("value").isJsonNull) {
             if (base.get("value").isJsonPrimitive) {
                 val tmpP = base.get("value").asJsonPrimitive
@@ -135,13 +124,13 @@ class DeviceState {
             subtitle = serviceGroupName!!
         }
         return Control.StatelessBuilder(getId(), pi)
-            // Required: The name of the control
-            .setTitle(title)
-            // Required: Usually the room where the control is located
-            .setSubtitle(subtitle)
-            // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
-            .build()
+                // Required: The name of the control
+                .setTitle(title)
+                // Required: Usually the room where the control is located
+                .setSubtitle(subtitle)
+                // Required: Type of device, i.e., thermostat, light, switch
+                .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
+                .build()
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
@@ -155,22 +144,22 @@ class DeviceState {
             subtitle = serviceGroupName!!
         }
         return Control.StatefulBuilder(getId(), pi)
-            // Required: The name of the control
-            .setTitle(title)
-            // Required: Usually the room where the control is located
-            .setSubtitle(subtitle)
-            // Required: Type of device, i.e., thermostat, light, switch
-            .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
-            .setStatus(Control.STATUS_OK)
-            .setControlTemplate(
-                ToggleTemplate(
-                    "", ControlButton(
-                        value.toString().toBoolean(),
-                        "Toggle switch"
-                    )
+                // Required: The name of the control
+                .setTitle(title)
+                // Required: Usually the room where the control is located
+                .setSubtitle(subtitle)
+                // Required: Type of device, i.e., thermostat, light, switch
+                .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
+                .setStatus(Control.STATUS_OK)
+                .setControlTemplate(
+                        ToggleTemplate(
+                                "", ControlButton(
+                                value.toString().toBoolean(),
+                                "Toggle switch"
+                        )
+                        )
                 )
-            )
-            .build()
+                .build()
     }
 
     fun toJSON(): String {
