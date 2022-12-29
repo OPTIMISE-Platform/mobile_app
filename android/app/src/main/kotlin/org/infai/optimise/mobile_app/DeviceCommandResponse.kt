@@ -16,6 +16,7 @@
 
 package org.infai.optimise.mobile_app
 
+import android.util.Log
 import com.google.gson.*
 
 class DeviceCommandResponse(id: String) {
@@ -55,6 +56,8 @@ class DeviceCommandResponse(id: String) {
                     message = tmpP.asDouble
                 if (tmpP.isString)
                     message = tmpP.asString
+            } else {
+                Log.w("DeviceCommandResponse", "Value not primitive, cannot parse from JSON: $tmp")
             }
         }
     }

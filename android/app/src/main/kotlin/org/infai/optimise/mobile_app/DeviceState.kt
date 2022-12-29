@@ -22,6 +22,7 @@ import android.service.controls.Control
 import android.service.controls.DeviceTypes
 import android.service.controls.templates.ControlButton
 import android.service.controls.templates.ToggleTemplate
+import android.util.Log
 import androidx.annotation.RequiresApi
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -107,6 +108,20 @@ class DeviceState {
 
         if (base.get("serviceGroupName") != null && !base.get("serviceGroupName").isJsonNull)
             serviceGroupName = base.get("serviceGroupName").asString
+
+        if (base.get("value") != null && !base.get("value").isJsonNull) {
+            if (base.get("value").isJsonPrimitive) {
+                val tmpP = base.get("value").asJsonPrimitive
+                if (tmpP.isBoolean)
+                    value = tmpP.asBoolean
+                if (tmpP.isNumber)
+                    value = tmpP.asDouble
+                if (tmpP.isString)
+                    value = tmpP.asString
+            } else {
+                Log.w("DeviceState", "Value not primitive, cannot parse from JSON: " + base.get("value").toString())
+            }
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
