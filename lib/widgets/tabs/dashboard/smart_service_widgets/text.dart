@@ -18,6 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 class SmSeText extends SmartServiceModuleWidget {
+  @override
+  setPreview(bool enabled) => null;
+
   String text = "";
 
   @override
@@ -27,7 +30,7 @@ class SmSeText extends SmartServiceModuleWidget {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
+  Widget buildInternal(BuildContext context, bool __) {
     return Text(text);
   }
 

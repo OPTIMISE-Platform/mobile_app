@@ -27,6 +27,10 @@ import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSeLineChart extends SmSeRequest {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) => preview = enabled;
+
   final List<LineChartBarData> _lines = [];
   DateFormat dateFormat = MyTheme.formatHHMM;
   final List<String> titles = [];
@@ -47,7 +51,7 @@ class SmSeLineChart extends SmSeRequest {
   }
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -97,7 +101,7 @@ class SmSeLineChart extends SmSeRequest {
                   ),
                 ),
                 lineTouchData: LineTouchData(
-                    enabled: !previewOnly,
+                    enabled: !preview,
                     touchTooltipData: LineTouchTooltipData(
                         fitInsideVertically: true,
                         fitInsideHorizontally: true,

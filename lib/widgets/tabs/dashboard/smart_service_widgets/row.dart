@@ -19,6 +19,10 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dar
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 
 class SmSeRow extends SmartServiceModuleWidget {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) => preview = enabled;
+
   final List<SmartServiceModuleWidget?> children = [];
 
   @override
@@ -28,8 +32,9 @@ class SmSeRow extends SmartServiceModuleWidget {
   double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a + b)+1;
 
   @override
-  Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
+  Widget buildInternal(BuildContext context, bool _) {
+    children.forEach((e) => e?.setPreview(preview));
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: children.map((e) => e?.buildInternal(context, true) ?? const SizedBox.shrink()).toList());
   }
 
   @override

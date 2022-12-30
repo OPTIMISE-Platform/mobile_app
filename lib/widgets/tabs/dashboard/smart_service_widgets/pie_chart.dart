@@ -28,6 +28,17 @@ import '../../../shared/indicator.dart';
 import '../dashboard.dart';
 
 class SmSePieChart extends SmSeRequest {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) {
+    preview = enabled;
+    if (enabled) {
+      height = 5;
+    } else {
+      height = 5.0 + _active_sections.length;
+    }
+  }
+
   final List<PieChartSectionData> _sections = [];
   final List<double> nums = [];
   final List<String> titles = [];
@@ -53,7 +64,6 @@ class SmSePieChart extends SmSeRequest {
     if (data is! Map<String, dynamic> || data["titles"] == null) return;
     titles.clear();
     (data["titles"] as List).forEach((element) => titles.add(element as String));
-    height += titles.length;
     if (data["showSum"] != null) {
       showSum = data["showSum"] as bool;
     }
@@ -63,7 +73,7 @@ class SmSePieChart extends SmSeRequest {
   }
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     final Widget w = _sections.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -73,13 +83,13 @@ class SmSePieChart extends SmSeRequest {
             child: StatefulBuilder(builder: (context, setState) {
               _buildSections();
               final List<Widget> legendWidgets = [];
-              if (_active_sections.isNotEmpty) {
+              if (_active_sections.isNotEmpty && !preview) {
                 _active_sections.forEach((i) {
                   legendWidgets.addAll([
                     GestureDetector(
-                        onTapDown: previewOnly ? null : (_) => setState(() => touchedIndex = _active_sections.indexOf(i)),
-                        onTapUp: previewOnly ? null : (_) => setState(() => touchedIndex = -1),
-                        onTapCancel: previewOnly ? null : () => setState(() => touchedIndex = -1),
+                        onTapDown: (_) => setState(() => touchedIndex = _active_sections.indexOf(i)),
+                        onTapUp: (_) => setState(() => touchedIndex = -1),
+                        onTapCancel: () => setState(() => touchedIndex = -1),
                         child: Indicator(
                           color: MyTheme.getSomeColor(i),
                           text: "${titles[i]}${_allZero ? "" : (" (${(nums[i] * 100 / sum).toStringAsFixed(1)}%)")}",
@@ -100,8 +110,8 @@ class SmSePieChart extends SmSeRequest {
                     PieChartData(
                       borderData: FlBorderData(show: false),
                       pieTouchData: PieTouchData(
-                        enabled: !previewOnly,
-                        touchCallback: previewOnly
+                        enabled: !preview,
+                        touchCallback: preview
                             ? null
                             : (FlTouchEvent event, pieTouchResponse) {
                                 setState(() {
@@ -165,7 +175,6 @@ class SmSePieChart extends SmSeRequest {
     }
     while (nums.length > titles.length) {
       titles.add("unknown");
-      height++;
     }
     sum = 0;
     nums.forEach((e) => sum += e);
@@ -206,7 +215,6 @@ class SmSePieChart extends SmSeRequest {
     }).where((element) => element.value > 0));
     _active_sections.clear();
     _active_sections.addAll(tmpActiveSections);
-    height = 5.0 + _active_sections.length;
   }
 
   int calcPrecision(List<double> nums) {

@@ -69,18 +69,24 @@ abstract class SmartServiceModuleWidget {
   /// Currently without effect
   double get width;
 
+  setPreview(bool enabled);
+
   late WidgetInfo widgetInfo;
   late String instance_id;
 
   Future<void> configure(dynamic data);
 
   @nonVirtual
-  Widget build(BuildContext context, bool onlyPreview) => SizedBox(
-      height: height * heightUnit,
-      child: _refreshing.isLocked ? const Center(child: DelayedCircularProgressIndicator()) : buildInternal(context, onlyPreview, false));
+  Widget build(BuildContext context, bool onlyPreview) {
+    setPreview(onlyPreview);
+    final w = buildInternal(context, false);
+    return SizedBox(
+        height: height * heightUnit,
+        child: _refreshing.isLocked ? const Center(child: DelayedCircularProgressIndicator()) : w);
+  }
 
   @protected
-  Widget buildInternal(BuildContext context, bool onlyPreview, bool parentFlexible);
+  Widget buildInternal(BuildContext context, bool parentFlexible);
 
   late String id;
 

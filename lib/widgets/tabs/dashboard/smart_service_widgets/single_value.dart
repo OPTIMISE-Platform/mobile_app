@@ -18,6 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 class SmSeSingleValue extends SmSeRequest {
+  @override
+  setPreview(bool enabled) => null;
+
   dynamic value;
 
   @override
@@ -27,7 +30,7 @@ class SmSeSingleValue extends SmSeRequest {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
+  Widget buildInternal(BuildContext context, bool __) {
     return Text(value.toString());
   }
 

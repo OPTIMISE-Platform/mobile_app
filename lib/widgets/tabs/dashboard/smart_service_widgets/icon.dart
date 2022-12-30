@@ -19,6 +19,9 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dar
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/material_icons.dart';
 
 class SmSeIcon extends SmartServiceModuleWidget {
+  @override
+  setPreview(bool enabled) => null;
+
   int codePoint = 0xe30b;
 
   @override
@@ -28,7 +31,7 @@ class SmSeIcon extends SmartServiceModuleWidget {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
+  Widget buildInternal(BuildContext context, bool __) {
     return Icon(IconData(codePoint, fontFamily: 'MaterialIcons'));
   }
 

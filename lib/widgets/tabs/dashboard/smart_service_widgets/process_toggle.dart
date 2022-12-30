@@ -24,6 +24,9 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dar
 import '../../../../services/auth.dart';
 
 class SmSeProcessToggle extends SmartServiceModuleWidget {
+  @override
+  setPreview(bool enabled) => null;
+
   static final _client = http.Client();
 
   String _deploymentId = "";
@@ -38,7 +41,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
+  Widget buildInternal(BuildContext context, bool __) {
     _context = context;
     return ElevatedButton(
       onPressed: _instanceIds.isEmpty ? _start : _stop,

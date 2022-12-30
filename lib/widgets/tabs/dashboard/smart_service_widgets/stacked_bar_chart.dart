@@ -27,26 +27,39 @@ class SmSeStackedBarChart extends SmSeBarChart {
   List<dynamic> values = [];
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  setPreview(bool enabled) {
+    preview = enabled;
+    if (enabled) {
+      height = 8;
+    } else {
+      height = 8.0 + (titles.length * .5);
+      ;
+    }
+  }
+
+  @override
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     return StatefulBuilder(builder: (context, setState) {
       final List<Widget> legendWidgets = [];
 
-      for (int i = 0; i < titles.length; i++) {
-        legendWidgets.addAll([
-          GestureDetector(
-              onTapDown: previewOnly ? null : (_) => setState(() => touchedIndex = i),
-              onTapUp: previewOnly ? null : (_) => setState(() => touchedIndex = -1),
-              onTapCancel: previewOnly ? null : () => setState(() => touchedIndex = -1),
-              child: Indicator(
-                color: MyTheme.getSomeColor(i),
-                text: titles[i],
-                textColor: MyTheme.textColor!,
-                isSquare: true,
-              )),
-          const SizedBox(
-            height: 4,
-          )
-        ]);
+      if (!preview) {
+        for (int i = 0; i < titles.length; i++) {
+          legendWidgets.addAll([
+            GestureDetector(
+                onTapDown: (_) => setState(() => touchedIndex = i),
+                onTapUp: (_) => setState(() => touchedIndex = -1),
+                onTapCancel: () => setState(() => touchedIndex = -1),
+                child: Indicator(
+                  color: MyTheme.getSomeColor(i),
+                  text: titles[i],
+                  textColor: MyTheme.textColor!,
+                  isSquare: true,
+                )),
+            const SizedBox(
+              height: 4,
+            )
+          ]);
+        }
       }
 
       buildGroups();
@@ -110,7 +123,6 @@ class SmSeStackedBarChart extends SmSeBarChart {
   @override
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     this.values = values;
-    height = 8.0 + (titles.length * .5);
   }
 
   void buildGroups() {

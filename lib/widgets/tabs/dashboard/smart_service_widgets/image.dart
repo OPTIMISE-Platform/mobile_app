@@ -28,6 +28,9 @@ import '../../../../shared/base64_response_decoder.dart';
 import '../../../../shared/http_client_adapter.dart';
 
 class SmSeImage extends SmSeRequest {
+  @override
+  setPreview(bool enabled) => null;
+
   bool _cachable = false;
   Widget imageWidget = const SizedBox.shrink();
   CacheOptions? _options;
@@ -49,7 +52,7 @@ class SmSeImage extends SmSeRequest {
   }
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     return imageWidget;
   }
 

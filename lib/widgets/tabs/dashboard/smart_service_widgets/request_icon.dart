@@ -19,6 +19,9 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/m
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 class SmSeRequestIcon extends SmSeRequest {
+  @override
+  setPreview(bool enabled) => null;
+
   int codePoint = 0xe30b;
 
   @override
@@ -28,7 +31,7 @@ class SmSeRequestIcon extends SmSeRequest {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool _, bool __) {
+  Widget buildInternal(BuildContext context, bool __) {
     return Icon(IconData(codePoint, fontFamily: 'MaterialIcons'));
   }
 

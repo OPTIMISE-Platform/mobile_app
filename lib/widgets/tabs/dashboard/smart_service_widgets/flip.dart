@@ -21,6 +21,10 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/w
 const Duration animationDuration = Duration(milliseconds: 100);
 
 class SmSeFlip extends SmartServiceModuleWidget {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) => preview = enabled;
+
   SmartServiceModuleWidget? front;
   SmartServiceModuleWidget? back;
 
@@ -33,11 +37,13 @@ class SmSeFlip extends SmartServiceModuleWidget {
   double get width => (_showFront ? front?.width : back?.width) ?? 0;
 
   @override
-  Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
+  Widget buildInternal(BuildContext context, bool _) {
+    front?.setPreview(preview);
+    back?.setPreview(preview);
     return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        child: (_showFront ? front : back)?.buildInternal(context, onlyPreview, false),
-        onTap: onlyPreview
+        child: (_showFront ? front : back)?.buildInternal(context, false),
+        onTap: preview
             ? null
             : () async {
                 _showFront = !_showFront;

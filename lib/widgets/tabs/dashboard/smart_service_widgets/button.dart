@@ -21,6 +21,10 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/r
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 
 class SmSeButton extends SmSeRequest {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) => preview = enabled;
+
   SmartServiceModuleWidget? child;
 
   @override
@@ -30,9 +34,9 @@ class SmSeButton extends SmSeRequest {
   double width = 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
-    final w = child?.buildInternal(context, onlyPreview, false) ?? const SizedBox.shrink();
-    final onPressed = onlyPreview ? null : () async => await request.perform();
+  Widget buildInternal(BuildContext context, bool _) {
+    final w = child?.buildInternal(context, false) ?? const SizedBox.shrink();
+    final onPressed = preview ? null : () async => await request.perform();
 
     return (child is SmSeIcon
         ? IconButton(icon: w, onPressed: onPressed)

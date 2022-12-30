@@ -26,6 +26,9 @@ import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSePvForecast extends SmSeRequest {
+  @override
+  setPreview(bool enabled) => null;
+
   final List<LineChartBarData> _lines = [];
   final List<VerticalLine> _verticalLines = [];
   final List<String> _recommendations = [];
@@ -37,7 +40,7 @@ class SmSePvForecast extends SmSeRequest {
   double width = 5;
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Column(children: [

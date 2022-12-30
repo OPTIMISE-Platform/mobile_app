@@ -25,9 +25,10 @@ class SmSeColumn extends SmSeRow {
   double get width => children.map((e) => e?.width ?? 0).reduce((a, b) => a > b ? a : b) + 1;
 
   @override
-  Widget buildInternal(BuildContext context, bool onlyPreview, bool _) {
+  Widget buildInternal(BuildContext context, bool _) {
+    children.forEach((e) => e?.setPreview(preview));
     return Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: children.map((e) => e?.buildInternal(context, onlyPreview, true) ?? const SizedBox.shrink()).toList());
+        children: children.map((e) => e?.buildInternal(context, true) ?? const SizedBox.shrink()).toList());
   }
 }

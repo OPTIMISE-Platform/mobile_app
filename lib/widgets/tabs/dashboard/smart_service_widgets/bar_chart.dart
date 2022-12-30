@@ -24,6 +24,10 @@ import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
+  bool preview = false;
+  @override
+  setPreview(bool enabled) => preview = enabled;
+
   final List<BarChartGroupData> barGroups = [];
 
   @override
@@ -50,7 +54,7 @@ class SmSeBarChart extends SmSeLineChart {
   }
 
   @override
-  Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
+  Widget buildInternal(BuildContext context, bool parentFlexible) {
     final Widget w = barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -98,7 +102,7 @@ class SmSeBarChart extends SmSeLineChart {
                     ),
                   ),
                   barTouchData: BarTouchData(
-                      enabled: !previewOnly,
+                      enabled: !preview,
                       touchTooltipData: BarTouchTooltipData(
                           fitInsideHorizontally: true,
                           fitInsideVertically: true,
