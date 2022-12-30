@@ -29,10 +29,11 @@ import '../dashboard.dart';
 
 class SmSePieChart extends SmSeRequest {
   bool preview = false;
+
   @override
   setPreview(bool enabled) {
     preview = enabled;
-    if (enabled) {
+    if (enabled || !maximized) {
       height = 5;
     } else {
       height = 5.0 + _active_sections.length;
@@ -50,6 +51,8 @@ class SmSePieChart extends SmSeRequest {
   bool _allZero = false;
   bool showSum = false;
   String? sumUnit;
+
+  bool maximized = false;
 
   @override
   double height = 5;
@@ -83,7 +86,7 @@ class SmSePieChart extends SmSeRequest {
             child: StatefulBuilder(builder: (context, setState) {
               _buildSections();
               final List<Widget> legendWidgets = [];
-              if (_active_sections.isNotEmpty && !preview) {
+              if (_active_sections.isNotEmpty && !preview && maximized) {
                 _active_sections.forEach((i) {
                   legendWidgets.addAll([
                     GestureDetector(
@@ -131,9 +134,19 @@ class SmSePieChart extends SmSeRequest {
                       child: showSum
                           ? Text(
                               "${sum.toStringAsFixed(precision)}${sumUnit != null ? " $sumUnit" : ""}",
-                              textScaleFactor: 2,
+                              textScaleFactor: maximized ? 2 : 1,
                             )
-                          : const SizedBox.shrink())
+                          : const SizedBox.shrink()),
+                  preview ? const SizedBox.shrink() : Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: IconButton(
+                          onPressed: () => setState(() {
+                                maximized = !maximized;
+                                setPreview(preview);
+                                redrawDashboard(context);
+                              }),
+                          icon: Icon(maximized ? Icons.zoom_in_map : Icons.zoom_out_map)))
                 ])),
                 const SizedBox(height: 8),
                 PlatformWidget(
@@ -196,7 +209,7 @@ class SmSePieChart extends SmSeRequest {
       if (touchedIndex != -1) {
         isTouched = touchedIndex == _active_sections.indexWhere((element) => element == e.key);
       }
-      final fontSize = isTouched ? 16.0 : 11.0;
+      final fontSize = isTouched ? 16.0 : maximized ? 11.0 : 9.0;
       final radius = isTouched ? 60.0 : 50.0;
       final value = double.parse(e.value.toStringAsFixed(precision)) + (_allZero ? 1 : 0);
       if (value > 0) {
