@@ -26,14 +26,16 @@ class SmSeStackedBarChart extends SmSeBarChart {
   int touchedIndex = -1;
   List<dynamic> values = [];
 
+  bool maximized = true;
+
   @override
   setPreview(bool enabled) {
     preview = enabled;
-    if (enabled) {
-      height = 8;
+    if (enabled || !maximized) {
+      height = 7.0;
+      if (!enabled) height++;
     } else {
       height = 8.0 + (titles.length * .5);
-      ;
     }
   }
 
@@ -42,7 +44,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
     return StatefulBuilder(builder: (context, setState) {
       final List<Widget> legendWidgets = [];
 
-      if (!preview) {
+      if (!preview && maximized) {
         for (int i = 0; i < titles.length; i++) {
           legendWidgets.addAll([
             GestureDetector(
@@ -68,54 +70,69 @@ class SmSeStackedBarChart extends SmSeBarChart {
           ? const Center(child: Text("No Data"))
           : Column(children: [
               Container(
-                  height: 8 * heightUnit - MyTheme.insetSize,
-                  padding: const EdgeInsets.only(
-                      top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-                  child: BarChart(
-                    BarChartData(
-                        borderData: FlBorderData(show: false),
-                        barGroups: barGroups,
-                        titlesData: FlTitlesData(
-                          show: true,
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: false,
-                            ),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 14,
-                                getTitlesWidget: (val, meta) {
-                                  if (val == meta.max || val == meta.min) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                                  return Container(
-                                      padding: const EdgeInsets.only(top: 3),
-                                      child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                                }),
-                          ),
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 24,
-                                getTitlesWidget: (val, meta) {
-                                  if (val == meta.max || val == meta.min) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                                }),
+                height: 8 * heightUnit - MyTheme.insetSize,
+                padding: const EdgeInsets.only(
+                    top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+                child: BarChart(
+                  BarChartData(
+                      borderData: FlBorderData(show: false),
+                      barGroups: barGroups,
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: false,
                           ),
                         ),
-                        barTouchData: BarTouchData(enabled: false)),
-                    swapAnimationDuration: const Duration(milliseconds: 400),
-                  )),
-              ...legendWidgets
-            ]);
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 14,
+                              getTitlesWidget: (val, meta) {
+                                if (val == meta.max || val == meta.min) {
+                                  return const SizedBox.shrink();
+                                }
+                                final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
+                                return Container(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                              }),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 24,
+                              getTitlesWidget: (val, meta) {
+                                if (val == meta.max || val == meta.min) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                              }),
+                        ),
+                      ),
+                      barTouchData: BarTouchData(enabled: false)),
+                  swapAnimationDuration: const Duration(milliseconds: 400),
+                ),
+              ),
+              Expanded(child: Stack(children: [
+                Container(constraints: BoxConstraints(minHeight: 12, minWidth: MediaQuery.of(context).size.width), child: Column(children: legendWidgets),),
+                preview
+                    ? const SizedBox.shrink()
+                    : Positioned(
+                        bottom: 4,
+                        right: 12,
+                        child: IconButton(
+                            onPressed: () => setState(() {
+                                  maximized = !maximized;
+                                  setPreview(preview);
+                                  redrawDashboard(context);
+                                }),
+                            icon: Icon(maximized ? Icons.zoom_in_map : Icons.zoom_out_map)))
+              ])),
+      ]);
       return parentFlexible ? Expanded(child: w) : w;
     });
   }
