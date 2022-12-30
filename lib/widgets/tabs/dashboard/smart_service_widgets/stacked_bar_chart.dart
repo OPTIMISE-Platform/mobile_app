@@ -121,6 +121,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
       final List<BarChartRodStackItem> rodStackItems = [];
       for (int j = 1; j < values[i].length; j++) {
+        if (values[i][j] == null) values[i][j] = 0;
         rodStackItems
             .add(BarChartRodStackItem(sum, sum + values[i][j], MyTheme.getSomeColor(j - 1), BorderSide(width: touchedIndex == j - 1 ? 1.5 : 0)));
         sum += values[i][j];
