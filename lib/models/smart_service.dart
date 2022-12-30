@@ -97,7 +97,7 @@ class SmartServiceExtendedParameter {
       if (value is List) {
         value_label = options!.where((element) => (value as List).contains(element.value)).map((e) => e.label).join(", ");
       } else {
-        value_label = options!.firstWhere((element) => element.value == value).label;
+        value_label = options!.firstWhere((element) => element.value == value, orElse: () => SmartServiceParameterOption("", "", null, null, null)).label;
       }
     }
     return SmartServiceParameter(id, value, label, value_label);

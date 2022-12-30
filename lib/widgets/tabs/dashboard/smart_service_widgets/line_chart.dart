@@ -125,16 +125,16 @@ class SmSeLineChart extends SmSeRequest {
         int linesAdded = 0;
         for (int i = 0; i < respArr.length; i++) {
           if (respArr[i].isEmpty) continue;
-          _add2D(respArr[i], colorOffset: linesAdded);
+          add2D(respArr[i], colorOffset: linesAdded);
           linesAdded += (respArr[i][0] as List).length - 1;
         }
       } else {
-        _add2D(respArr);
+        add2D(respArr);
       }
     }
   }
 
-  void _add2D(List<dynamic> values, {int colorOffset = 0}) {
+  void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
     List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
     final List<String> timestamps = [];

@@ -21,8 +21,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/services/settings.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/services/settings.dart';
 
 typedef ThemeStyle = String;
 
@@ -198,7 +198,15 @@ class MyTheme {
 
   /// Retrieve a nice color. Colors are rotated based on i
   static Color getSomeColor(int i) {
-    const List<Color> colors = [MyTheme.appColor, ...Colors.primaries, ...Colors.accents];
+    const List<Color> colors = [
+      MyTheme.appColor,
+      Colors.indigo,
+      Colors.redAccent,
+      Colors.blueAccent,
+      Colors.teal,
+      Colors.deepOrangeAccent,
+      Colors.blueGrey
+    ];
     return colors[i % colors.length];
   }
 }

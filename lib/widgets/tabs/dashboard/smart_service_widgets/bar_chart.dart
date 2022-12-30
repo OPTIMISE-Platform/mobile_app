@@ -24,11 +24,11 @@ import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
-  final List<BarChartGroupData> _barGroups = [];
+  final List<BarChartGroupData> barGroups = [];
 
   @override
   Future<void> refreshInternal() async {
-    _barGroups.clear();
+    barGroups.clear();
     final resp = await request.perform();
     if (resp.statusCode > 299) {
       return;
@@ -40,18 +40,18 @@ class SmSeBarChart extends SmSeLineChart {
         int linesAdded = 0;
         for (int i = 0; i < respArr.length; i++) {
           if (respArr[i].isEmpty) continue;
-          _add2D(respArr[i], colorOffset: linesAdded);
+          add2D(respArr[i], colorOffset: linesAdded);
           linesAdded += (respArr[i][0] as List).length - 1;
         }
       } else {
-        _add2D(respArr);
+        add2D(respArr);
       }
     }
   }
 
   @override
   Widget buildInternal(BuildContext context, bool previewOnly, bool parentFlexible) {
-    final Widget w = _barGroups.isEmpty
+    final Widget w = barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
             height: height * heightUnit - MyTheme.insetSize,
@@ -60,7 +60,7 @@ class SmSeBarChart extends SmSeLineChart {
             child: BarChart(
               BarChartData(
                   borderData: FlBorderData(show: false),
-                  barGroups: _barGroups,
+                  barGroups: barGroups,
                   titlesData: FlTitlesData(
                     show: true,
                     rightTitles: AxisTitles(
@@ -98,8 +98,10 @@ class SmSeBarChart extends SmSeLineChart {
                     ),
                   ),
                   barTouchData: BarTouchData(
-                    enabled: !previewOnly,
+                      enabled: !previewOnly,
                       touchTooltipData: BarTouchTooltipData(
+                          fitInsideHorizontally: true,
+                          fitInsideVertically: true,
                           getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                               BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
               swapAnimationDuration: const Duration(milliseconds: 400),
@@ -107,7 +109,8 @@ class SmSeBarChart extends SmSeLineChart {
     return parentFlexible ? Expanded(child: w) : w;
   }
 
-  void _add2D(List<dynamic> values, {int colorOffset = 0}) {
+  @override
+  void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
     final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
@@ -120,10 +123,13 @@ class SmSeBarChart extends SmSeLineChart {
           .asMap()
           .entries
           .map<BarChartRodData>((e) => BarChartRodData(
-              toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)), color: MyTheme.getSomeColor(e.key)))
+              toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
+              color: MyTheme.getSomeColor(e.key),
+              width: 20,
+              borderRadius: const BorderRadius.horizontal()))
           .toList(growable: false);
       if (rods.isNotEmpty) {
-        _barGroups.add(BarChartGroupData(
+        barGroups.add(BarChartGroupData(
           x: t,
           barRods: rods,
         ));

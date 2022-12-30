@@ -29,6 +29,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/single_value.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/stacked_bar_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
 import 'package:mutex/mutex.dart';
 
@@ -55,6 +56,7 @@ const SmSeWidgetType smSeImageType = "image";
 const SmSeWidgetType smSePvForecastType = "pv_forecast";
 const SmSeWidgetType smSeBarChartType = "bar_chart";
 const SmSeWidgetType smSePieChartType = "pie_chart";
+const SmSeWidgetType smSeStackedBarChartType = "stacked_bar_chart";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -163,6 +165,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSePieChartType:
         w = SmSePieChart();
+        break;
+      case smSeStackedBarChartType:
+        w = SmSeStackedBarChart();
         break;
 
       // ADD NEW WIDGETS ABOVE
