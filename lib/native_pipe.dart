@@ -17,14 +17,18 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:isar/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'app_state.dart';
 import 'config/functions/function_config.dart';
+import 'main.dart';
 import 'models/device_state.dart';
 
 class NativePipe {
@@ -36,10 +40,9 @@ class NativePipe {
         case "getToggleStateless":
           final devices = await isar!.deviceInstances.where().findAll();
           final List<Future> futures = [];
-          devices.forEach((element) =>
-              futures.add(AppState()
-                  .loadDeviceType(element.device_type_id)
-                  .then((value) => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
+          devices.forEach((element) => futures.add(AppState()
+              .loadDeviceType(element.device_type_id)
+              .then((value) => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
           await Future.wait(futures);
           final resp = json
               .encode(devices.map((e) => e.states).expand((e) => e).where((e) => e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).toList());
@@ -52,10 +55,10 @@ class NativePipe {
           final controllingFunction = functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(!(state.value as bool));
           final controllingStates = device.states
               .where((s) =>
-          s.isControlling &&
-              s.functionId == controllingFunction &&
-              s.serviceGroupKey == state.serviceGroupKey &&
-              s.aspectId == state.aspectId)
+                  s.isControlling &&
+                  s.functionId == controllingFunction &&
+                  s.serviceGroupKey == state.serviceGroupKey &&
+                  s.aspectId == state.aspectId)
               .toList();
           if (controllingStates.isEmpty) {
             throw "Found no controlling service, check device type!";
@@ -74,6 +77,15 @@ class NativePipe {
             }
           }
           return json.encode(states);
+        case "openDetailPage":
+          final device = await isar!.deviceInstances.where().idEqualTo(call.arguments).findFirst();
+          if (navigatorKey.currentContext != null) {
+            Navigator.push(
+                navigatorKey.currentContext!, platformPageRoute(context: navigatorKey.currentContext!, builder: (context) => DetailPage(device, null)));
+          } else {
+            throw "No root context";
+          }
+          return null;
         default:
           throw MissingPluginException("not implemented");
       }

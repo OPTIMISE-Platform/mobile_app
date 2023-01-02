@@ -16,8 +16,7 @@
 
 package org.infai.optimise.mobile_app
 
-import android.app.PendingIntent
-import android.content.Intent
+import android.content.Context
 import android.os.Build
 import android.service.controls.Control
 import android.service.controls.ControlsProviderService
@@ -28,12 +27,10 @@ import androidx.annotation.RequiresApi
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
-import io.flutter.embedding.engine.loader.FlutterLoader
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.view.FlutterMain
 import io.reactivex.processors.FlowableProcessor
 import io.reactivex.processors.ReplayProcessor
 import org.reactivestreams.FlowAdapters
@@ -51,12 +48,9 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
 
     override fun createPublisherForAllAvailable(): Flow.Publisher<Control> {
         ensureFlutterReady()
-        val i = Intent(this, MainActivity::class.java)
-        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
-
         val processor = ReplayProcessor.create<Control>()
 
-        val handler = StatelessResultHandler(processor, pi)
+        val handler = StatelessResultHandler(baseContext, processor)
         MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel")
                 .invokeMethod("getToggleStateless", null, handler)
 
@@ -69,14 +63,9 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
         Log.d(TAG, "createPublisherFor: Requested for ${controlIds}}")
         ensureFlutterReady()
 
-        val i = Intent(this, MainActivity::class.java)
-        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
-        val toggleStreamHandler = ToggleStreamHandler(updateProcessor, pi, controlIds)
-
+        val toggleStreamHandler = ToggleStreamHandler(baseContext, updateProcessor, controlIds)
         MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel").setMethodCallHandler(toggleStreamHandler)
-
-
-        val statefulResultHandler = StatefulResultHandler(updateProcessor, pi)
+        val statefulResultHandler = StatefulResultHandler(baseContext, updateProcessor)
         val states = mutableListOf<DeviceState>()
         for (controlId in controlIds) {
             states.add(DeviceState(controlId))
@@ -91,8 +80,6 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
 
     override fun performControlAction(controlId: String, action: ControlAction, consumer: Consumer<Int>) {
         ensureFlutterReady()
-        val i = Intent(this, MainActivity::class.java)
-        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
 
         val state = DeviceState(controlId)
         if (action is BooleanAction) {
@@ -102,7 +89,7 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
                 .invokeMethod(
                         "setToggle",
                         state.toJSON(),
-                        ToggleResultHandler(updateProcessor, pi, state, consumer)
+                        ToggleResultHandler(baseContext, updateProcessor, state, consumer)
                 )
     }
 
@@ -129,7 +116,7 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
             loader.ensureInitializationComplete(baseContext, null)
             val engine = FlutterEngine(baseContext)
             engine.plugins.add(AppControlsProviderService())
-            engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint(FlutterMain.findAppBundlePath(), "main"))
+            engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint(loader.findAppBundlePath(), "main"))
             Log.d(TAG, "Flutter Engine inited")
             Log.d(TAG, "Binary Messanger now: " + binaryMessenger.toString())
         }
@@ -137,14 +124,14 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
 }
 
 private class StatelessResultHandler(
+        val context: Context,
         val processor: FlowableProcessor<Control>,
-        val pi: PendingIntent,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
         val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
-            processor.onNext(state.statelessToggleControl(pi))
+            processor.onNext(state.statelessToggleControl(context))
         }
         processor.onComplete()
     }
@@ -161,8 +148,8 @@ private class StatelessResultHandler(
 }
 
 private class ToggleStreamHandler(
+        val context: Context,
         val processor: FlowableProcessor<Control>,
-        val pi: PendingIntent,
         val controlIds: MutableList<String>
 ) : MethodChannel.MethodCallHandler {
 
@@ -174,7 +161,7 @@ private class ToggleStreamHandler(
                 if (!controlIds.contains(state.getId())) {
                     return
                 }
-                processor.onNext(state.statefulToggleControl(pi))
+                processor.onNext(state.statefulToggleControl(context))
             }
 
             else -> result.notImplemented()
@@ -183,14 +170,14 @@ private class ToggleStreamHandler(
 }
 
 private class StatefulResultHandler(
+        val context: Context,
         val processor: FlowableProcessor<Control>,
-        val pi: PendingIntent,
 ) : MethodChannel.Result {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
         val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
-            processor.onNext(state.statefulToggleControl(pi))
+            processor.onNext(state.statefulToggleControl(context))
         }
     }
 
@@ -206,8 +193,8 @@ private class StatefulResultHandler(
 }
 
 private class ToggleResultHandler(
+        val context: Context,
         val processor: FlowableProcessor<Control>,
-        val pi: PendingIntent,
         val state: DeviceState,
         val consumer: Consumer<Int>,
 ) : MethodChannel.Result {
@@ -216,7 +203,7 @@ private class ToggleResultHandler(
         val responses = DeviceCommandResponse.fromJSONList(result.toString())
         for (response in responses) {
             if (response.status_code == 200) {
-                val control = state.statefulToggleControl(pi)
+                val control = state.statefulToggleControl(context)
                 processor.onNext(control)
                 consumer.accept(ControlAction.RESPONSE_OK)
             } else {

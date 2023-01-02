@@ -37,6 +37,8 @@ import 'firebase_options.dart';
 
 import 'home.dart';
 
+final navigatorKey = GlobalKey<NavigatorState>();
+
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   await AppState.queueRemoteMessage(message);
@@ -136,6 +138,7 @@ class MyAppState extends State<MyApp> {
             initialPlatform: MyTheme.initialPlatform,
             settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
             builder: (context) => PlatformApp(
+              navigatorKey: navigatorKey,
               localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
                 DefaultMaterialLocalizations.delegate,
                 DefaultWidgetsLocalizations.delegate,

@@ -17,6 +17,8 @@
 package org.infai.optimise.mobile_app
 
 import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.service.controls.Control
 import android.service.controls.DeviceTypes
@@ -113,8 +115,18 @@ class DeviceState(id: String) {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
+    private fun pi(context: Context): PendingIntent {
+        val i = Intent(context, MainActivity::class.java)
+        i.putExtra("org.infai.optimise.mobile_app.DetailPage", this.deviceId)
+        for (key in i.extras!!.keySet()) {
+            Log.d("DeviceState", key)
+        }
+        return PendingIntent.getActivity(context, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    }
+
     @RequiresApi(Build.VERSION_CODES.R)
-    fun statelessToggleControl(pi: PendingIntent): Control {
+    fun statelessToggleControl(context: Context): Control {
         var subtitle = ""
         var title = ""
         if (name != null) {
@@ -123,7 +135,9 @@ class DeviceState(id: String) {
         if (serviceGroupName != null) {
             subtitle = serviceGroupName!!
         }
-        return Control.StatelessBuilder(getId(), pi)
+
+
+        return Control.StatelessBuilder(getId(), pi(context))
                 // Required: The name of the control
                 .setTitle(title)
                 // Required: Usually the room where the control is located
@@ -134,7 +148,7 @@ class DeviceState(id: String) {
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun statefulToggleControl(pi: PendingIntent): Control {
+    fun statefulToggleControl(context: Context): Control {
         var title = ""
         var subtitle = ""
         if (name != null) {
@@ -143,7 +157,7 @@ class DeviceState(id: String) {
         if (serviceGroupName != null) {
             subtitle = serviceGroupName!!
         }
-        return Control.StatefulBuilder(getId(), pi)
+        return Control.StatefulBuilder(getId(), pi(context))
                 // Required: The name of the control
                 .setTitle(title)
                 // Required: Usually the room where the control is located
