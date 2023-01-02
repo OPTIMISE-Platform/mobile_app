@@ -26,7 +26,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
   int touchedIndex = -1;
   List<dynamic> values = [];
 
-  bool maximized = true;
+  bool maximized = false;
 
   @override
   setPreview(bool enabled) {
