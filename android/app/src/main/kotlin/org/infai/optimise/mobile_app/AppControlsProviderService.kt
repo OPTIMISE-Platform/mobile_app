@@ -17,7 +17,6 @@
 package org.infai.optimise.mobile_app
 
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.service.controls.Control
@@ -26,113 +25,114 @@ import android.service.controls.actions.BooleanAction
 import android.service.controls.actions.ControlAction
 import android.util.Log
 import androidx.annotation.RequiresApi
+import io.flutter.FlutterInjector
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.embedding.engine.loader.FlutterLoader
+import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.view.FlutterMain
 import io.reactivex.processors.FlowableProcessor
 import io.reactivex.processors.ReplayProcessor
 import org.reactivestreams.FlowAdapters
 import java.util.concurrent.Flow
 import java.util.function.Consumer
 
-
 @RequiresApi(Build.VERSION_CODES.R)
-class AppControlsProviderService() : ControlsProviderService() {
+class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
 
-    private var updateProcessor: ReplayProcessor<Control> = ReplayProcessor.create()
+    companion object {
+        var binaryMessenger: BinaryMessenger? = null
+        const val TAG = "AppControlsProviderSe.."
+        var updateProcessor: ReplayProcessor<Control> = ReplayProcessor.create()
+    }
 
     override fun createPublisherForAllAvailable(): Flow.Publisher<Control> {
-        val context: Context = baseContext
+        ensureFlutterReady()
         val i = Intent(this, MainActivity::class.java)
-        val pi =
-                PendingIntent.getActivity(
-                        context,
-                        -1 /*CONTROL_REQUEST_CODE*/,
-                        i,
-                        PendingIntent.FLAG_IMMUTABLE
-                )
+        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
 
         val processor = ReplayProcessor.create<Control>()
 
         val handler = StatelessResultHandler(processor, pi)
-        AndroidPipe.flutterEngine?.dartExecutor?.let {
-            MethodChannel(
-                    it.binaryMessenger,
-                    "flutter/controlMethodChannel"
-            ).invokeMethod("getToggleStateless", null, handler)
-        }
+        MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel")
+                .invokeMethod("getToggleStateless", null, handler)
+
         val flow = FlowAdapters.toFlowPublisher(processor)
-        // Uncomment for Debugging flow.subscribe(LogSubscriber("ALL"))
+        flow.subscribe(LogSubscriber("ALL"))
         return flow
     }
 
     override fun createPublisherFor(controlIds: MutableList<String>): Flow.Publisher<Control> {
-        Log.d("AppControlsProviderSe..", "createPublisherFor: Requested for ${controlIds}}")
-        val context: Context = baseContext
-        val i = Intent(this, MainActivity::class.java)
-        val pi =
-                PendingIntent.getActivity(
-                        context,
-                        -1 /*CONTROL_REQUEST_CODE*/,
-                        i,
-                        PendingIntent.FLAG_IMMUTABLE
-                )
+        Log.d(TAG, "createPublisherFor: Requested for ${controlIds}}")
+        ensureFlutterReady()
 
+        val i = Intent(this, MainActivity::class.java)
+        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
         val toggleStreamHandler = ToggleStreamHandler(updateProcessor, pi, controlIds)
 
-        AndroidPipe.flutterEngine?.dartExecutor?.let {
-            MethodChannel(
-                    it.binaryMessenger,
-                    "flutter/controlMethodChannel"
-            ).setMethodCallHandler(toggleStreamHandler)
-        }
+        MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel").setMethodCallHandler(toggleStreamHandler)
+
 
         val statefulResultHandler = StatefulResultHandler(updateProcessor, pi)
         val states = mutableListOf<DeviceState>()
         for (controlId in controlIds) {
             states.add(DeviceState(controlId))
         }
-        AndroidPipe.flutterEngine?.dartExecutor?.let {
-            MethodChannel(
-                    it.binaryMessenger,
-                    "flutter/controlMethodChannel"
-            ).invokeMethod("getToggleStates",
-                    DeviceState.toJSONList(states), statefulResultHandler)
-        }
-
+        MethodChannel(
+                binaryMessenger!!,
+                "flutter/controlMethodChannel"
+        ).invokeMethod("getToggleStates",
+                DeviceState.toJSONList(states), statefulResultHandler)
         return FlowAdapters.toFlowPublisher(updateProcessor)
     }
 
-    override fun performControlAction(
-            controlId: String, action: ControlAction, consumer: Consumer<Int>
-    ) {
-        val context: Context = baseContext
+    override fun performControlAction(controlId: String, action: ControlAction, consumer: Consumer<Int>) {
+        ensureFlutterReady()
         val i = Intent(this, MainActivity::class.java)
-        val pi =
-                PendingIntent.getActivity(
-                        context,
-                        -1 /*CONTROL_REQUEST_CODE*/,
-                        i,
-                        PendingIntent.FLAG_IMMUTABLE
-                )
+        val pi = PendingIntent.getActivity(baseContext, -1, i, PendingIntent.FLAG_IMMUTABLE)
 
         val state = DeviceState(controlId)
         if (action is BooleanAction) {
             state.value = action.newState
         }
-        AndroidPipe.flutterEngine?.dartExecutor?.let {
-            MethodChannel(
-                    it.binaryMessenger,
-                    "flutter/controlMethodChannel"
-            ).invokeMethod(
-                    "setToggle",
-                    state.toJSON(),
-                    ToggleResultHandler(updateProcessor, pi, state, consumer)
-            )
-        }
+        MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel")
+                .invokeMethod(
+                        "setToggle",
+                        state.toJSON(),
+                        ToggleResultHandler(updateProcessor, pi, state, consumer)
+                )
     }
 
     init {
-        // Uncomment for Debugging FlowAdapters.toFlowPublisher(updateProcessor).subscribe(LogSubscriber("UPD"))
+        FlowAdapters.toFlowPublisher(updateProcessor).subscribe(LogSubscriber("UPD"))
+    }
+
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        Log.d(TAG, "Attached to engine")
+        binaryMessenger = binding.binaryMessenger
+    }
+
+    override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        Log.d(TAG, "Detached from engine")
+        binaryMessenger = binding.binaryMessenger
+    }
+
+    private fun ensureFlutterReady() {
+        if (binaryMessenger == null) {
+            Log.d(TAG, "binaryMessenger NULL")
+            Log.d(TAG, "Try init flutter Engine")
+            val loader = FlutterInjector.instance().flutterLoader()
+            loader.startInitialization(baseContext)
+            loader.ensureInitializationComplete(baseContext, null)
+            val engine = FlutterEngine(baseContext)
+            engine.plugins.add(AppControlsProviderService())
+            engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint(FlutterMain.findAppBundlePath(), "main"))
+            Log.d(TAG, "Flutter Engine inited")
+            Log.d(TAG, "Binary Messanger now: " + binaryMessenger.toString())
+        }
     }
 }
 

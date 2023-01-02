@@ -17,15 +17,18 @@
 package org.infai.optimise.mobile_app
 
 import android.os.Build
+import android.os.Bundle
 import androidx.annotation.RequiresApi
 import io.flutter.embedding.android.FlutterActivity
-import io.flutter.embedding.engine.FlutterEngine
 
 class MainActivity : FlutterActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
-    override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
-        super.configureFlutterEngine(flutterEngine)
-
-        AndroidPipe.flutterEngine = flutterEngine
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            flutterEngine!!.plugins.add(AppControlsProviderService())
+        } catch (e: Exception) {
+            io.flutter.Log.e("MainActivity", "Error registering plugin android_control_plugin, org.infai.optimise.mobile_app.AppControlsProviderService", e)
+        }
     }
 }
