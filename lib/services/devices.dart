@@ -146,7 +146,14 @@ class DevicesService {
   }
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
-  static Future<int> getTotalDevices(DeviceSearchFilter filter) async {
+  static Future<int> getTotalDevices(DeviceSearchFilter filter, {bool forceBackend = false}) async {
+    await initOptions();
+    final collection =  isar?.collection<DeviceInstance>();
+
+    if (!forceBackend && isar != null && collection != null) {
+      return await filter.isarQuery(double.maxFinite.toInt(), 0, collection).build().count();
+    }
+
     String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
@@ -154,7 +161,6 @@ class DevicesService {
       queryParameters["search"] = filter.query;
     }
     final headers = await Auth().getHeaders();
-    await initOptions();
     final Response<int> resp;
     try {
       final DateTime start = DateTime.now();
