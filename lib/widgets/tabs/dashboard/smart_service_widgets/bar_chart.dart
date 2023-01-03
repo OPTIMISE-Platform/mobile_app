@@ -24,11 +24,17 @@ import '../../../../theme.dart';
 import '../dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
-  bool preview = false;
-  @override
-  setPreview(bool enabled) => preview = enabled;
-
   final List<BarChartGroupData> barGroups = [];
+
+  bool colorLatestSpecial = false;
+  static const double specialColorMultiplier = 0.7;
+
+  @override
+  @mustCallSuper
+  Future<void> configure(dynamic data) async {
+    super.configure(data);
+    colorLatestSpecial = data["color_latest_special"] ?? colorLatestSpecial;
+  }
 
   @override
   Future<void> refreshInternal() async {
@@ -128,7 +134,10 @@ class SmSeBarChart extends SmSeLineChart {
           .entries
           .map<BarChartRodData>((e) => BarChartRodData(
               toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
-              color: MyTheme.getSomeColor(e.key),
+              color: i == values.length -1 && colorLatestSpecial ? MyTheme.getSomeColor(e.key).withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
+                  .withGreen((MyTheme.getSomeColor(e.key).green * specialColorMultiplier).toInt())
+                  .withBlue((MyTheme.getSomeColor(e.key).blue * specialColorMultiplier).toInt())
+                  : MyTheme.getSomeColor(e.key),
               width: 20,
               borderRadius: const BorderRadius.horizontal()))
           .toList(growable: false);
