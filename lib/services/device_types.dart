@@ -21,6 +21,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mutex/mutex.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
@@ -34,23 +35,27 @@ class DeviceTypesService {
   static CacheOptions? _options;
   static late final Dio? _dio;
 
+  static Mutex m = Mutex();
+
   static initOptions() async {
-    if (_options != null && _dio != null) {
-      return;
-    }
+    return await m.protect(() async {
+      if (_options != null && _dio != null) {
+        return;
+      }
 
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      hitCacheOnErrorExcept: [401, 403],
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.bodyCacheIDBuilder,
-    );
+      _options = CacheOptions(
+        store: HiveCacheStore(await CacheHelper.getCacheFile()),
+        policy: CachePolicy.forceCache,
+        hitCacheOnErrorExcept: [401, 403],
+        maxStale: const Duration(days: 7),
+        priority: CachePriority.normal,
+        keyBuilder: CacheHelper.bodyCacheIDBuilder,
+      );
 
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..httpClientAdapter = AppHttpClientAdapter();
+      _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+        ..interceptors.add(DioCacheInterceptor(options: _options!))
+        ..httpClientAdapter = AppHttpClientAdapter();
+    });
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {
