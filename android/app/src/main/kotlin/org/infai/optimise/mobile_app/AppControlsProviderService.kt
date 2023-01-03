@@ -104,7 +104,9 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         Log.d(TAG, "Detached from engine")
-        binaryMessenger = binding.binaryMessenger
+        binaryMessenger = null
+        updateProcessor.onComplete()
+        updateProcessor = ReplayProcessor.create()
     }
 
     private fun ensureFlutterReady() {

@@ -24,6 +24,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    var delayedIntent: Intent? = null
+
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,11 +34,15 @@ class MainActivity : FlutterActivity() {
         } catch (e: Exception) {
             io.flutter.Log.e("MainActivity", "Error registering plugin android_control_plugin, org.infai.optimise.mobile_app.AppControlsProviderService", e)
         }
+        delayedIntent = intent
     }
 
     override fun onResume() {
         super.onResume()
-        handleIntent(intent)
+        if (delayedIntent != null) {
+            handleIntent(delayedIntent!!)
+            delayedIntent = null
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

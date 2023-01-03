@@ -120,9 +120,9 @@ class DeviceState(id: String) {
         val i = Intent(context, MainActivity::class.java)
         i.putExtra("org.infai.optimise.mobile_app.DetailPage", this.deviceId)
         for (key in i.extras!!.keySet()) {
-            Log.d("DeviceState", key)
+            Log.d("DeviceState", key + " --> " + this.deviceId)
         }
-        return PendingIntent.getActivity(context, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        return PendingIntent.getActivity(context, deviceId.hashCode(), i, PendingIntent.FLAG_IMMUTABLE)
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
