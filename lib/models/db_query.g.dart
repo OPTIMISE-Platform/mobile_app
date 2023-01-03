@@ -63,6 +63,9 @@ QueriesRequestElementColumn _$QueriesRequestElementColumnFromJson(
       json['name'] as String,
       json['groupType'] as String?,
       json['math'] as String?,
+      json['sourceCharacteristicId'] as String?,
+      json['targetCharacteristicId'] as String?,
+      json['conceptId'] as String?,
     );
 
 Map<String, dynamic> _$QueriesRequestElementColumnToJson(
@@ -71,6 +74,9 @@ Map<String, dynamic> _$QueriesRequestElementColumnToJson(
       'name': instance.name,
       'groupType': instance.groupType,
       'math': instance.math,
+      'sourceCharacteristicId': instance.sourceCharacteristicId,
+      'targetCharacteristicId': instance.targetCharacteristicId,
+      'conceptId': instance.conceptId,
     };
 
 QueriesRequestElementFilter _$QueriesRequestElementFilterFromJson(

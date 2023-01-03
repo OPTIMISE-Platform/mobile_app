@@ -23,7 +23,9 @@ import 'package:mobile_app/services/db_query.dart';
 import 'package:mutex/mutex.dart';
 import 'package:stats/stats.dart';
 
+import '../../../../app_state.dart';
 import '../../../../models/db_query.dart';
+import '../../../../services/settings.dart';
 import '../../../../theme.dart';
 import '../../../shared/app_bar.dart';
 import '../../../shared/delay_circular_progress_indicator.dart';
@@ -80,8 +82,25 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       });
       late final List<List<dynamic>> data;
       try {
-        data = await DbQueryService.query(DbQuery(null, widget._state.deviceId, widget._state.serviceId, _getGroupTime(range), null, null, null,
-            QueriesRequestElementTime(_getTime(range), null, null), [QueriesRequestElementColumn(widget._state.path!, _aggregation, null)], null));
+        data = await DbQueryService.query(DbQuery(
+            null,
+            widget._state.deviceId,
+            widget._state.serviceId,
+            _getGroupTime(range),
+            null,
+            null,
+            null,
+            QueriesRequestElementTime(_getTime(range), null, null),
+            [
+              QueriesRequestElementColumn(
+                  widget._state.path!,
+                  _aggregation,
+                  null,
+                  null,
+                  Settings.getFunctionPreferredCharacteristicId(widget._state.functionId),
+                  AppState().nestedFunctions[widget._state.functionId]?.concept_id)
+            ],
+            null));
       } catch (e) {
         Toast.showErrorToast(context, "Could not load data");
         _logger.e(e);
@@ -245,8 +264,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
             )),
       ),
       PlatformIconButton(
-        onPressed: _refreshing ? null : () =>
-            _refresh(context, _range),
+        onPressed: _refreshing ? null : () => _refresh(context, _range),
         icon: _refreshing ? const DelayedCircularProgressIndicator() : const Icon(Icons.refresh),
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )
@@ -314,6 +332,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
     for (int i = 0; i < values.length; i++) {
       nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
     }
+    if (nums.isEmpty) return 0;
     final stats = Stats.fromData(nums);
     int precision = 0;
     if (stats.standardDeviation > 1) {

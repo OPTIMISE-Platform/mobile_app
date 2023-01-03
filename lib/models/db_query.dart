@@ -26,8 +26,11 @@ class DbQuery {
   List<QueriesRequestElementColumn>? columns;
   List<QueriesRequestElementFilter>? filters;
 
-  DbQuery(this.exportId, this.deviceId, this.serviceId, this.groupTime, this.orderDirection, this.limit, this.orderColumnIndex, this.time, this.columns, this.filters);
+  DbQuery(this.exportId, this.deviceId, this.serviceId, this.groupTime, this.orderDirection, this.limit, this.orderColumnIndex, this.time,
+      this.columns, this.filters);
+
   factory DbQuery.fromJson(Map<String, dynamic> json) => _$DbQueryFromJson(json);
+
   Map<String, dynamic> toJson() => _$DbQueryToJson(this);
 }
 
@@ -36,17 +39,21 @@ class QueriesRequestElementTime {
   String? last, start, end;
 
   QueriesRequestElementTime(this.last, this.start, this.end);
+
   factory QueriesRequestElementTime.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementTimeFromJson(json);
+
   Map<String, dynamic> toJson() => _$QueriesRequestElementTimeToJson(this);
 }
 
 @JsonSerializable()
 class QueriesRequestElementColumn {
   String name;
-  String? groupType, math;
+  String? groupType, math, sourceCharacteristicId, targetCharacteristicId, conceptId;
 
-  QueriesRequestElementColumn(this.name, this.groupType, this.math);
+  QueriesRequestElementColumn(this.name, this.groupType, this.math, this.sourceCharacteristicId, this.targetCharacteristicId, this.conceptId);
+
   factory QueriesRequestElementColumn.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementColumnFromJson(json);
+
   Map<String, dynamic> toJson() => _$QueriesRequestElementColumnToJson(this);
 }
 
@@ -57,6 +64,8 @@ class QueriesRequestElementFilter {
   dynamic value;
 
   QueriesRequestElementFilter(this.column, this.type, this.math, this.value);
+
   factory QueriesRequestElementFilter.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementFilterFromJson(json);
+
   Map<String, dynamic> toJson() => _$QueriesRequestElementFilterToJson(this);
 }
