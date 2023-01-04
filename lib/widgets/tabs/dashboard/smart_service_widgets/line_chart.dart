@@ -15,11 +15,14 @@
  */
 
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
+import 'package:mutex/mutex.dart';
 import 'package:stats/stats.dart';
 
 import '../../../../shared/keyed_list.dart';
@@ -28,6 +31,7 @@ import '../dashboard.dart';
 
 class SmSeLineChart extends SmSeRequest {
   bool preview = false;
+
   @override
   setPreview(bool enabled) => preview = enabled;
 
@@ -41,6 +45,15 @@ class SmSeLineChart extends SmSeRequest {
   @override
   double width = 5;
 
+  bool usesTSWrapperRequest = false;
+  List<DbQuery>? queries;
+  int left = double.maxFinite.toInt();
+  int right = (0.0 - double.maxFinite).toInt();
+  final List<String> timestamps = [];
+  final List<int> rawTimestamps = [];
+  Duration? initialTimestampDifference;
+  Mutex loadMoreData = Mutex();
+
   @override
   @mustCallSuper
   Future<void> configure(dynamic data) async {
@@ -48,6 +61,11 @@ class SmSeLineChart extends SmSeRequest {
     if (data is! Map<String, dynamic> || data["titles"] == null) return;
     titles.clear();
     (data["titles"] as List).forEach((element) => titles.add(element as String));
+    usesTSWrapperRequest = data["uses_ts_wrapper_request"] ?? usesTSWrapperRequest;
+    if (usesTSWrapperRequest) {
+      final l = json.decode(request.body) as List<dynamic>;
+      queries = List.generate(l.length, (index) => DbQuery.fromJson(l[index]));
+    }
   }
 
   @override
@@ -59,102 +77,137 @@ class SmSeLineChart extends SmSeRequest {
             //width: MediaQuery.of(context).size.width,
             padding:
                 const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: LineChart(
-              LineChartData(
-                borderData: FlBorderData(show: false),
-                lineBarsData: _lines,
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: false,
+            child: GestureDetector(
+                onHorizontalDragUpdate: preview || !usesTSWrapperRequest
+                    ? null
+                    : (details) async {
+                        if (loadMoreData.isLocked) return;
+                        await loadMoreData.acquire();
+                        final swipeWidth = ((initialTimestampDifference ?? Duration.zero).inMilliseconds *
+                                (details.delta.distance / MediaQuery.of(context).size.width))
+                            .toInt();
+                        if (details.delta.direction > 0) {
+                          // right
+                          left += swipeWidth;
+                          right += swipeWidth;
+                          if (right > rawTimestamps.last) {
+                            print("add right start");
+                            await addData(true);
+                            print("add right done");
+                          }
+                        } else {
+                          // left
+                          left -= swipeWidth;
+                          right -= swipeWidth;
+                          if (left < rawTimestamps.first) {
+                            print("add left start");
+                            await addData(false);
+                            print("add left done");
+                          }
+                        }
+                        redrawDashboard(context);
+                        loadMoreData.release();
+                      },
+                child: LineChart(
+                  LineChartData(
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: _lines,
+                    maxX: right.toDouble(),
+                    minX: left.toDouble(),
+                    titlesData: FlTitlesData(
+                      show: true,
+                      rightTitles: AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      topTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: false,
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 14,
+                            //interval: 5 * 60 * 1000,
+                            getTitlesWidget: (val, meta) {
+                              if (val == meta.max || val == meta.min) {
+                                return const SizedBox.shrink();
+                              }
+                              final dt = DateTime.fromMillisecondsSinceEpoch(val.floor(), isUtc: true).toLocal();
+                              return Container(
+                                  padding: const EdgeInsets.only(top: 3),
+                                  child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                            }),
+                      ),
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 24,
+                            getTitlesWidget: (val, meta) {
+                              if (val == meta.max || val == meta.min) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                            }),
+                      ),
                     ),
+                    lineTouchData: LineTouchData(
+                        enabled: !preview,
+                        touchTooltipData: LineTouchTooltipData(
+                            fitInsideVertically: true,
+                            fitInsideHorizontally: true,
+                            getTooltipItems: (spots) =>
+                                    spots.map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
+                                        TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
+                                    .toList())),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 14,
-                        //interval: 5 * 60 * 1000,
-                        getTitlesWidget: (val, meta) {
-                          if (val == meta.max || val == meta.min) {
-                            return const SizedBox.shrink();
-                          }
-                          final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                          return Container(
-                              padding: const EdgeInsets.only(top: 3),
-                              child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                        }),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 24,
-                        getTitlesWidget: (val, meta) {
-                          if (val == meta.max || val == meta.min) {
-                            return const SizedBox.shrink();
-                          }
-                          return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                        }),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                    enabled: !preview,
-                    touchTooltipData: LineTouchTooltipData(
-                        fitInsideVertically: true,
-                        fitInsideHorizontally: true,
-                        getTooltipItems: (spots) => spots
-                            .map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
-                                TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
-                            .toList())),
-              ),
-              swapAnimationDuration: const Duration(milliseconds: 400),
-            ));
+                  swapAnimationDuration: const Duration(milliseconds: 0),
+                )));
     return parentFlexible ? Expanded(child: w) : w;
   }
 
   @override
   Future<void> refreshInternal() async {
     _lines.clear();
-    final resp = await request.perform();
-    if (resp.statusCode > 299) {
-      return;
-    } else {
-      final List<dynamic> respArr = json.decode(resp.body);
-      if (respArr.isEmpty) return;
-      if (respArr[0] is! List || respArr[0].isEmpty) return;
-      if (respArr[0][0] is List) {
-        int linesAdded = 0;
-        for (int i = 0; i < respArr.length; i++) {
-          if (respArr[i].isEmpty) continue;
-          add2D(respArr[i], colorOffset: linesAdded);
-          linesAdded += (respArr[i][0] as List).length - 1;
-        }
-      } else {
-        add2D(respArr);
-      }
-    }
+    rawTimestamps.clear();
+    timestamps.clear();
+    await addFromRequest(request);
   }
 
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
     List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
-    final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
-      timestamps.add(values[i][0]);
       for (int j = 1; j < values[i].length; j++) {
-        if (values[i][j] != null)
+        if (values[i][j] != null) {
+          rawTimestamps.add(t.toInt());
+          timestamps.add(values[i][0]);
           lineSpots[j - 1].add(FlSpot(t, double.parse((values[i][j] is int ? values[i][j].toDouble() : values[i][j]).toStringAsFixed(precision))));
+        }
       }
     }
-    _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
+    lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.forEach((e) {
+      if (e.key < _lines.length) {
+        _lines[e.key].spots.addAll(e.value);
+        _lines[e.key].spots.sort((a, b) {
+          final d = a.x - b.x;
+          return d < 0 ? d.floor() : d.ceil();
+        });
+        _lines[e.key] = LineChartBarData(
+          dotData: FlDotData(show: false),
+          spots:  _lines[e.key].spots,
+          color: MyTheme.getSomeColor(e.key + colorOffset),
+        );
+      } else {
+        _lines.add(LineChartBarData(
           dotData: FlDotData(show: false),
           spots: e.value,
           color: MyTheme.getSomeColor(e.key + colorOffset),
-        )));
+        ));
+      }
+    });
+    rawTimestamps.sort();
     setDateFormat(timestamps);
   }
 
@@ -227,11 +280,59 @@ class SmSeLineChart extends SmSeRequest {
       precision = 1;
     } else {
       num std = stats.standardDeviation;
-      while (std < 1) {
+      while (std < 1 && std != 0) {
         std *= 10;
         precision++;
       }
     }
     return precision;
+  }
+
+  Future<void> addData(bool toRight) async {
+    final diff = (initialTimestampDifference ?? Duration.zero).inMilliseconds;
+    List<DbQuery> newBody = List.generate(queries?.length ?? 0, (i) {
+      final e = DbQuery.from(queries![i]);
+      if (toRight) {
+        e.time = QueriesRequestElementTime(
+            null,
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true).toIso8601String(),
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.length + diff, isUtc: true).toIso8601String());
+      } else {
+        e.time = QueriesRequestElementTime(null, DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first - diff, isUtc: true).toIso8601String(),
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first, isUtc: true).toIso8601String());
+      }
+
+      return e;
+    });
+    final newRequest = Request.from(request);
+    newRequest.body = json.encode(newBody);
+    await addFromRequest(newRequest);
+  }
+
+  Future<void> addFromRequest(Request request) async {
+    final resp = await request.perform();
+    if (resp.statusCode > 299) {
+      return;
+    } else {
+      final List<dynamic> respArr = json.decode(resp.body) ?? [];
+      if (respArr.isEmpty) return;
+      if (respArr[0] is! List || respArr[0].isEmpty) return;
+      if (respArr[0][0] is List) {
+        int linesAdded = 0;
+        for (int i = 0; i < respArr.length; i++) {
+          if (respArr[i].isEmpty) continue;
+          add2D(respArr[i], colorOffset: linesAdded);
+          linesAdded += (respArr[i][0] as List).length - 1;
+        }
+      } else {
+        add2D(respArr);
+      }
+    }
+    if (initialTimestampDifference == null && rawTimestamps.isNotEmpty) {
+      initialTimestampDifference = DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true)
+          .difference(DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first, isUtc: true));
+      left = min(left, rawTimestamps.first);
+      right = max(right, rawTimestamps.last);
+    }
   }
 }

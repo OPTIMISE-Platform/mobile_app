@@ -32,6 +32,18 @@ class DbQuery {
   factory DbQuery.fromJson(Map<String, dynamic> json) => _$DbQueryFromJson(json);
 
   Map<String, dynamic> toJson() => _$DbQueryToJson(this);
+
+  factory DbQuery.from(DbQuery q) => DbQuery(
+      q.exportId,
+      q.deviceId,
+      q.serviceId,
+      q.groupTime,
+      q.orderDirection,
+      q.limit,
+      q.orderColumnIndex,
+      q.time == null ? null : QueriesRequestElementTime.from(q.time!),
+      q.columns == null ? null : List.generate(q.columns!.length, (i) => QueriesRequestElementColumn.from(q.columns![i])),
+      q.filters == null ? null : List.generate(q.filters!.length, (i) => QueriesRequestElementFilter.from(q.filters![i])));
 }
 
 @JsonSerializable()
@@ -43,6 +55,8 @@ class QueriesRequestElementTime {
   factory QueriesRequestElementTime.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementTimeFromJson(json);
 
   Map<String, dynamic> toJson() => _$QueriesRequestElementTimeToJson(this);
+
+  factory QueriesRequestElementTime.from(QueriesRequestElementTime e) => QueriesRequestElementTime(e.last, e.start, e.end);
 }
 
 @JsonSerializable()
@@ -55,6 +69,9 @@ class QueriesRequestElementColumn {
   factory QueriesRequestElementColumn.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementColumnFromJson(json);
 
   Map<String, dynamic> toJson() => _$QueriesRequestElementColumnToJson(this);
+
+  factory QueriesRequestElementColumn.from(QueriesRequestElementColumn c) =>
+      QueriesRequestElementColumn(c.name, c.groupType, c.math, c.sourceCharacteristicId, c.targetCharacteristicId, c.conceptId);
 }
 
 @JsonSerializable()
@@ -68,4 +85,6 @@ class QueriesRequestElementFilter {
   factory QueriesRequestElementFilter.fromJson(Map<String, dynamic> json) => _$QueriesRequestElementFilterFromJson(json);
 
   Map<String, dynamic> toJson() => _$QueriesRequestElementFilterToJson(this);
+
+  factory QueriesRequestElementFilter.from(QueriesRequestElementFilter f) => QueriesRequestElementFilter(f.column, f.type, f.math, f.value);
 }

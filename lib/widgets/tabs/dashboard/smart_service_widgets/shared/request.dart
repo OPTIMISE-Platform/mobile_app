@@ -31,11 +31,13 @@ class Request {
   final bool need_token;
 
   Request(this.method, this.url, dynamic body, this.need_token) {
-      this.body = json.encode(body);
+    this.body = json.encode(body);
   }
 
   factory Request.fromJson(Map<String, dynamic> json) =>
       Request(json["method"] as String, json["url"] as String, json["body"], json["need_token"] as bool);
+
+  factory Request.from(Request r) => Request(r.method, r.url, json.decode(json.encode(r.body)), r.need_token);
 
   Future<http.Response> perform() async {
     var uri = Uri.parse(url);
