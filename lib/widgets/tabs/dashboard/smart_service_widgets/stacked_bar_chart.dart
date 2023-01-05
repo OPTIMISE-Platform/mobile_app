@@ -64,7 +64,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
         }
       }
 
-      buildGroups();
+      buildGroups(); // Do this here for highlighting
 
       final Widget w = barGroups.isEmpty
           ? const Center(child: Text("No Data"))
@@ -73,10 +73,10 @@ class SmSeStackedBarChart extends SmSeBarChart {
                 height: 8 * heightUnit - MyTheme.insetSize,
                 padding: const EdgeInsets.only(
                     top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-                child: BarChart(
+                child: gestureDetector(context, BarChart(
                   BarChartData(
                       borderData: FlBorderData(show: false),
-                      barGroups: barGroups,
+                      barGroups: barGroups.where((e) => e.x >= left && e.x <= right).toList(),
                       titlesData: FlTitlesData(
                         show: true,
                         rightTitles: AxisTitles(
@@ -114,9 +114,9 @@ class SmSeStackedBarChart extends SmSeBarChart {
                         ),
                       ),
                       barTouchData: BarTouchData(enabled: false)),
-                  swapAnimationDuration: const Duration(milliseconds: 400),
+                  swapAnimationDuration: Duration.zero,
                 ),
-              ),
+              )),
               Expanded(child: Stack(children: [
                 Container(constraints: BoxConstraints(minHeight: 12, minWidth: MediaQuery.of(context).size.width), child: Column(children: legendWidgets),),
                 preview
@@ -139,12 +139,19 @@ class SmSeStackedBarChart extends SmSeBarChart {
 
   @override
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
-    this.values = values;
+    this.values.addAll(values);
+  }
+
+  @override
+  Future<void> refreshInternal() async {
+    values.clear();
+    await super.refreshInternal();
   }
 
   void buildGroups() {
-    final List<String> timestamps = [];
     barGroups.clear();
+    timestamps.clear();
+    rawTimestamps.clear();
     for (int i = 0; i < values.length; i++) {
       double sum = 0.0;
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
@@ -157,6 +164,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
       }
 
       timestamps.add(values[i][0]);
+      rawTimestamps.add(t.toInt());
       final rod = BarChartRodData(toY: sum, rodStackItems: rodStackItems, width: 20, borderRadius: const BorderRadius.horizontal());
       if (rodStackItems.isNotEmpty) {
         barGroups.add(BarChartGroupData(
@@ -165,6 +173,8 @@ class SmSeStackedBarChart extends SmSeBarChart {
         ));
       }
     }
+    rawTimestamps.sort();
+    barGroups.sort((a, b) => a.x - b.x);
     setDateFormat(timestamps);
   }
 }

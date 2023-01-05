@@ -130,7 +130,7 @@ class SmSeLineChart extends SmSeRequest {
                                         TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
                                     .toList())),
                   ),
-                  swapAnimationDuration: const Duration(milliseconds: 0),
+                  swapAnimationDuration: Duration.zero,
                 )));
     return parentFlexible ? Expanded(child: w) : w;
   }

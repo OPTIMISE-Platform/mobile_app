@@ -95,7 +95,7 @@ class SmSeBarChart extends SmSeLineChart {
                           fitInsideVertically: true,
                           getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                               BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
-              swapAnimationDuration: const Duration(milliseconds: 0),
+              swapAnimationDuration: Duration.zero,
             )));
     return parentFlexible ? Expanded(child: w) : w;
   }
