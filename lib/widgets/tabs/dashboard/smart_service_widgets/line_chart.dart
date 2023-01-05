@@ -77,38 +77,7 @@ class SmSeLineChart extends SmSeRequest {
             //width: MediaQuery.of(context).size.width,
             padding:
                 const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: GestureDetector(
-                onHorizontalDragUpdate: preview || !usesTSWrapperRequest
-                    ? null
-                    : (details) async {
-                        if (loadMoreData.isLocked) return;
-                        await loadMoreData.acquire();
-                        final swipeWidth = ((initialTimestampDifference ?? Duration.zero).inMilliseconds *
-                                (details.delta.distance / MediaQuery.of(context).size.width))
-                            .toInt();
-                        if (details.delta.direction > 0) {
-                          // right
-                          left += swipeWidth;
-                          right += swipeWidth;
-                          if (right > rawTimestamps.last) {
-                            print("add right start");
-                            await addData(true);
-                            print("add right done");
-                          }
-                        } else {
-                          // left
-                          left -= swipeWidth;
-                          right -= swipeWidth;
-                          if (left < rawTimestamps.first) {
-                            print("add left start");
-                            await addData(false);
-                            print("add left done");
-                          }
-                        }
-                        redrawDashboard(context);
-                        loadMoreData.release();
-                      },
-                child: LineChart(
+            child: gestureDetector(context, LineChart(
                   LineChartData(
                     borderData: FlBorderData(show: false),
                     lineBarsData: _lines,
@@ -334,5 +303,36 @@ class SmSeLineChart extends SmSeRequest {
       left = min(left, rawTimestamps.first);
       right = max(right, rawTimestamps.last);
     }
+  }
+
+  Widget gestureDetector(BuildContext context, Widget child) {
+    return GestureDetector(
+        onHorizontalDragUpdate: preview || !usesTSWrapperRequest
+        ? null
+        : (details) async {
+      if (loadMoreData.isLocked) return;
+      await loadMoreData.acquire();
+      final swipeWidth = max(((initialTimestampDifference ?? Duration.zero).inMilliseconds *
+          (details.delta.distance / MediaQuery.of(context).size.width)),  0)
+          .toInt();
+      if (details.delta.direction > 0) {
+        // right
+        left += swipeWidth;
+        right += swipeWidth;
+        if (right > rawTimestamps.last) {
+          await addData(true);
+        }
+      } else {
+        // left
+        left -= swipeWidth;
+        right -= swipeWidth;
+        if (left < rawTimestamps.first) {
+          await addData(false);
+        }
+      }
+      redrawDashboard(context);
+      loadMoreData.release();
+    },
+    child: child);
   }
 }

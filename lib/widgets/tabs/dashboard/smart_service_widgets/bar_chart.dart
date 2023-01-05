@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
@@ -39,24 +37,7 @@ class SmSeBarChart extends SmSeLineChart {
   @override
   Future<void> refreshInternal() async {
     barGroups.clear();
-    final resp = await request.perform();
-    if (resp.statusCode > 299) {
-      return;
-    } else {
-      final List<dynamic> respArr = json.decode(resp.body);
-      if (respArr.isEmpty) return;
-      if (respArr[0] is! List || respArr[0].isEmpty) return;
-      if (respArr[0][0] is List) {
-        int linesAdded = 0;
-        for (int i = 0; i < respArr.length; i++) {
-          if (respArr[i].isEmpty) continue;
-          add2D(respArr[i], colorOffset: linesAdded);
-          linesAdded += (respArr[i][0] as List).length - 1;
-        }
-      } else {
-        add2D(respArr);
-      }
-    }
+    await super.refreshInternal();
   }
 
   @override
@@ -67,10 +48,10 @@ class SmSeBarChart extends SmSeLineChart {
             height: height * heightUnit - MyTheme.insetSize,
             padding:
                 const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: BarChart(
+            child: gestureDetector(context, BarChart(
               BarChartData(
                   borderData: FlBorderData(show: false),
-                  barGroups: barGroups,
+                  barGroups: barGroups.where((element) => element.x >= left && element.x <= right).toList(),
                   titlesData: FlTitlesData(
                     show: true,
                     rightTitles: AxisTitles(
@@ -114,18 +95,18 @@ class SmSeBarChart extends SmSeLineChart {
                           fitInsideVertically: true,
                           getTooltipItem: (group, groupIndex, rod, rodIndex) =>
                               BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
-              swapAnimationDuration: const Duration(milliseconds: 400),
-            ));
+              swapAnimationDuration: const Duration(milliseconds: 0),
+            )));
     return parentFlexible ? Expanded(child: w) : w;
   }
 
   @override
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
-    final List<String> timestamps = [];
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
       timestamps.add(values[i][0]);
+      rawTimestamps.add(t.toInt());
       final rods = (values[i] as List)
           .skip(1)
           .where((element) => element != 0.0 && element != null && element != 0)
@@ -134,7 +115,7 @@ class SmSeBarChart extends SmSeLineChart {
           .entries
           .map<BarChartRodData>((e) => BarChartRodData(
               toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
-              color: i == values.length -1 && colorLatestSpecial ? MyTheme.getSomeColor(e.key).withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
+              color: i == values.length -1 && colorLatestSpecial && initialTimestampDifference == null ? MyTheme.getSomeColor(e.key).withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
                   .withGreen((MyTheme.getSomeColor(e.key).green * specialColorMultiplier).toInt())
                   .withBlue((MyTheme.getSomeColor(e.key).blue * specialColorMultiplier).toInt())
                   : MyTheme.getSomeColor(e.key),
@@ -148,6 +129,8 @@ class SmSeBarChart extends SmSeLineChart {
         ));
       }
     }
+    barGroups.sort((a, b) => a.x - b.x);
+    rawTimestamps.sort();
     setDateFormat(timestamps);
   }
 }
