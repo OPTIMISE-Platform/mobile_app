@@ -70,55 +70,61 @@ class SmSeStackedBarChart extends SmSeBarChart {
           ? const Center(child: Text("No Data"))
           : Column(children: [
               Container(
-                height: 8 * heightUnit - MyTheme.insetSize,
-                padding: const EdgeInsets.only(
-                    top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-                child: gestureDetector(context, BarChart(
-                  BarChartData(
-                      borderData: FlBorderData(show: false),
-                      barGroups: barGroups.where((e) => e.x >= left && e.x <= right).toList(),
-                      titlesData: FlTitlesData(
-                        show: true,
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: false,
+                  height: 8 * heightUnit - MyTheme.insetSize,
+                  padding: const EdgeInsets.only(
+                      top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+                  child: gestureDetector(
+                    context,
+                    BarChart(
+                      BarChartData(
+                          borderData: FlBorderData(show: false),
+                          barGroups: barGroups.where((e) => e.x >= left && e.x <= right).toList(),
+                          titlesData: FlTitlesData(
+                            show: true,
+                            rightTitles: AxisTitles(
+                              sideTitles: SideTitles(showTitles: false),
+                            ),
+                            topTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                showTitles: false,
+                              ),
+                            ),
+                            bottomTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 14,
+                                  getTitlesWidget: (val, meta) {
+                                    if (val == meta.max || val == meta.min) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
+                                    return Container(
+                                        padding: const EdgeInsets.only(top: 3),
+                                        child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                                  }),
+                            ),
+                            leftTitles: AxisTitles(
+                              sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 24,
+                                  getTitlesWidget: (val, meta) {
+                                    if (val == meta.max || val == meta.min) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                                  }),
+                            ),
                           ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 14,
-                              getTitlesWidget: (val, meta) {
-                                if (val == meta.max || val == meta.min) {
-                                  return const SizedBox.shrink();
-                                }
-                                final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                                return Container(
-                                    padding: const EdgeInsets.only(top: 3),
-                                    child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                              }),
-                        ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 24,
-                              getTitlesWidget: (val, meta) {
-                                if (val == meta.max || val == meta.min) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                              }),
-                        ),
-                      ),
-                      barTouchData: BarTouchData(enabled: false)),
-                  swapAnimationDuration: Duration.zero,
+                          barTouchData: BarTouchData(enabled: false)),
+                      swapAnimationDuration: Duration.zero,
+                    ),
+                  )),
+              Expanded(
+                  child: Stack(children: [
+                Container(
+                  constraints: BoxConstraints(minHeight: 12, minWidth: MediaQuery.of(context).size.width),
+                  child: Column(children: legendWidgets),
                 ),
-              )),
-              Expanded(child: Stack(children: [
-                Container(constraints: BoxConstraints(minHeight: 12, minWidth: MediaQuery.of(context).size.width), child: Column(children: legendWidgets),),
                 preview
                     ? const SizedBox.shrink()
                     : Positioned(
@@ -132,7 +138,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
                                 }),
                             icon: Icon(maximized ? Icons.zoom_in_map : Icons.zoom_out_map)))
               ])),
-      ]);
+            ]);
       return parentFlexible ? Expanded(child: w) : w;
     });
   }

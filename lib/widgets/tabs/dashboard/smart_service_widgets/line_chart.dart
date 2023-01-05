@@ -77,7 +77,9 @@ class SmSeLineChart extends SmSeRequest {
             //width: MediaQuery.of(context).size.width,
             padding:
                 const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: gestureDetector(context, LineChart(
+            child: gestureDetector(
+                context,
+                LineChart(
                   LineChartData(
                     borderData: FlBorderData(show: false),
                     lineBarsData: _lines,
@@ -125,10 +127,10 @@ class SmSeLineChart extends SmSeRequest {
                         touchTooltipData: LineTouchTooltipData(
                             fitInsideVertically: true,
                             fitInsideHorizontally: true,
-                            getTooltipItems: (spots) =>
-                                    spots.map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
-                                        TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
-                                    .toList())),
+                            getTooltipItems: (spots) => spots
+                                .map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
+                                    TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
+                                .toList())),
                   ),
                   swapAnimationDuration: Duration.zero,
                 )));
@@ -165,7 +167,7 @@ class SmSeLineChart extends SmSeRequest {
         });
         _lines[e.key] = LineChartBarData(
           dotData: FlDotData(show: false),
-          spots:  _lines[e.key].spots,
+          spots: _lines[e.key].spots,
           color: MyTheme.getSomeColor(e.key + colorOffset),
         );
       } else {
@@ -262,9 +264,7 @@ class SmSeLineChart extends SmSeRequest {
     List<DbQuery> newBody = List.generate(queries?.length ?? 0, (i) {
       final e = DbQuery.from(queries![i]);
       if (toRight) {
-        e.time = QueriesRequestElementTime(
-            null,
-            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true).toIso8601String(),
+        e.time = QueriesRequestElementTime(null, DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true).toIso8601String(),
             DateTime.fromMillisecondsSinceEpoch(rawTimestamps.length + diff, isUtc: true).toIso8601String());
       } else {
         e.time = QueriesRequestElementTime(null, DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first - diff, isUtc: true).toIso8601String(),
@@ -308,31 +308,32 @@ class SmSeLineChart extends SmSeRequest {
   Widget gestureDetector(BuildContext context, Widget child) {
     return GestureDetector(
         onHorizontalDragUpdate: preview || !usesTSWrapperRequest
-        ? null
-        : (details) async {
-      if (loadMoreData.isLocked) return;
-      await loadMoreData.acquire();
-      final swipeWidth = max(((initialTimestampDifference ?? Duration.zero).inMilliseconds *
-          (details.delta.distance / MediaQuery.of(context).size.width)),  0)
-          .toInt();
-      if (details.delta.direction > 0) {
-        // right
-        left += swipeWidth;
-        right += swipeWidth;
-        if (right > rawTimestamps.last) {
-          await addData(true);
-        }
-      } else {
-        // left
-        left -= swipeWidth;
-        right -= swipeWidth;
-        if (left < rawTimestamps.first) {
-          await addData(false);
-        }
-      }
-      redrawDashboard(context);
-      loadMoreData.release();
-    },
-    child: child);
+            ? null
+            : (details) async {
+                if (loadMoreData.isLocked) return;
+                await loadMoreData.acquire();
+                final swipeWidth = max(
+                        ((initialTimestampDifference ?? Duration.zero).inMilliseconds * (details.delta.distance / MediaQuery.of(context).size.width)),
+                        0)
+                    .toInt();
+                if (details.delta.direction > 0) {
+                  // right
+                  left += swipeWidth;
+                  right += swipeWidth;
+                  if (right > rawTimestamps.last) {
+                    await addData(true);
+                  }
+                } else {
+                  // left
+                  left -= swipeWidth;
+                  right -= swipeWidth;
+                  if (left < rawTimestamps.first) {
+                    await addData(false);
+                  }
+                }
+                redrawDashboard(context);
+                loadMoreData.release();
+              },
+        child: child);
   }
 }

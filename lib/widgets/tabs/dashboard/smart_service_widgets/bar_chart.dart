@@ -48,55 +48,57 @@ class SmSeBarChart extends SmSeLineChart {
             height: height * heightUnit - MyTheme.insetSize,
             padding:
                 const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: gestureDetector(context, BarChart(
-              BarChartData(
-                  borderData: FlBorderData(show: false),
-                  barGroups: barGroups.where((element) => element.x >= left && element.x <= right).toList(),
-                  titlesData: FlTitlesData(
-                    show: true,
-                    rightTitles: AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    topTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: false,
+            child: gestureDetector(
+                context,
+                BarChart(
+                  BarChartData(
+                      borderData: FlBorderData(show: false),
+                      barGroups: barGroups.where((element) => element.x >= left && element.x <= right).toList(),
+                      titlesData: FlTitlesData(
+                        show: true,
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: false,
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 14,
+                              getTitlesWidget: (val, meta) {
+                                if (val == meta.max || val == meta.min) {
+                                  return const SizedBox.shrink();
+                                }
+                                final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
+                                return Container(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                              }),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 24,
+                              getTitlesWidget: (val, meta) {
+                                if (val == meta.max || val == meta.min) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                              }),
+                        ),
                       ),
-                    ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 14,
-                          getTitlesWidget: (val, meta) {
-                            if (val == meta.max || val == meta.min) {
-                              return const SizedBox.shrink();
-                            }
-                            final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                            return Container(
-                                padding: const EdgeInsets.only(top: 3),
-                                child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                          }),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                          showTitles: true,
-                          reservedSize: 24,
-                          getTitlesWidget: (val, meta) {
-                            if (val == meta.max || val == meta.min) {
-                              return const SizedBox.shrink();
-                            }
-                            return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                          }),
-                    ),
-                  ),
-                  barTouchData: BarTouchData(
-                      enabled: !preview,
-                      touchTooltipData: BarTouchTooltipData(
-                          fitInsideHorizontally: true,
-                          fitInsideVertically: true,
-                          getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                              BarTooltipItem("${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
-              swapAnimationDuration: Duration.zero,
-            )));
+                      barTouchData: BarTouchData(
+                          enabled: !preview,
+                          touchTooltipData: BarTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
+                              getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                                  "${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
+                  swapAnimationDuration: Duration.zero,
+                )));
     return parentFlexible ? Expanded(child: w) : w;
   }
 
@@ -115,9 +117,11 @@ class SmSeBarChart extends SmSeLineChart {
           .entries
           .map<BarChartRodData>((e) => BarChartRodData(
               toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
-              color: i == values.length -1 && colorLatestSpecial && initialTimestampDifference == null ? MyTheme.getSomeColor(e.key).withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
-                  .withGreen((MyTheme.getSomeColor(e.key).green * specialColorMultiplier).toInt())
-                  .withBlue((MyTheme.getSomeColor(e.key).blue * specialColorMultiplier).toInt())
+              color: i == values.length - 1 && colorLatestSpecial && initialTimestampDifference == null
+                  ? MyTheme.getSomeColor(e.key)
+                      .withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
+                      .withGreen((MyTheme.getSomeColor(e.key).green * specialColorMultiplier).toInt())
+                      .withBlue((MyTheme.getSomeColor(e.key).blue * specialColorMultiplier).toInt())
                   : MyTheme.getSomeColor(e.key),
               width: 20,
               borderRadius: const BorderRadius.horizontal()))
