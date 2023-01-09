@@ -179,11 +179,25 @@ class DeviceGroup {
   setFavorite(bool val) {
     if (val) {
       attributes ??= [];
-      attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
+      try {
+        attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
+      } on UnsupportedError {
+        final List<Attribute> tmp = [];
+        tmp.addAll(attributes!);
+        tmp.add(Attribute.New(attributeFavorite, "true", appOrigin));
+        attributes = tmp;
+      }
     } else {
       final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
       if (i != null && i != -1) {
-        attributes!.removeAt(i);
+        try {
+          attributes!.removeAt(i);
+        } on UnsupportedError {
+          final List<Attribute> tmp = [];
+          tmp.addAll(attributes!);
+          tmp.removeAt(i);
+          attributes = tmp;
+        }
       }
     }
   }
