@@ -65,23 +65,6 @@ class DevicesService {
     if (!forceBackend && isar != null && collection != null && await collection.count() >= AppState().totalDevices) {
       final devices = await filter.isarQuery(limit, offset, collection).build().findAll();
       _logger.d("Getting devices from local DB took ${DateTime.now().difference(start)}");
-      Future.delayed(const Duration(seconds: 2), () async {
-        final refreshDeviceIds = devices.where((element) => element.network?.localService == null).map((e) => e.id).toList(growable: false);
-        if (refreshDeviceIds.isEmpty) {
-          return;
-        }
-        final refreshFilter =  DeviceSearchFilter("");
-        refreshFilter.deviceIds = refreshDeviceIds;
-        final refreshedDevices = await getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true);
-        refreshedDevices.forEach((d1) {
-          final i = AppState().devices.indexWhere((d2) => d1.id == d2.id);
-          if (i == -1) return;
-          AppState().devices[i] = d1;
-        });
-        await isar!.writeTxn(() async {
-          await collection.putAll(refreshedDevices);
-        });
-      });
       return devices;
     }
     final headers = await Auth().getHeaders();

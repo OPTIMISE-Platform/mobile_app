@@ -345,10 +345,21 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         newDevices[i].prepareStates(deviceTypes[newDevices[i].device_type_id]!);
       }
 
-      await Future.wait(<Future>[
+      final futures = <Future>[
         loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']),
-        MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices)
-      ]);
+        MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices),
+      ];
+
+      // update connection status for devices outside of local network
+      final refreshDeviceIds = newDevices.where((element) => element.network?.localService == null).map((e) => e.id).toList(growable: false);
+      if (refreshDeviceIds.isNotEmpty) {
+        final refreshFilter = DeviceSearchFilter("");
+        refreshFilter.deviceIds = refreshDeviceIds;
+        futures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true)
+            .then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
+      }
+
+      await Future.wait(futures);
       devices.addAll(newDevices);
     }
     if (totalDevices <= _deviceOffset) {
