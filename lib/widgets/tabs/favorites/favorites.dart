@@ -41,6 +41,7 @@ class DeviceListFavorites extends StatefulWidget {
 class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsBindingObserver {
   final GlobalKey _keyFavButton = GlobalKey();
   StreamSubscription? _refreshSubscription;
+  bool _init = false;
 
   _openFavorites(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
@@ -74,8 +75,9 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      if (state.devices.isEmpty) {
+      if (state.initialized && state.devices.isEmpty && !_init) {
         state.loadDevices(context);
+        _init = true;
       }
       final List<DeviceGroup> matchingGroups = [];
       for (var i = 0; i < state.deviceGroups.length; i++) {
@@ -87,65 +89,67 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
       if (devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
       }
+      Widget? child;
+      if (devices.isEmpty) {
+        if (state.loadingDevices) {
+          child = const Center(child: DelayedCircularProgressIndicator());
+        } else if (matchingGroups.isEmpty) {
+          Center(child: LayoutBuilder(
+            builder: (context, constraint) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Column(
+                      children: [
+                        Expanded(
+                            child: Center(
+                                child: PlatformElevatedButton(
+                          widgetKey: _keyFavButton,
+                          child: const Text("Add Favorites"),
+                          onPressed: () => _openFavorites(context),
+                        ))),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ));
+        }
+      }
+      child ??= ListView.builder(
+          padding: MyTheme.inset,
+          itemCount: state.totalDevices + matchingGroups.length,
+          itemBuilder: (_, i) {
+            if (i > devices.length + matchingGroups.length - 1) {
+              return const SizedBox.shrink();
+            }
+            if (i < devices.length) {
+              return Column(
+                children: [const Divider(), DeviceListItem(devices[i], null)],
+              );
+            }
+            return Column(
+              children: [
+                const Divider(),
+                GroupListItem(matchingGroups.elementAt(i - devices.length), (_) {
+                  final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+                  if (parentState == null) return;
+                  parentState.filter.deviceGroupIds = null;
+                  state.searchDevices(parentState.filter, context);
+                })
+              ],
+            );
+          },
+        );
       return RefreshIndicator(
           onRefresh: () async {
             HapticFeedbackProxy.lightImpact();
             state.refreshDevices(context);
           },
-          child: Scrollbar(
-            child: devices.isEmpty && matchingGroups.isEmpty
-                ? Center(
-                    child: state.loadingDevices
-                        ? const DelayedCircularProgressIndicator()
-                        : LayoutBuilder(
-                            builder: (context, constraint) {
-                              return SingleChildScrollView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                  child: IntrinsicHeight(
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                            child: Center(
-                                                child: PlatformElevatedButton(
-                                          widgetKey: _keyFavButton,
-                                          child: const Text("Add Favorites"),
-                                          onPressed: () => _openFavorites(context),
-                                        ))),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ))
-                : ListView.builder(
-                    padding: MyTheme.inset,
-                    itemCount: state.totalDevices + matchingGroups.length,
-                    itemBuilder: (_, i) {
-                      if (i > devices.length + matchingGroups.length - 1) {
-                        return const SizedBox.shrink();
-                      }
-                      if (i < devices.length) {
-                        return Column(
-                          children: [const Divider(), DeviceListItem(devices[i], null)],
-                        );
-                      }
-                      return Column(
-                        children: [
-                          const Divider(),
-                          GroupListItem(matchingGroups.elementAt(i - devices.length), (_) {
-                            final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-                            if (parentState == null) return;
-                            parentState.filter.deviceGroupIds = null;
-                            state.searchDevices(parentState.filter, context);
-                          })
-                        ],
-                      );
-                    },
-                  ),
-          ));
+          child: Scrollbar(child: child));
     });
   }
 

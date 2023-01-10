@@ -193,6 +193,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get loggingIn => Auth().loggingIn;
 
+  bool get initialized => _initialized;
+
   init() async {
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageInteraction);
     final List<Future> futures = [
@@ -300,10 +302,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
-    await Future.wait(<Future>[
-      updateTotalDevices(),
-      loadDevices(context),
-    ]);
+    await updateTotalDevices();
+    await loadDevices(context);
   }
 
   refreshDevices(BuildContext context) async {
@@ -337,20 +337,25 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       _devicesMutex.release();
       return;
     }
-    devices.addAll(newDevices);
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
+      for (int i = 0; i < newDevices.length; i++) {
+        await loadDeviceType(newDevices[i].device_type_id);
+        newDevices[i].prepareStates(deviceTypes[newDevices[i].device_type_id]!);
+      }
+
       await Future.wait(<Future>[
         loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']),
         MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices)
       ]);
+      devices.addAll(newDevices);
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(); // when loadDevices called directly
     }
-    _devicesMutex.release();
     notifyListeners();
+    _devicesMutex.release();
   }
 
   bool get loadingDevices {
@@ -375,8 +380,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
-      await loadDeviceType(element.device_type_id);
-      element.prepareStates(deviceTypes[element.device_type_id]!);
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
       if (element.connectionStatus == DeviceConnectionStatus.offline) {
         callbacks.forEach((element) => element.callback(null));
@@ -489,7 +492,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   initMessaging() async {
     try {
       await messaging.requestPermission();
-    } catch(e) {
+    } catch (e) {
       _logger.w(e);
       return;
     }
@@ -513,9 +516,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (message.data["type"] != notificationUpdateType) {
       return; //safety check
     }
-    _messageIdToDisplay = app.Notification
-        .fromJson(json.decode(message.data["payload"]))
-        .id;
+    _messageIdToDisplay = app.Notification.fromJson(json.decode(message.data["payload"])).id;
   }
 
   _handleFcmTokenRefresh(String token) async {
@@ -604,10 +605,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     _messageIdToDisplay = null;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (ModalRoute
-          .of(context)
-          ?.settings
-          .name != NotificationList.preferredRouteName) {
+      if (ModalRoute.of(context)?.settings.name != NotificationList.preferredRouteName) {
         Navigator.push(
             context,
             platformPageRoute(
