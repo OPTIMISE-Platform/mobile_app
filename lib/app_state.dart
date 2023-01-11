@@ -339,21 +339,18 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
     _allDevicesLoaded = false;
-    if (devices.isNotEmpty) {
-      devices.clear();
-    }
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
     await updateTotalDevices();
-    await loadDevices(context);
+    await loadDevices(context, null, true);
   }
 
   refreshDevices(BuildContext context) async {
     await searchDevices(_deviceSearchFilter, context, true);
   }
 
-  loadDevices(BuildContext context, [int? offset]) async {
+  loadDevices(BuildContext context, [int? offset, bool clear = false]) async {
     if (_allDevicesLoaded) {
       return;
     }
@@ -363,6 +360,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       _devicesMutex.release();
       notifyListeners(); // missing loadingDevices() change otherwise
       return;
+    }
+
+    if (clear) {
+      devices.clear();
     }
 
     if (!_initialized) {
