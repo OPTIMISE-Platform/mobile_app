@@ -60,7 +60,7 @@ class FunctionsService {
       resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }

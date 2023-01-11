@@ -70,7 +70,7 @@ class LocationService {
       resp = await _dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -98,7 +98,7 @@ class LocationService {
       resp = await _dio.put<dynamic>(uri, options: Options(headers: headers), data: location.toJson());
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -122,7 +122,7 @@ class LocationService {
       resp = await _dio.post<dynamic>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -144,7 +144,7 @@ class LocationService {
       await _dio.delete(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }

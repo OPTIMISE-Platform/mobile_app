@@ -73,7 +73,7 @@ class NotificationsService {
       resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -100,7 +100,7 @@ class NotificationsService {
     final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
 
     if (resp.statusCode > 201) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
   }
 
@@ -116,7 +116,7 @@ class NotificationsService {
     final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
 
     if (resp.statusCode > 204) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
   }
 }

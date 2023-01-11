@@ -131,7 +131,7 @@ class AppUpdater {
         resp = await dio.get<List<dynamic>>(url);
       } on DioError catch (e) {
         if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(e.response?.statusCode);
+          throw UnexpectedStatusCodeException(e.response?.statusCode, url);
         }
         rethrow;
       }
@@ -169,7 +169,7 @@ class AppUpdater {
 
     await for (final r in resp.asStream()) {
       if (r.statusCode != 200) {
-        throw UnexpectedStatusCodeException(r.statusCode);
+        throw UnexpectedStatusCodeException(r.statusCode, updateUrl);
       }
 
       await for (final chunk in r.stream) {

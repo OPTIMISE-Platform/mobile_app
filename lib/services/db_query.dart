@@ -37,7 +37,7 @@ class DbQueryService {
 
     final resp = await _client.post(uri, headers: headers, body: json.encode([query]));
     if (resp.statusCode != 200) {
-      throw UnexpectedStatusCodeException(resp.statusCode);
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
     final decoded = (json.decode(resp.body) as List<dynamic>)[0];
     return List<List<dynamic>>.generate(decoded.length, (i) => decoded[i] as List<dynamic>);

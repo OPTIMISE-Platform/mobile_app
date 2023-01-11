@@ -80,7 +80,7 @@ class DevicesService {
       _logger.d("getDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -115,7 +115,7 @@ class DevicesService {
       await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
@@ -151,7 +151,7 @@ class DevicesService {
       _logger.d("getTotalDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }

@@ -67,7 +67,7 @@ class FcmTokenService {
       resp = await _dio!.post(url, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, url);
       }
       rethrow;
     }
@@ -89,7 +89,7 @@ class FcmTokenService {
     final resp = await _client.delete(uri, headers: headers);
     if (resp.statusCode > 204 && resp.statusCode != 404) {
       // dont have to delete what cant be found
-      throw UnexpectedStatusCodeException(resp.statusCode);
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
     await initOptions();
     final key = _options!.keyBuilder(RequestOptions(path: url, method: 'POST'));

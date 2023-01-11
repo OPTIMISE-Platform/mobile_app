@@ -14,7 +14,8 @@
  *  limitations under the License.
  */
 
-class AuthException {
-  String? message;
-  AuthException([this.message]);
+import '../models/exception_log_element.dart';
+
+class AuthException extends ExceptionLogElement {
+  AuthException([String? message]) : super(message);
 }

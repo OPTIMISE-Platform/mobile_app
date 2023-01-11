@@ -56,7 +56,7 @@ class MgwDeviceManager {
       resp = await dio.get<Map<String, dynamic>>(uri);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
       }
       rethrow;
     }
