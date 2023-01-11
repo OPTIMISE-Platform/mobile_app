@@ -17,5 +17,5 @@
 import 'package:mobile_app/models/exception_log_element.dart';
 
 class SettingsNotInitializedException extends ExceptionLogElement {
-  SettingsNotInitializedException() : super(null);
+  SettingsNotInitializedException() : super.Log(null);
 }

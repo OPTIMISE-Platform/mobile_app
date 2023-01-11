@@ -17,5 +17,5 @@
 import '../models/exception_log_element.dart';
 
 class NoNetworkException extends ExceptionLogElement {
-  NoNetworkException() : super(null);
+  NoNetworkException() : super.Log(null);
 }

@@ -22,7 +22,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:isar/isar.dart';
 import 'package:mobile_app/main.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -35,6 +37,7 @@ import '../../app_state.dart';
 import '../../config/functions/function_config.dart';
 import '../../exceptions/no_network_exception.dart';
 import '../../services/auth.dart';
+import '../../shared/isar.dart';
 import '../../theme.dart';
 import '../shared/app_bar.dart';
 import '../shared/page_spinner.dart';
@@ -196,13 +199,20 @@ class Settings extends StatelessWidget {
         const Divider(),
         ListTile(
             title: const Text("Show Debug Information"),
-            onTap: () {
-              final txt = "Version: ${dotenv.env["VERSION"]}\n"
+            onTap: () async {
+              var txt = "Version: ${dotenv.env["VERSION"]}\n"
                   "Username: ${Auth().getUsername()}\n"
-                  "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
+                  "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n\n"
                   "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
                   "Keycloak Redirect: ${settings_service.Settings.getKeycloakRedirect()}\n"
                   "Api Url: ${settings_service.Settings.getApiUrl()}\n";
+              if (isar != null) {
+                final ex = await isar!.exceptionLogElements.where().findAll();
+                if (ex.isNotEmpty) {
+                  txt += "\nException Log:\n";
+                  ex.forEach((e) => txt += "$e\n");
+                }
+              }
               showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
@@ -213,11 +223,19 @@ class Settings extends StatelessWidget {
                         icon: Icon(PlatformIcons(context).share),
                         onPressed: () => Share.share("OPTIMISE Debug Information\n$txt", subject: "OPTIMISE Debug Information"))
                   ]),
-                  content: Text(
+                  content: Scrollbar(
+                      child: SingleChildScrollView(
+                          child: Text(
                     txt,
                     textAlign: TextAlign.left,
-                  ),
+                  ))),
                   actions: [
+                    PlatformDialogAction(child: const Text("Clear Log"), onPressed: () async {
+                      if (isar != null) {
+                        await isar!.writeTxn(() async => await isar!.exceptionLogElements.where().deleteAll());
+                      }
+                      Navigator.pop(context);
+                    }),
                     PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
                   ],
                 ),
@@ -257,7 +275,6 @@ class Settings extends StatelessWidget {
                   children: [
                     PlatformTextFormField(
                         hintText: "Keycloak Url",
-
                         initialValue: keycloakUrl,
                         keyboardType: TextInputType.url,
                         autovalidateMode: AutovalidateMode.always,

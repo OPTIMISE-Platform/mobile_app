@@ -27,9 +27,11 @@ class ExceptionLogElement {
   final String stack = StackTrace.current.toString();
 
   @Index()
-  final DateTime logTime = DateTime.now();
+  final DateTime logTime = DateTime.now().toUtc();
 
-  ExceptionLogElement(this.message) {
+  ExceptionLogElement(this.message);
+
+  ExceptionLogElement.Log(this.message) {
     if (isar != null) {
       isar!.writeTxnSync(() {
         isar!.exceptionLogElements.putSync(this);

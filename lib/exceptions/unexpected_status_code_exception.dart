@@ -18,5 +18,5 @@ import '../models/exception_log_element.dart';
 
 class UnexpectedStatusCodeException extends ExceptionLogElement {
   final int? code;
-  UnexpectedStatusCodeException(this.code, String? message) : super("Code $code, message: $message");
+  UnexpectedStatusCodeException(this.code, String? message) : super.Log("Code $code, message: $message");
 }
