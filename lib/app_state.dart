@@ -53,6 +53,7 @@ import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
@@ -65,6 +66,7 @@ import 'models/device_command_response.dart';
 import 'models/device_instance.dart';
 import 'models/device_search_filter.dart';
 import 'models/device_type.dart';
+import 'models/exception_log_element.dart';
 import 'native_pipe.dart';
 
 const notificationUpdateType = "put notification";
@@ -206,7 +208,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       loadCharacteristics(),
       initMessaging(),
     ];
-    await Future.wait(futures);
+    try {
+      await Future.wait(futures);
+    } catch (e) {
+      ExceptionLogElement.Log(e.toString());
+      Toast.showToastNoContext("Could not initialize", MyTheme.errorColor);
+    }
     _initialized = true;
   }
 
@@ -218,8 +225,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     deviceClasses.clear();
     notifyListeners();
-    for (var element in (await DeviceClassesService.getDeviceClasses())) {
-      deviceClasses[element.id] = element;
+    try {
+      for (var element in (await DeviceClassesService.getDeviceClasses())) {
+        deviceClasses[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Coud not get device classes $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _deviceClassesMutex.release();
@@ -235,8 +248,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (locked) {
       return deviceTypesPermSearch;
     }
-    for (var element in (await DeviceTypesPermSearchService.getDeviceTypes())) {
-      deviceTypesPermSearch[element.id] = element;
+    try {
+      for (var element in (await DeviceTypesPermSearchService.getDeviceTypes())) {
+        deviceTypesPermSearch[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Could not get device types $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _deviceTypesPermSearchMutex.release();
@@ -248,8 +267,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (locked) {
       return nestedFunctions;
     }
-    for (var element in (await FunctionsService.getNestedFunctions())) {
-      nestedFunctions[element.id] = element;
+    try {
+      for (var element in (await FunctionsService.getNestedFunctions())) {
+        nestedFunctions[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Could not get nested functions $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _nestedFunctionsMutex.release();
@@ -261,8 +286,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (locked) {
       return concepts;
     }
-    for (var element in (await ConceptsService.getConcepts())) {
-      concepts[element.id] = element;
+    try {
+      for (var element in (await ConceptsService.getConcepts())) {
+        concepts[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Could not get concepts $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _conceptsMutex.release();
@@ -274,8 +305,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (locked) {
       return characteristics;
     }
-    for (var element in (await CharacteristicsService.getCharacteristics())) {
-      characteristics[element.id] = element;
+    try {
+      for (var element in (await CharacteristicsService.getCharacteristics())) {
+        characteristics[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Could not get characteristics $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _characteristicsMutex.release();
@@ -283,10 +320,16 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   updateTotalDevices() async {
     await _totalDevicesMutex.protect(() async {
-      final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
-      if (total != totalDevices) {
-        totalDevices = total;
-        notifyListeners();
+      try {
+        final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
+        if (total != totalDevices) {
+          totalDevices = total;
+          notifyListeners();
+        }
+      } catch (e) {
+        final err = "Could not get total devices $e";
+        _logger.e(err);
+        Toast.showToastNoContext(err, MyTheme.errorColor);
       }
     });
   }
@@ -358,9 +401,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         futures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true)
             .then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
       }
-
-      await Future.wait(futures);
-      devices.addAll(newDevices);
+      try {
+        await Future.wait(futures);
+        devices.addAll(newDevices);
+      } catch (e) {
+        final err = "Could not get devices: $e";
+        _logger.e(err);
+        Toast.showToastNoContext(err, MyTheme.errorColor);
+      }
     }
     if (totalDevices <= _deviceOffset) {
       await updateTotalDevices(); // when loadDevices called directly
@@ -381,11 +429,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (!force && deviceTypes.containsKey(id)) {
       return;
     }
-    final t = await DeviceTypesService.getDeviceType(id);
-    if (t == null) {
-      return;
+    try {
+      final t = await DeviceTypesService.getDeviceType(id);
+      if (t == null) {
+        return;
+      }
+      deviceTypes[id] = t;
+    } catch (e) {
+      final err = "Could not load device type $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
-    deviceTypes[id] = t;
   }
 
   loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
@@ -410,11 +464,15 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     try {
       result = await DeviceCommandsService.runCommands(commandCallbacks.map((e) => e.command).toList(growable: false));
     } on NoNetworkException {
-      _logger.e("failed to loadStates: currently offline");
+      const err = "failed to loadStates: currently offline";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
       result = [];
       commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
     } catch (e) {
-      _logger.e("failed to loadStates: $e");
+      final err = "failed to loadStates: $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
       result = [];
       commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
     }
@@ -447,7 +505,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         try {
           response = await NotificationsService.getNotifications(limit, offset);
         } catch (e) {
-          _logger.e("Could not load notifications: $e");
+          final err = "Could not load notifications: $e";
+          _logger.e(err);
+          Toast.showToastNoContext(err, MyTheme.errorColor);
           return;
         }
         final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
@@ -466,7 +526,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   updateNotifications(BuildContext context, int index) async {
-    await NotificationsService.setNotification(notifications[index]);
+    try {
+      await NotificationsService.setNotification(notifications[index]);
+    } catch (e) {
+      final err = "Could not update notification $e";
+      _logger.e(err);
+      Toast.showErrorToast(context, err);
+    }
     notifyListeners();
   }
 
@@ -540,7 +606,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         try {
           await FcmTokenService.deregisterFcmToken(fcmToken!);
         } catch (e) {
-          _logger.e("Could not deregister FCM: $e");
+          final err = "Could not deregister FCM: $e";
+          _logger.e(err);
+          Toast.showToastNoContext(err, MyTheme.errorColor);
         }
       }
       fcmToken = token;
@@ -551,7 +619,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
           await FcmTokenService.registerFcmToken(fcmToken!);
           if (!kIsWeb) messaging.subscribeToTopic("announcements");
         } catch (e) {
-          _logger.e("Could not setup FCM: $e");
+          final err = "Could not setup FCM: $e";
+          _logger.e(err);
+          Toast.showToastNoContext(err, MyTheme.errorColor);
         }
       } else {
         _logger.e("FCM token is null");
@@ -640,7 +710,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     deviceGroups.clear();
     notifyListeners();
 
-    deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups()));
+    try {
+      deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups()));
+    } catch (e) {
+      final err = "Could not load device groups $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
+    }
     notifyListeners();
 
     _deviceGroupsMutex.release();
@@ -659,7 +735,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     locations.clear();
     notifyListeners();
 
-    locations.addAll(await Future.wait(await LocationService.getLocations()));
+    try {
+      locations.addAll(await Future.wait(await LocationService.getLocations()));
+    } catch (e) {
+      final err = "Could not load locations $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
+    }
     notifyListeners();
 
     _locationsMutex.release();
@@ -678,7 +760,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     networks.clear();
     notifyListeners();
 
-    networks.addAll(await NetworksService.getNetworks());
+    try {
+      networks.addAll(await NetworksService.getNetworks());
+    } catch (e) {
+      final err = "Could not load networks $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
+    }
     _mergeDiscoveredServicesWithNetworks();
     for (final network in networks) {
       final networkDevices = devices.where((device) => network.device_local_ids?.contains(device.local_id) ?? false);
@@ -705,8 +793,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (locked) {
       return aspects;
     }
-    for (var element in (await AspectsService.getAspects())) {
-      aspects[element.id] = element;
+    try {
+      for (var element in (await AspectsService.getAspects())) {
+        aspects[element.id] = element;
+      }
+    } catch (e) {
+      final err = "Could not load aspects $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
     }
     notifyListeners();
     _aspectsMutex.release();

@@ -17,6 +17,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
@@ -35,6 +37,7 @@ import 'package:mutex/mutex.dart';
 
 import '../../../../models/smart_service.dart';
 import '../../../shared/delay_circular_progress_indicator.dart';
+import '../../../shared/toast.dart';
 import '../dashboard.dart';
 import 'bar_chart.dart';
 import 'button.dart';
@@ -94,7 +97,12 @@ abstract class SmartServiceModuleWidget {
 
   @nonVirtual
   Future<void> refresh() async {
-    await _refreshing.protect(refreshInternal);
+    try {
+      await _refreshing.protect(refreshInternal);
+    } catch (e) {
+      ExceptionLogElement.Log(e.toString());
+      Toast.showToastNoContext("Could not load widget data", MyTheme.errorColor);
+    }
   }
 
   @protected

@@ -45,6 +45,17 @@ class Toast {
     );
   }
 
+  static showToastNoContext(String text, Color color) {
+    Fluttertoast.showToast(
+        msg: text,
+        gravity: ToastGravity.CENTER,
+        timeInSecForIosWeb: 2,
+        backgroundColor: color,
+        textColor: Colors.black,
+        fontSize: 16.0
+    );
+  }
+
   static showErrorToast(BuildContext context, String text, [Duration? duration]) {
     List<Widget> widgets = [
       Icon(PlatformIcons(context).error, color: MyTheme.isDarkMode ? null : Colors.black),

@@ -29,10 +29,12 @@ import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/device_instance.dart';
 import '../shared/isar.dart';
+import '../widgets/shared/toast.dart';
 import 'devices.dart';
 import 'locations.dart';
 
@@ -122,7 +124,9 @@ class CacheHelper {
       try {
         newDevices = await DevicesService.getDevices(limit, deviceOffset, DeviceSearchFilter(""), last, forceBackend: true);
       } catch (e) {
-        _logger.e("Could not get devices: $e");
+        final err = "Could not get devices: $e";
+        _logger.e(err);
+        Toast.showToastNoContext(err, MyTheme.errorColor);
         return;
       }
       allDevicesLoaded = newDevices.length < limit;
@@ -161,7 +165,9 @@ class CacheHelper {
     try {
       await DeviceGroupsService.getDeviceGroups(forceBackend: true);
     } catch (e) {
-      _logger.e("Could not get deviceGroups: $e");
+      final err = "Could not get deviceGroups: $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
       return;
     }
 
@@ -200,7 +206,9 @@ class CacheHelper {
     try {
       await NetworksService.getNetworks(null, true);
     } catch (e) {
-      _logger.e("Could not get networks: $e");
+      final err = "Could not get networks: $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
       return;
     }
 
@@ -239,7 +247,9 @@ class CacheHelper {
     try {
       await LocationService.getLocations(forceBackend: true);
     } catch (e) {
-      _logger.e("Could not get locations: $e");
+      final err = "Could not get locations: $e";
+      _logger.e(err);
+      Toast.showToastNoContext(err, MyTheme.errorColor);
       return;
     }
 
