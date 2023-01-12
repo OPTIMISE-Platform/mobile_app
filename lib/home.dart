@@ -25,6 +25,7 @@ import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:provider/provider.dart';
 
+import 'app_state.dart';
 import 'services/auth.dart';
 import 'widgets/shared/app_bar.dart';
 
@@ -54,6 +55,7 @@ class _HomeState extends State<Home> {
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
       await CacheHelper.refreshCache();
+      AppState().pushRefresh();
     } on AuthenticationException catch (e) {
       if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
         Toast.showErrorToast(context, "Invalid user credentials");
