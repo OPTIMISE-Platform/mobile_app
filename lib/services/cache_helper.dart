@@ -26,6 +26,7 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -96,7 +97,7 @@ class CacheHelper {
   }
 
   static scheduleCacheUpdates() async {
-    if (isar == null) {
+    if (isar == null || !Auth().loggedIn) {
       return;
     }
     await  Future.wait([
