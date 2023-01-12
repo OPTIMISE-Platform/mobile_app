@@ -141,7 +141,7 @@ class DeviceSearchFilter {
     if (networkIds != null) {
       final List<String> localIds = [];
       AppState().networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
-      isarQ = isarQ.local_idMatches(localIds.join("|"));
+      isarQ =  isarQ.anyOf(localIds, (q, String e) => q.local_idEqualTo(e));
     }
 
     if (favorites == true) {

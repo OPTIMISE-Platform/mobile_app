@@ -139,7 +139,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                               state
                                                   .searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]),
                                                       context, true)
-                                                  .then((_) => setState(() => _loading = true));
+                                                  .then((_) => setState(() => _loading = false));
                                               parentState?.setState(() {
                                                 parentState.hideSearch = false;
                                                 parentState.onBackCallback = () {
