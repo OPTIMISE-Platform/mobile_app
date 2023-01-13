@@ -146,6 +146,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
   @override
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     this.values.addAll(values);
+    buildGroups();
   }
 
   @override
