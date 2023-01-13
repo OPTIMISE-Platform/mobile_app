@@ -106,7 +106,7 @@ class AppUpdater {
       final cacheFile = await CacheHelper.getCacheFile(customSuffix: "_appUpdater_");
 
       if (cacheFile != null && cacheAge == Duration.zero) {
-        HiveCacheStore(cacheFile).clean();
+        await HiveCacheStore(cacheFile).clean();
       }
 
       final options = CacheOptions(
