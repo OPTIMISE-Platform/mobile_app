@@ -118,10 +118,7 @@ class SmSeBarChart extends SmSeLineChart {
           .map<BarChartRodData>((e) => BarChartRodData(
               toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
               color: i == values.length - 1 && colorLatestSpecial && initialTimestampDifference == null
-                  ? MyTheme.getSomeColor(e.key)
-                      .withRed((MyTheme.getSomeColor(e.key).red * specialColorMultiplier).toInt())
-                      .withGreen((MyTheme.getSomeColor(e.key).green * specialColorMultiplier).toInt())
-                      .withBlue((MyTheme.getSomeColor(e.key).blue * specialColorMultiplier).toInt())
+                  ? getSpecialColor(e.key)
                   : MyTheme.getSomeColor(e.key),
               width: 20,
               borderRadius: const BorderRadius.horizontal()))
@@ -136,5 +133,12 @@ class SmSeBarChart extends SmSeLineChart {
     barGroups.sort((a, b) => a.x - b.x);
     rawTimestamps.sort();
     setDateFormat(timestamps);
+  }
+
+  Color getSpecialColor(int key) {
+    return MyTheme.getSomeColor(key)
+        .withRed((MyTheme.getSomeColor(key).red * specialColorMultiplier).toInt())
+        .withGreen((MyTheme.getSomeColor(key).green * specialColorMultiplier).toInt())
+        .withBlue((MyTheme.getSomeColor(key).blue * specialColorMultiplier).toInt());
   }
 }
