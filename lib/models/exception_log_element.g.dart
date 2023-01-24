@@ -97,6 +97,7 @@ ExceptionLogElement _exceptionLogElementDeserialize(
 ) {
   final object = ExceptionLogElement(
     reader.readStringOrNull(offsets[1]),
+    reader.readString(offsets[2]),
   );
   return object;
 }

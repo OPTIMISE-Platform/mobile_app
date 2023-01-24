@@ -24,14 +24,15 @@ class ExceptionLogElement {
 
   final String? message;
 
-  final String stack = StackTrace.current.toString();
+  String stack = "";
 
   @Index()
   final DateTime logTime = DateTime.now().toUtc();
 
-  ExceptionLogElement(this.message);
+  ExceptionLogElement(this.message, this.stack);
 
   ExceptionLogElement.Log(this.message) {
+    stack = StackTrace.current.toString();
     if (isar != null) {
       isar!.writeTxnSync(() {
         isar!.exceptionLogElements.putSync(this);
