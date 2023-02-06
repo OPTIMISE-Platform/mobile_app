@@ -68,7 +68,7 @@ class DeviceTypesService {
       resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }

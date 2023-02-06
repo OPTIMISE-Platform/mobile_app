@@ -131,7 +131,7 @@ class AppUpdater {
         resp = await dio.get<List<dynamic>>(url);
       } on DioError catch (e) {
         if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(e.response?.statusCode, url);
+          throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
         }
         rethrow;
       }

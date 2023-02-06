@@ -77,7 +77,7 @@ class DeviceGroupsService {
       resp = await _dio!.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -109,7 +109,7 @@ class DeviceGroupsService {
       resp = await _dio!.put<Map<String, dynamic>>(uri, options: Options(headers: headers), data: encoded);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -136,7 +136,7 @@ class DeviceGroupsService {
       resp = await dio.post<dynamic>(uri, options: Options(headers: headers), data: DeviceGroup("", name, [], "", [], []).toJson());
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -160,7 +160,7 @@ class DeviceGroupsService {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -191,7 +191,7 @@ class DeviceGroupsService {
           .post<Map<String, dynamic>>(uri, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(deviceIds));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }

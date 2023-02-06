@@ -72,7 +72,7 @@ class NetworksService {
       resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, uri);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }

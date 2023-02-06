@@ -109,7 +109,7 @@ class DeviceCommandsService {
       resp = await dio.post<List<dynamic>>(url, options: Options(headers: sendToken ? headers : null), data: json.encode(commands));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, url);
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
       }
       rethrow;
     }
