@@ -17,11 +17,15 @@
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_instance.dart';
 import '../models/network.dart';
 import '../shared/keyed_list.dart';
+import '../theme.dart';
+import '../widgets/shared/toast.dart';
+import 'devices.dart';
 
 class MgwDeviceManager {
   static final _logger = Logger(
@@ -34,9 +38,21 @@ class MgwDeviceManager {
     final KeyedList<Network?, DeviceInstance> devicesByNetwork = KeyedList();
     devices.forEach((d) => devicesByNetwork.insert(d.network, d));
     final List<Future> futures = [];
-    devicesByNetwork.m.forEach((network, devices) {
+    devicesByNetwork.m.forEach((network, devices) async {
       if (network?.localService != null) {
-        futures.add(_updateFromMgw(network!, devices));
+        futures.add(_updateFromMgw(network!, devices).onError((error, stackTrace) async {
+          final deviceIds = devices.map((e) => e.id).toList();
+          try {
+            await DevicesService.getDevices(devices.length, 0, DeviceSearchFilter("", null, deviceIds), null, forceBackend: true)
+                .then((ds) =>
+                ds.forEach((d) =>
+                devices
+                    .firstWhere((d2) => d2.id == d.id)
+                    .annotations = d.annotations));
+          } catch (e) {
+            Toast.showToastNoContext("Device status could not be loaded from network or cloud", MyTheme.errorColor);
+          }
+        }));
       }
     });
     final start = DateTime.now();
