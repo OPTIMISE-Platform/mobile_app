@@ -32,8 +32,8 @@ import '../widgets/shared/toast.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {
-  static final _dioH1 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000));
-  static final _dio2H2 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+  static final _dioH1 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000));
+  static final _dio2H2 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
     ..httpClientAdapter = AppHttpClientAdapter();
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -85,7 +85,7 @@ class DeviceCommandsService {
     final DateTime start = DateTime.now();
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
-      final url = "${Settings.getApiUrl() ?? 'localhost'}/device-command/commands/batch?timeout=25s&prefer_event_value=$preferEventValue";
+      final url = "${Settings.getApiUrl() ?? 'localhost'}/device-command/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
       List<DeviceCommandResponse> retryRes;
       try {
         retryRes = await _runCommands(cloudRetries, url, true, _dio2H2);
