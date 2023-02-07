@@ -210,7 +210,7 @@ class Settings extends StatelessWidget {
                 final ex = await isar!.exceptionLogElements.where().findAll();
                 if (ex.isNotEmpty) {
                   txt += "\nException Log:\n";
-                  ex.forEach((e) => txt += "$e\n");
+                  ex.forEach((e) => txt += "$e\n\n");
                 }
               }
               showPlatformDialog(
