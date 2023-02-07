@@ -34,7 +34,7 @@ class SmSeBarChartEstimate extends SmSeBarChart {
       for (int j = 1; j < values[i].length; j += 2) {
         final List<BarChartRodStackItem> rodStackItems = [];
 
-        final low = double.parse((0.0 + values[i][j]).toStringAsFixed(precision));
+        final low = double.parse((0.0 + (values[i][j] ?? 0)).toStringAsFixed(precision));
         if (values[i][j] == null) values[i][j] = 0;
         rodStackItems.add(BarChartRodStackItem(0.0, low, MyTheme.getSomeColor(j - 1)));
 
