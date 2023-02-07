@@ -16,7 +16,7 @@
 
 import 'dart:async';
 
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -119,10 +119,10 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                   ListTile(
                                       title: Container(
                                           alignment: Alignment.centerLeft,
-                                          child: Badge(
+                                          child: badges.Badge(
                                             alignment: Alignment.centerLeft,
                                             padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                            position: BadgePosition.topEnd(),
+                                            position: badges.BadgePosition.topEnd(),
                                             badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
                                             showBadge: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
                                             badgeColor: Colors.transparent,

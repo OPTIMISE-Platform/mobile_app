@@ -13,7 +13,7 @@ import flutter_secure_storage_macos
 import geolocator_apple
 import isar_flutter_libs
 import nsd_macos
-import path_provider_macos
+import path_provider_foundation
 import share_plus
 import url_launcher_macos
 

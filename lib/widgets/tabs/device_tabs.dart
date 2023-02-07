@@ -16,7 +16,7 @@
 
 import 'dart:async';
 
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -484,7 +484,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           actions.add(PlatformPopupMenu(
             options: filterActions,
             icon: PlatformIconButton(
-              icon: Badge(
+              icon: badges.Badge(
                 badgeContent: Text(filterCount.toString()),
                 showBadge: filterCount > 0,
                 child: Icon(Icons.filter_alt, color: isCupertino(context) ? MyTheme.appColor : null),

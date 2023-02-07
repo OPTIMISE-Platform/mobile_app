@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -186,10 +186,10 @@ class _NotificationListState extends State<NotificationList> {
                                             ]),
                                       title: Container(
                                           alignment: Alignment.centerLeft,
-                                          child: Badge(
+                                          child: badges.Badge(
                                             alignment: Alignment.centerLeft,
                                             padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                            position: BadgePosition.topEnd(),
+                                            position: badges.BadgePosition.topEnd(),
                                             badgeContent: const Icon(Icons.circle_notifications, size: 16, color: MyTheme.warnColor),
                                             showBadge: !state.notifications[i].isRead,
                                             badgeColor: Colors.transparent,

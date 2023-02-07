@@ -1,12 +1,9 @@
-FROM fischerscode/flutter:3.3 AS builder
-
+FROM cirrusci/flutter:3.7.1 AS builder
 RUN mkdir app
 WORKDIR app
-COPY --chown=flutter pubspec.yaml .
-COPY --chown=flutter pubspec.lock .
+COPY . .
 RUN flutter pub get
-COPY --chown=flutter . .
 RUN flutter build web
 
 FROM nginx:1.23-alpine
-COPY --from=builder /home/flutter/app/build/web /usr/share/nginx/html
+COPY --from=builder /app/build/web /usr/share/nginx/html

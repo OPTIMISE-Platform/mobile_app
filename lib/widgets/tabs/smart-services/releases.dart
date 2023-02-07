@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -140,10 +140,10 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
                                 ListTile(
                                     title: Container(
                                         alignment: Alignment.centerLeft,
-                                        child: Badge(
+                                        child: badges.Badge(
                                             alignment: Alignment.centerLeft,
                                             padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                            position: BadgePosition.topEnd(),
+                                            position: badges.BadgePosition.topEnd(),
                                             badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
                                             showBadge: releases[i].error != null,
                                             badgeColor: Colors.transparent,
