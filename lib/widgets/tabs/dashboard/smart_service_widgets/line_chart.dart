@@ -226,13 +226,13 @@ class SmSeLineChart extends SmSeRequest {
     for (int i = 1; i < timestamps.length; i++) {
       assert(timestamps[i].length == l);
       int j = 0;
-      while (j <= left && timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j)) {
+      while (j <= left && timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j) && j < timestamps[i].length - 1) {
         j++;
       }
       left = j;
 
       j = 0;
-      while (j <= right && timestamps[i].codeUnitAt(l - 1 - j) == timestamps[0].codeUnitAt(l - 1 - j)) {
+      while (j <= right && timestamps[i].codeUnitAt(l - 1 - j) == timestamps[0].codeUnitAt(l - 1 - j) && j < timestamps[i].length - 1) {
         j++;
       }
       right = j;
