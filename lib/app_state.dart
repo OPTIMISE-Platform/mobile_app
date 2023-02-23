@@ -389,8 +389,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         newDevices[i].prepareStates(deviceTypes[newDevices[i].device_type_id]!);
       }
 
-      final futures = <Future>[
-        loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']),
+      final connectionStatusFutures = <Future>[
         MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices),
       ];
 
@@ -399,11 +398,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       if (refreshDeviceIds.isNotEmpty) {
         final refreshFilter = DeviceSearchFilter("");
         refreshFilter.deviceIds = refreshDeviceIds;
-        futures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true)
+        connectionStatusFutures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true)
             .then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
       }
       try {
-        await Future.wait(futures);
+        await Future.wait(connectionStatusFutures);
+        await loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']); // need to know which devices are online first
         devices.addAll(newDevices);
       } catch (e) {
         final err = "Could not get devices: $e";
