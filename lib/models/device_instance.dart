@@ -117,8 +117,12 @@ class DeviceInstance {
   setFavorite(bool val) {
     if (val) {
       attributes ??= [];
+      attributes = attributes!.toList(); // ensure growable
       attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
     } else {
+      if (attributes != null) {
+        attributes = attributes!.toList(); // ensure growable
+      }
       final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
       if (i != null && i != -1) {
         attributes!.removeAt(i);
