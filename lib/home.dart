@@ -113,7 +113,7 @@ class _HomeState extends State<Home> {
             : PlatformScaffold(
                 appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
                 body: auth.loggingIn || !_loginChecked
-                    ? Center(child: const DelayedCircularProgressIndicator())
+                    ? const Center(child: DelayedCircularProgressIndicator())
                     : Container(
                         padding: MyTheme.inset * 3,
                         child: SingleChildScrollView(

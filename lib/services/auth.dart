@@ -75,6 +75,7 @@ class Auth extends ChangeNotifier {
           );
           _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
           loggedIn = _client?.identity != null;
+          notifyListeners();
           _client?.changes.listen((event) async {
             _logger.d("${event.type}: ${event.message}");
             switch (event.type) {
@@ -82,10 +83,10 @@ class Auth extends ChangeNotifier {
               case AuthEventTypes.Success:
                 loggedIn = true;
                 notifyListeners();
-
                 break;
               case AuthEventTypes.NotLoggedIn: // applies if token exists but timed out on client init
                 loggedIn = _client?.identity != null;
+                notifyListeners();
                 if (!loggedIn) {
                   _cleanup();
                 }
@@ -191,7 +192,10 @@ class Auth extends ChangeNotifier {
   }
 
   Future<Map<String, String>> getHeaders() async {
-    if (!loggedIn) throw AuthException("Not logged in");
+    if (!loggedIn) {
+      notifyListeners();
+      throw AuthException("Not logged in");
+    }
     if (!(await refreshToken())) {
       return {};
     }
