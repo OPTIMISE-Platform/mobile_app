@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -155,20 +154,21 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                               ? Column(children: [
                                   const Divider(),
                                   ListTile(
-                                    title: Container(
-                                        alignment: Alignment.centerLeft,
-                                        child: badges.Badge(
-                                          alignment: Alignment.centerLeft,
-                                          padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                          position: badges.BadgePosition.topEnd(),
-                                          badgeContent: instances[i].error != null
-                                              ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
-                                              : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                          showBadge: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
-                                          badgeColor: Colors.transparent,
-                                          elevation: 0,
-                                          child: Text(instances[i].name),
-                                        )),
+                                    title: Row(children: [
+                                      Text(instances[i].name),
+                                      Badge(
+                                        label: instances[i].error != null
+                                            ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
+                                            : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
+                                        isLabelVisible: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
+                                        alignment: AlignmentDirectional.topCenter,
+                                        largeSize: 16,
+                                        backgroundColor: Colors.transparent,
+                                        child: instances[i].error != null || !instances[i].ready || instances[i].deleting == true
+                                            ? const Text("")
+                                            : null,
+                                      )
+                                    ]),
                                     onTap: () async {
                                       await Navigator.push(
                                           context,

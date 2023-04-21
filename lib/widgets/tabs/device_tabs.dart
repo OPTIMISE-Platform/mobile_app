@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -484,9 +483,10 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           actions.add(PlatformPopupMenu(
             options: filterActions,
             icon: PlatformIconButton(
-              icon: badges.Badge(
-                badgeContent: Text(filterCount.toString()),
-                showBadge: filterCount > 0,
+              icon: Badge(
+                label: Text(filterCount.toString()),
+                isLabelVisible: filterCount > 0,
+                textColor: Colors.white,
                 child: Icon(Icons.filter_alt, color: isCupertino(context) ? MyTheme.appColor : null),
               ),
               cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),

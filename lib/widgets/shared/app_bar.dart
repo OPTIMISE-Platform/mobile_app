@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
@@ -37,9 +36,10 @@ class MyAppBar {
         AppState().checkMessageDisplay(context);
         final unread = AppState().notifications.where((element) => !element.isRead).toList(growable: false).length;
         return PlatformIconButton(
-          icon: badges.Badge(
-            badgeContent: Text(unread.toString()),
-            showBadge: unread > 0,
+          icon: Badge(
+            isLabelVisible: unread > 0,
+            label: Text(unread.toString()),
+            textColor: Colors.white,
             child: const Icon(Icons.notifications),
           ),
           onPressed: () {

@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -184,18 +183,23 @@ class _NotificationListState extends State<NotificationList> {
                                                 color: MyTheme.appColor,
                                               )
                                             ]),
-                                      title: Container(
-                                          alignment: Alignment.centerLeft,
-                                          child: badges.Badge(
-                                            alignment: Alignment.centerLeft,
-                                            padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                            position: badges.BadgePosition.topEnd(),
-                                            badgeContent: const Icon(Icons.circle_notifications, size: 16, color: MyTheme.warnColor),
-                                            showBadge: !state.notifications[i].isRead,
-                                            badgeColor: Colors.transparent,
-                                            elevation: 0,
-                                            child: Text(state.notifications[i].title),
-                                          )),
+                                      title: Row(
+                                        children: [
+                                          Text(state.notifications[i].title),
+                                          Badge(
+                                            label: const Icon(
+                                              Icons.circle_notifications,
+                                              size: 12,
+                                              color: MyTheme.warnColor,
+                                            ),
+                                            isLabelVisible: !state.notifications[i].isRead,
+                                            alignment: AlignmentDirectional.topCenter,
+                                            largeSize: 16,
+                                            backgroundColor: Colors.transparent,
+                                            child: state.notifications[i].isRead ? null : const Text(""),
+                                          )
+                                        ],
+                                      ),
                                       subtitle: Text(_format.format(state.notifications[i].createdAt())),
                                       onTap: () {
                                         if (_selectionMode) {

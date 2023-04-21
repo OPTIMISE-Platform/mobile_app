@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -117,18 +116,17 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                 return Column(children: [
                                   const Divider(),
                                   ListTile(
-                                      title: Container(
-                                          alignment: Alignment.centerLeft,
-                                          child: badges.Badge(
-                                            alignment: Alignment.centerLeft,
-                                            padding: const EdgeInsets.only(left: MyTheme.insetSize),
-                                            position: badges.BadgePosition.topEnd(),
-                                            badgeContent: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-                                            showBadge: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
-                                            badgeColor: Colors.transparent,
-                                            elevation: 0,
-                                            child: Text(state.networks[i].name),
-                                          )),
+                                      title: Row(children: [
+                                        Text(state.networks[i].name),
+                                        Badge(
+                                          label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
+                                          isLabelVisible: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
+                                          alignment: AlignmentDirectional.topCenter,
+                                          largeSize: 16,
+                                          backgroundColor: Colors.transparent,
+                                          child: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline ? const Text("") : null,
+                                        )
+                                      ]),
                                       subtitle: Text(
                                           "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
                                       onTap: (state.networks[i].device_local_ids ?? []).isEmpty
