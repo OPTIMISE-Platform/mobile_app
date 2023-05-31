@@ -181,6 +181,7 @@ class DeviceInstance {
       attributes![i].value = val;
     } else {
       attributes ??= [];
+      attributes = attributes!.toList(); // ensure growable
       attributes!.add(Attribute.New(attributeNickname, val, sharedOrigin));
     }
     display_name = val;
