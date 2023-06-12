@@ -96,11 +96,11 @@ class CacheHelper {
     ]);
   }
 
-  static scheduleCacheUpdates() async {
+  static Future scheduleCacheUpdates() async {
     if (isar == null || !Auth().loggedIn) {
       return;
     }
-    await  Future.wait([
+    return await Future.wait([
     _scheduleRefreshDevices(),
     _scheduleRefreshDeviceGroups(),
     _scheduleRefreshNetworks(),

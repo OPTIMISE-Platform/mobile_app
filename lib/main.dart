@@ -29,6 +29,7 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -81,7 +82,7 @@ Future main() async {
   print("Auth init took ${DateTime.now().difference(sub)}");
 
   sub = DateTime.now();
-  await CacheHelper.scheduleCacheUpdates();
+  await CacheHelper.scheduleCacheUpdates().catchError((_) => Toast.showToastNoContext("Could not refresh cache", MyTheme.errorColor));
   print("Cache init took ${DateTime.now().difference(sub)}");
 
   print("App init took ${DateTime.now().difference(start)}");
