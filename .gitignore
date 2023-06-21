@@ -49,3 +49,4 @@ app.*.map.json
 ios/Runner.xcodeproj
 ios/Runner.xcodeproj/*
 ios/Runner.xcworkspace
+.fvm
