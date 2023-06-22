@@ -40,7 +40,7 @@ class SmSeBarChartEstimate extends SmSeBarChart {
 
         double? high;
         if (values[i][j + 1] != null) {
-          high = double.parse((0.0 + values[i][j + 1]).toStringAsPrecision(precision));
+          high = double.parse((0.0 + values[i][j + 1]).toStringAsFixed(precision));
           rodStackItems.add(BarChartRodStackItem(low, high, getSpecialColor(j - 1)));
         }
 
