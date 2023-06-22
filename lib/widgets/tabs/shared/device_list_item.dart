@@ -172,8 +172,9 @@ class _DeviceListItemState extends State<DeviceListItem> {
       final List<Widget> columnWidgets = [];
       final Widget title = Row(
           children: [
-            Text(
-              device.displayName,
+            SizedBox(
+              width: MediaQuery.of(context).size.width - 192,
+              child: Text(device.displayName),
             ),
             Badge(
               label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
