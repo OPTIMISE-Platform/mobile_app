@@ -52,6 +52,7 @@ class MyTheme {
   static final formatEHH = DateFormat.E().add_H();
   static final formatEHHMM = DateFormat.E().add_Hm();
   static final formatMMM = DateFormat.MMM();
+  static final formatDDMM = DateFormat('dd.MM');
 
   static ThemeData materialTheme = ThemeData(
       cupertinoOverrideTheme: cupertinoTheme,

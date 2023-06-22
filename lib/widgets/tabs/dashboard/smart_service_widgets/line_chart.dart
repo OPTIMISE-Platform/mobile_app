@@ -179,10 +179,19 @@ class SmSeLineChart extends SmSeRequest {
       }
     });
     rawTimestamps.sort();
-    setDateFormat(timestamps);
+    setDateFormat(timestamps, rawTimestamps);
   }
 
-  void setDateFormat(List<String> timestamps) {
+  void setDateFormat(List<String> timestamps, List<int> rawTimestamps) {
+    for (int i = 1; i< rawTimestamps.length; i++) {
+      if (rawTimestamps[i] - rawTimestamps[i-1] != 604800000) { //exactly one week apart
+        break;
+      }
+      if (i == timestamps.length - 1) {
+        dateFormat = MyTheme.formatDDMM;
+        return;
+      }
+    }
     final similarities = _similarity(timestamps);
     final left = similarities.k;
     var right = similarities.t;

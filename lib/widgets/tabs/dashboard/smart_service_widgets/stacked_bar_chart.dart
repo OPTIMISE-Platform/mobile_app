@@ -182,6 +182,6 @@ class SmSeStackedBarChart extends SmSeBarChart {
     }
     rawTimestamps.sort();
     barGroups.sort((a, b) => a.x - b.x);
-    setDateFormat(timestamps);
+    setDateFormat(timestamps, rawTimestamps);
   }
 }

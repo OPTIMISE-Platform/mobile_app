@@ -132,7 +132,7 @@ class SmSeBarChart extends SmSeLineChart {
     }
     barGroups.sort((a, b) => a.x - b.x);
     rawTimestamps.sort();
-    setDateFormat(timestamps);
+    setDateFormat(timestamps, rawTimestamps);
   }
 
   Color getSpecialColor(int key) {
