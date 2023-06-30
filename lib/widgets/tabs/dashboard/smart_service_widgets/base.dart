@@ -27,6 +27,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_cha
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pie_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_forecast.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_flow.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
@@ -58,6 +59,7 @@ const SmSeWidgetType smSeLineChartType = "line_chart";
 const SmSeWidgetType smSeProcessToggleType = "process_toggle";
 const SmSeWidgetType smSeImageType = "image";
 const SmSeWidgetType smSePvForecastType = "pv_forecast";
+const SmSeWidgetType smSePvFlow = "pv_flow";
 const SmSeWidgetType smSeBarChartType = "bar_chart";
 const SmSeWidgetType smSePieChartType = "pie_chart";
 const SmSeWidgetType smSeStackedBarChartType = "stacked_bar_chart";
@@ -175,6 +177,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSePvForecastType:
         w = SmSePvForecast();
+        break;
+      case smSePvFlow:
+        w = SmSePvFlow();
         break;
       case smSeBarChartType:
         w = SmSeBarChart();

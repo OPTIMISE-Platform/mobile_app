@@ -128,9 +128,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                     itemCount: items.length,
                     itemBuilder: (context, idx) {
                       final item = items[idx];
-                      return Card(
+                      return Stack(children: [Card(
                         child: item.build(context, false),
-                      );
+                      )]);
                     })))));
 
     // Add button for new dashboard

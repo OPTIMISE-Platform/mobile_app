@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.4.0"
+  arrow_path:
+    dependency: "direct main"
+    description:
+      name: arrow_path
+      sha256: "794651f27eca2e9b4749d307b1e7fb8254fb8343124cc24ee6497f3ceff94651"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   async:
     dependency: transitive
     description:
@@ -443,6 +451,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  flutter_material_symbols:
+    dependency: "direct main"
+    description:
+      name: flutter_material_symbols
+      sha256: "14845fb68cfb4ec264de5a49e0f3e7bc7c8f1b61898605162a378b17a06a80a0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.4"
   flutter_native_splash:
     dependency: "direct main"
     description:
@@ -841,10 +857,10 @@ packages:
     dependency: "direct main"
     description:
       name: multiselect
-      sha256: "89307c172c874dbd184825f8509bee38c4c68eae676c480ac5b7943ee2e8436d"
+      sha256: "8d0c4a7b89bee6c5e5e4a25ecba68c796dafc1917492d5606f0caa3947d5905a"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.9"
+    version: "0.1.0"
   mutex:
     dependency: "direct main"
     description:
