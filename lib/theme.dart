@@ -54,6 +54,7 @@ class MyTheme {
   static final formatMMM = DateFormat.MMM();
   static final formatDDMM = DateFormat('dd.MM');
   static final formatY = DateFormat.y();
+  static final formatEddMMy = DateFormat('E, dd.MM.y');
 
   static ThemeData materialTheme = ThemeData(
       cupertinoOverrideTheme: cupertinoTheme,

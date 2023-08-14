@@ -213,6 +213,10 @@ class SmSeLineChart extends SmSeRequest {
   }
 
   void setDateFormat(List<String> timestamps, List<int> rawTimestamps) {
+    if (rawTimestamps.length == 1) {
+      dateFormat = MyTheme.formatEddMMy;
+      return;
+    }
     for (int i = 1; i < rawTimestamps.length; i++) {
       if (rawTimestamps[i] - rawTimestamps[i - 1] != 604800000) {
         //exactly one week apart
