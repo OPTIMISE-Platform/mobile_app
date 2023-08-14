@@ -60,8 +60,10 @@ class SmSeLineChart extends SmSeRequest {
     super.configure(data);
     if (data is! Map<String, dynamic> || data["titles"] == null) return;
     titles.clear();
-    (data["titles"] as List).forEach((element) => titles.add(element as String));
-    usesTSWrapperRequest = data["uses_ts_wrapper_request"] ?? usesTSWrapperRequest;
+    (data["titles"] as List)
+        .forEach((element) => titles.add(element as String));
+    usesTSWrapperRequest =
+        data["uses_ts_wrapper_request"] ?? usesTSWrapperRequest;
     if (usesTSWrapperRequest) {
       final l = json.decode(request.body) as List<dynamic>;
       queries = List.generate(l.length, (index) => DbQuery.fromJson(l[index]));
@@ -75,8 +77,11 @@ class SmSeLineChart extends SmSeRequest {
         : Container(
             height: height * heightUnit - MyTheme.insetSize,
             //width: MediaQuery.of(context).size.width,
-            padding:
-                const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+            padding: const EdgeInsets.only(
+                top: MyTheme.insetSize,
+                right: MyTheme.insetSize,
+                left: MyTheme.insetSize / 2,
+                bottom: MyTheme.insetSize / 2),
             child: gestureDetector(
                 context,
                 LineChart(
@@ -104,10 +109,18 @@ class SmSeLineChart extends SmSeRequest {
                               if (val == meta.max || val == meta.min) {
                                 return const SizedBox.shrink();
                               }
-                              final dt = DateTime.fromMillisecondsSinceEpoch(val.floor(), isUtc: true).toLocal();
+                              final dt = DateTime.fromMillisecondsSinceEpoch(
+                                      val.floor(),
+                                      isUtc: true)
+                                  .toLocal();
                               return Container(
                                   padding: const EdgeInsets.only(top: 3),
-                                  child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
+                                  child: Text(dateFormat.format(dt),
+                                      style: TextStyle(
+                                          fontSize:
+                                              MediaQuery.textScaleFactorOf(
+                                                      context) *
+                                                  11)));
                             }),
                       ),
                       leftTitles: AxisTitles(
@@ -118,7 +131,11 @@ class SmSeLineChart extends SmSeRequest {
                               if (val == meta.max || val == meta.min) {
                                 return const SizedBox.shrink();
                               }
-                              return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
+                              return Text(meta.formattedValue,
+                                  style: TextStyle(
+                                      fontSize: MediaQuery.textScaleFactorOf(
+                                              context) *
+                                          11));
                             }),
                       ),
                     ),
@@ -128,8 +145,11 @@ class SmSeLineChart extends SmSeRequest {
                             fitInsideVertically: true,
                             fitInsideHorizontally: true,
                             getTooltipItems: (spots) => spots
-                                .map((e) => LineTooltipItem("${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
-                                    TextStyle(color: MyTheme.getSomeColor(e.barIndex))))
+                                .map((e) => LineTooltipItem(
+                                    "${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
+                                    TextStyle(
+                                        color:
+                                            MyTheme.getSomeColor(e.barIndex))))
                                 .toList())),
                   ),
                   swapAnimationDuration: Duration.zero,
@@ -147,18 +167,28 @@ class SmSeLineChart extends SmSeRequest {
 
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
-    List<List<FlSpot>> lineSpots = List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
+    List<List<FlSpot>> lineSpots =
+        List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
       for (int j = 1; j < values[i].length; j++) {
         if (values[i][j] != null) {
           rawTimestamps.add(t.toInt());
           timestamps.add(values[i][0]);
-          lineSpots[j - 1].add(FlSpot(t, double.parse((values[i][j] is int ? values[i][j].toDouble() : values[i][j]).toStringAsFixed(precision))));
+          lineSpots[j - 1].add(FlSpot(
+              t,
+              double.parse(
+                  (values[i][j] is int ? values[i][j].toDouble() : values[i][j])
+                      .toStringAsFixed(precision))));
         }
       }
     }
-    lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.forEach((e) {
+    lineSpots
+        .where((e) => e.isNotEmpty)
+        .toList(growable: false)
+        .asMap()
+        .entries
+        .forEach((e) {
       if (e.key < _lines.length) {
         _lines[e.key].spots.addAll(e.value);
         _lines[e.key].spots.sort((a, b) {
@@ -183,8 +213,9 @@ class SmSeLineChart extends SmSeRequest {
   }
 
   void setDateFormat(List<String> timestamps, List<int> rawTimestamps) {
-    for (int i = 1; i< rawTimestamps.length; i++) {
-      if (rawTimestamps[i] - rawTimestamps[i-1] != 604800000) { //exactly one week apart
+    for (int i = 1; i < rawTimestamps.length; i++) {
+      if (rawTimestamps[i] - rawTimestamps[i - 1] != 604800000) {
+        //exactly one week apart
         break;
       }
       if (i == timestamps.length - 1) {
@@ -220,6 +251,8 @@ class SmSeLineChart extends SmSeRequest {
       }
     } else if (right == 14) {
       dateFormat = MyTheme.formatMMM;
+    } else if (right == 17) {
+      dateFormat = MyTheme.formatY;
     } else {
       dateFormat = MyTheme.formatE;
     }
@@ -235,13 +268,18 @@ class SmSeLineChart extends SmSeRequest {
     for (int i = 1; i < timestamps.length; i++) {
       assert(timestamps[i].length == l);
       int j = 0;
-      while (j <= left && timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j) && j < timestamps[i].length - 1) {
+      while (j <= left &&
+          timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j) &&
+          j < timestamps[i].length - 1) {
         j++;
       }
       left = j;
 
       j = 0;
-      while (j <= right && timestamps[i].codeUnitAt(l - 1 - j) == timestamps[0].codeUnitAt(l - 1 - j) && j < timestamps[i].length - 1) {
+      while (j <= right &&
+          timestamps[i].codeUnitAt(l - 1 - j) ==
+              timestamps[0].codeUnitAt(l - 1 - j) &&
+          j < timestamps[i].length - 1) {
         j++;
       }
       right = j;
@@ -252,7 +290,9 @@ class SmSeLineChart extends SmSeRequest {
   int calcPrecision(List<dynamic> values) {
     final List<double> nums = [];
     for (int i = 0; i < values.length; i++) {
-      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e ?? 0));
+      nums.addAll((values[i] as List)
+          .skip(1)
+          .map((e) => e is int ? e.toDouble() : e ?? 0));
     }
     final stats = Stats.fromData(nums);
     int precision = 0;
@@ -273,11 +313,22 @@ class SmSeLineChart extends SmSeRequest {
     List<DbQuery> newBody = List.generate(queries?.length ?? 0, (i) {
       final e = DbQuery.from(queries![i]);
       if (toRight) {
-        e.time = QueriesRequestElementTime(null, DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true).toIso8601String(),
-            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.length + diff, isUtc: true).toIso8601String());
+        e.time = QueriesRequestElementTime(
+            null,
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true)
+                .toIso8601String(),
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.length + diff,
+                    isUtc: true)
+                .toIso8601String());
       } else {
-        e.time = QueriesRequestElementTime(null, DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first - diff, isUtc: true).toIso8601String(),
-            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first, isUtc: true).toIso8601String());
+        e.time = QueriesRequestElementTime(
+            null,
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first - diff,
+                    isUtc: true)
+                .toIso8601String(),
+            DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first,
+                    isUtc: true)
+                .toIso8601String());
       }
 
       return e;
@@ -307,8 +358,11 @@ class SmSeLineChart extends SmSeRequest {
       }
     }
     if (initialTimestampDifference == null && rawTimestamps.isNotEmpty) {
-      initialTimestampDifference = DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true)
-          .difference(DateTime.fromMillisecondsSinceEpoch(rawTimestamps.first, isUtc: true));
+      initialTimestampDifference =
+          DateTime.fromMillisecondsSinceEpoch(rawTimestamps.last, isUtc: true)
+              .difference(DateTime.fromMillisecondsSinceEpoch(
+                  rawTimestamps.first,
+                  isUtc: true));
       left = min(left, rawTimestamps.first);
       right = max(right, rawTimestamps.last);
     }
@@ -322,7 +376,10 @@ class SmSeLineChart extends SmSeRequest {
                 if (loadMoreData.isLocked) return;
                 await loadMoreData.acquire();
                 final swipeWidth = max(
-                        ((initialTimestampDifference ?? Duration.zero).inMilliseconds * (details.delta.distance / MediaQuery.of(context).size.width)),
+                        ((initialTimestampDifference ?? Duration.zero)
+                                .inMilliseconds *
+                            (details.delta.distance /
+                                MediaQuery.of(context).size.width)),
                         0)
                     .toInt();
                 if (details.delta.direction > 0) {
