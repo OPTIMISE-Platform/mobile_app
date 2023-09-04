@@ -398,8 +398,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       if (refreshDeviceIds.isNotEmpty) {
         final refreshFilter = DeviceSearchFilter("");
         refreshFilter.deviceIds = refreshDeviceIds;
-        connectionStatusFutures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true)
-            .then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
+        connectionStatusFutures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true).catchError((_) async {
+          Toast.showToastNoContext("Error refreshing device status, using cache", MyTheme.errorColor);
+          return await DevicesService.getDevices(
+              refreshDeviceIds.length, 0, refreshFilter, null,
+              forceBackend: false);
+        }).then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
       }
       try {
         await Future.wait(connectionStatusFutures);
