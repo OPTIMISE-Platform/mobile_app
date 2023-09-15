@@ -21,11 +21,13 @@ import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/network.dart';
 import '../shared/http_client_adapter.dart';
 import '../shared/isar.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class NetworksService {
@@ -34,6 +36,8 @@ class NetworksService {
   );
 
   static CacheOptions? _options;
+  static     String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/hubs?limit=9999';
+
 
   static initOptions() async {
     if (_options != null) {
@@ -56,7 +60,6 @@ class NetworksService {
     }
 
 
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/hubs?limit=9999';
     final Map<String, String> queryParameters = {};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
@@ -66,6 +69,7 @@ class NetworksService {
     await initOptions();
     final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final Response<List<dynamic>?> resp;
     try {
@@ -89,4 +93,7 @@ class NetworksService {
     }
     return networks;
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
+
 }

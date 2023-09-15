@@ -17,13 +17,14 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class FcmTokenService {
@@ -33,7 +34,7 @@ class FcmTokenService {
 
   static CacheOptions? _options;
   static late final Dio? _dio;
-  static final _client = http.Client();
+  static final baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
@@ -50,11 +51,14 @@ class FcmTokenService {
       allowPostMethod: true,
     );
 
-    _dio = Dio()..interceptors.add(DioCacheInterceptor(options: _options!))..httpClientAdapter = AppHttpClientAdapter();
+    _dio = Dio()
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
+      ..httpClientAdapter = AppHttpClientAdapter();
   }
 
   static registerFcmToken(String token) async {
-    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
+    final url = '$baseUrl/$token';
 
     var uri = Uri.parse(url);
     if (url.startsWith("https://")) {
@@ -78,16 +82,12 @@ class FcmTokenService {
   }
 
   static deregisterFcmToken(String token) async {
-    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens/$token';
+    final url = '$baseUrl/$token';
 
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
     final headers = await Auth().getHeaders();
-
-    final resp = await _client.delete(uri, headers: headers);
-    if (resp.statusCode > 204 && resp.statusCode != 404) {
+    await initOptions();
+    final resp = await _dio!.delete(url, options: Options(headers: headers));
+    if (resp.statusCode == null || (resp.statusCode! > 204 && resp.statusCode != 404)) {
       // dont have to delete what cant be found
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
@@ -95,4 +95,7 @@ class FcmTokenService {
     final key = _options!.keyBuilder(RequestOptions(path: url, method: 'POST'));
     await _options?.store?.delete(key); // ensure token is resubmitted when registered again
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);
+
 }

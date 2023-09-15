@@ -17,29 +17,28 @@
 
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/services/settings.dart';
 
+import '../shared/api_available_interceptor.dart';
 import 'auth.dart';
 
 class DbQueryService {
-  static final _client = http.Client();
+  static final _dio = Dio(BaseOptions(
+      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+    ..interceptors.add(ApiAvailableInterceptor());
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {
     final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/queries';
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
     final headers = await Auth().getHeaders();
 
-    final resp = await _client.post(uri, headers: headers, body: json.encode([query]));
-    if (resp.statusCode != 200) {
+    final resp = await _dio.post<List<dynamic>>(url, options: Options(headers: headers), data: json.encode([query]));
+    if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
-    final decoded = (json.decode(resp.body) as List<dynamic>)[0];
+    final decoded = resp.data![0];
     return List<List<dynamic>>.generate(decoded.length, (i) => decoded[i] as List<dynamic>);
   }
 }

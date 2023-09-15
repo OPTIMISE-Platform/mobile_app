@@ -41,13 +41,15 @@ class LocationPage extends StatefulWidget {
   final int _stateLocationIndex;
   final DeviceTabsState parentState;
 
-  const LocationPage(this._stateLocationIndex, this.parentState, {Key? key}) : super(key: key);
+  const LocationPage(this._stateLocationIndex, this.parentState, {Key? key})
+      : super(key: key);
 
   @override
   State<StatefulWidget> createState() => LocationPageState();
 }
 
-class LocationPageState extends State<LocationPage> with WidgetsBindingObserver {
+class LocationPageState extends State<LocationPage>
+    with WidgetsBindingObserver {
   final StreamController _toggleStreamController = StreamController();
   late final Stream _toggleStream;
 
@@ -80,7 +82,8 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true)
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true)
       _refresh(AppState().locations[widget._stateLocationIndex], context);
   }
 
@@ -88,11 +91,15 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
       if (state.locations.length - 1 < widget._stateLocationIndex) {
-        _logger.w("Location Page requested for location index that is not in AppState");
+        _logger.w(
+            "Location Page requested for location index that is not in AppState");
         return const Center(child: DelayedCircularProgressIndicator());
       }
 
-      if ((state.loadingDevices || state.devices.length != state.locations[widget._stateLocationIndex].device_ids.length) &&
+      if ((state.loadingDevices ||
+              state.devices.length !=
+                  state.locations[widget._stateLocationIndex].device_ids
+                      .length) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
           state.loadDevices(context); //ensure all devices get loaded
@@ -102,72 +109,87 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
       final location = state.locations[widget._stateLocationIndex];
 
       List<Widget> appBarActions = [];
-      appBarActions.add(PlatformIconButton(
-        onPressed: () async {
-          final titleController = TextEditingController(text: location.name);
+      if (LocationService.isCreateEditDeleteAvailable()) {
+        appBarActions.add(PlatformIconButton(
+          onPressed: () async {
+            final titleController = TextEditingController(text: location.name);
 
-          final newName = await showPlatformDialog(
-              context: context,
-              builder: (context) => PlatformAlertDialog(
-                    title: Text("Edit ${location.name}"),
-                    content: PlatformTextFormField(controller: titleController),
-                    actions: [
-                      PlatformDialogAction(
-                        child: PlatformText('Cancel'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      PlatformDialogAction(
-                          child: PlatformText('Save'),
-                          onPressed: () {
-                            Navigator.pop(context, titleController.value.text);
-                          })
-                    ],
-                  ));
-          if (newName == null) {
-            return;
-          }
-          location.name = newName;
-          final newLocation = await LocationService.saveLocation(location);
-          state.locations[widget._stateLocationIndex] = newLocation;
-          state.notifyListeners();
-        },
-        icon: Icon(PlatformIcons(context).edit),
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-      ));
-      appBarActions.add(PlatformIconButton(
-        onPressed: () async {
-          final deleted = await showPlatformDialog(
-              context: context,
-              builder: (context) => PlatformAlertDialog(
-                    title: Text("Do you want to permanently delete location '${location.name}'?"),
-                    actions: [
-                      PlatformDialogAction(
-                        child: PlatformText('Cancel'),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      PlatformDialogAction(
-                          child: PlatformText('Delete'),
-                          cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
-                          onPressed: () async {
-                            await LocationService.deleteLocation(location.id);
-                            state.locations.removeAt(widget._stateLocationIndex);
-                            Navigator.pop(context, true);
-                          })
-                    ],
-                  ));
-          if (deleted == true) {
-            Navigator.pop(context);
+            final newName = await showPlatformDialog(
+                context: context,
+                builder: (context) =>
+                    PlatformAlertDialog(
+                      title: Text("Edit ${location.name}"),
+                      content:
+                      PlatformTextFormField(controller: titleController),
+                      actions: [
+                        PlatformDialogAction(
+                          child: PlatformText('Cancel'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        PlatformDialogAction(
+                            child: PlatformText('Save'),
+                            onPressed: () {
+                              Navigator.pop(
+                                  context, titleController.value.text);
+                            })
+                      ],
+                    ));
+            if (newName == null) {
+              return;
+            }
+            location.name = newName;
+            final newLocation = await LocationService.saveLocation(location);
+            state.locations[widget._stateLocationIndex] = newLocation;
             state.notifyListeners();
-          }
-        },
-        icon: Icon(PlatformIcons(context).delete),
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-      ));
+          },
+          icon: Icon(PlatformIcons(context).edit),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
+        ));
+
+        appBarActions.add(PlatformIconButton(
+          onPressed: () async {
+            final deleted = await showPlatformDialog(
+                context: context,
+                builder: (context) =>
+                    PlatformAlertDialog(
+                      title: Text(
+                          "Do you want to permanently delete location '${location
+                              .name}'?"),
+                      actions: [
+                        PlatformDialogAction(
+                          child: PlatformText('Cancel'),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        PlatformDialogAction(
+                            child: PlatformText('Delete'),
+                            cupertino: (_, __) =>
+                                CupertinoDialogActionData(
+                                    isDestructiveAction: true),
+                            onPressed: () async {
+                              await LocationService.deleteLocation(location.id);
+                              state.locations
+                                  .removeAt(widget._stateLocationIndex);
+                              Navigator.pop(context, true);
+                            })
+                      ],
+                    ));
+            if (deleted == true) {
+              Navigator.pop(context);
+              state.notifyListeners();
+            }
+          },
+          icon: Icon(PlatformIcons(context).delete),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
+        ));
+      }
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
           onPressed: () => _refresh(location, context),
           icon: const Icon(Icons.refresh),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
@@ -175,13 +197,15 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
       final List<DeviceGroup> matchingGroups = [];
       for (var i = 0; i < state.deviceGroups.length; i++) {
         if (location.device_group_ids.contains(state.deviceGroups[i].id) &&
-            (widget.parentState.filter.deviceGroupIds == null || widget.parentState.filter.deviceGroupIds!.contains(state.deviceGroups[i].id))) {
+            (widget.parentState.filter.deviceGroupIds == null ||
+                widget.parentState.filter.deviceGroupIds!
+                    .contains(state.deviceGroups[i].id))) {
           matchingGroups.add(state.deviceGroups[i]);
         }
       }
 
       return Scaffold(
-          floatingActionButton: ExpandableFab(
+          floatingActionButton: !LocationService.isCreateEditDeleteAvailable() ? null : ExpandableFab(
             icon: Icon(Icons.list, color: MyTheme.textColor),
             distance: 55.0,
             toggleStream: _toggleStream,
@@ -190,7 +214,11 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                 onPressed: () async {
                   _toggleStreamController.add(null);
                   await Navigator.push(
-                      context, platformPageRoute(context: context, builder: (context) => LocationEditDevices(widget._stateLocationIndex)));
+                      context,
+                      platformPageRoute(
+                          context: context,
+                          builder: (context) =>
+                              LocationEditDevices(widget._stateLocationIndex)));
                   state.searchDevices(widget.parentState.filter, context);
                 },
                 icon: Icon(Icons.sensors, color: MyTheme.textColor),
@@ -198,7 +226,12 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
               ActionButton(
                 onPressed: () {
                   _toggleStreamController.add(null);
-                  Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationEditGroups(widget._stateLocationIndex)));
+                  Navigator.push(
+                      context,
+                      platformPageRoute(
+                          context: context,
+                          builder: (context) =>
+                              LocationEditGroups(widget._stateLocationIndex)));
                 },
                 icon: Icon(Icons.devices_other, color: MyTheme.textColor),
               )
@@ -215,18 +248,21 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                       HapticFeedbackProxy.lightImpact();
                       await _refresh(location, context);
                     },
-                    child: location.device_ids.isEmpty && location.device_group_ids.isEmpty
+                    child: location.device_ids.isEmpty &&
+                            location.device_group_ids.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {
                               return SingleChildScrollView(
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 child: ConstrainedBox(
-                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                  constraints: BoxConstraints(
+                                      minHeight: constraint.maxHeight),
                                   child: IntrinsicHeight(
                                     child: Column(
                                       children: const [
                                         Expanded(
-                                          child: Center(child: Text("Empty Location")),
+                                          child: Center(
+                                              child: Text("Empty Location")),
                                         ),
                                       ],
                                     ),
@@ -237,9 +273,14 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                           )
                         : ListView.builder(
                             padding: MyTheme.inset,
-                            itemCount: location.device_ids.length + matchingGroups.length + 1,
+                            itemCount: location.device_ids.length +
+                                matchingGroups.length +
+                                1,
                             itemBuilder: (_, i) {
-                              if (i > state.devices.length + matchingGroups.length - 1) {
+                              if (i >
+                                  state.devices.length +
+                                      matchingGroups.length -
+                                      1) {
                                 state.loadDevices(context);
                                 return Column(
                                   children: const [Divider(), ListTile()],
@@ -247,15 +288,27 @@ class LocationPageState extends State<LocationPage> with WidgetsBindingObserver 
                               }
                               if (i < state.devices.length) {
                                 return Column(
-                                  children: [const Divider(), DeviceListItem(state.devices[i], null)],
+                                  children: [
+                                    i > 0
+                                        ? const Divider()
+                                        : const SizedBox.shrink(),
+                                    DeviceListItem(state.devices[i], null)
+                                  ],
                                 );
                               }
                               return Column(
                                 children: [
-                                  const Divider(),
-                                  GroupListItem(matchingGroups.elementAt(i - state.devices.length), (_) {
-                                    widget.parentState.filter.locationIds = [location.id];
-                                    state.searchDevices(widget.parentState.filter, context);
+                                  i > 0
+                                      ? const Divider()
+                                      : const SizedBox.shrink(),
+                                  GroupListItem(
+                                      matchingGroups.elementAt(
+                                          i - state.devices.length), (_) {
+                                    widget.parentState.filter.locationIds = [
+                                      location.id
+                                    ];
+                                    state.searchDevices(
+                                        widget.parentState.filter, context);
                                   })
                                 ],
                               );

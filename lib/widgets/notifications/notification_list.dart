@@ -19,7 +19,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/notification.dart' as app;
@@ -43,7 +45,8 @@ class _NotificationListState extends State<NotificationList> {
 
   @override
   Widget build(BuildContext context) {
-    final appBar = MyAppBar(_selectionMode ? _selected.length.toString() : "Notifications");
+    final appBar = MyAppBar(
+        _selectionMode ? _selected.length.toString() : "Notifications");
 
     return Consumer<AppState>(builder: (context, state, child) {
       state.checkMessageDisplay(context);
@@ -51,9 +54,12 @@ class _NotificationListState extends State<NotificationList> {
 
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
-          onPressed: () => state.loadNotifications(context),
+          onPressed: !NotificationsService.isAvailable()
+              ? null
+              : () => state.loadNotifications(context),
           icon: const Icon(Icons.refresh),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
       }
 
@@ -65,78 +71,95 @@ class _NotificationListState extends State<NotificationList> {
               _selectionMode = false;
             }),
             icon: Icon(PlatformIcons(context).clear),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
           PlatformIconButton(
-            onPressed: () => setState(() => _selected.addAll(state.notifications)),
+            onPressed: () =>
+                setState(() => _selected.addAll(state.notifications)),
             icon: Icon(PlatformIcons(context).addCircledOutline),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
           PlatformIconButton(
-            onPressed: () async {
-              final List<Future> futures = [];
-              for (var element in _selected) {
-                if (!element.isRead) {
-                  element.isRead = true;
-                  futures.add(state.updateNotifications(context, state.notifications.indexOf(element)));
-                }
-              }
-              await Future.wait(futures);
-              setState(() {
-                _selected.clear();
-                _selectionMode = false;
-              });
-            },
+            onPressed: !NotificationsService.isAvailable()
+                ? null
+                : () async {
+                    final List<Future> futures = [];
+                    for (var element in _selected) {
+                      if (!element.isRead) {
+                        element.isRead = true;
+                        futures.add(state.updateNotifications(
+                            context, state.notifications.indexOf(element)));
+                      }
+                    }
+                    await Future.wait(futures);
+                    setState(() {
+                      _selected.clear();
+                      _selectionMode = false;
+                    });
+                  },
             icon: const Icon(Icons.mark_email_read),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
           PlatformIconButton(
-            onPressed: () async {
-              final List<Future> futures = [];
-              for (var element in _selected) {
-                if (element.isRead) {
-                  element.isRead = false;
-                  futures.add(state.updateNotifications(context, state.notifications.indexOf(element)));
-                }
-              }
-              await Future.wait(futures);
-              setState(() {
-                _selected.clear();
-                _selectionMode = false;
-              });
-            },
+            onPressed: !NotificationsService.isAvailable()
+                ? null
+                : () async {
+                    final List<Future> futures = [];
+                    for (var element in _selected) {
+                      if (element.isRead) {
+                        element.isRead = false;
+                        futures.add(state.updateNotifications(
+                            context, state.notifications.indexOf(element)));
+                      }
+                    }
+                    await Future.wait(futures);
+                    setState(() {
+                      _selected.clear();
+                      _selectionMode = false;
+                    });
+                  },
             icon: const Icon(Icons.mark_email_unread),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
           PlatformIconButton(
-            onPressed: () async {
-              final confirmed = await showPlatformDialog(
-                context: context,
-                builder: (_) => PlatformAlertDialog(
-                  title: const Text('Confirmation'),
-                  content: const Text("Do you want to permanently delete selected notifications?"),
-                  actions: <Widget>[
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
-                      onPressed: () => Navigator.pop(context, false),
-                    ),
-                    PlatformDialogAction(
-                        child: PlatformText('OK'),
-                        cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
-                        onPressed: () => Navigator.pop(context, true)),
-                  ],
-                ),
-              );
-              if (confirmed is bool && confirmed) {
-                await state.deleteNotifications(this.context, _selected.map((e) => e.id).toList(growable: false));
-                setState(() {
-                  _selected.clear();
-                  _selectionMode = false;
-                });
-              }
-            },
+            onPressed: !NotificationsService.isAvailable()
+                ? null
+                : () async {
+                    final confirmed = await showPlatformDialog(
+                      context: context,
+                      builder: (_) => PlatformAlertDialog(
+                        title: const Text('Confirmation'),
+                        content: const Text(
+                            "Do you want to permanently delete selected notifications?"),
+                        actions: <Widget>[
+                          PlatformDialogAction(
+                            child: PlatformText('Cancel'),
+                            onPressed: () => Navigator.pop(context, false),
+                          ),
+                          PlatformDialogAction(
+                              child: PlatformText('OK'),
+                              cupertino: (_, __) => CupertinoDialogActionData(
+                                  isDestructiveAction: true),
+                              onPressed: () => Navigator.pop(context, true)),
+                        ],
+                      ),
+                    );
+                    if (confirmed is bool && confirmed) {
+                      await state.deleteNotifications(this.context,
+                          _selected.map((e) => e.id).toList(growable: false));
+                      setState(() {
+                        _selected.clear();
+                        _selectionMode = false;
+                      });
+                    }
+                  },
             icon: Icon(PlatformIcons(context).delete),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
         ]);
       }
@@ -158,7 +181,9 @@ class _NotificationListState extends State<NotificationList> {
                           itemBuilder: (BuildContext context, int i) {
                             return Column(
                               children: [
-                                const Divider(),
+                                i > 0
+                                    ? const Divider()
+                                    : const SizedBox.shrink(),
                                 Dismissible(
                                     background: Container(
                                       alignment: Alignment.centerRight,
@@ -169,20 +194,36 @@ class _NotificationListState extends State<NotificationList> {
                                         color: Colors.white,
                                       ),
                                     ),
+                                    confirmDismiss: (_) {
+                                      final b = NotificationsService.isAvailable();
+                                      if (!b) {
+                                        Toast.showToastNoContext("Currently unavailable");
+                                      }
+                                      return Future.value(
+                                          b);
+                                    },
                                     direction: DismissDirection.endToStart,
-                                    onDismissed: (_) => state.deleteNotifications(context, [state.notifications[i].id]),
-                                    key: ValueKey<String>(state.notifications[i].id),
+                                    onDismissed: (_) => state
+                                        .deleteNotifications(context,
+                                            [state.notifications[i].id]),
+                                    key: ValueKey<String>(
+                                        state.notifications[i].id),
                                     child: ListTile(
                                       leading: !_selectionMode
                                           ? null
-                                          : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                                              Icon(
-                                                _selected.contains(state.notifications[i])
-                                                    ? PlatformIcons(context).checkMarkCircledSolid
-                                                    : Icons.circle_outlined,
-                                                color: MyTheme.appColor,
-                                              )
-                                            ]),
+                                          : Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                  Icon(
+                                                    _selected.contains(state
+                                                            .notifications[i])
+                                                        ? PlatformIcons(context)
+                                                            .checkMarkCircledSolid
+                                                        : Icons.circle_outlined,
+                                                    color: MyTheme.appColor,
+                                                  )
+                                                ]),
                                       title: Row(
                                         children: [
                                           Text(state.notifications[i].title),
@@ -192,26 +233,36 @@ class _NotificationListState extends State<NotificationList> {
                                               size: 12,
                                               color: MyTheme.warnColor,
                                             ),
-                                            isLabelVisible: !state.notifications[i].isRead,
-                                            alignment: AlignmentDirectional.topCenter,
+                                            isLabelVisible:
+                                                !state.notifications[i].isRead,
+                                            alignment:
+                                                AlignmentDirectional.topCenter,
                                             largeSize: 16,
                                             backgroundColor: Colors.transparent,
-                                            child: state.notifications[i].isRead ? null : const Text(""),
+                                            child: state.notifications[i].isRead
+                                                ? null
+                                                : const Text(""),
                                           )
                                         ],
                                       ),
-                                      subtitle: Text(_format.format(state.notifications[i].createdAt())),
+                                      subtitle: Text(_format.format(
+                                          state.notifications[i].createdAt())),
                                       onTap: () {
                                         if (_selectionMode) {
                                           setState(() {
-                                            _selected.contains(state.notifications[i])
-                                                ? _selected.remove(state.notifications[i])
-                                                : _selected.add(state.notifications[i]);
+                                            _selected.contains(
+                                                    state.notifications[i])
+                                                ? _selected.remove(
+                                                    state.notifications[i])
+                                                : _selected.add(
+                                                    state.notifications[i]);
                                           });
                                         } else {
                                           if (!state.notifications[i].isRead) {
-                                            state.notifications[i].isRead = true;
-                                            state.updateNotifications(context, i);
+                                            state.notifications[i].isRead =
+                                                true;
+                                            state.updateNotifications(
+                                                context, i);
                                           }
                                           state.notifications[i].show(context);
                                         }
@@ -221,7 +272,8 @@ class _NotificationListState extends State<NotificationList> {
                                           : () {
                                               setState(() {
                                                 _selectionMode = true;
-                                                _selected.add(state.notifications[i]);
+                                                _selected.add(
+                                                    state.notifications[i]);
                                               });
                                             },
                                     ))

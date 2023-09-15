@@ -21,9 +21,11 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class FunctionsService {
@@ -32,6 +34,8 @@ class FunctionsService {
   );
 
   static CacheOptions? _options;
+  static String uri =
+      '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/nested-function-infos';
 
   static initOptions() async {
     if (_options != null) {
@@ -49,18 +53,21 @@ class FunctionsService {
   }
 
   static Future<List<NestedFunction>> getNestedFunctions() async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/nested-function-infos';
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+    final dio = Dio(BaseOptions(
+        connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
+      resp = await dio.get<List<dynamic>?>(uri,
+          options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -69,6 +76,9 @@ class FunctionsService {
     }
 
     final l = resp.data ?? [];
-    return List<NestedFunction>.generate(l.length, (index) => NestedFunction.fromJson(l[index]));
+    return List<NestedFunction>.generate(
+        l.length, (index) => NestedFunction.fromJson(l[index]));
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

@@ -22,10 +22,12 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
 import '../shared/isar.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class LocationService {
@@ -51,6 +53,7 @@ class LocationService {
     );
     _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
@@ -157,4 +160,8 @@ class LocationService {
 
     return;
   }
+
+  static bool isListAvailable() => ApiAvailableService().isAvailable('${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/locations');
+  static bool isCreateEditDeleteAvailable() => ApiAvailableService().isAvailable('${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations');
+
 }

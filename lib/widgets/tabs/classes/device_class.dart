@@ -115,7 +115,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                             itemCount: deviceClasses.length,
                             itemBuilder: (context, i) {
                               return Column(children: [
-                                const Divider(),
+                                i > 0 ? const Divider() : const SizedBox.shrink(),
                                 ListTile(
                                     title: Text(deviceClasses[i].name),
                                     subtitle: Text(
@@ -165,8 +165,13 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                           state.loadDevices(context);
                           return const SizedBox.shrink();
                         }
+                        final List<Widget> children = [];
+                        if (i>0) {
+                          children.add(const Divider());
+                        }
+                        children.add(DeviceListItem(state.devices[i], null));
                         return Column(
-                          children: [const Divider(), DeviceListItem(state.devices[i], null)],
+                          children: children,
                         );
                       },
                     )),

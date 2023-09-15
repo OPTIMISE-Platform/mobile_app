@@ -19,10 +19,16 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/device_classes.dart';
+import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/services/networks.dart';
+import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
@@ -72,11 +78,25 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     if (_fabPressedControllerStream != null) {
       return _fabPressedControllerStream!;
     }
-    _fabPressedControllerStream = _fabPressedController.stream.asBroadcastStream();
+    _fabPressedControllerStream =
+        _fabPressedController.stream.asBroadcastStream();
     return _fabPressedControllerStream!;
   }
 
   final _cupertinoSearchController = RestorableTextEditingController();
+
+  final controller = CupertinoTabController(initialIndex: 0);
+
+  final _tabKeys = [
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey(),
+    GlobalKey()
+  ];
 
   _searchChanged(String search) {
     if (filter.query == search) {
@@ -132,12 +152,12 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         case tabLocations:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          showFab = true;
+          showFab = LocationService.isCreateEditDeleteAvailable();
           break;
         case tabGroups:
           hideSearch = true;
           AppState().searchDevices(filter, context);
-          showFab = true;
+          showFab = DeviceGroupsService.isCreateEditDeleteAvailable();
           break;
         case tabNetworks:
           hideSearch = true;
@@ -192,24 +212,87 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return count;
   }
 
+  List<bool> _tabDisabled() {
+    final state = AppState();
+    return [
+      false,
+      !SmartServiceService.isAvailable(),
+      state.deviceClasses.isEmpty && !DeviceClassesService.isAvailable(),
+      state.locations.isEmpty && !LocationService.isListAvailable(),
+      state.deviceGroups.isEmpty && !DeviceGroupsService.isListAvailable(),
+      state.networks.isEmpty && !NetworksService.isAvailable(),
+      false,
+      !SmartServiceService.isAvailable(),
+    ];
+  }
+
   PlatformNavBar _buildBottom(BuildContext context) {
+    final disabled = _tabDisabled();
+
+    Color disabledColor;
+    if (isCupertino(context)) {
+      disabledColor = Theme.of(context).disabledColor.withAlpha(32);
+    } else {
+      disabledColor = Theme.of(context).disabledColor;
+    }
+
+    final items = [
+      BottomNavigationBarItem(
+          tooltip: disabled[0] ? "Currently unavailable" : null,
+          icon: Icon(Icons.star_border,
+              key: _tabKeys[0], color: disabled[0] ? disabledColor : null),
+          label: "Favorites"),
+      BottomNavigationBarItem(
+          tooltip: disabled[1] ? "Currently unavailable" : null,
+          icon: Icon(Icons.dashboard,
+              key: _tabKeys[1], color: disabled[1] ? disabledColor : null),
+          label: "Board"),
+      BottomNavigationBarItem(
+          tooltip: disabled[2] ? "Currently unavailable" : null,
+          icon: Icon(Icons.devices,
+              key: _tabKeys[2], color: disabled[2] ? disabledColor : null),
+          label: "Classes"),
+      BottomNavigationBarItem(
+          tooltip: disabled[3] ? "Currently unavailable" : null,
+          icon: Icon(PlatformIcons(context).location,
+              key: _tabKeys[3], color: disabled[3] ? disabledColor : null),
+          label: "Locations"),
+      BottomNavigationBarItem(
+          tooltip: disabled[4] ? "Currently unavailable" : null,
+          icon: Icon(Icons.devices_other,
+              key: _tabKeys[4], color: disabled[4] ? disabledColor : null),
+          label: "Groups"),
+      BottomNavigationBarItem(
+          tooltip: disabled[5] ? "Currently unavailable" : null,
+          icon: Icon(Icons.device_hub,
+              key: _tabKeys[5], color: disabled[5] ? disabledColor : null),
+          label: "Networks"),
+      BottomNavigationBarItem(
+          tooltip: disabled[6] ? "Currently unavailable" : null,
+          icon: Icon(Icons.sensors,
+              key: _tabKeys[6], color: disabled[6] ? disabledColor : null),
+          label: "Devices"),
+      BottomNavigationBarItem(
+          tooltip: disabled[7] ? "Currently unavailable" : null,
+          icon: Icon(Icons.auto_fix_high,
+              key: _tabKeys[7], color: disabled[7] ? disabledColor : null),
+          label: "Services"),
+    ];
+
     return PlatformNavBar(
-        items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.star_border), label: "Favorites"),
-          const BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Board"),
-          const BottomNavigationBarItem(icon: Icon(Icons.devices), label: "Classes"),
-          BottomNavigationBarItem(icon: Icon(PlatformIcons(context).location), label: "Locations"),
-          const BottomNavigationBarItem(icon: Icon(Icons.devices_other), label: "Groups"),
-          const BottomNavigationBarItem(icon: Icon(Icons.device_hub), label: "Networks"),
-          const BottomNavigationBarItem(icon: Icon(Icons.sensors), label: "Devices"),
-          const BottomNavigationBarItem(icon: Icon(Icons.auto_fix_high), label: "Services"),
-        ],
+        items: items,
         currentIndex: _bottomBarIndex,
         itemChanged: (i) {
+          if (disabled[i]) {
+            controller.index = _bottomBarIndex;
+            return;
+          }
           HapticFeedbackProxy.lightImpact();
           switchBottomBar(i, false);
         },
-        material: (context, _) => MaterialNavBarData(selectedItemColor: MyTheme.appColor, unselectedItemColor: MyTheme.appColor));
+        material: (context, _) => MaterialNavBarData(
+            selectedItemColor: MyTheme.appColor,
+            unselectedItemColor: MyTheme.appColor));
   }
 
   @override
@@ -269,10 +352,13 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           actions.add(PlatformIconButton(
             onPressed: () => AppState().pushRefresh(),
             icon: const Icon(Icons.refresh),
-            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
         }
-        if (_bottomBarIndex != tabGroups && _bottomBarIndex != tabSmartServices && _bottomBarIndex != tabDashboard) {
+        if (_bottomBarIndex != tabGroups &&
+            _bottomBarIndex != tabSmartServices &&
+            _bottomBarIndex != tabDashboard) {
           // TODO move decision to showFab etc.
           final List<PopupMenuOption> filterActions = [];
           if (_bottomBarIndex != tabClasses && state.deviceClasses.isNotEmpty) {
@@ -284,27 +370,41 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         title: const Text('Filter Classes'),
                         content: SizedBox(
                             width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
+                            height: MediaQuery.of(context).size.height -
+                                MediaQuery.textScaleFactorOf(context) * 172,
                             child: Material(
-                                color: const Color(0x00000000), // required for ListTile
+                                color: const Color(0x00000000),
+                                // required for ListTile
                                 child: ListView.builder(
-                                    itemCount: state.deviceClasses.values.length,
+                                    itemCount:
+                                        state.deviceClasses.values.length,
                                     itemBuilder: (context, i) {
-                                      final deviceClass = state.deviceClasses.values.elementAt(i);
+                                      final deviceClass = state
+                                          .deviceClasses.values
+                                          .elementAt(i);
                                       return StatefulBuilder(
-                                          builder: (context, setState) => ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  if (checked == true) {
-                                                    filter.addDeviceClass(deviceClass.id);
-                                                  } else {
-                                                    filter.removeDeviceClass(deviceClass.id);
-                                                  }
-                                                  setState(() {});
-                                                },
-                                                value: filter.deviceClassIds?.contains(deviceClass.id) ?? false,
-                                              ),
-                                              title: Text(deviceClass.name)));
+                                          builder: (context, setState) =>
+                                              ListTile(
+                                                  trailing: PlatformSwitch(
+                                                    onChanged: (checked) {
+                                                      if (checked == true) {
+                                                        filter.addDeviceClass(
+                                                            deviceClass.id);
+                                                      } else {
+                                                        filter
+                                                            .removeDeviceClass(
+                                                                deviceClass.id);
+                                                      }
+                                                      setState(() {});
+                                                    },
+                                                    value: filter.deviceClassIds
+                                                            ?.contains(
+                                                                deviceClass
+                                                                    .id) ??
+                                                        false,
+                                                  ),
+                                                  title:
+                                                      Text(deviceClass.name)));
                                     }))),
                         actions: <Widget>[
                           PlatformDialogAction(
@@ -327,28 +427,37 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         title: const Text('Filter Locations'),
                         content: SizedBox(
                             width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
+                            height: MediaQuery.of(context).size.height -
+                                MediaQuery.textScaleFactorOf(context) * 172,
                             child: Material(
-                                color: const Color(0x00000000), // required for ListTile
+                                color: const Color(0x00000000),
+                                // required for ListTile
                                 child: ListView.builder(
                                     itemCount: state.locations.length,
                                     itemBuilder: (context, i) {
-                                      final location = state.locations.elementAt(i);
+                                      final location =
+                                          state.locations.elementAt(i);
                                       return StatefulBuilder(
-                                          builder: (context, setState) => ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addLocation(location.id);
-                                                    } else {
-                                                      filter.removeLocation(location.id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.locationIds?.contains(location.id) ?? false,
-                                              ),
-                                              title: Text(location.name)));
+                                          builder: (context, setState) =>
+                                              ListTile(
+                                                  trailing: PlatformSwitch(
+                                                    onChanged: (checked) {
+                                                      setState(() {
+                                                        if (checked == true) {
+                                                          filter.addLocation(
+                                                              location.id);
+                                                        } else {
+                                                          filter.removeLocation(
+                                                              location.id);
+                                                        }
+                                                      });
+                                                    },
+                                                    value: filter.locationIds
+                                                            ?.contains(
+                                                                location.id) ??
+                                                        false,
+                                                  ),
+                                                  title: Text(location.name)));
                                     }))),
                         actions: <Widget>[
                           PlatformDialogAction(
@@ -371,28 +480,41 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         title: const Text('Filter Groups'),
                         content: SizedBox(
                             width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
+                            height: MediaQuery.of(context).size.height -
+                                MediaQuery.textScaleFactorOf(context) * 172,
                             child: Material(
-                                color: const Color(0x00000000), // required for ListTile
+                                color: const Color(0x00000000),
+                                // required for ListTile
                                 child: ListView.builder(
                                     itemCount: state.deviceGroups.length,
                                     itemBuilder: (context, i) {
-                                      final deviceGroup = state.deviceGroups.elementAt(i);
+                                      final deviceGroup =
+                                          state.deviceGroups.elementAt(i);
                                       return StatefulBuilder(
-                                          builder: (context, setState) => ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addDeviceGroup(deviceGroup.id);
-                                                    } else {
-                                                      filter.removeDeviceGroup(deviceGroup.id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.deviceGroupIds?.contains(deviceGroup.id) ?? false,
-                                              ),
-                                              title: Text(deviceGroup.name)));
+                                          builder: (context, setState) =>
+                                              ListTile(
+                                                  trailing: PlatformSwitch(
+                                                    onChanged: (checked) {
+                                                      setState(() {
+                                                        if (checked == true) {
+                                                          filter.addDeviceGroup(
+                                                              deviceGroup.id);
+                                                        } else {
+                                                          filter
+                                                              .removeDeviceGroup(
+                                                                  deviceGroup
+                                                                      .id);
+                                                        }
+                                                      });
+                                                    },
+                                                    value: filter.deviceGroupIds
+                                                            ?.contains(
+                                                                deviceGroup
+                                                                    .id) ??
+                                                        false,
+                                                  ),
+                                                  title:
+                                                      Text(deviceGroup.name)));
                                     }))),
                         actions: <Widget>[
                           PlatformDialogAction(
@@ -415,28 +537,37 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         title: const Text('Filter Networks'),
                         content: SizedBox(
                             width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height - MediaQuery.textScaleFactorOf(context) * 172,
+                            height: MediaQuery.of(context).size.height -
+                                MediaQuery.textScaleFactorOf(context) * 172,
                             child: Material(
-                                color: const Color(0x00000000), // required for ListTile
+                                color: const Color(0x00000000),
+                                // required for ListTile
                                 child: ListView.builder(
                                     itemCount: state.networks.length,
                                     itemBuilder: (context, i) {
-                                      final network = state.networks.elementAt(i);
+                                      final network =
+                                          state.networks.elementAt(i);
                                       return StatefulBuilder(
-                                          builder: (context, setState) => ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addNetwork(network.id);
-                                                    } else {
-                                                      filter.removeNetwork(network.id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.networkIds?.contains(network.id) ?? false,
-                                              ),
-                                              title: Text(network.name)));
+                                          builder: (context, setState) =>
+                                              ListTile(
+                                                  trailing: PlatformSwitch(
+                                                    onChanged: (checked) {
+                                                      setState(() {
+                                                        if (checked == true) {
+                                                          filter.addNetwork(
+                                                              network.id);
+                                                        } else {
+                                                          filter.removeNetwork(
+                                                              network.id);
+                                                        }
+                                                      });
+                                                    },
+                                                    value: filter.networkIds
+                                                            ?.contains(
+                                                                network.id) ??
+                                                        false,
+                                                  ),
+                                                  title: Text(network.name)));
                                     }))),
                         actions: <Widget>[
                           PlatformDialogAction(
@@ -468,13 +599,17 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [Divider(), Text("Reset")],
                     )),
-                cupertino: (context, __) => CupertinoPopupMenuOptionData(isDestructiveAction: true),
+                cupertino: (context, __) =>
+                    CupertinoPopupMenuOptionData(isDestructiveAction: true),
                 label: 'Reset',
                 onTap: (_) {
-                  if (_bottomBarIndex != tabLocations) filter.locationIds = null;
-                  if (_bottomBarIndex != tabGroups) filter.deviceGroupIds = null;
+                  if (_bottomBarIndex != tabLocations)
+                    filter.locationIds = null;
+                  if (_bottomBarIndex != tabGroups)
+                    filter.deviceGroupIds = null;
                   if (_bottomBarIndex != tabNetworks) filter.networkIds = null;
-                  if (_bottomBarIndex != tabClasses) filter.deviceClassIds = null;
+                  if (_bottomBarIndex != tabClasses)
+                    filter.deviceClassIds = null;
                   if (_bottomBarIndex != tabFavorites) filter.favorites = null;
                   switchBottomBar(_bottomBarIndex, true);
                 }));
@@ -482,15 +617,12 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
           actions.add(PlatformPopupMenu(
             options: filterActions,
-            icon: PlatformIconButton(
-              icon: Badge(
-                label: Text(filterCount.toString()),
-                isLabelVisible: filterCount > 0,
-                textColor: Colors.white,
-                child: Icon(Icons.filter_alt, color: isCupertino(context) ? MyTheme.appColor : null),
-              ),
-              cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-              material: (_, __) => MaterialIconButtonData(disabledColor: MyTheme.textColor),
+            icon: Badge(
+              label: Text(filterCount.toString()),
+              isLabelVisible: filterCount > 0,
+              textColor: Colors.white,
+              child: Icon(Icons.filter_alt,
+                  color: isCupertino(context) ? MyTheme.appColor : null),
             ),
             cupertino: (context, _) => CupertinoPopupMenuData(
                 title: const Text("Select Filters"),
@@ -506,7 +638,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         final appBar = MyAppBar(customAppBarTitle ?? "OPTIMISE");
         Widget? leadingAction;
         if (onBackCallback != null) {
-          leadingAction = IconButton(onPressed: () => onBackCallback!(), icon: Icon(PlatformIcons(context).back));
+          leadingAction = IconButton(
+              onPressed: () => onBackCallback!(),
+              icon: Icon(PlatformIcons(context).back));
         }
 
         return WillPopScope(
@@ -525,58 +659,74 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                           child: Icon(Icons.add, color: MyTheme.textColor),
                         ))
                     : null,
-                body: PlatformScaffold(
-                  appBar: appBar.getAppBar(context, actions, leadingAction),
-                  body: Column(children: [
-                    PlatformWidget(
-                      cupertino: !hideSearch
-                          ? (_, __) => Container(
-                                padding: MyTheme.inset,
-                                child: CupertinoSearchTextField(
-                                  onChanged: (query) => _searchChanged(query),
-                                  style: TextStyle(color: MyTheme.textColor),
-                                  itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-                                  restorationId: "cupertino-device-search",
-                                  controller: _cupertinoSearchController.value,
-                                ),
-                              )
-                          : null,
-                    ),
-                    Expanded(child: (() {
-                      switch (_bottomBarIndex) {
-                        case tabDevices:
-                          return const DeviceList();
-                        case tabLocations:
-                          return const DeviceListByLocation();
-                        case tabClasses:
-                          return const DeviceListByDeviceClass();
-                        case tabGroups:
-                          return const GroupList();
-                        case tabNetworks:
-                          return const DeviceListByNetwork();
-                        case tabFavorites:
-                          return const DeviceListFavorites();
-                        case tabSmartServices:
-                          return const SmartServicesInstances();
-                        case tabDashboard:
-                          return const Dashboard();
-                        default:
-                          return Center(
-                              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            const Icon(
-                              Icons.error,
-                              color: MyTheme.errorColor,
-                            ),
-                            SizedBox(width: MediaQuery.of(context).textScaleFactor * 12, height: 0),
-                            const Text("not implemented")
-                          ]));
-                      }
-                    })()),
-                  ]),
-                  cupertino: (context, _) => CupertinoPageScaffoldData(controller: CupertinoTabController(initialIndex: _bottomBarIndex)),
-                  // if not used, changes to _bottomBarIndex are not reflected visually
-                  bottomNavBar: _buildBottom(context),
-                )));
+                body: Theme(
+                    data: Theme.of(context).copyWith(
+                        splashFactory: _getCustomSplashFactory(context),
+                        highlightColor: Colors.transparent),
+                    child: PlatformScaffold(
+                      appBar: appBar.getAppBar(context, actions, leadingAction),
+                      body: Column(children: [
+                        PlatformWidget(
+                          cupertino: !hideSearch
+                              ? (_, __) => Container(
+                                    padding: MyTheme.inset,
+                                    child: CupertinoSearchTextField(
+                                      onChanged: (query) =>
+                                          _searchChanged(query),
+                                      style:
+                                          TextStyle(color: MyTheme.textColor),
+                                      itemColor: MyTheme.textColor ??
+                                          CupertinoColors.secondaryLabel,
+                                      restorationId: "cupertino-device-search",
+                                      controller:
+                                          _cupertinoSearchController.value,
+                                    ),
+                                  )
+                              : null,
+                        ),
+                        Expanded(child: (() {
+                          switch (_bottomBarIndex) {
+                            case tabDevices:
+                              return const DeviceList();
+                            case tabLocations:
+                              return const DeviceListByLocation();
+                            case tabClasses:
+                              return const DeviceListByDeviceClass();
+                            case tabGroups:
+                              return const GroupList();
+                            case tabNetworks:
+                              return const DeviceListByNetwork();
+                            case tabFavorites:
+                              return const DeviceListFavorites();
+                            case tabSmartServices:
+                              return const SmartServicesInstances();
+                            case tabDashboard:
+                              return const Dashboard();
+                            default:
+                              return Center(
+                                  child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                    const Icon(
+                                      Icons.error,
+                                      color: MyTheme.errorColor,
+                                    ),
+                                    SizedBox(
+                                        width: MediaQuery.of(context)
+                                                .textScaleFactor *
+                                            12,
+                                        height: 0),
+                                    const Text("not implemented")
+                                  ]));
+                          }
+                        })()),
+                      ]),
+                      cupertino: (context, _) =>
+                          CupertinoPageScaffoldData(controller: controller),
+                      // if not used, changes to _bottomBarIndex are not reflected visually
+                      bottomNavBar: _buildBottom(context),
+                    ))));
       },
     );
   }
@@ -586,6 +736,101 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_cupertinoSearchController, "_cupertinoSearchController");
+    registerForRestoration(
+        _cupertinoSearchController, "_cupertinoSearchController");
+  }
+
+  InteractiveInkFeatureFactory _getCustomSplashFactory(BuildContext context) {
+    return _CustomInkSplashFactory()
+      ..keys = _tabKeys
+      ..keysDisabled = _tabDisabled();
+  }
+}
+
+class _CustomInkSplashFactory extends InteractiveInkFeatureFactory {
+  List<GlobalKey> keys = [];
+  List<bool> keysDisabled = [];
+
+  @override
+  InteractiveInkFeature create(
+      {required MaterialInkController controller,
+      required RenderBox referenceBox,
+      required Offset position,
+      required Color color,
+      required TextDirection textDirection,
+      bool containedInkWell = false,
+      RectCallback? rectCallback,
+      BorderRadius? borderRadius,
+      ShapeBorder? customBorder,
+      double? radius,
+      VoidCallback? onRemoved}) {
+    return _CustomInkSplash(
+      controller: controller,
+      referenceBox: referenceBox,
+      position: position,
+      color: color,
+      containedInkWell: containedInkWell,
+      rectCallback: rectCallback,
+      borderRadius: borderRadius,
+      customBorder: customBorder,
+      radius: radius,
+      onRemoved: onRemoved,
+      textDirection: textDirection,
+      keys: keys,
+      keysDisabled: keysDisabled,
+    );
+  }
+}
+
+class _CustomInkSplash extends InkSplash {
+  bool shouldPaint = true;
+
+  final List<GlobalKey> keys;
+  final List<bool> keysDisabled;
+
+  _CustomInkSplash({
+    required MaterialInkController super.controller,
+    required super.referenceBox,
+    required TextDirection super.textDirection,
+    Offset? position,
+    required Color super.color,
+    bool super.containedInkWell = false,
+    RectCallback? super.rectCallback,
+    BorderRadius? super.borderRadius,
+    ShapeBorder? super.customBorder,
+    double? super.radius,
+    super.onRemoved,
+    required List<GlobalKey> this.keys,
+    required List<bool> this.keysDisabled,
+  }) : super(position: position) {
+    assert(keys.length == keysDisabled.length);
+    for (int i = 0; i < keys.length; i++) {
+      if (!keysDisabled[i]) {
+        continue;
+      }
+      //final box = keys[i].currentContext?.findRenderObject() as RenderBox?;
+      final box = keys[i].currentContext?.findAncestorRenderObjectOfType<RenderStack>();
+      if (box == null) {
+        continue;
+      }
+      final boxGlobal = box.localToGlobal(Offset.zero);
+      final tap = referenceBox.localToGlobal(position ?? Offset.zero);
+      //box.constraints.maxHeight
+      final hits = boxGlobal.dx < tap.dx &&
+          boxGlobal.dx + box.size.height > tap.dx &&
+          boxGlobal.dy < tap.dy &&
+          boxGlobal.dy + box.size.width > tap.dy;
+      if (hits) {
+        shouldPaint = false;
+        break;
+      }
+    }
+  }
+
+  @override
+  void paintFeature(Canvas canvas, Matrix4 transform) {
+    if (shouldPaint) {
+      return super.paintFeature(canvas, transform);
+    }
   }
 }

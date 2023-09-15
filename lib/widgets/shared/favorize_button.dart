@@ -54,17 +54,18 @@ class FavorizeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, widget) {
+      final disabled = _device != null ? !DevicesService.isSaveAvailable() : !DeviceGroupsService.isCreateEditDeleteAvailable();
       final List<Widget> children = [];
       if (_device != null ? _device!.favorite : _group!.favorite) {
         children.add(Icon(
           Icons.star,
-          color: Colors.yellow,
-          size: _border ? MediaQuery.textScaleFactorOf(context) * 15 : null,
+          color: disabled ?  Theme.of(context).disabledColor : Colors.yellow,
+          size: _border && !disabled ? MediaQuery.textScaleFactorOf(context) * 15 : null,
         ));
       }
       if ((_device != null ? !_device!.favorite : !_group!.favorite) ||
-          _border) {
-        children.add(const Icon(Icons.star_border, color: Colors.grey));
+          (_border && !disabled)) {
+        children.add(Icon(Icons.star_border, color: disabled ? Theme.of(context).disabledColor : Colors.grey));
       }
       return PlatformIconButton(
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
@@ -72,7 +73,7 @@ class FavorizeButton extends StatelessWidget {
             alignment: AlignmentDirectional.center,
             children: children,
           ),
-          onPressed: click);
+          onPressed: disabled ? null : click);
     });
   }
 }

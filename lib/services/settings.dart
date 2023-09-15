@@ -53,6 +53,8 @@ class Settings {
   static const _keycloakRedirectKey = "keycloak_redirect";
   static const _apiUrlKey = "api_url";
 
+  static const _localModeKey = "local_mode";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -284,6 +286,16 @@ class Settings {
     } else {
       return _box!.put(_apiUrlKey, value);
     }
+  }
+
+  static bool getLocalMode() {
+    checkInit();
+    return _box!.get(_localModeKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setLocalMode(bool? value) {
+    checkInit();
+    return _box!.put(_localModeKey, value.toString());
   }
 }
 

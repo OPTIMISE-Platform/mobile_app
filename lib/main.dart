@@ -82,7 +82,7 @@ Future main() async {
   print("Auth init took ${DateTime.now().difference(sub)}");
 
   sub = DateTime.now();
-  await CacheHelper.scheduleCacheUpdates().catchError((_) => Toast.showToastNoContext("Could not refresh cache", MyTheme.errorColor));
+  await CacheHelper.scheduleCacheUpdates().catchError((_) => Toast.showToastNoContext("Could not refresh cache"));
   print("Cache init took ${DateTime.now().difference(sub)}");
 
   print("App init took ${DateTime.now().difference(start)}");

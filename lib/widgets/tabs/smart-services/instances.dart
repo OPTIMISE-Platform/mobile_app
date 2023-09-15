@@ -38,7 +38,8 @@ class SmartServicesInstances extends StatefulWidget {
   State<StatefulWidget> createState() => _SmartServicesInstancesState();
 }
 
-class _SmartServicesInstancesState extends State<SmartServicesInstances> with WidgetsBindingObserver {
+class _SmartServicesInstancesState extends State<SmartServicesInstances>
+    with WidgetsBindingObserver {
   bool allInstancesLoaded = false;
   final List<SmartServiceInstance> instances = [];
   List<bool> upgradingInstances = [];
@@ -58,7 +59,8 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   @override
   void initState() {
     super.initState();
-    parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
+        as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       await Navigator.push(
           context,
@@ -81,7 +83,8 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
       _refresh();
     }
   }
@@ -101,7 +104,8 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
     }
     await instancesMutex.protect(() async {
       const limit = 50;
-      final newInstances = await SmartServiceService.getInstances(limit, instances.length);
+      final newInstances =
+          await SmartServiceService.getInstances(limit, instances.length);
       instances.addAll(newInstances);
       while (instances.length > upgradingInstances.length) {
         upgradingInstances.add(false);
@@ -128,12 +132,14 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                           return SingleChildScrollView(
                             physics: const AlwaysScrollableScrollPhysics(),
                             child: ConstrainedBox(
-                              constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                              constraints: BoxConstraints(
+                                  minHeight: constraint.maxHeight),
                               child: IntrinsicHeight(
                                 child: Column(
                                   children: const [
                                     Expanded(
-                                      child: Center(child: Text("No Instances")),
+                                      child:
+                                          Center(child: Text("No Instances")),
                                     ),
                                   ],
                                 ),
@@ -147,24 +153,37 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                         padding: MyTheme.inset,
                         itemCount: instances.length + 1,
                         itemBuilder: (context, i) {
-                          if (i == instances.length - 1 && !allInstancesLoaded) {
+                          if (i == instances.length - 1 &&
+                              !allInstancesLoaded) {
                             _loadInstances();
                           }
                           return i < instances.length
                               ? Column(children: [
-                                  const Divider(),
+                                  i > 0
+                                      ? const Divider()
+                                      : const SizedBox.shrink(),
                                   ListTile(
                                     title: Row(children: [
                                       Text(instances[i].name),
                                       Badge(
                                         label: instances[i].error != null
-                                            ? Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor)
-                                            : const Icon(Icons.pending, size: 16, color: Colors.lightBlue),
-                                        isLabelVisible: instances[i].error != null || !instances[i].ready || instances[i].deleting == true,
-                                        alignment: AlignmentDirectional.topCenter,
+                                            ? Icon(PlatformIcons(context).error,
+                                                size: 16,
+                                                color: MyTheme.warnColor)
+                                            : const Icon(Icons.pending,
+                                                size: 16,
+                                                color: Colors.lightBlue),
+                                        isLabelVisible:
+                                            instances[i].error != null ||
+                                                !instances[i].ready ||
+                                                instances[i].deleting == true,
+                                        alignment:
+                                            AlignmentDirectional.topCenter,
                                         largeSize: 16,
                                         backgroundColor: Colors.transparent,
-                                        child: instances[i].error != null || !instances[i].ready || instances[i].deleting == true
+                                        child: instances[i].error != null ||
+                                                !instances[i].ready ||
+                                                instances[i].deleting == true
                                             ? const Text("")
                                             : null,
                                       )
@@ -174,11 +193,15 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                           context,
                                           platformPageRoute(
                                             context: context,
-                                            builder: (context) => SmartServicesInstanceDetails(instances[i], parentState?.context),
+                                            builder: (context) =>
+                                                SmartServicesInstanceDetails(
+                                                    instances[i],
+                                                    parentState?.context),
                                           ));
                                       _refresh();
                                     },
-                                    trailing: instances[i].new_release_id == null
+                                    trailing: instances[i].new_release_id ==
+                                            null
                                         ? null
                                         : upgradingInstances[i]
                                             ? const DelayedCircularProgressIndicator()
@@ -186,27 +209,48 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances> with Wi
                                                 icon: const Icon(Icons.upgrade),
                                                 onPressed: () async {
                                                   setState(() {
-                                                    upgradingInstances[i] = true;
+                                                    upgradingInstances[i] =
+                                                        true;
                                                   });
-                                                  final p = await SmartServiceService.prepareUpgrade(instances[i]);
+                                                  final p =
+                                                      await SmartServiceService
+                                                          .prepareUpgrade(
+                                                              instances[i]);
                                                   if (!p.t) {
-                                                    await SmartServiceService.updateInstanceParameters(
-                                                        instances[i].id, p.k.map((e) => e.toSmartServiceParameter()).toList(),
-                                                        releaseId: instances[i].new_release_id);
+                                                    await SmartServiceService
+                                                        .updateInstanceParameters(
+                                                            instances[i].id,
+                                                            p.k
+                                                                .map((e) => e
+                                                                    .toSmartServiceParameter())
+                                                                .toList(),
+                                                            releaseId: instances[
+                                                                    i]
+                                                                .new_release_id);
                                                   } else {
-                                                    final release = await SmartServiceService.getRelease(instances[i].new_release_id!);
+                                                    final release =
+                                                        await SmartServiceService
+                                                            .getRelease(instances[
+                                                                    i]
+                                                                .new_release_id!);
                                                     await Navigator.push(
                                                         context,
                                                         platformPageRoute(
                                                             context: context,
-                                                            builder: (context) => SmartServicesReleaseLaunch(
+                                                            builder: (context) =>
+                                                                SmartServicesReleaseLaunch(
                                                                   release,
-                                                                  instance: instances[i],
-                                                                  parameters: p.k,
+                                                                  instance:
+                                                                      instances[
+                                                                          i],
+                                                                  parameters:
+                                                                      p.k,
                                                                 )));
                                                   }
                                                   upgradingInstances[i] = false;
-                                                  if (!upgradingInstances.contains(true)) _refresh();
+                                                  if (!upgradingInstances
+                                                      .contains(true))
+                                                    _refresh();
                                                 },
                                               ),
                                   )

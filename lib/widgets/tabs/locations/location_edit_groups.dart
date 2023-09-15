@@ -79,7 +79,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                 itemBuilder: (_, i) {
                   return Column(
                     children: [
-                      const Divider(),
+                      i > 0 ? const Divider() : const SizedBox.shrink(),
                       ListTile(
                         leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Icon(

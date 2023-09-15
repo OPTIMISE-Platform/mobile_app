@@ -45,12 +45,11 @@ class Toast {
     );
   }
 
-  static showToastNoContext(String text, Color color) {
+  static showToastNoContext(String text) {
     Fluttertoast.showToast(
         msg: text,
         gravity: ToastGravity.CENTER,
         timeInSecForIosWeb: 2,
-        backgroundColor: color,
         textColor: Colors.black,
         fontSize: 16.0
     );

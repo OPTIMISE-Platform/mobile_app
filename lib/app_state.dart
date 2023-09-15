@@ -21,13 +21,12 @@ import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/exceptions/no_network_exception.dart';
+import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
@@ -51,9 +50,9 @@ import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
-import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
@@ -96,7 +95,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       handleQueuedMessages();
-      _manageNetworkDiscovery().then((_) => _mergeDiscoveredServicesWithNetworks());
+      _manageNetworkDiscovery()
+          .then((_) => _mergeDiscoveredServicesWithNetworks());
     }
   }
 
@@ -115,7 +115,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
     switch (remoteMessageMap["data"]["type"]) {
       case notificationUpdateType:
-        final updatedNotification = app.Notification.fromJson(json.decode(remoteMessageMap["data"]["payload"]));
+        final updatedNotification = app.Notification.fromJson(
+            json.decode(remoteMessageMap["data"]["payload"]));
         if (updatedNotification.isRead) {
           await Eraser.clearAppNotificationsByTag(updatedNotification.id);
         }
@@ -212,7 +213,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       await Future.wait(futures);
     } catch (e) {
       ExceptionLogElement.Log(e.toString());
-      Toast.showToastNoContext("Could not initialize", MyTheme.errorColor);
+      Toast.showToastNoContext("Could not initialize");
     }
     _initialized = true;
   }
@@ -232,7 +233,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Coud not get device classes $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _deviceClassesMutex.release();
@@ -249,13 +250,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return deviceTypesPermSearch;
     }
     try {
-      for (var element in (await DeviceTypesPermSearchService.getDeviceTypes())) {
+      for (var element
+          in (await DeviceTypesPermSearchService.getDeviceTypes())) {
         deviceTypesPermSearch[element.id] = element;
       }
     } catch (e) {
       final err = "Could not get device types $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _deviceTypesPermSearchMutex.release();
@@ -274,7 +276,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not get nested functions $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _nestedFunctionsMutex.release();
@@ -293,7 +295,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not get concepts $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _conceptsMutex.release();
@@ -312,7 +314,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not get characteristics $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _characteristicsMutex.release();
@@ -329,12 +331,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       } catch (e) {
         final err = "Could not get total devices $e";
         _logger.e(err);
-        Toast.showToastNoContext(err, MyTheme.errorColor);
+        Toast.showToastNoContext(err);
       }
     });
   }
 
-  Future searchDevices(DeviceSearchFilter filter, BuildContext context, [bool force = false]) async {
+  Future searchDevices(DeviceSearchFilter filter, BuildContext context,
+      [bool force = false]) async {
     if (!force && _deviceSearchFilter == filter) {
       return;
     }
@@ -373,7 +376,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     late final List<DeviceInstance> newDevices;
     const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(limit, _deviceOffset, _deviceSearchFilter, devices.isNotEmpty ? devices.last : null);
+      newDevices = await DevicesService.getDevices(limit, _deviceOffset,
+          _deviceSearchFilter, devices.isNotEmpty ? devices.last : null);
     } catch (e) {
       _logger.e("Could not get devices: $e");
       Toast.showErrorToast(context, "Could not load devices");
@@ -394,25 +398,41 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       ];
 
       // update connection status for devices outside of local network
-      final refreshDeviceIds = newDevices.where((element) => element.network?.localService == null).map((e) => e.id).toList(growable: false);
+      final refreshDeviceIds = newDevices
+          .where((element) => element.network?.localService == null)
+          .map((e) => e.id)
+          .toList(growable: false);
       if (refreshDeviceIds.isNotEmpty) {
         final refreshFilter = DeviceSearchFilter("");
         refreshFilter.deviceIds = refreshDeviceIds;
-        connectionStatusFutures.add(DevicesService.getDevices(refreshDeviceIds.length, 0, refreshFilter, null, forceBackend: true).catchError((_) async {
-          Toast.showToastNoContext("Error refreshing device status, using cache", MyTheme.errorColor);
-          return await DevicesService.getDevices(
+        connectionStatusFutures.add(DevicesService.getDevices(
+                refreshDeviceIds.length, 0, refreshFilter, null,
+                forceBackend: true)
+            .catchError((_) async {
+          if (!Settings.getLocalMode()) {
+            Toast.showToastNoContext(
+                "Error refreshing device status, using cache");
+          }
+          final devices = await DevicesService.getDevices(
               refreshDeviceIds.length, 0, refreshFilter, null,
               forceBackend: false);
-        }).then((ds) => ds.forEach((d) => newDevices.firstWhere((d2) => d2.id == d.id).annotations = d.annotations)));
+          devices.forEach((element) =>
+          element.connectionStatus = DeviceConnectionStatus.unknown);
+          return devices;
+        }).then((ds) => ds.forEach((d) => newDevices
+                .firstWhere((d2) => d2.id == d.id)
+                .annotations = d.annotations)));
       }
       try {
         await Future.wait(connectionStatusFutures);
-        await loadStates(newDevices, [], [dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '']); // need to know which devices are online first
+        await loadStates(newDevices, [], [
+          dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? ''
+        ]); // need to know which devices are online first
         devices.addAll(newDevices);
       } catch (e) {
         final err = "Could not get devices: $e";
         _logger.e(err);
-        Toast.showToastNoContext(err, MyTheme.errorColor);
+        Toast.showToastNoContext(err);
       }
     }
     if (totalDevices <= _deviceOffset) {
@@ -443,11 +463,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not load device type $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
   }
 
-  loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups, [List<String>? limitToFunctionIds]) async {
+  loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups,
+      [List<String>? limitToFunctionIds]) async {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
@@ -459,7 +480,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     for (var element in groups) {
       element.prepareStates();
-      commandCallbacks.addAll(element.getStateFillFunctions(limitToFunctionIds));
+      commandCallbacks
+          .addAll(element.getStateFillFunctions(limitToFunctionIds));
     }
     if (commandCallbacks.isEmpty) {
       notifyListeners();
@@ -467,19 +489,22 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     }
     List<DeviceCommandResponse> result;
     try {
-      result = await DeviceCommandsService.runCommands(commandCallbacks.map((e) => e.command).toList(growable: false));
-    } on NoNetworkException {
-      const err = "failed to loadStates: currently offline";
+      result = await DeviceCommandsService.runCommands(
+          commandCallbacks.map((e) => e.command).toList(growable: false));
+    } on ApiUnavailableException {
+      const err = "failed to loadStates: currently unavailable";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
       result = [];
-      commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
+      commandCallbacks
+          .forEach((_) => result.add(DeviceCommandResponse(200, null)));
     } catch (e) {
       final err = "failed to loadStates: $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
       result = [];
-      commandCallbacks.forEach((_) => result.add(DeviceCommandResponse(200, null)));
+      commandCallbacks
+          .forEach((_) => result.add(DeviceCommandResponse(200, null)));
     }
     assert(result.length == commandCallbacks.length);
     for (var i = 0; i < commandCallbacks.length; i++) {
@@ -500,7 +525,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return notifications;
     }
     notifications.clear();
-    await _storage.delete(key: messageKey); // clean up any queued messages of previous instances
+    await _storage.delete(
+        key: messageKey); // clean up any queued messages of previous instances
 
     const limit = 10000;
     int offset = 0;
@@ -512,10 +538,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         } catch (e) {
           final err = "Could not load notifications: $e";
           _logger.e(err);
-          Toast.showToastNoContext(err, MyTheme.errorColor);
+          Toast.showToastNoContext(err);
           return;
         }
-        final tmp = response?.notifications.reversed.toList() ?? []; // got reverse ordered batches form api
+        final tmp = response?.notifications.reversed.toList() ??
+            []; // got reverse ordered batches form api
         tmp.addAll(notifications);
         notifications = tmp;
         offset += response?.notifications.length ?? 0;
@@ -554,7 +581,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   deleteAllNotifications(BuildContext context) async {
     try {
-      await NotificationsService.deleteNotifications(notifications.map((e) => e.id).toList(growable: false));
+      await NotificationsService.deleteNotifications(
+          notifications.map((e) => e.id).toList(growable: false));
     } catch (e) {
       _logger.e(e.toString());
       Toast.showErrorToast(context, "Could not delete notifications");
@@ -582,7 +610,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
-    final token = await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
+    final token =
+        await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
     if (token == null) {
       _logger.e("fcmToken null");
     } else {
@@ -598,7 +627,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (message.data["type"] != notificationUpdateType) {
       return; //safety check
     }
-    _messageIdToDisplay = app.Notification.fromJson(json.decode(message.data["payload"])).id;
+    _messageIdToDisplay =
+        app.Notification.fromJson(json.decode(message.data["payload"])).id;
   }
 
   _handleFcmTokenRefresh(String token) async {
@@ -613,7 +643,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         } catch (e) {
           final err = "Could not deregister FCM: $e";
           _logger.e(err);
-          Toast.showToastNoContext(err, MyTheme.errorColor);
+          Toast.showToastNoContext(err);
         }
       }
       fcmToken = token;
@@ -626,7 +656,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         } catch (e) {
           final err = "Could not setup FCM: $e";
           _logger.e(err);
-          Toast.showToastNoContext(err, MyTheme.errorColor);
+          Toast.showToastNoContext(err);
         }
       } else {
         _logger.e("FCM token is null");
@@ -641,8 +671,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   _handleRemoteMessageCommand(dynamic data) {
     switch (data["type"]) {
       case notificationUpdateType:
-        final updatedNotification = app.Notification.fromJson(json.decode(data["payload"]));
-        final idx = notifications.indexWhere((element) => element.id == updatedNotification.id);
+        final updatedNotification =
+            app.Notification.fromJson(json.decode(data["payload"]));
+        final idx = notifications
+            .indexWhere((element) => element.id == updatedNotification.id);
         if (idx != -1) {
           notifications[idx] = updatedNotification;
         } else {
@@ -685,18 +717,21 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (_messageIdToDisplay == null) {
       return;
     }
-    final idx = notifications.indexWhere((element) => element.id == _messageIdToDisplay);
+    final idx = notifications
+        .indexWhere((element) => element.id == _messageIdToDisplay);
     if (idx == -1) {
       return;
     }
     _messageIdToDisplay = null;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (ModalRoute.of(context)?.settings.name != NotificationList.preferredRouteName) {
+      if (ModalRoute.of(context)?.settings.name !=
+          NotificationList.preferredRouteName) {
         Navigator.push(
             context,
             platformPageRoute(
                 context: context,
-                settings: const RouteSettings(name: NotificationList.preferredRouteName),
+                settings: const RouteSettings(
+                    name: NotificationList.preferredRouteName),
                 builder: (context) => const NotificationList()));
       }
       notifications[idx].show(context);
@@ -716,11 +751,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
 
     try {
-      deviceGroups.addAll(await Future.wait(await DeviceGroupsService.getDeviceGroups()));
+      deviceGroups.addAll(
+          await Future.wait(await DeviceGroupsService.getDeviceGroups()));
     } catch (e) {
       final err = "Could not load device groups $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
 
@@ -745,7 +781,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not load locations $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
 
@@ -770,14 +806,17 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not load networks $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     _mergeDiscoveredServicesWithNetworks();
     for (final network in networks) {
-      final networkDevices = devices.where((device) => network.device_local_ids?.contains(device.local_id) ?? false);
+      final networkDevices = devices.where((device) =>
+          network.device_local_ids?.contains(device.local_id) ?? false);
       networkDevices.forEach((d) => d.network = network);
       for (final group in deviceGroups) {
-        if (group.device_ids.every((String groupDeviceId) => (network.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57)) as bool)) {
+        if (group.device_ids.every((String groupDeviceId) =>
+            (network.device_ids ?? <String>[])
+                .contains(groupDeviceId.substring(0, 57)) as bool)) {
           group.network = network;
         }
       }
@@ -805,7 +844,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not load aspects $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
     _aspectsMutex.release();
@@ -823,7 +862,11 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   _mergeDiscoveredServicesWithNetworks() {
     networks.forEach((n) => n.localService = null);
     _discovery?.services.forEach((service) {
-      final nI = networks.indexWhere((n) => n.id == utf8.decode((service.txt?["serial"] ?? Uint8List(0)).map((e) => e.toInt()).toList()));
+      final nI = networks.indexWhere((n) =>
+          n.id ==
+          utf8.decode((service.txt?["serial"] ?? Uint8List(0))
+              .map((e) => e.toInt())
+              .toList()));
       if (nI != -1) {
         networks[nI].localService = service;
       }
@@ -883,7 +926,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (_refreshPressedControllerStream != null) {
       return _refreshPressedControllerStream!;
     }
-    _refreshPressedControllerStream = _refreshPressedController.stream.asBroadcastStream();
+    _refreshPressedControllerStream =
+        _refreshPressedController.stream.asBroadcastStream();
     return _refreshPressedControllerStream!;
   }
 

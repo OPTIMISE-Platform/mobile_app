@@ -36,7 +36,8 @@ class DeviceListByLocation extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByLocationState();
 }
 
-class _DeviceListByLocationState extends State<DeviceListByLocation> with WidgetsBindingObserver {
+class _DeviceListByLocationState extends State<DeviceListByLocation>
+    with WidgetsBindingObserver {
   static StreamSubscription? _fabSubscription;
   StreamSubscription? _refreshSubscription;
   DeviceTabsState? parentState;
@@ -53,28 +54,30 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
+        as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       final titleController = TextEditingController(text: "");
       String? newName;
       await showPlatformDialog(
           context: context,
           builder: (_) => PlatformAlertDialog(
-            title: const Text("New Location"),
-            content: PlatformTextFormField(controller: titleController, hintText: "Name"),
-            actions: [
-              PlatformDialogAction(
-                child: PlatformText('Cancel'),
-                onPressed: () => Navigator.pop(context),
-              ),
-              PlatformDialogAction(
-                  child: PlatformText('Create'),
-                  onPressed: () {
-                    newName = titleController.value.text;
-                    Navigator.popUntil(context, (route) => route.isFirst);
-                  })
-            ],
-          ));
+                title: const Text("New Location"),
+                content: PlatformTextFormField(
+                    controller: titleController, hintText: "Name"),
+                actions: [
+                  PlatformDialogAction(
+                    child: PlatformText('Cancel'),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  PlatformDialogAction(
+                      child: PlatformText('Create'),
+                      onPressed: () {
+                        newName = titleController.value.text;
+                        Navigator.popUntil(context, (route) => route.isFirst);
+                      })
+                ],
+              ));
       if (newName == null) {
         return;
       }
@@ -91,7 +94,8 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
       AppState().loadLocations(context);
       setState(() {});
     }
@@ -99,8 +103,16 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
 
   void _openLocationPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.locationIds = [AppState().locations[i].id];
-    AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, null, [AppState().locations[i].id]), context);
-    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => LocationPage(i, parentState!)));
+    AppState().searchDevices(
+        parentState?.filter ??
+            DeviceSearchFilter(
+                "", null, null, null, [AppState().locations[i].id]),
+        context);
+    await Navigator.push(
+        context,
+        platformPageRoute(
+            context: context,
+            builder: (context) => LocationPage(i, parentState!)));
     parentState?.filter.locationIds = null;
   }
 
@@ -121,12 +133,14 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
                             return SingleChildScrollView(
                               physics: const AlwaysScrollableScrollPhysics(),
                               child: ConstrainedBox(
-                                constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                constraints: BoxConstraints(
+                                    minHeight: constraint.maxHeight),
                                 child: IntrinsicHeight(
                                   child: Column(
                                     children: const [
                                       Expanded(
-                                        child: Center(child: Text("No Locations")),
+                                        child:
+                                            Center(child: Text("No Locations")),
                                       ),
                                     ],
                                   ),
@@ -142,21 +156,39 @@ class _DeviceListByLocationState extends State<DeviceListByLocation> with Widget
                           itemBuilder: (context, i) {
                             return i < state.locations.length
                                 ? Column(children: [
-                                    const Divider(),
+                                    i > 0
+                                        ? const Divider()
+                                        : const SizedBox.shrink(),
                                     ListTile(
                                         title: Text(state.locations[i].name),
                                         leading: Container(
-                                          height: MediaQuery.of(context).textScaleFactor * 48,
-                                          width: MediaQuery.of(context).textScaleFactor * 48,
-                                          decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                          height: MediaQuery.of(context)
+                                                  .textScaleFactor *
+                                              48,
+                                          width: MediaQuery.of(context)
+                                                  .textScaleFactor *
+                                              48,
+                                          decoration: BoxDecoration(
+                                              color: const Color(0xFF6c6c6c),
+                                              borderRadius:
+                                                  BorderRadius.circular(50)),
                                           child: Padding(
-                                            padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                                            child: state.locations[i].imageWidget ?? Icon(PlatformIcons(context).location, color: Colors.white),
+                                            padding: EdgeInsets.all(
+                                                MediaQuery.of(context)
+                                                        .textScaleFactor *
+                                                    8),
+                                            child: state
+                                                    .locations[i].imageWidget ??
+                                                Icon(
+                                                    PlatformIcons(context)
+                                                        .location,
+                                                    color: Colors.white),
                                           ),
                                         ),
                                         subtitle: Text(
                                             "${state.locations[i].device_ids.length} Device${state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : ""}, ${state.locations[i].device_group_ids.length} Group${state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : ""}"),
-                                        onTap: () => _openLocationPage(i, parentState))
+                                        onTap: () =>
+                                            _openLocationPage(i, parentState))
                                   ])
                                 : Column(
                                     children: const [Divider(), ListTile()],

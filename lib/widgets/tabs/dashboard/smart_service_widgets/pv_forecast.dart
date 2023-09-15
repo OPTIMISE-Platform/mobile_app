@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -106,11 +104,11 @@ class SmSePvForecast extends SmSeRequest {
     _lines.clear();
     _verticalLines.clear();
     _recommendations.clear();
-    final resp = await request.perform();
-    if (resp.statusCode > 299) {
+    final resp = await request.perform<List<dynamic>>();
+    if (resp.statusCode == null || resp.statusCode! > 299 || resp.data == null) {
       return;
     } else {
-      final List<dynamic> respArr = json.decode(resp.body);
+      final respArr = resp.data!;
       if (respArr.isEmpty) return;
       if (respArr[0] is! List || respArr[0].isEmpty) return;
       if (respArr[0][0] is List) {

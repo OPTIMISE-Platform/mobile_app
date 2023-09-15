@@ -16,19 +16,18 @@
 
 import 'dart:convert';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
-import '../exceptions/no_network_exception.dart';
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class NotificationsService {
@@ -38,7 +37,7 @@ class NotificationsService {
 
   static CacheOptions? _options;
   static late final Dio? _dio;
-  static final _client = http.Client();
+  static final baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
@@ -56,15 +55,13 @@ class NotificationsService {
 
     _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
   static Future<app.NotificationResponse?> getNotifications(int limit, int offset) async {
-    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
-    if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
-
     String uri =
-        "${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications?limit=${limit.toString()}&offset=${offset.toString()}";
+        "$baseUrl?limit=${limit.toString()}&offset=${offset.toString()}";
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -89,34 +86,29 @@ class NotificationsService {
   }
 
   static Future setNotification(app.Notification notification) async {
-    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications/${notification.id}';
+    final url = '$baseUrl/${notification.id}';
 
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
     final headers = await Auth().getHeaders();
+    await initOptions();
 
-    final resp = await _client.put(uri, headers: headers, body: json.encode(notification));
+    final resp = await _dio!.put(url, options: Options(headers: headers), data: json.encode(notification));
 
-    if (resp.statusCode > 201) {
+    if (resp.statusCode == null || resp.statusCode! > 201) {
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
   }
 
   static Future deleteNotifications(List<String> ids) async {
-    final url = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications';
 
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
     final headers = await Auth().getHeaders();
+    await initOptions();
+    final resp = await _dio!.delete(baseUrl, options: Options(headers: headers), data: json.encode(ids));
 
-    final resp = await _client.delete(uri, headers: headers, body: json.encode(ids));
-
-    if (resp.statusCode > 204) {
-      throw UnexpectedStatusCodeException(resp.statusCode, url);
+    if (resp.statusCode == null || resp.statusCode! > 204) {
+      throw UnexpectedStatusCodeException(resp.statusCode, baseUrl);
     }
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);
+
 }

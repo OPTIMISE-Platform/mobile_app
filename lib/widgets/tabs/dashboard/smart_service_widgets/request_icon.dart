@@ -38,6 +38,6 @@ class SmSeRequestIcon extends SmSeRequest {
   @override
   Future<void> refreshInternal() async {
     final resp = await request.perform();
-    codePoint = iconNameToCodePoints[resp.body.endsWith("\n") ? resp.body.substring(0, resp.body.length - 1) : resp.body] ?? 0xe30b;
+    codePoint = iconNameToCodePoints[resp.data.endsWith("\n") ? resp.data.substring(0, resp.data.length - 1) : resp.data] ?? 0xe30b;
   }
 }

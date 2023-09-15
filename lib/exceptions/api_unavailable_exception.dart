@@ -16,6 +16,6 @@
 
 import '../models/exception_log_element.dart';
 
-class NoNetworkException extends ExceptionLogElement {
-  NoNetworkException() : super.Log(null);
+class ApiUnavailableException extends ExceptionLogElement {
+  ApiUnavailableException() : super.Log(null);
 }

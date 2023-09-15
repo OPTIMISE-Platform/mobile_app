@@ -102,7 +102,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
                                 return const SizedBox.shrink();
                               }
                               return Column(children: [
-                                const Divider(),
+                                i > 0 ? const Divider() : const SizedBox.shrink(),
                                 DeviceListItem(AppState().devices[i], null),
                               ]);
                             }),

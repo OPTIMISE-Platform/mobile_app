@@ -16,34 +16,36 @@
 
 import 'dart:convert';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/exceptions/no_network_exception.dart';
+import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/settings.dart';
 
-import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/device_command_response.dart';
+import '../shared/api_available_interceptor.dart';
 import '../shared/http_client_adapter.dart';
 import '../widgets/shared/toast.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class DeviceCommandsService {
-  static final _dioH1 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000));
-  static final _dio2H2 = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+  static final _dioH1 = Dio(BaseOptions(
+      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+    ..interceptors.add(ApiAvailableInterceptor());
+  static final _dio2H2 = Dio(BaseOptions(
+      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+    ..interceptors.add(ApiAvailableInterceptor())
     ..httpClientAdapter = AppHttpClientAdapter();
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  static Future<List<DeviceCommandResponse>> runCommands(List<DeviceCommand> commands, [bool preferEventValue = true]) async {
-    ConnectivityResult connectivityResult = await (Connectivity().checkConnectivity());
-
-    if (connectivityResult == ConnectivityResult.none) throw NoNetworkException();
-
+  static Future<List<DeviceCommandResponse>> runCommands(
+      List<DeviceCommand> commands,
+      [bool preferEventValue = true]) async {
     final Map<Network?, List<DeviceCommand>> map = {};
     commands.forEach((e) {
       if (e.deviceInstance != null || e.device_id != null) {
@@ -54,7 +56,8 @@ class DeviceCommandsService {
     });
 
     final List<Future> futures = [];
-    final List<DeviceCommandResponse?> resp = List.generate(commands.length, (index) => null);
+    final List<DeviceCommandResponse?> resp =
+        List.generate(commands.length, (index) => null);
 
     final List<DeviceCommand> cloudRetries = [];
 
@@ -70,7 +73,14 @@ class DeviceCommandsService {
         dio = _dio2H2;
       }
       url += "/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
-      futures.add(_runCommands(network.value, url, service == null, dio).then((value) {
+      futures.add(_runCommands(network.value, url, service == null, dio)
+          .onError((_, __) {
+        cloudRetries.addAll(network.value);
+        return [];
+      }).then((value) {
+        if (value.isEmpty) {
+          return;
+        }
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
             resp[commands.indexOf(network.value[i])] = value[i];
@@ -78,52 +88,53 @@ class DeviceCommandsService {
             cloudRetries.add(network.value[i]);
           }
         }
-      }).onError((_, __) {
-        cloudRetries.addAll(network.value);
       }));
     });
     final DateTime start = DateTime.now();
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
-      final url = "${Settings.getApiUrl() ?? 'localhost'}/device-command/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
+      final url =
+          "${Settings.getApiUrl() ?? 'localhost'}/device-command/commands/batch?timeout=10s&prefer_event_value=$preferEventValue";
       List<DeviceCommandResponse> retryRes;
       try {
         retryRes = await _runCommands(cloudRetries, url, true, _dio2H2);
-      } catch (e) {
-        retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length, (index) => DeviceCommandResponse(502, e.toString()));
+      } on DioError catch (e) {
+        retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length,
+            (index) => DeviceCommandResponse(502, e.toString()));
       }
       for (int i = 0; i < retryRes.length; i++) {
         resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
       }
     }
     _logger.d("runCommands ${DateTime.now().difference(start)}");
-    return resp.map((e) => e ?? DeviceCommandResponse(502, "upstream reply null")).toList();
+    return resp
+        .map((e) => e ?? DeviceCommandResponse(502, "upstream reply null"))
+        .toList();
   }
 
-  static Future<List<DeviceCommandResponse>> _runCommands(List<DeviceCommand> commands, String url, bool sendToken, Dio dio) async {
+  static Future<List<DeviceCommandResponse>> _runCommands(
+      List<DeviceCommand> commands, String url, bool sendToken, Dio dio) async {
     final headers = await Auth().getHeaders();
 
     final Response<List<dynamic>> resp;
 
-    try {
-      resp = await dio.post<List<dynamic>>(url, options: Options(headers: sendToken ? headers : null), data: json.encode(commands));
-    } on DioError catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
-      }
-      rethrow;
-    }
+    resp = await dio.post<List<dynamic>>(url,
+        options: Options(headers: sendToken ? headers : null),
+        data: json.encode(commands));
 
-    return List<DeviceCommandResponse>.generate(resp.data!.length, (index) => DeviceCommandResponse.fromJson(resp.data![index]));
+    return List<DeviceCommandResponse>.generate(resp.data!.length,
+        (index) => DeviceCommandResponse.fromJson(resp.data![index]));
   }
 
   /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
-  static Future<bool> runCommandsSecurely(BuildContext context, List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
+  static Future<bool> runCommandsSecurely(BuildContext context,
+      List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
       [bool preferEventValue = true]) async {
     try {
-      responses.addAll(await DeviceCommandsService.runCommands(commands, preferEventValue));
-    } on NoNetworkException {
-      const err = "You are offline";
+      responses.addAll(
+          await DeviceCommandsService.runCommands(commands, preferEventValue));
+    } on ApiUnavailableException {
+      const err = "Currently unavailable";
       Toast.showErrorToast(context, err);
       _logger.e(err);
       return false;
@@ -136,10 +147,16 @@ class DeviceCommandsService {
     return true;
   }
 
-  static void _insert(Map<dynamic, List<dynamic>> m, dynamic key, dynamic value, List<dynamic> ifNotExisting) {
+  static void _insert(Map<dynamic, List<dynamic>> m, dynamic key, dynamic value,
+      List<dynamic> ifNotExisting) {
     if (!m.containsKey(key)) {
       m[key] = ifNotExisting;
     }
     m[key]!.add(value);
+  }
+
+  static bool isAvailable() {
+    final uri = "${Settings.getApiUrl() ?? 'localhost'}/device-command";
+    return ApiAvailableService().isAvailable(uri);
   }
 }

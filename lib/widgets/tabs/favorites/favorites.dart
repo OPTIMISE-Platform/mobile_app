@@ -45,7 +45,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
 
   _openFavorites(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-    parentState?.switchBottomBar(5, true);
+    parentState?.switchBottomBar(6, true);
   }
 
   @override
@@ -94,7 +94,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
         if (state.loadingDevices) {
           child = const Center(child: DelayedCircularProgressIndicator());
         } else if (matchingGroups.isEmpty) {
-          Center(child: LayoutBuilder(
+          return Center(child: LayoutBuilder(
             builder: (context, constraint) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
@@ -128,12 +128,15 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
             }
             if (i < devices.length) {
               return Column(
-                children: [const Divider(), DeviceListItem(devices[i], null)],
+                children: [
+                  i > 0 ? const Divider() : const SizedBox.shrink(),
+                  DeviceListItem(devices[i], null)
+                ],
               );
             }
             return Column(
               children: [
-                const Divider(),
+                i > 0 ? const Divider() : const SizedBox.shrink(),
                 GroupListItem(matchingGroups.elementAt(i - devices.length), (_) {
                   final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
                   if (parentState == null) return;

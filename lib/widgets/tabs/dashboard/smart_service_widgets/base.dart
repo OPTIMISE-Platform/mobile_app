@@ -18,7 +18,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart_estimate.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
@@ -26,14 +26,13 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/image.da
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pie_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/process_toggle.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_forecast.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_flow.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/pv_forecast.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/request_icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/row.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/single_value.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/stacked_bar_chart.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart_estimate.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
 import 'package:mutex/mutex.dart';
 
@@ -105,7 +104,7 @@ abstract class SmartServiceModuleWidget {
       await _refreshing.protect(refreshInternal);
     } catch (e) {
       ExceptionLogElement.Log(e.toString());
-      Toast.showToastNoContext("Could not load widget data", MyTheme.errorColor);
+      Toast.showToastNoContext("Could not load widget data");
     }
   }
 

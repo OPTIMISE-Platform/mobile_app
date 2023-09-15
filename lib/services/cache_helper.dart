@@ -26,11 +26,17 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/characteristics.dart';
+import 'package:mobile_app/services/concepts.dart';
+import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/device_types.dart';
+import 'package:mobile_app/services/device_types_perm_search.dart';
+import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/theme.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/device_instance.dart';
@@ -92,7 +98,13 @@ class CacheHelper {
       _refreshDevices(Duration.zero, reschedule: false),
       _refreshDeviceGroups(Duration.zero, reschedule: false),
       _refreshNetworks(Duration.zero, reschedule: false),
-      _refreshLocations(Duration.zero, reschedule: false)
+      _refreshLocations(Duration.zero, reschedule: false),
+      FunctionsService.getNestedFunctions(),
+      AspectsService.getAspects(),
+      ConceptsService.getConcepts(),
+      CharacteristicsService.getCharacteristics(),
+      DeviceTypesPermSearchService.getDeviceTypes(),
+      DeviceClassesService.getDeviceClasses(),
     ]);
   }
 
@@ -101,40 +113,50 @@ class CacheHelper {
       return;
     }
     return await Future.wait([
-    _scheduleRefreshDevices(),
-    _scheduleRefreshDeviceGroups(),
-    _scheduleRefreshNetworks(),
-    _scheduleRefreshLocations(),
+      _scheduleRefreshDevices(),
+      _scheduleRefreshDeviceGroups(),
+      _scheduleRefreshNetworks(),
+      _scheduleRefreshLocations(),
     ]);
   }
 
-  static Future<void> _refreshDevices(Duration wait, {bool reschedule = true}) async {
+  static Future<void> _refreshDevices(Duration wait,
+      {bool reschedule = true}) async {
     await Future.delayed(wait);
     var allDevicesLoaded = false;
     const limit = 5000;
     var deviceOffset = 0;
     DeviceInstance? last;
     final List<DeviceInstance> newDevices = [];
+    final Map<String, int> deviceTypeIds = {};
 
     while (!allDevicesLoaded) {
       try {
-        newDevices.addAll(await DevicesService.getDevices(limit, deviceOffset, DeviceSearchFilter(""), last, forceBackend: true));
+        newDevices.addAll(await DevicesService.getDevices(
+            limit, deviceOffset, DeviceSearchFilter(""), last,
+            forceBackend: true));
       } catch (e) {
         final err = "Could not get devices: $e";
         _logger.e(err);
-        Toast.showToastNoContext(err, MyTheme.errorColor);
+        Toast.showToastNoContext(err);
         return;
       }
       allDevicesLoaded = newDevices.length < limit;
       deviceOffset = newDevices.length;
       last = newDevices.isNotEmpty ? newDevices.last : null;
+
+      newDevices.forEach((element) =>
+      deviceTypeIds[element.device_type_id] = 0);
+      if (isar != null) {
+        await isar!.writeTxn(() async {
+          await isar!.deviceInstances.clear();
+          await isar!.deviceInstances.putAll(newDevices);
+        });
+      }
     }
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.deviceInstances.clear();
-        await isar!.deviceInstances.putAll(newDevices);
-      });
-    }
+    final List<Future> futures = [];
+    deviceTypeIds.keys.forEach((element) => futures.add(DeviceTypesService.getDeviceType(element)));
+    await Future.wait(futures);
     await Settings.setCacheUpdated("devices");
     if (reschedule) {
       _refreshDevices(const Duration(days: 1));
@@ -155,15 +177,17 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshDeviceGroups(Duration wait, {bool reschedule = true}) async {
+  static Future<void> _refreshDeviceGroups(Duration wait,
+      {bool reschedule = true}) async {
     await Future.delayed(wait);
     late final List<DeviceGroup> deviceGroups;
     try {
-       deviceGroups = await Future.wait(await DeviceGroupsService.getDeviceGroups(forceBackend: true));
+      deviceGroups = await Future.wait(
+          await DeviceGroupsService.getDeviceGroups(forceBackend: true));
     } catch (e) {
       final err = "Could not get deviceGroups: $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
       return;
     }
 
@@ -194,7 +218,8 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshNetworks(Duration wait, {bool reschedule = true}) async {
+  static Future<void> _refreshNetworks(Duration wait,
+      {bool reschedule = true}) async {
     if (isar == null) {
       return;
     }
@@ -206,7 +231,7 @@ class CacheHelper {
     } catch (e) {
       final err = "Could not get networks: $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
       return;
     }
 
@@ -237,7 +262,8 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshLocations(Duration wait, {bool reschedule = true}) async {
+  static Future<void> _refreshLocations(Duration wait,
+      {bool reschedule = true}) async {
     if (isar == null) {
       return;
     }
@@ -245,11 +271,12 @@ class CacheHelper {
     late final List<Location> locations;
 
     try {
-      locations = await Future.wait(await LocationService.getLocations(forceBackend: true));
+      locations = await Future.wait(
+          await LocationService.getLocations(forceBackend: true));
     } catch (e) {
       final err = "Could not get locations: $e";
       _logger.e(err);
-      Toast.showToastNoContext(err, MyTheme.errorColor);
+      Toast.showToastNoContext(err);
       return;
     }
 

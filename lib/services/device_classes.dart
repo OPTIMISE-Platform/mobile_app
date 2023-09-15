@@ -21,9 +21,11 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class DeviceClassesService {
@@ -32,6 +34,9 @@ class DeviceClassesService {
   );
 
   static CacheOptions? _options;
+
+  static String uri =
+      '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/device-class-uses';
 
   static initOptions() async {
     if (_options != null) {
@@ -49,20 +54,23 @@ class DeviceClassesService {
   }
 
   static Future<List<DeviceClass>> getDeviceClasses() async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/device-class-uses';
     final Map<String, String> queryParameters = {};
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    final dio = Dio(BaseOptions(
+        connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final Response<Map<String, dynamic>?> resp;
     try {
-      resp = await dio.get<Map<String, dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await dio.get<Map<String, dynamic>?>(uri,
+          queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -73,7 +81,8 @@ class DeviceClassesService {
 
     final l = resp.data!["device-classes"];
     if (l == null) return [];
-    final deviceClasses = List<DeviceClass>.generate(l.length, (index) => DeviceClass.fromJson(l[index]));
+    final deviceClasses = List<DeviceClass>.generate(
+        l.length, (index) => DeviceClass.fromJson(l[index]));
     for (var element in deviceClasses) {
       for (var s in (resp.data!["used-devices"][element.id] as List<dynamic>)) {
         element.deviceIds.add(s as String);
@@ -81,4 +90,6 @@ class DeviceClassesService {
     }
     return deviceClasses;
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

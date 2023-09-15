@@ -27,6 +27,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../services/cache_helper.dart';
 import '../shared/base64_response_decoder.dart';
@@ -92,6 +93,7 @@ class DeviceGroup {
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {

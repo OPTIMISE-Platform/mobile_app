@@ -37,10 +37,10 @@ class SmSeSingleValue extends SmSeRequest {
   @override
   Future<void> refreshInternal() async {
     final resp = await request.perform();
-    if (resp.statusCode > 299) {
+    if (resp.statusCode == null || resp.statusCode! > 299) {
       value = "ERROR Status " + resp.statusCode.toString();
     } else {
-      value = resp.body.endsWith("\n") ? resp.body.substring(0, resp.body.length - 1) : resp.body;
+      value = resp.data.endsWith("\n") ? resp.data.substring(0, resp.data.length - 1) : resp.data;
     }
   }
 }

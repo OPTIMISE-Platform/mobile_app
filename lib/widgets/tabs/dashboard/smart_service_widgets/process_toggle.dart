@@ -16,9 +16,11 @@
 
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 import '../../../../services/auth.dart';
@@ -27,7 +29,11 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   @override
   setPreview(bool enabled) => null;
 
-  static final _client = http.Client();
+  static final _dio = Dio()
+    ..interceptors.add(ApiAvailableInterceptor())
+    ..httpClientAdapter = AppHttpClientAdapter();
+
+
 
   String _deploymentId = "";
   final List<String> _instanceIds = [];
@@ -59,19 +65,14 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   @override
   Future<void> refreshInternal() async {
     final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/instances";
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
 
     final headers = await Auth().getHeaders();
-    final resp = await _client.get(uri, headers: headers);
-    if (resp.statusCode != 200) {
+    final resp = await _dio.get<List<dynamic>>(url, options: Options(headers: headers));
+    if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
       return;
     }
-    final List l = json.decode(resp.body);
     _instanceIds.clear();
-    _instanceIds.addAll(l.map((e) => e["id"]));
+    _instanceIds.addAll(resp.data!.map((e) => e["id"]));
   }
 
   Future<void> _start() async {
@@ -87,13 +88,9 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
       url += queryParameters;
       url = Uri.encodeFull(url);
     }
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
 
     final headers = await Auth().getHeaders();
-    await _client.get(uri, headers: headers);
+    await _dio.get(url, options: Options(headers: headers));
     await refresh();
     redrawDashboard(_context);
   }
@@ -101,12 +98,9 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   Future<void> _stop() async {
     final List<Future> futures = _instanceIds.map((e) {
       final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/process-instances/$e";
-      var uri = Uri.parse(url);
-      if (url.startsWith("https://")) {
-        uri = uri.replace(scheme: "https");
-      }
 
-      return Auth().getHeaders().then((headers) => _client.delete(uri, headers: headers));
+
+      return Auth().getHeaders().then((headers) => _dio.delete(url, options: Options(headers: headers)));
     }).toList(growable: false);
 
     await Future.wait(futures);

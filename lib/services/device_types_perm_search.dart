@@ -21,9 +21,11 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class DeviceTypesPermSearchService {
@@ -32,6 +34,9 @@ class DeviceTypesPermSearchService {
   );
 
   static CacheOptions? _options;
+
+  static String uri =
+      '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/device-types';
 
   static initOptions() async {
     if (_options != null) {
@@ -48,8 +53,8 @@ class DeviceTypesPermSearchService {
     );
   }
 
-  static Future<List<DeviceTypePermSearch>> getDeviceTypes([List<String>? ids]) async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/device-types';
+  static Future<List<DeviceTypePermSearch>> getDeviceTypes(
+      [List<String>? ids]) async {
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     if (ids != null && ids.isNotEmpty) {
@@ -58,15 +63,19 @@ class DeviceTypesPermSearchService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+    final dio = Dio(BaseOptions(
+        connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await dio.get<List<dynamic>?>(uri,
+          queryParameters: queryParameters, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -75,6 +84,9 @@ class DeviceTypesPermSearchService {
     }
 
     final l = resp.data ?? [];
-    return List<DeviceTypePermSearch>.generate(l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
+    return List<DeviceTypePermSearch>.generate(
+        l.length, (index) => DeviceTypePermSearch.fromJson(l[index]));
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

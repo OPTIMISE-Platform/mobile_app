@@ -35,7 +35,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../app_state.dart';
 import '../../config/functions/function_config.dart';
-import '../../exceptions/no_network_exception.dart';
+import '../../exceptions/api_unavailable_exception.dart';
 import '../../services/auth.dart';
 import '../../shared/isar.dart';
 import '../../theme.dart';
@@ -77,7 +77,8 @@ class Settings extends StatelessWidget {
                     const Spacer(),
                     OutlinedButton(
                         onPressed: () async {
-                          await settings_service.Settings.deleteAllFunctionPreferredCharacteristicIds();
+                          await settings_service.Settings
+                              .deleteAllFunctionPreferredCharacteristicIds();
                           reinit();
                           AppState().notifyListeners();
                           AppState().pushRefresh();
@@ -85,20 +86,26 @@ class Settings extends StatelessWidget {
                         },
                         child: const Text("Reset All"))
                   ]),
-                  content: StatefulBuilder(builder: (context, setState) => _getFunctionPreferredCharacteristicsList(context, setState)),
+                  content: StatefulBuilder(
+                      builder: (context, setState) =>
+                          _getFunctionPreferredCharacteristicsList(
+                              context, setState)),
                   actions: [
-                    PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                    PlatformDialogAction(
+                        child: const Text("Close"),
+                        onPressed: () => Navigator.pop(context)),
                   ],
                 ),
               );
             }),
         const Divider(),
         ListTile(
-          title: const Text("Refresh Cache"),
-          onTap: () async {
+          title: Text("Refresh Cache", style: settings_service.Settings.getLocalMode() ? TextStyle(color: Theme.of(context).disabledColor) : null),
+          onTap: settings_service.Settings.getLocalMode() ? null : () async {
             await CacheHelper.clearCache();
             await CacheHelper.refreshCache();
-            Toast.showConfirmationToast(context, "Cache refreshed, please restart App");
+            Toast.showConfirmationToast(
+                context, "Cache refreshed, please restart App");
           },
         ),
         const Divider(),
@@ -129,21 +136,27 @@ class Settings extends StatelessWidget {
                             child: PlatformText('System Default'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(null);
-                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              (context.findAncestorStateOfType<State<MyApp>>()
+                                      as MyAppState)
+                                  .restartApp();
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
                             child: PlatformText('Dark'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(dark);
-                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              (context.findAncestorStateOfType<State<MyApp>>()
+                                      as MyAppState)
+                                  .restartApp();
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
                             child: PlatformText('Light'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(light);
-                              (context.findAncestorStateOfType<State<MyApp>>() as MyAppState).restartApp();
+                              (context.findAncestorStateOfType<State<MyApp>>()
+                                      as MyAppState)
+                                  .restartApp();
                               Navigator.pop(context);
                             })
                       ],
@@ -156,13 +169,13 @@ class Settings extends StatelessWidget {
         children.addAll([
           const Divider(),
           ListTile(
-            title: const Text("Check Updates"),
-            onTap: () async {
+            title: Text("Check Updates", style: settings_service.Settings.getLocalMode() ? TextStyle(color: Theme.of(context).disabledColor) : null),
+            onTap: settings_service.Settings.getLocalMode() ? null : () async {
               late final bool? updateAvailable;
               try {
                 updateAvailable = await AppUpdater.updateAvailable();
-              } on NoNetworkException {
-                Toast.showWarningToast(context, "Currently offline");
+              } on ApiUnavailableException {
+                Toast.showWarningToast(context, "Currently unavailable");
                 return;
               } catch (e) {
                 Toast.showErrorToast(context, "Error checking for updates");
@@ -198,11 +211,26 @@ class Settings extends StatelessWidget {
       children.addAll([
         const Divider(),
         ListTile(
+          title: const Text("Local Mode"),
+          trailing: PlatformSwitch(
+            onChanged: (bool value) async {
+              await settings_service.Settings.setLocalMode(value);
+              state.notifyListeners();
+              HapticFeedbackProxy.lightImpact();
+            },
+            value: settings_service.Settings.getLocalMode(),
+          ),
+        )
+      ]);
+      children.addAll([
+        const Divider(),
+        ListTile(
             title: const Text("Show Debug Information"),
             onTap: () async {
               var txt = "Version: ${dotenv.env["VERSION"]}\n"
                   "Username: ${Auth().getUsername()}\n"
-                  "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n\n"
+                  "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
+                  "Local Mode:  ${settings_service.Settings.getLocalMode()}\n\n";
                   "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
                   "Keycloak Redirect: ${settings_service.Settings.getKeycloakRedirect()}\n"
                   "Api Url: ${settings_service.Settings.getApiUrl()}\n";
@@ -221,7 +249,9 @@ class Settings extends StatelessWidget {
                     const Spacer(),
                     PlatformIconButton(
                         icon: Icon(PlatformIcons(context).share),
-                        onPressed: () => Share.share("OPTIMISE Debug Information\n$txt", subject: "OPTIMISE Debug Information"))
+                        onPressed: () => Share.share(
+                            "OPTIMISE Debug Information\n$txt",
+                            subject: "OPTIMISE Debug Information"))
                   ]),
                   content: Scrollbar(
                       child: SingleChildScrollView(
@@ -230,13 +260,20 @@ class Settings extends StatelessWidget {
                     textAlign: TextAlign.left,
                   ))),
                   actions: [
-                    PlatformDialogAction(child: const Text("Clear Log"), onPressed: () async {
-                      if (isar != null) {
-                        await isar!.writeTxn(() async => await isar!.exceptionLogElements.where().deleteAll());
-                      }
-                      Navigator.pop(context);
-                    }),
-                    PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                    PlatformDialogAction(
+                        child: const Text("Clear Log"),
+                        onPressed: () async {
+                          if (isar != null) {
+                            await isar!.writeTxn(() async => await isar!
+                                .exceptionLogElements
+                                .where()
+                                .deleteAll());
+                          }
+                          Navigator.pop(context);
+                        }),
+                    PlatformDialogAction(
+                        child: const Text("Close"),
+                        onPressed: () => Navigator.pop(context)),
                   ],
                 ),
               );
@@ -251,7 +288,8 @@ class Settings extends StatelessWidget {
             title: const Text("Delete FCM Token"),
             onTap: () async {
               await state.messaging.deleteToken();
-              await state.messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
+              await state.messaging
+                  .getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
               Toast.showConfirmationToast(context, "OK");
             },
           ),
@@ -264,7 +302,8 @@ class Settings extends StatelessWidget {
           title: const Text("Server Settings"),
           onTap: () async {
             String? keycloakUrl = settings_service.Settings.getKeycloakUrl();
-            String? keycloakRedirect = settings_service.Settings.getKeycloakRedirect();
+            String? keycloakRedirect =
+                settings_service.Settings.getKeycloakRedirect();
             String? apiUrl = settings_service.Settings.getApiUrl();
 
             await showPlatformDialog(
@@ -304,17 +343,23 @@ class Settings extends StatelessWidget {
                       child: const Text("Reset"),
                       onPressed: () async {
                         await settings_service.Settings.setKeycloakUrl(null);
-                        await settings_service.Settings.setKeycloakRedirect(null);
+                        await settings_service.Settings.setKeycloakRedirect(
+                            null);
                         await settings_service.Settings.setApiUrl(null);
-                        Toast.showConfirmationToast(context, "Reset done, consider logging out");
+                        Toast.showConfirmationToast(
+                            context, "Reset done, consider logging out");
                         Navigator.pop(context);
                       }),
-                  PlatformDialogAction(child: const Text("Close"), onPressed: () => Navigator.pop(context)),
+                  PlatformDialogAction(
+                      child: const Text("Close"),
+                      onPressed: () => Navigator.pop(context)),
                   PlatformDialogAction(
                       child: const Text("Save"),
                       onPressed: () async {
-                        await settings_service.Settings.setKeycloakUrl(keycloakUrl);
-                        await settings_service.Settings.setKeycloakRedirect(keycloakRedirect);
+                        await settings_service.Settings.setKeycloakUrl(
+                            keycloakUrl);
+                        await settings_service.Settings.setKeycloakRedirect(
+                            keycloakRedirect);
                         await settings_service.Settings.setApiUrl(apiUrl);
                         Navigator.pop(context);
                       }),
@@ -358,11 +403,14 @@ class Settings extends StatelessWidget {
     });
   }
 
-  Widget _getFunctionPreferredCharacteristicsList(BuildContext context, StateSetter setState) {
+  Widget _getFunctionPreferredCharacteristicsList(
+      BuildContext context, StateSetter setState) {
     final functions = AppState()
         .nestedFunctions
         .values
-        .where((f) => (f.concept.characteristic_ids ?? []).length > 1 && f.name.toLowerCase().contains(_functionSearch.toLowerCase()))
+        .where((f) =>
+            (f.concept.characteristic_ids ?? []).length > 1 &&
+            f.name.toLowerCase().contains(_functionSearch.toLowerCase()))
         .toList();
     final list = ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -372,11 +420,16 @@ class Settings extends StatelessWidget {
           return ListTile(
               title: PlatformWidget(
                   material: (_, __) => PopupMenuButton<String?>(
-                        initialValue: settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ?? f.concept.base_characteristic_id,
+                        initialValue: settings_service.Settings
+                                .getFunctionPreferredCharacteristicId(f.id) ??
+                            f.concept.base_characteristic_id,
                         itemBuilder: (_) => f.concept.characteristic_ids!
                             .map(
-                              (e) =>
-                                  PopupMenuItem<String?>(value: e, child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME")),
+                              (e) => PopupMenuItem<String?>(
+                                  value: e,
+                                  child: Text(
+                                      AppState().characteristics[e]?.name ??
+                                          "MISSING_CHARACTERISTIC_NAME")),
                             )
                             .toList()
                           ..add(PopupMenuItem<String?>(
@@ -386,7 +439,8 @@ class Settings extends StatelessWidget {
                                 children: const [Divider(), Text("Reset")],
                               ))),
                         onSelected: (v) {
-                          settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, v);
+                          settings_service.Settings
+                              .setFunctionPreferredCharacteristicId(f.id, v);
                           reinit();
                           AppState().notifyListeners();
                           AppState().pushRefresh();
@@ -400,12 +454,21 @@ class Settings extends StatelessWidget {
                             builder: (context) => CupertinoActionSheet(
                                   actions: f.concept.characteristic_ids!
                                       .map((e) => CupertinoActionSheetAction(
-                                            isDefaultAction: (settings_service.Settings.getFunctionPreferredCharacteristicId(f.id) ??
-                                                    f.concept.base_characteristic_id) ==
+                                            isDefaultAction: (settings_service
+                                                            .Settings
+                                                        .getFunctionPreferredCharacteristicId(
+                                                            f.id) ??
+                                                    f.concept
+                                                        .base_characteristic_id) ==
                                                 e,
-                                            child: Text(AppState().characteristics[e]?.name ?? "MISSING_CHARACTERISTIC_NAME"),
+                                            child: Text(AppState()
+                                                    .characteristics[e]
+                                                    ?.name ??
+                                                "MISSING_CHARACTERISTIC_NAME"),
                                             onPressed: () {
-                                              settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, e);
+                                              settings_service.Settings
+                                                  .setFunctionPreferredCharacteristicId(
+                                                      f.id, e);
                                               reinit();
                                               AppState().notifyListeners();
                                               setState(() {});
@@ -418,7 +481,9 @@ class Settings extends StatelessWidget {
                                       isDestructiveAction: true,
                                       child: const Text("Reset"),
                                       onPressed: () {
-                                        settings_service.Settings.setFunctionPreferredCharacteristicId(f.id, null);
+                                        settings_service.Settings
+                                            .setFunctionPreferredCharacteristicId(
+                                                f.id, null);
                                         reinit();
                                         AppState().notifyListeners();
                                         setState(() {});
@@ -459,13 +524,17 @@ class Settings extends StatelessWidget {
   }
 }
 
-StatefulBuilder Function(BuildContext context) getDisplayedFractionsDigitSelectDialog(AppState state) {
+StatefulBuilder Function(BuildContext context)
+    getDisplayedFractionsDigitSelectDialog(AppState state) {
   return (context) {
-    var currentDisplayedFractionDigitsSetting = settings_service.Settings.getDisplayedFractionDigits();
+    var currentDisplayedFractionDigitsSetting =
+        settings_service.Settings.getDisplayedFractionDigits();
     return StatefulBuilder(
       builder: (context, setState) => PlatformAlertDialog(
           actions: [
-            PlatformDialogAction(child: const Text("OK"), onPressed: () => Navigator.pop(context)),
+            PlatformDialogAction(
+                child: const Text("OK"),
+                onPressed: () => Navigator.pop(context)),
           ],
           content: NumberPicker(
               value: currentDisplayedFractionDigitsSetting,

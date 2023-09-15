@@ -23,6 +23,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../shared/base64_response_decoder.dart';
 import '../shared/http_client_adapter.dart';
@@ -68,6 +69,7 @@ class DeviceClass {
     await initOptions();
     final dio = Dio()
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final resp = await dio.get<String?>(image,
         options: Options(responseDecoder: DecodeIntoBase64()));

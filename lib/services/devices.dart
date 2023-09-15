@@ -25,12 +25,14 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../models/attribute.dart';
 import '../models/device_search_filter.dart';
 import '../shared/http_client_adapter.dart';
 import '../shared/isar.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class DevicesService {
@@ -51,36 +53,47 @@ class DevicesService {
       allowPostMethod: true,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio ??= Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    _dio ??= Dio(BaseOptions(
+        connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<DeviceInstance>> getDevices(int limit, int offset, DeviceSearchFilter filter, DeviceInstance? lastDevice, {bool forceBackend = false}) async {
+  static Future<List<DeviceInstance>> getDevices(int limit, int offset,
+      DeviceSearchFilter filter, DeviceInstance? lastDevice,
+      {bool forceBackend = false}) async {
     final start = DateTime.now();
     await initOptions();
 
-    final collection =  isar?.collection<DeviceInstance>();
+    final collection = isar?.collection<DeviceInstance>();
 
-    if (!forceBackend && isar != null && collection != null && await collection.count() >= AppState().totalDevices) {
-      final devices = await filter.isarQuery(limit, offset, collection).build().findAll();
-      _logger.d("Getting devices from local DB took ${DateTime.now().difference(start)}");
+    if (!forceBackend && isar != null && collection != null &&
+        await collection.count() >= AppState().totalDevices) {
+      final devices = await filter.isarQuery(limit, offset, collection)
+          .build()
+          .findAll();
+      _logger.d("Getting devices from local DB took ${DateTime.now().difference(
+          start)}");
       return devices;
     }
     final headers = await Auth().getHeaders();
 
     final body = filter.toBody(limit, offset, lastDevice);
-    final uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/query';
+    final uri = '${Settings.getApiUrl() ??
+        'localhost'}/permissions/query/v3/query';
     final encoded = json.encode(body);
     _logger.d("Devices: $encoded");
     final Response<List<dynamic>?> resp;
     try {
       final DateTime start = DateTime.now();
-      resp = await _dio!.post<List<dynamic>?>(uri, options: Options(headers: headers), data: encoded);
+      resp = await _dio!.post<List<dynamic>?>(
+          uri, options: Options(headers: headers), data: encoded);
       _logger.d("getDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -90,8 +103,10 @@ class DevicesService {
     }
 
     final l = resp.data ?? [];
-    final devices = List<DeviceInstance>.generate(l.length, (index) => DeviceInstance.fromJson(l[index]));
-    _logger.d("Getting devices from remote DB took ${DateTime.now().difference(start)}");
+    final devices = List<DeviceInstance>.generate(
+        l.length, (index) => DeviceInstance.fromJson(l[index]));
+    _logger.d("Getting devices from remote DB took ${DateTime.now().difference(
+        start)}");
 
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
@@ -105,17 +120,20 @@ class DevicesService {
     _logger.d("Saving device: ${device.id}");
 
     final uri =
-        "${Settings.getApiUrl() ?? 'localhost'}/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
+        "${Settings.getApiUrl() ?? 'localhost'}/device-manager/devices/${device
+        .id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
 
     final encoded = json.encode(device.toJson());
 
     final headers = await Auth().getHeaders();
     await initOptions();
     try {
-      await _dio!.put<dynamic>(uri, options: Options(headers: headers), data: encoded);
+      await _dio!.put<dynamic>(
+          uri, options: Options(headers: headers), data: encoded);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -129,15 +147,19 @@ class DevicesService {
   }
 
   /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
-  static Future<int> getTotalDevices(DeviceSearchFilter filter, {bool forceBackend = false}) async {
+  static Future<int> getTotalDevices(DeviceSearchFilter filter,
+      {bool forceBackend = false}) async {
     await initOptions();
-    final collection =  isar?.collection<DeviceInstance>();
+    final collection = isar?.collection<DeviceInstance>();
 
     if (!forceBackend && isar != null && collection != null) {
-      return await filter.isarQuery(double.maxFinite.toInt(), 0, collection).build().count();
+      return await filter.isarQuery(double.maxFinite.toInt(), 0, collection)
+          .build()
+          .count();
     }
 
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/total/devices';
+    String uri = '${Settings.getApiUrl() ??
+        'localhost'}/permissions/query/v3/total/devices';
 
     final Map<String, String> queryParameters = {};
     if (filter.query.isNotEmpty) {
@@ -147,11 +169,13 @@ class DevicesService {
     final Response<int> resp;
     try {
       final DateTime start = DateTime.now();
-      resp = await _dio!.get<int>(uri, options: Options(headers: headers), queryParameters: queryParameters);
+      resp = await _dio!.get<int>(uri, options: Options(headers: headers),
+          queryParameters: queryParameters);
       _logger.d("getTotalDevices ${DateTime.now().difference(start)}");
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -162,4 +186,16 @@ class DevicesService {
 
     return resp.data ?? 0;
   }
+
+  static bool isListAvailable() {
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3';
+    return ApiAvailableService().isAvailable(uri);
+  }
+
+  static bool isSaveAvailable() {
+    final uri =
+        "${Settings.getApiUrl() ?? 'localhost'}/device-manager/devices";
+    return ApiAvailableService().isAvailable(uri);
+  }
+
 }

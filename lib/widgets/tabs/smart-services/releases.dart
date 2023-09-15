@@ -36,7 +36,8 @@ class SmartServicesReleases extends StatefulWidget {
   State<StatefulWidget> createState() => _SmartServicesReleasesState();
 }
 
-class _SmartServicesReleasesState extends State<SmartServicesReleases> with WidgetsBindingObserver {
+class _SmartServicesReleasesState extends State<SmartServicesReleases>
+    with WidgetsBindingObserver {
   bool allInstancesLoaded = false;
   final List<SmartServiceRelease> releases = [];
   Mutex releasesMutex = Mutex();
@@ -60,9 +61,8 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute
-        .of(context)
-        ?.isCurrent == true) {
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
       _refresh();
     }
   }
@@ -79,7 +79,8 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
     }
     await releasesMutex.protect(() async {
       const limit = 50;
-      final newInstances = await SmartServiceService.getReleases(limit, releases.length);
+      final newInstances =
+          await SmartServiceService.getReleases(limit, releases.length);
       releases.addAll(newInstances);
       allInstancesLoaded = newInstances.length < limit;
     });
@@ -90,11 +91,14 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
   Widget build(BuildContext context) {
     final actions = MyAppBar.getDefaultActions(context);
     if (kIsWeb) {
-      actions.insert(0, PlatformIconButton(
-        onPressed: () => _refresh(),
-        icon: const Icon(Icons.refresh),
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-      ));
+      actions.insert(
+          0,
+          PlatformIconButton(
+            onPressed: () => _refresh(),
+            icon: const Icon(Icons.refresh),
+            cupertino: (_, __) =>
+                CupertinoIconButtonData(padding: EdgeInsets.zero),
+          ));
     }
 
     return PlatformScaffold(
@@ -103,67 +107,85 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases> with Widg
             child: releasesMutex.isLocked
                 ? const Center(child: DelayedCircularProgressIndicator())
                 : RefreshIndicator(
-                onRefresh: () async {
-                  HapticFeedbackProxy.lightImpact();
-                  await _refresh();
-                },
-                child: releases.isEmpty
-                    ? LayoutBuilder(
-                  builder: (context, constraint) {
-                    return SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                        child: IntrinsicHeight(
-                          child: Column(
-                            children: const [
-                              Expanded(
-                                child: Center(child: Text("No Releases")),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                )
-                    : ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: MyTheme.inset,
-                  itemCount: releases.length,
-                  itemBuilder: (context, i) {
-                    if (i == releases.length - 1 && !allInstancesLoaded) {
-                      _loadInstances();
-                    }
-                    return Column(children: [
-                      const Divider(),
-                      ListTile(
-                          title: Row(
-                              children: [
-                                Text(
-                                  releases[i].name,
-                                  style: releases[i].usable == false ? const TextStyle(color: Colors.grey) : null,
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      await _refresh();
+                    },
+                    child: releases.isEmpty
+                        ? LayoutBuilder(
+                            builder: (context, constraint) {
+                              return SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                      minHeight: constraint.maxHeight),
+                                  child: IntrinsicHeight(
+                                    child: Column(
+                                      children: const [
+                                        Expanded(
+                                          child: Center(
+                                              child: Text("No Releases")),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                Badge(
-                                  label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-                                  isLabelVisible: releases[i].error != null,
-                                  alignment: AlignmentDirectional.topCenter,
-                                  largeSize: 16,
-                                  backgroundColor: Colors.transparent,
-                                  child: releases[i].error != null
-                                      ? const Text("")
-                                      : null,
-
-                                )
-                              ]),
-                          subtitle: Text(_format.format(releases[i].createdAt())),
-                          onTap: releases[i].error != null || releases[i].usable == false
-                              ? () => Toast.showWarningToast(context, "Missing devices for this service")
-                              : () =>
-                              Navigator.push(context,
-                                  platformPageRoute(context: context, builder: (context) => SmartServicesReleaseLaunch(releases[i])))),
-                    ]);
-                  },
-                ))));
+                              );
+                            },
+                          )
+                        : ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: MyTheme.inset,
+                            itemCount: releases.length,
+                            itemBuilder: (context, i) {
+                              if (i == releases.length - 1 &&
+                                  !allInstancesLoaded) {
+                                _loadInstances();
+                              }
+                              return Column(children: [
+                                i > 0
+                                    ? const Divider()
+                                    : const SizedBox.shrink(),
+                                ListTile(
+                                    title: Row(children: [
+                                      Text(
+                                        releases[i].name,
+                                        style: releases[i].usable == false
+                                            ? const TextStyle(
+                                                color: Colors.grey)
+                                            : null,
+                                      ),
+                                      Badge(
+                                        label: Icon(
+                                            PlatformIcons(context).error,
+                                            size: 16,
+                                            color: MyTheme.warnColor),
+                                        isLabelVisible:
+                                            releases[i].error != null,
+                                        alignment:
+                                            AlignmentDirectional.topCenter,
+                                        largeSize: 16,
+                                        backgroundColor: Colors.transparent,
+                                        child: releases[i].error != null
+                                            ? const Text("")
+                                            : null,
+                                      )
+                                    ]),
+                                    subtitle: Text(_format
+                                        .format(releases[i].createdAt())),
+                                    onTap: releases[i].error != null ||
+                                            releases[i].usable == false
+                                        ? () => Toast.showWarningToast(context,
+                                            "Missing devices for this service")
+                                        : () => Navigator.push(
+                                            context,
+                                            platformPageRoute(
+                                                context: context,
+                                                builder: (context) =>
+                                                    SmartServicesReleaseLaunch(
+                                                        releases[i])))),
+                              ]);
+                            },
+                          ))));
   }
 }

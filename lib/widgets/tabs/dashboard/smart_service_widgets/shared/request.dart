@@ -16,15 +16,16 @@
 
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
-import 'package:http/http.dart' as http;
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../../../../../services/auth.dart';
 import '../base.dart';
 
 class Request {
-  static final _client = http.Client();
+  static final _dio = Dio()..interceptors.add(ApiAvailableInterceptor());
 
   final String method, url;
   dynamic body;
@@ -34,16 +35,16 @@ class Request {
     this.body = json.encode(body);
   }
 
-  factory Request.fromJson(Map<String, dynamic> json) =>
-      Request(json["method"] as String, json["url"] as String, json["body"], json["need_token"] as bool);
+  factory Request.fromJson(Map<String, dynamic> json) => Request(
+      json["method"] as String,
+      json["url"] as String,
+      json["body"],
+      json["need_token"] as bool);
 
-  factory Request.from(Request r) => Request(r.method, r.url, json.decode(json.encode(r.body)), r.need_token);
+  factory Request.from(Request r) =>
+      Request(r.method, r.url, json.decode(json.encode(r.body)), r.need_token);
 
-  Future<http.Response> perform() async {
-    var uri = Uri.parse(url);
-    if (url.startsWith("https://")) {
-      uri = uri.replace(scheme: "https");
-    }
+  Future<Response<T>> perform<T>() async {
     Map<String, String> headers = {};
     if (need_token) {
       headers = await Auth().getHeaders();
@@ -51,20 +52,24 @@ class Request {
 
     switch (method.toUpperCase()) {
       case "GET":
-        return await _client.get(uri, headers: headers);
+        return await _dio.get(url, options: Options(headers: headers));
       case "POST":
-        return await _client.post(uri, headers: headers, body: body);
+        return await _dio.post(url,
+            options: Options(headers: headers), data: body);
       case "PUT":
-        return await _client.put(uri, headers: headers, body: body);
+        return await _dio.put(url,
+            options: Options(headers: headers), data: body);
       case "HEAD":
-        return await _client.head(uri, headers: headers);
+        return await _dio.head(url, options: Options(headers: headers));
       case "PATCH":
-        return await _client.patch(uri, headers: headers, body: body);
+        return await _dio.patch(url,
+            options: Options(headers: headers), data: body);
       case "DELETE":
-        return await _client.delete(uri, headers: headers, body: body);
+        return await _dio.delete(url,
+            options: Options(headers: headers), data: body);
 
       default:
-        throw ArgumentException("Unsupported method " + method);
+        throw ArgumentException("Unsupported method $method");
     }
   }
 }

@@ -325,7 +325,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
       List<Widget> appBarActions = [];
 
-      if (device != null) {
+      if (device != null && DevicesService.isSaveAvailable()) {
         appBarActions.add(PlatformIconButton(
           onPressed: () async {
             final oldName = device.displayName;
@@ -358,7 +358,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           icon: Icon(PlatformIcons(context).edit),
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
-      } else if (deviceGroup != null) {
+      } else if (deviceGroup != null && DeviceGroupsService.isCreateEditDeleteAvailable()) {
         appBarActions.add(PlatformIconButton(
           onPressed: () async {
             final oldName = deviceGroup.name;
@@ -617,7 +617,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
 
       return Scaffold(
-          floatingActionButton: deviceGroup == null
+          floatingActionButton: deviceGroup == null || !DeviceGroupsService.isCreateEditDeleteAvailable()
               ? null
               : FloatingActionButton(
                   onPressed: () async {

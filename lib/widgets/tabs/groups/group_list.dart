@@ -142,7 +142,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
                       itemBuilder: (context, i) {
                         return i < state.deviceGroups.length
                             ? Column(children: [
-                                const Divider(),
+                          i > 0 ? const Divider() : const SizedBox.shrink(),
                                 GroupListItem(state.deviceGroups[i], null),
                               ])
                             : Column(children: const [

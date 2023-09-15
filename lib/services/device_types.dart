@@ -25,6 +25,8 @@ import 'package:mutex/mutex.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
+import '../shared/api_available_interceptor.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class DeviceTypesService {
@@ -36,6 +38,8 @@ class DeviceTypesService {
   static late final Dio? _dio;
 
   static Mutex m = Mutex();
+
+  static String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-types';
 
   static initOptions() async {
     return await m.protect(() async {
@@ -54,21 +58,23 @@ class DeviceTypesService {
 
       _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
         ..interceptors.add(DioCacheInterceptor(options: _options!))
+        ..interceptors.add(ApiAvailableInterceptor())
         ..httpClientAdapter = AppHttpClientAdapter();
     });
   }
 
   static Future<DeviceType?> getDeviceType(String id) async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-types/$id';
+    String url = '$uri/$id';
+
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
+      resp = await _dio!.get<Map<String, dynamic>>(url, options: Options(headers: headers));
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
       }
       rethrow;
     }
@@ -82,4 +88,6 @@ class DeviceTypesService {
 
     return DeviceType.fromJson(resp.data!);
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

@@ -23,10 +23,12 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
 import '../shared/keyed_list.dart';
+import 'api_available.dart';
 import 'auth.dart';
 
 class SmartServiceService {
@@ -55,6 +57,7 @@ class SmartServiceService {
     );
     _dio = Dio(BaseOptions(connectTimeout: 15000, sendTimeout: 5000, receiveTimeout: 10000))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
@@ -309,4 +312,6 @@ class SmartServiceService {
     }
     return Pair(params, newParamsAdded);
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);
 }

@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/settings.dart' as SettingsService;
 import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
 
@@ -34,7 +35,11 @@ class MyAppBar {
       builder: (_, __, ___) {
         AppState().initNotifications(context);
         AppState().checkMessageDisplay(context);
-        final unread = AppState().notifications.where((element) => !element.isRead).toList(growable: false).length;
+        final unread = AppState()
+            .notifications
+            .where((element) => !element.isRead)
+            .toList(growable: false)
+            .length;
         return PlatformIconButton(
           icon: Badge(
             isLabelVisible: unread > 0,
@@ -47,28 +52,57 @@ class MyAppBar {
               context,
               platformPageRoute(
                 context: context,
-                settings: const RouteSettings(name: NotificationList.preferredRouteName),
+                settings: const RouteSettings(
+                    name: NotificationList.preferredRouteName),
                 builder: (context) => const NotificationList(),
               ),
             );
           },
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
         );
       },
     );
   }
 
-  static Widget _updateIcon(BuildContext context) {
-    bool? hasUpdate = AppUpdater.updateAvailableSync(cacheAge: const Duration(days: 1));
+  static PreferredSizeWidget? _localMode(BuildContext context) {
+    bool? localMode = SettingsService.Settings.getLocalMode();
 
-    final future = hasUpdate != null ? null : AppUpdater.updateAvailable(cacheAge: const Duration(days: 1));
+    return localMode != true
+        ? null
+        : PreferredSize(
+            preferredSize:
+                const Size(128, 23),
+            child: ColoredBox(
+                color: Colors.black,
+                child: (Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(
+                      Icons.lan_outlined,
+                      color: Colors.white,
+                    ),
+                    Text(
+                      " Local Mode",
+                      style: TextStyle(color: Colors.white),
+                    )
+                  ],
+                ))));
+  }
+
+  static Widget _updateIcon(BuildContext context) {
+    bool? hasUpdate =
+        AppUpdater.updateAvailableSync(cacheAge: const Duration(days: 1));
+
+    final future = hasUpdate != null
+        ? null
+        : AppUpdater.updateAvailable(cacheAge: const Duration(days: 1));
     return StatefulBuilder(builder: (context, setState) {
       future?.then((value) => {
-            if (value != null && value != hasUpdate) {setState(() => hasUpdate = value)}
+            if (value != null && value != hasUpdate)
+              {setState(() => hasUpdate = value)}
           });
-      return hasUpdate != true
-          ? const SizedBox.shrink()
-          : UpdateIcon();
+      return hasUpdate != true ? const SizedBox.shrink() : UpdateIcon();
     });
   }
 
@@ -97,15 +131,21 @@ class MyAppBar {
     return actions;
   }
 
-  PlatformAppBar getAppBar(BuildContext context, [List<Widget>? trailingActions, Widget? leading]) {
+  PlatformAppBar getAppBar(BuildContext context,
+      [List<Widget>? trailingActions, Widget? leading]) {
     return PlatformAppBar(
       title: PlatformWidget(
           material: (_, __) => Text(_title, overflow: TextOverflow.fade),
-          cupertino: (_, __) => Text(_title, style: const TextStyle(color: Colors.white), overflow: TextOverflow.fade)),
+          cupertino: (_, __) => Text(_title + (SettingsService.Settings.getLocalMode() ? " (Offline)" : ""),
+              style: const TextStyle(color: Colors.white),
+              overflow: TextOverflow.fade)),
       cupertino: (_, __) => CupertinoNavigationBarData(
         // Issue with cupertino where a bar with no transparency
         // will push the list down. Adding some alpha value fixes it (in a hacky way)
         backgroundColor: Colors.black,
+      ),
+      material: (_, __) => MaterialAppBarData(
+        bottom: _localMode(context),
       ),
       trailingActions: [
         ...trailingActions ?? [],
@@ -120,15 +160,18 @@ class UpdateIcon extends StatefulWidget {
   _UpdateIconState createState() => _UpdateIconState();
 }
 
-class _UpdateIconState extends State<UpdateIcon> with SingleTickerProviderStateMixin {
+class _UpdateIconState extends State<UpdateIcon>
+    with SingleTickerProviderStateMixin {
   late Animation<Color?> animation;
   late AnimationController controller;
 
   @override
   void initState() {
     super.initState();
-    controller = AnimationController(duration: const Duration(seconds: 1, milliseconds: 200), vsync: this);
-    animation = ColorTween(begin: MyTheme.textColor!, end: MyTheme.appColor).animate(controller)
+    controller = AnimationController(
+        duration: const Duration(seconds: 1, milliseconds: 200), vsync: this);
+    animation = ColorTween(begin: MyTheme.textColor!, end: MyTheme.appColor)
+        .animate(controller)
       ..addListener(() {
         setState(() {
           // The state that has changed here is the animation object’s value.

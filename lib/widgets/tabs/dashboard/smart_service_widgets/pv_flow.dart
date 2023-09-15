@@ -100,24 +100,24 @@ class SmSePvFlow extends SmartServiceModuleWidget {
 
     futures.add(solarGenerationRequest
             ?.perform()
-            .then((value) => solarGeneration = double.parse(value.body)) ??
+            .then((value) => solarGeneration = double.parse(value.data)) ??
         Future.value(null));
     futures.add(chargePowerRequest
             ?.perform()
-            .then((value) => chargePower = double.parse(value.body)) ??
+            .then((value) => chargePower = double.parse(value.data)) ??
         Future.value(null));
     futures.add(dischargePowerRequest
             ?.perform()
-            .then((value) => dischargePower = double.parse(value.body)) ??
+            .then((value) => dischargePower = double.parse(value.data)) ??
         Future.value(null));
     for (final req in gridConsumptionRequests) {
       futures.add(req.perform().then((value) {
-        gridConsumption += double.parse(value.body);
+        gridConsumption += double.parse(value.data);
       }));
     }
     futures.add(batteryLevelRequest
             ?.perform()
-            .then((value) => batteryLevel = double.parse(value.body)) ??
+            .then((value) => batteryLevel = double.parse(value.data)) ??
         Future.value(null));
 
     await Future.wait(futures);

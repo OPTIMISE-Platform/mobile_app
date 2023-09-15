@@ -114,7 +114,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
                 }
                 return Column(
                   children: [
-                    const Divider(),
+                    i > 0 ? const Divider() : const SizedBox.shrink(),
                     i < _selected.length
                         ? ListTile(
                             leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [

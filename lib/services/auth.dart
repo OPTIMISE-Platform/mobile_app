@@ -25,6 +25,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
@@ -45,6 +46,7 @@ class Auth extends ChangeNotifier {
   final _clientSetupMutex = Mutex();
 
   static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+    ..interceptors.add(ApiAvailableInterceptor())
     ..httpClientAdapter = AppHttpClientAdapter();
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);

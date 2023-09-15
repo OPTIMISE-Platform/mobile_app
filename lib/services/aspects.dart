@@ -19,15 +19,19 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import '../exceptions/unexpected_status_code_exception.dart';
 import '../shared/http_client_adapter.dart';
 import 'auth.dart';
 
-
 class AspectsService {
+  static String uri =
+  '${Settings.getApiUrl() ?? 'localhost'}/device-repository/aspects';
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -50,19 +54,23 @@ class AspectsService {
   }
 
   static Future<List<Aspect>> getAspects() async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/aspects';
-
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000, headers: headers))
+    final dio = Dio(BaseOptions(
+        connectTimeout: 5000,
+        sendTimeout: 5000,
+        receiveTimeout: 5000,
+        headers: headers))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri);
     } on DioError catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -71,6 +79,9 @@ class AspectsService {
     }
 
     final l = resp.data ?? [];
-    return List<Aspect>.generate(l.length, (index) => Aspect.fromJson(l[index]));
+    return List<Aspect>.generate(
+        l.length, (index) => Aspect.fromJson(l[index]));
   }
+
+  static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

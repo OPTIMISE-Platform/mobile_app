@@ -114,7 +114,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                               itemCount: state.networks.length,
                               itemBuilder: (context, i) {
                                 return Column(children: [
-                                  const Divider(),
+                                  i > 0 ? const Divider() : const SizedBox.shrink(),
                                   ListTile(
                                       title: Row(children: [
                                         Text(state.networks[i].name),
@@ -177,7 +177,10 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                   return const SizedBox.shrink();
                                 }
                                 return Column(
-                                  children: [const Divider(), DeviceListItem(state.devices[i], null)],
+                                  children: [
+                                    i > 0 ? const Divider() : const SizedBox.shrink(),
+                                    DeviceListItem(state.devices[i], null)
+                                  ],
                                 );
                               },
                             )));
