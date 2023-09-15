@@ -82,12 +82,13 @@ class CacheHelper {
 
   static clearCache() async {
     final cacheFile = (await getCacheFile());
-    HiveCacheStore(cacheFile).clean();
+    await HiveCacheStore(cacheFile).clean();
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.clear();
       });
     }
+    return await Future.delayed(const Duration(seconds: 1));
   }
 
   static refreshCache() async {
