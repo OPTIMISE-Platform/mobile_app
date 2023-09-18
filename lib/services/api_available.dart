@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -27,7 +29,19 @@ class ApiAvailableService {
 
   ApiAvailableService._internal() {
     Connectivity().onConnectivityChanged.listen((event) {
-      _offline = event == ConnectivityResult.none;
+      final offline = event == ConnectivityResult.none;
+      if (offline != _offline) {
+        _offline = offline;
+        AppState().notifyListeners();
+      }
+    });
+    Timer.periodic(const Duration(seconds: 10), (timer) async {
+      // not all connectivity changes are recognized, checking periodically
+      final offline = await Connectivity().checkConnectivity() == ConnectivityResult.none;
+      if (offline != _offline) {
+        _offline = offline;
+        AppState().notifyListeners();
+      }
     });
   }
 

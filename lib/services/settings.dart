@@ -238,6 +238,7 @@ class Settings {
   }
 
   static DateTime? getCacheUpdated(String cache) {
+    // return DateTime.fromMillisecondsSinceEpoch(0); // TODO debug ONLY
     checkInit();
     final ms = _box!.get(_cacheUpdatedAtPrefix + cache);
     if (ms == null) {
