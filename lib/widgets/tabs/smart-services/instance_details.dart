@@ -65,7 +65,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                         onPressed: () async {
                           final f = SmartServiceService.deleteInstance(widget.instance.id);
                           f.catchError(
-                              (_) => Toast.showErrorToast(widget.parentContext ?? context, "Could not delete Smart Service " + widget.instance.name));
+                              (_) => Toast.showToastNoContext("Could not delete Smart Service ${widget.instance.name}"));
                           await Future.any([f, Future.delayed(const Duration(milliseconds: 500))]);
                           Navigator.pop(this.context, true);
                         })

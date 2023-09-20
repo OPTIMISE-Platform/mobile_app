@@ -105,10 +105,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                           : () async {
                               if (device.connectionStatus ==
                                   DeviceConnectionStatus.offline) {
-                                Toast.showWarningToast(
-                                    context,
-                                    "Device is offline",
-                                    const Duration(milliseconds: 750));
+                                Toast.showToastNoContext("Device is offline");
                                 return;
                               }
                               if (element.transitioning) {
@@ -121,7 +118,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               if (controllingFunction == null) {
                                 const err =
                                     "Could not find related controlling function";
-                                Toast.showErrorToast(context, err);
+                                Toast.showToastNoContext(err);
                                 _logger.e(err);
                                 return;
                               }
@@ -135,14 +132,14 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               if (controllingStates.isEmpty) {
                                 const err =
                                     "Found no controlling service, check device type!";
-                                Toast.showErrorToast(context, err);
+                                Toast.showToastNoContext(err);
                                 _logger.e(err);
                                 return;
                               }
                               if (controllingStates.length > 1) {
                                 const err =
                                     "Found more than one controlling service, check device type!";
-                                Toast.showErrorToast(context, err);
+                                Toast.showToastNoContext(err);
                                 _logger.e(err);
                                 return;
                               }
@@ -162,7 +159,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               if (responses[0].status_code != 200) {
                                 final err =
                                     "Error running command: ${responses[0].message}";
-                                Toast.showErrorToast(context, err);
+                                Toast.showToastNoContext(err);
                                 _logger.e(err);
                                 return;
                               }
@@ -181,7 +178,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               if (responses[0].status_code != 200) {
                                 final err =
                                     "Error running command: ${responses[0].message}";
-                                Toast.showErrorToast(context, err);
+                                Toast.showToastNoContext(err);
                                 element.transitioning = false;
                                 state.notifyListeners();
                                 _logger.e(err);

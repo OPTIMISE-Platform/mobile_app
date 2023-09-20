@@ -380,7 +380,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
           _deviceSearchFilter, devices.isNotEmpty ? devices.last : null);
     } catch (e) {
       _logger.e("Could not get devices: $e");
-      Toast.showErrorToast(context, "Could not load devices");
+      Toast.showToastNoContext("Could not load devices");
       notifyListeners(); // missing loadingDevices() change otherwise
       _devicesMutex.release();
       return;
@@ -550,7 +550,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       } while (response != null && response.notifications.length == limit);
     } catch (e) {
       const err = "Could not load notifications";
-      if (context != null) Toast.showErrorToast(context, err);
+      if (context != null) Toast.showToastNoContext(err);
       _logger.e("$err: $e");
     } finally {
       _notificationsMutex.release();
@@ -563,7 +563,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     } catch (e) {
       final err = "Could not update notification $e";
       _logger.e(err);
-      Toast.showErrorToast(context, err);
+      Toast.showToastNoContext(err);
     }
     notifyListeners();
   }
@@ -573,7 +573,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       await NotificationsService.deleteNotifications(ids);
     } catch (e) {
       _logger.e(e.toString());
-      Toast.showErrorToast(context, "Could not delete notifications");
+      Toast.showToastNoContext("Could not delete notifications");
     }
     // notifications.removeAt(index);
     // notifyListeners(); Expect change propagation through FCM
@@ -585,7 +585,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
           notifications.map((e) => e.id).toList(growable: false));
     } catch (e) {
       _logger.e(e.toString());
-      Toast.showErrorToast(context, "Could not delete notifications");
+      Toast.showToastNoContext("Could not delete notifications");
     }
     // notifications.clear();
     // notifyListeners(); Expect change propagation through FCM

@@ -85,7 +85,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
   _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
     if (connectionStatus == DeviceConnectionStatus.offline) {
-      Toast.showWarningToast(context, "Device is offline", const Duration(milliseconds: 750));
+      Toast.showToastNoContext("Device is offline");
       return;
     }
     FunctionConfig? functionConfig;
@@ -97,7 +97,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       final controllingFunction = functionConfig.getRelatedControllingFunction(element.value);
       if (controllingFunction == null) {
         const err = "Could not find related controlling function";
-        Toast.showErrorToast(context, err);
+        Toast.showToastNoContext(err);
         _logger.e(err);
         return;
       }
@@ -108,13 +108,13 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           state.aspectId == element.aspectId);
       if (controllingStates.isEmpty) {
         const err = "Found no controlling service, check device type!";
-        Toast.showErrorToast(context, err);
+        Toast.showToastNoContext(err);
         _logger.e(err);
         return;
       }
       if (controllingStates.length > 1) {
         const err = "Found more than one controlling service, check device type!";
-        Toast.showErrorToast(context, err);
+        Toast.showToastNoContext(err);
         _logger.e(err);
         return;
       }
@@ -127,7 +127,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
     if (function == null) {
       const err = "Function not found";
-      Toast.showWarningToast(context, err, const Duration(milliseconds: 750));
+      Toast.showToastNoContext(err);
       _logger.e("$err: ${element.functionId}");
       return;
     }
@@ -175,7 +175,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       Widget? content = functionConfig.build(context, setState, transitioningStates.length == 1 ? states[transitioningStates[0]].value : null);
       if (content == null) {
         const err = "Function Config missing build()";
-        Toast.showErrorToast(context, err, const Duration(milliseconds: 750));
+        Toast.showToastNoContext(err);
         _logger.e("$err: ${element.functionId}");
         return;
       }
@@ -219,7 +219,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       }
       AppState().notifyListeners();
       const err = "Error running command";
-      Toast.showErrorToast(context, err);
+      Toast.showToastNoContext(err);
       _logger.e("$err: ${responses[0].message}");
       return;
     }
@@ -251,7 +251,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           state.aspectId == element.aspectId &&
           state.deviceClassId == element.deviceClassId &&
           state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
-      Toast.showInformationToast(context, FunctionConfigGetTimestamp().formatTimestamp(state.value), const Duration(milliseconds: 1000));
+      Toast.showToastNoContext(FunctionConfigGetTimestamp().formatTimestamp(state.value));
     } catch (e) {
       _logger.w("Could not display timestamp: $e");
     }
@@ -351,7 +351,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               await DevicesService.saveDevice(device);
               state.notifyListeners();
             } catch (e) {
-              Toast.showErrorToast(context, "Could not update device name");
+              Toast.showToastNoContext("Could not update device name");
               device.setNickname(oldName);
             }
           },
@@ -384,7 +384,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               await DeviceGroupsService.saveDeviceGroup(deviceGroup);
               state.notifyListeners();
             } catch (e) {
-              Toast.showErrorToast(context, "Could not update device name");
+              Toast.showToastNoContext("Could not update device name");
               deviceGroup.name = oldName;
             }
           },

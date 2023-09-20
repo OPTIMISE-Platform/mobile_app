@@ -82,7 +82,7 @@ class Settings extends StatelessWidget {
                           reinit();
                           AppState().notifyListeners();
                           AppState().pushRefresh();
-                          Toast.showConfirmationToast(context, "All Reset");
+                          Toast.showToastNoContext("All Reset");
                         },
                         child: const Text("Reset All"))
                   ]),
@@ -100,20 +100,25 @@ class Settings extends StatelessWidget {
             }),
         const Divider(),
         ListTile(
-          title: Text("Refresh Cache", style: settings_service.Settings.getLocalMode() ? TextStyle(color: Theme.of(context).disabledColor) : null),
-          onTap: settings_service.Settings.getLocalMode() ? null : () async {
-            await CacheHelper.clearCache();
-            await CacheHelper.refreshCache();
-            Toast.showConfirmationToast(
-                context, "Cache refreshed, please restart App");
-          },
+          title: Text("Refresh Cache",
+              style: settings_service.Settings.getLocalMode()
+                  ? TextStyle(color: Theme.of(context).disabledColor)
+                  : null),
+          onTap: settings_service.Settings.getLocalMode()
+              ? null
+              : () async {
+                  await CacheHelper.clearCache();
+                  await CacheHelper.refreshCache();
+                  Toast.showToastNoContext(
+                      "Cache refreshed, please restart App");
+                },
         ),
         const Divider(),
         ListTile(
           title: const Text("Reset Tutorials"),
           onTap: () async {
             await settings_service.Settings.resetTutorials();
-            Toast.showConfirmationToast(context, "Tutorials reset");
+            Toast.showToastNoContext("Tutorials reset");
           },
         ),
       ];
@@ -169,28 +174,33 @@ class Settings extends StatelessWidget {
         children.addAll([
           const Divider(),
           ListTile(
-            title: Text("Check Updates", style: settings_service.Settings.getLocalMode() ? TextStyle(color: Theme.of(context).disabledColor) : null),
-            onTap: settings_service.Settings.getLocalMode() ? null : () async {
-              late final bool? updateAvailable;
-              try {
-                updateAvailable = await AppUpdater.updateAvailable();
-              } on ApiUnavailableException {
-                Toast.showWarningToast(context, "Currently unavailable");
-                return;
-              } catch (e) {
-                Toast.showErrorToast(context, "Error checking for updates");
-                return;
-              }
-              if (updateAvailable == false) {
-                Toast.showConfirmationToast(context, "Already up to date!");
-                return;
-              } else if (updateAvailable == null) {
-                Toast.showWarningToast(context, "Please check again later");
-                return;
-              } else {
-                AppUpdater.showUpdateDialog(context);
-              }
-            },
+            title: Text("Check Updates",
+                style: settings_service.Settings.getLocalMode()
+                    ? TextStyle(color: Theme.of(context).disabledColor)
+                    : null),
+            onTap: settings_service.Settings.getLocalMode()
+                ? null
+                : () async {
+                    late final bool? updateAvailable;
+                    try {
+                      updateAvailable = await AppUpdater.updateAvailable();
+                    } on ApiUnavailableException {
+                      Toast.showToastNoContext("Currently unavailable");
+                      return;
+                    } catch (e) {
+                      Toast.showToastNoContext("Error checking for updates");
+                      return;
+                    }
+                    if (updateAvailable == false) {
+                      Toast.showToastNoContext("Already up to date!");
+                      return;
+                    } else if (updateAvailable == null) {
+                      Toast.showToastNoContext("Please check again later");
+                      return;
+                    } else {
+                      AppUpdater.showUpdateDialog(context);
+                    }
+                  },
           ),
         ]);
       }
@@ -231,7 +241,7 @@ class Settings extends StatelessWidget {
                   "Username: ${Auth().getUsername()}\n"
                   "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
                   "Local Mode:  ${settings_service.Settings.getLocalMode()}\n\n";
-                  "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
+              "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
                   "Keycloak Redirect: ${settings_service.Settings.getKeycloakRedirect()}\n"
                   "Api Url: ${settings_service.Settings.getApiUrl()}\n";
               if (isar != null) {
@@ -290,7 +300,7 @@ class Settings extends StatelessWidget {
               await state.messaging.deleteToken();
               await state.messaging
                   .getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
-              Toast.showConfirmationToast(context, "OK");
+              Toast.showToastNoContext("OK");
             },
           ),
         ]);
@@ -346,8 +356,7 @@ class Settings extends StatelessWidget {
                         await settings_service.Settings.setKeycloakRedirect(
                             null);
                         await settings_service.Settings.setApiUrl(null);
-                        Toast.showConfirmationToast(
-                            context, "Reset done, consider logging out");
+                        Toast.showToastNoContext("Reset done, consider logging out");
                         Navigator.pop(context);
                       }),
                   PlatformDialogAction(
@@ -386,7 +395,7 @@ class Settings extends StatelessWidget {
                 try {
                   await Auth().logout(context);
                 } catch (e) {
-                  Toast.showErrorToast(context, "Can't logout");
+                  Toast.showToastNoContext("Can't logout");
                 }
               },
             ),

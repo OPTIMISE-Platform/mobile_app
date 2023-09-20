@@ -175,8 +175,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                         .format(releases[i].createdAt())),
                                     onTap: releases[i].error != null ||
                                             releases[i].usable == false
-                                        ? () => Toast.showWarningToast(context,
-                                            "Missing devices for this service")
+                                        ? () => Toast.showToastNoContext("Missing devices for this service")
                                         : () => Navigator.push(
                                             context,
                                             platformPageRoute(

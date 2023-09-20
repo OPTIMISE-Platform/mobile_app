@@ -135,12 +135,12 @@ class DeviceCommandsService {
           await DeviceCommandsService.runCommands(commands, preferEventValue));
     } on ApiUnavailableException {
       const err = "Currently unavailable";
-      Toast.showErrorToast(context, err);
+      Toast.showToastNoContext(err);
       _logger.e(err);
       return false;
     } catch (e) {
       const err = "Couldn't run command";
-      Toast.showErrorToast(context, err);
+      Toast.showToastNoContext(err);
       _logger.e(err);
       return false;
     }

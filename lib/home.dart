@@ -58,13 +58,13 @@ class _HomeState extends State<Home> {
       AppState().pushRefresh();
     } on AuthenticationException catch (e) {
       if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
-        Toast.showErrorToast(context, "Invalid user credentials");
+        Toast.showToastNoContext("Invalid user credentials");
         setState(() {});
       } else {
         rethrow;
       }
     } catch (e) {
-      Toast.showErrorToast(context, e.toString());
+      Toast.showToastNoContext(e.toString());
     }
   }
 
