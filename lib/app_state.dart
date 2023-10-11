@@ -17,6 +17,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
@@ -699,7 +700,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         notifyListeners();
         break;
       case notificationReleaseInfoType:
-        Future.delayed(const Duration(seconds: 30)) // ensure actually available
+        Future.delayed(Duration(
+                seconds:
+                    10 + Random().nextInt(60))) // ensure actually available and spread requests
             .then((_) => AppUpdater.updateAvailable().then((res) {
                   if (res == true) {
                     notifyListeners();
