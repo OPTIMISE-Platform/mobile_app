@@ -16,6 +16,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:eraser/eraser.dart';
@@ -33,6 +34,7 @@ import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
+import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
@@ -70,6 +72,7 @@ import 'native_pipe.dart';
 
 const notificationUpdateType = "put notification";
 const notificationDeleteManyType = "delete notifications";
+const notificationReleaseInfoType = "release_info";
 const messageKey = "messages";
 
 class AppState extends ChangeNotifier with WidgetsBindingObserver {
@@ -417,7 +420,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
               refreshDeviceIds.length, 0, refreshFilter, null,
               forceBackend: false);
           devices.forEach((element) =>
-          element.connectionStatus = DeviceConnectionStatus.unknown);
+              element.connectionStatus = DeviceConnectionStatus.unknown);
           return devices;
         }).then((ds) => ds.forEach((d) => newDevices
                 .firstWhere((d2) => d2.id == d.id)
@@ -607,6 +610,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return;
     }
 
+    if (!kIsWeb && Platform.isAndroid) {
+      messaging.subscribeToTopic("android");
+    }
+
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
@@ -690,6 +697,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         ids.forEach((id) => Eraser.clearAppNotificationsByTag(id));
         notifications.removeWhere((element) => ids.contains(element.id));
         notifyListeners();
+        break;
+      case notificationReleaseInfoType:
+        Future.delayed(const Duration(seconds: 30)) // ensure actually available
+            .then((_) => AppUpdater.updateAvailable().then((res) {
+                  if (res == true) {
+                    notifyListeners();
+                  }
+                }));
         break;
       default:
         _logger.e("Got message of unknown type: ${data["type"]}");
