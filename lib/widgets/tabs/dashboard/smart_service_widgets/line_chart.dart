@@ -170,13 +170,13 @@ class SmSeLineChart extends SmSeRequest {
     List<List<FlSpot>> lineSpots =
         List.generate((values[0] as List<dynamic>).length - 1, (index) => []);
     for (int i = 0; i < values.length; i++) {
-      final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch.toDouble();
+      final t = DateTime.parse(values[i][0]);
       for (int j = 1; j < values[i].length; j++) {
         if (values[i][j] != null) {
-          rawTimestamps.add(t.toInt());
-          timestamps.add(values[i][0]);
+          rawTimestamps.add(t.millisecondsSinceEpoch);
+          timestamps.add(t.toIso8601String());
           lineSpots[j - 1].add(FlSpot(
-              t,
+              t.millisecondsSinceEpoch.toDouble(),
               double.parse(
                   (values[i][j] is int ? values[i][j].toDouble() : values[i][j])
                       .toStringAsFixed(precision))));
