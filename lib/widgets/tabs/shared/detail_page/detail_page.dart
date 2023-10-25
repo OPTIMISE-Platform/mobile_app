@@ -455,8 +455,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
           String? unit;
           if (preferred != null) {
             unit = state.characteristics[preferred]?.display_unit;
+          } else {
+            unit = state.nestedFunctions[element.functionId]?.concept
+                .base_characteristic?.display_unit ?? "";
           }
-          unit ??= state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? "";
           functionWidgets.insert(
             element.functionId,
             ListTile(
