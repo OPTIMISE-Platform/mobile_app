@@ -450,15 +450,15 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               state.aspectId == element.aspectId &&
               functionConfig.getRelatedControllingFunction(element.value) != null);
         }
+        String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
+        String? unit;
+        if (preferred != null) {
+          unit = state.characteristics[preferred]?.display_unit;
+        } else {
+          unit = state.nestedFunctions[element.functionId]?.concept
+              .base_characteristic?.display_unit ?? "";
+        }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
-          String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
-          String? unit;
-          if (preferred != null) {
-            unit = state.characteristics[preferred]?.display_unit;
-          } else {
-            unit = state.nestedFunctions[element.functionId]?.concept
-                .base_characteristic?.display_unit ?? "";
-          }
           functionWidgets.insert(
             element.functionId,
             ListTile(
@@ -527,7 +527,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                                     ),
                             child: functionConfig.displayValue(element.value, context) ??
                                 Text(
-                                    "${formatValue(element.value)} ${state.nestedFunctions[element.functionId]?.concept.base_characteristic?.display_unit ?? ""}"),
+                                    "${formatValue(element.value)}${unit != "" ? " $unit" : ""}"),
                           )),
           );
         }
