@@ -96,14 +96,33 @@ class DeviceGroupsService {
     }
 
     final l = resp.data ?? [];
-    final groups = List<DeviceGroup>.generate(
+    final groupsPerm = List<DeviceGroup>.generate(
         l.length, (index) => DeviceGroup.fromJson(l[index]));
+
+    List<DeviceGroup> groupsRepo = [];
+    List<Future> futures = [];
+    queryParameters.clear();
+    queryParameters["filter_generic_duplicate_criteria"] = "true";
+    for(int i = 0; i< groupsPerm.length; i++) {
+      final uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${groupsPerm[i].id}';
+      futures.add(_dio!.get<dynamic>(uri, queryParameters: queryParameters, options: Options(headers: headers)).then((value) {
+        if (value.data != null) {
+          groupsRepo.add(DeviceGroup.fromJson(value.data));
+        }
+      }).catchError((e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+      }));
+    }
+    await Future.wait(futures);
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
-        await collection.putAll(groups);
+        await collection.putAll(groupsRepo);
       });
     }
-    return groups.map((e) => e.initImage()).toList(growable: false);
+    return groupsRepo.map((e) => e.initImage()).toList(growable: false);
   }
 
   static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group) async {
