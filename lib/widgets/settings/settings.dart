@@ -33,15 +33,15 @@ import 'package:numberpicker/numberpicker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../app_state.dart';
-import '../../config/functions/function_config.dart';
-import '../../exceptions/api_unavailable_exception.dart';
-import '../../services/auth.dart';
-import '../../shared/isar.dart';
-import '../../theme.dart';
-import '../shared/app_bar.dart';
-import '../shared/page_spinner.dart';
-import '../shared/toast.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
+import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/page_spinner.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class Settings extends StatelessWidget {
   Settings({Key? key}) : super(key: key);

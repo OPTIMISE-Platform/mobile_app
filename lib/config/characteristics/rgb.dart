@@ -19,7 +19,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 
-import '../../models/characteristic.dart';
+import 'package:mobile_app/models/characteristic.dart';
 
 class RGB {
   static final _logger = Logger(
@@ -27,7 +27,7 @@ class RGB {
   );
 
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
-    var _color = _getColor(characteristic.value);
+    var _color = _getColor(characteristic);
     void setter(Color c) => setState(() {
           _color = c;
           characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
@@ -55,9 +55,17 @@ class RGB {
     ]);
   }
 
-  static Color _getColor(dynamic value) {
+  static Color _getColor(Characteristic characteristic) {
+    var value = characteristic.value;
     if (value == null) {
-      return Colors.white;
+      if (characteristic.sub_characteristics?.length == 3) {
+        value = Map<String, dynamic>();
+        for(var sub in characteristic.sub_characteristics!) {
+          value[sub.name] = sub.value;
+        }
+      } else {
+        return Colors.white;
+      }
     }
     if (value is! Map<String, dynamic>) {
       _logger.w("value is not map: $value");

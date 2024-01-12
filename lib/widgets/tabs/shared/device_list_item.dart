@@ -23,17 +23,17 @@ import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-import '../../../app_state.dart';
-import '../../../config/functions/function_config.dart';
-import '../../../models/device_command_response.dart';
-import '../../../models/device_instance.dart';
-import '../../../services/device_commands.dart';
-import '../../../services/settings.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../../shared/favorize_button.dart';
-import '../../shared/toast.dart';
-import 'detail_page/detail_page.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/favorize_button.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;

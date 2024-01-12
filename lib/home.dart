@@ -25,9 +25,9 @@ import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:provider/provider.dart';
 
-import 'app_state.dart';
-import 'services/auth.dart';
-import 'widgets/shared/app_bar.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);

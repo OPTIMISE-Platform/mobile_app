@@ -16,7 +16,7 @@
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'function_config.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 
 class FunctionConfigGetLowerPowerInjectionLimit extends FunctionConfigDefault {
   FunctionConfigGetLowerPowerInjectionLimit() : super(dotenv.env['FUNCTION_GET_LOWER_POWER_INJECTION_LIMIT'] ?? "");

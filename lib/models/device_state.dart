@@ -21,9 +21,9 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/service.dart';
 import 'package:mobile_app/models/service_group.dart';
 
-import '../services/settings.dart';
-import 'content_variable.dart';
-import 'device_type.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/models/content_variable.dart';
+import 'package:mobile_app/models/device_type.dart';
 
 part 'device_state.g.dart';
 

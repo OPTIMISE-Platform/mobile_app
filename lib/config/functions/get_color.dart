@@ -19,7 +19,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 
-import '../../exceptions/argument_exception.dart';
+import 'package:mobile_app/exceptions/argument_exception.dart';
 
 class FunctionConfigGetColor extends FunctionConfig {
   FunctionConfigGetColor() {

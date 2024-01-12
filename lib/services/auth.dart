@@ -29,8 +29,8 @@ import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 
-import '../shared/http_client_adapter.dart';
-import 'cache_helper.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 
 class Auth extends ChangeNotifier {
   static final _instance = Auth._internal();

@@ -17,7 +17,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/device_group.dart';
 
-import 'device_instance.dart';
+import 'package:mobile_app/models/device_instance.dart';
 
 part 'device_command.g.dart';
 

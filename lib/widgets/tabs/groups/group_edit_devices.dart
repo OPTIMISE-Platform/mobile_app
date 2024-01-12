@@ -24,12 +24,12 @@ import 'package:mobile_app/services/device_groups.dart';
 import 'package:mutex/mutex.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../models/device_instance.dart';
-import '../../../theme.dart';
-import '../../shared/app_bar.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../shared/search_delegate.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class GroupEditDevices extends StatefulWidget {
   final DeviceGroup _group;

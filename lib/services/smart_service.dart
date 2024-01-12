@@ -25,11 +25,11 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
-import '../exceptions/unexpected_status_code_exception.dart';
-import '../shared/http_client_adapter.dart';
-import '../shared/keyed_list.dart';
-import 'api_available.dart';
-import 'auth.dart';
+import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/auth.dart';
 
 class SmartServiceService {
   static final _logger = Logger(

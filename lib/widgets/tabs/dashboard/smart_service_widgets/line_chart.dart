@@ -25,9 +25,9 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/r
 import 'package:mutex/mutex.dart';
 import 'package:stats/stats.dart';
 
-import '../../../../shared/keyed_list.dart';
-import '../../../../theme.dart';
-import '../dashboard.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSeLineChart extends SmSeRequest {
   bool preview = false;

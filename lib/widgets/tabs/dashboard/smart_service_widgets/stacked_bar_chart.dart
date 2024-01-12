@@ -18,9 +18,9 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart.dart';
 
-import '../../../../theme.dart';
-import '../../../shared/indicator.dart';
-import '../dashboard.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/indicator.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSeStackedBarChart extends SmSeBarChart {
   int touchedIndex = -1;

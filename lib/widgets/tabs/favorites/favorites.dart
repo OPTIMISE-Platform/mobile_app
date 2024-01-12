@@ -23,13 +23,13 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
-import '../../../app_state.dart';
-import '../../../services/settings.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../device_tabs.dart';
-import '../shared/device_list_item.dart';
-import '../shared/group_list_item.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/tabs/device_tabs.dart';
+import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
+import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 class DeviceListFavorites extends StatefulWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);

@@ -24,10 +24,10 @@ import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
 import 'package:mutex/mutex.dart';
 
-import '../../../models/smart_service.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../../shared/toast.dart';
+import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
   const SmartServicesReleases({Key? key}) : super(key: key);

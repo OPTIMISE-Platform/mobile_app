@@ -21,9 +21,9 @@ import 'package:mobile_app/services/settings.dart' as SettingsService;
 import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
 
-import '../../services/app_update.dart';
-import '../../theme.dart';
-import '../notifications/notification_list.dart';
+import 'package:mobile_app/services/app_update.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/notifications/notification_list.dart';
 
 class MyAppBar {
   final String _title;

@@ -34,20 +34,20 @@ import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../app_state.dart';
-import '../../../../models/aspect.dart';
-import '../../../../models/device_command_response.dart';
-import '../../../../models/device_instance.dart';
-import '../../../../services/device_commands.dart';
-import '../../../../services/devices.dart';
-import '../../../../services/settings.dart';
-import '../../../../shared/keyed_list.dart';
-import '../../../../theme.dart';
-import '../../../shared/app_bar.dart';
-import '../../../shared/delay_circular_progress_indicator.dart';
-import '../../../shared/expandable_text.dart';
-import '../../../shared/favorize_button.dart';
-import '../../../shared/toast.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect.dart';
+import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/expandable_text.dart';
+import 'package:mobile_app/widgets/shared/favorize_button.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class DetailPage extends StatefulWidget {
   final DeviceInstance? _device;

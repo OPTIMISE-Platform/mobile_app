@@ -23,8 +23,8 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../shared/favorize_button.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/widgets/shared/favorize_button.dart';
 
 class GroupListItem extends StatelessWidget {
   final DeviceGroup _group;

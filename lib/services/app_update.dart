@@ -33,7 +33,7 @@ import 'package:mutex/mutex.dart';
 import 'package:open_file_plus/open_file_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'cache_helper.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 
 class AppUpdater {
   static final _dio = Dio(BaseOptions(

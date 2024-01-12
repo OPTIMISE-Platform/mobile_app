@@ -24,11 +24,11 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../theme.dart';
-import '../../shared/app_bar.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../shared/search_delegate.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class LocationEditDevices extends StatefulWidget {
   final int _stateLocationIndex;

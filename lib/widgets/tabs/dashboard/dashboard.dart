@@ -25,11 +25,11 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../app_state.dart';
-import '../../../exceptions/unexpected_status_code_exception.dart';
-import '../../../shared/keyed_list.dart';
-import '../../../theme.dart';
-import '../../shared/expandable_fab.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/expandable_fab.dart';
 
 const double heightUnit = 32;
 

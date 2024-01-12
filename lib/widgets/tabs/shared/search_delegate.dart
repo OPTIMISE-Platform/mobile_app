@@ -18,9 +18,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../theme.dart';
-import '../../shared/app_bar.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
 
 class DevicesSearchDelegate extends SearchDelegate {
   final Widget Function(String query) _resultBuilder;

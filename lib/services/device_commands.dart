@@ -24,12 +24,12 @@ import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/settings.dart';
 
-import '../models/device_command_response.dart';
-import '../shared/api_available_interceptor.dart';
-import '../shared/http_client_adapter.dart';
-import '../widgets/shared/toast.dart';
-import 'api_available.dart';
-import 'auth.dart';
+import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/auth.dart';
 
 class DeviceCommandsService {
   static final _dioH1 = Dio(BaseOptions(

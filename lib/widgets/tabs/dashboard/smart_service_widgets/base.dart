@@ -36,12 +36,12 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/stacked_
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
 import 'package:mutex/mutex.dart';
 
-import '../../../../models/smart_service.dart';
-import '../../../shared/delay_circular_progress_indicator.dart';
-import '../../../shared/toast.dart';
-import '../dashboard.dart';
-import 'bar_chart.dart';
-import 'button.dart';
+import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/button.dart';
 
 typedef SmSeWidgetType = String;
 

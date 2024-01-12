@@ -17,7 +17,7 @@
 import 'package:isar/isar.dart';
 import 'package:mobile_app/app_state.dart';
 
-import 'device_instance.dart';
+import 'package:mobile_app/models/device_instance.dart';
 
 class DeviceSearchFilter {
   String query;

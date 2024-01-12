@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import '../models/exception_log_element.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
 
 class ApiUnavailableException extends ExceptionLogElement {
   ApiUnavailableException() : super.Log(null);

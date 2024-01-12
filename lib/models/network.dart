@@ -20,8 +20,8 @@ import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:nsd/nsd.dart';
 
-import '../shared/isar.dart';
-import 'device_instance.dart';
+import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/models/device_instance.dart';
 
 part 'network.g.dart';
 

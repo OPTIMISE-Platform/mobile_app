@@ -25,12 +25,12 @@ import 'package:mobile_app/config/functions/set_off_state.dart';
 import 'package:mobile_app/config/functions/set_on_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
-import '../../models/characteristic.dart';
-import '../../shared/math_list.dart';
-import 'get_color.dart';
-import 'get_on_off_state.dart';
-import 'get_power_injection_limit.dart';
-import 'get_temperature.dart';
+import 'package:mobile_app/models/characteristic.dart';
+import 'package:mobile_app/shared/math_list.dart';
+import 'package:mobile_app/config/functions/get_color.dart';
+import 'package:mobile_app/config/functions/get_on_off_state.dart';
+import 'package:mobile_app/config/functions/get_power_injection_limit.dart';
+import 'package:mobile_app/config/functions/get_temperature.dart';
 
 Map<String?, FunctionConfig> functionConfigs = _specialConfigs();
 

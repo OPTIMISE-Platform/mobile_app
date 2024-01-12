@@ -20,11 +20,11 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
-import '../../../models/smart_service.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../../shared/expandable_text.dart';
-import 'instance_edit_launch.dart';
+import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/expandable_text.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
 
 class SmartServicesInstanceDetails extends StatefulWidget {
   final SmartServiceInstance instance;

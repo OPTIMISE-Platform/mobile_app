@@ -17,7 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_timezone/flutter_native_timezone.dart';
 
-import '../../models/characteristic.dart';
+import 'package:mobile_app/models/characteristic.dart';
 
 class TZ {
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {

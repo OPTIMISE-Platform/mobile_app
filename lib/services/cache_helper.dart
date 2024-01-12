@@ -39,11 +39,11 @@ import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../models/device_instance.dart';
-import '../shared/isar.dart';
-import '../widgets/shared/toast.dart';
-import 'devices.dart';
-import 'locations.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/locations.dart';
 
 class CacheHelper {
   static final _logger = Logger(

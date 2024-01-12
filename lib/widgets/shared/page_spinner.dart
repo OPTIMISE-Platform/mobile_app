@@ -17,8 +17,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
-import 'app_bar.dart';
-import 'delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
 
 

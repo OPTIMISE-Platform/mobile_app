@@ -20,8 +20,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
-import '../../../../theme.dart';
-import '../dashboard.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSePvForecast extends SmSeRequest {
   @override

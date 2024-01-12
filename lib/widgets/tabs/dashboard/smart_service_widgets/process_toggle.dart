@@ -23,7 +23,7 @@ import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
-import '../../../../services/auth.dart';
+import 'package:mobile_app/services/auth.dart';
 
 class SmSeProcessToggle extends SmartServiceModuleWidget {
   @override

@@ -21,12 +21,12 @@ import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
-import '../exceptions/unexpected_status_code_exception.dart';
-import '../models/device_instance.dart';
-import '../models/network.dart';
-import '../shared/keyed_list.dart';
-import '../widgets/shared/toast.dart';
-import 'devices.dart';
+import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/services/devices.dart';
 
 class MgwDeviceManager {
   static final _logger = Logger(

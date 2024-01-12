@@ -16,8 +16,8 @@
 
 import 'package:dio/dio.dart';
 
-import '../exceptions/api_unavailable_exception.dart';
-import '../services/api_available.dart';
+import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
+import 'package:mobile_app/services/api_available.dart';
 
 class ApiAvailableInterceptor extends Interceptor {
   static final _instance = ApiAvailableInterceptor._internal();

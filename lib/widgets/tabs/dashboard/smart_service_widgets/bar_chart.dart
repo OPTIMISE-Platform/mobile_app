@@ -18,8 +18,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
 
-import '../../../../theme.dart';
-import '../dashboard.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSeBarChart extends SmSeLineChart {
   final List<BarChartGroupData> barGroups = [];

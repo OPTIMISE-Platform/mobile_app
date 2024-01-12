@@ -20,10 +20,10 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../theme.dart';
-import '../../shared/app_bar.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
 class LocationEditGroups extends StatefulWidget {
   final int _stateLocationIndex;

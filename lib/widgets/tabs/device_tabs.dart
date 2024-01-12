@@ -35,13 +35,13 @@ import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
 
-import '../shared/app_bar.dart';
-import 'classes/device_class.dart';
-import 'favorites/favorites.dart';
-import 'groups/group_list.dart';
-import 'locations/device_location.dart';
-import 'networks/device_networks.dart';
-import 'shared/search_delegate.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/tabs/classes/device_class.dart';
+import 'package:mobile_app/widgets/tabs/favorites/favorites.dart';
+import 'package:mobile_app/widgets/tabs/groups/group_list.dart';
+import 'package:mobile_app/widgets/tabs/locations/device_location.dart';
+import 'package:mobile_app/widgets/tabs/networks/device_networks.dart';
+import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class DeviceTabs extends StatefulWidget {
   const DeviceTabs({Key? key}) : super(key: key);

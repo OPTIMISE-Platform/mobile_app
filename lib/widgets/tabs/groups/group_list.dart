@@ -24,11 +24,11 @@ import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../models/device_search_filter.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../shared/group_list_item.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
   const GroupList({Key? key}) : super(key: key);

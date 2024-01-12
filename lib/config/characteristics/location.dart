@@ -17,10 +17,10 @@
 import 'package:flutter/material.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 
-import '../../models/characteristic.dart';
-import '../../shared/location.dart';
-import '../../theme.dart';
-import '../../widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/models/characteristic.dart';
+import 'package:mobile_app/shared/location.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
 class Location {
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {

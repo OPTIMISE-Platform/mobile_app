@@ -23,13 +23,13 @@ import 'package:mobile_app/services/db_query.dart';
 import 'package:mutex/mutex.dart';
 import 'package:stats/stats.dart';
 
-import '../../../../app_state.dart';
-import '../../../../models/db_query.dart';
-import '../../../../services/settings.dart';
-import '../../../../theme.dart';
-import '../../../shared/app_bar.dart';
-import '../../../shared/delay_circular_progress_indicator.dart';
-import '../../../shared/toast.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/db_query.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class Chart extends StatefulWidget {
   final DeviceState _state;

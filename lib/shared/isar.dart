@@ -21,7 +21,7 @@ import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 
-import '../models/device_instance.dart';
+import 'package:mobile_app/models/device_instance.dart';
 
 final Isar? isar = kIsWeb ? null : Isar.openSync([DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema]);
 

@@ -23,13 +23,13 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/releases.dart';
 import 'package:mutex/mutex.dart';
 
-import '../../../app_state.dart';
-import '../../../models/smart_service.dart';
-import '../../../theme.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../device_tabs.dart';
-import 'instance_details.dart';
-import 'instance_edit_launch.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/tabs/device_tabs.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instance_details.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
 
 class SmartServicesInstances extends StatefulWidget {
   const SmartServicesInstances({Key? key}) : super(key: key);

@@ -24,9 +24,9 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:provider/provider.dart';
 
-import '../../../models/notification.dart' as app;
-import '../../app_state.dart';
-import '../shared/app_bar.dart';
+import "package:mobile_app/models/notification.dart" as app;
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
 
 class NotificationList extends StatefulWidget {
   static const preferredRouteName = "notifications";

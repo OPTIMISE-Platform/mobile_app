@@ -16,7 +16,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import 'content.dart';
+import 'package:mobile_app/models/content.dart';
 
 part 'service.g.dart';
 

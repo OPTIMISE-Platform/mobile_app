@@ -25,17 +25,17 @@ import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/widgets/tabs/locations/location_edit_groups.dart';
 import 'package:provider/provider.dart';
 
-import '../../../app_state.dart';
-import '../../../models/location.dart';
-import '../../../services/haptic_feedback_proxy.dart';
-import '../../../theme.dart';
-import '../../shared/app_bar.dart';
-import '../../shared/delay_circular_progress_indicator.dart';
-import '../../shared/expandable_fab.dart';
-import '../device_tabs.dart';
-import '../shared/device_list_item.dart';
-import '../shared/group_list_item.dart';
-import 'location_edit_devices.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/location.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/expandable_fab.dart';
+import 'package:mobile_app/widgets/tabs/device_tabs.dart';
+import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
+import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
+import 'package:mobile_app/widgets/tabs/locations/location_edit_devices.dart';
 
 class LocationPage extends StatefulWidget {
   final int _stateLocationIndex;

@@ -15,7 +15,7 @@
  */
 import 'package:isar/isar.dart';
 
-import '../shared/isar.dart';
+import 'package:mobile_app/shared/isar.dart';
 part 'exception_log_element.g.dart';
 
 @collection

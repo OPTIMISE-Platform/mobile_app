@@ -21,8 +21,8 @@ import 'package:flutter/widgets.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
-import '../../../../../services/auth.dart';
-import '../base.dart';
+import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 class Request {
   static final _dio = Dio()..interceptors.add(ApiAvailableInterceptor());

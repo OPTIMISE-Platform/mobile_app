@@ -34,9 +34,9 @@ import 'package:open_location_picker/open_location_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:mobile_app/firebase_options.dart';
 
-import 'home.dart';
+import 'package:mobile_app/home.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 

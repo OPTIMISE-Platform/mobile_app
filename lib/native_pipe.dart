@@ -26,10 +26,10 @@ import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
-import 'app_state.dart';
-import 'config/functions/function_config.dart';
-import 'main.dart';
-import 'models/device_state.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/main.dart';
+import 'package:mobile_app/models/device_state.dart';
 
 class NativePipe {
   static const MethodChannel controlMethodChannel = MethodChannel("flutter/controlMethodChannel");

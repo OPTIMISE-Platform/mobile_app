@@ -16,9 +16,9 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
-import '../shared/keyed_list.dart';
-import 'characteristic.dart';
-import 'content_variable.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
+import 'package:mobile_app/models/characteristic.dart';
+import 'package:mobile_app/models/content_variable.dart';
 
 part 'smart_service.g.dart';
 

@@ -24,7 +24,7 @@ import 'package:flutter_material_symbols/flutter_material_symbols.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
-import 'base.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 class SmSePvFlow extends SmartServiceModuleWidget {
   bool preview = false;

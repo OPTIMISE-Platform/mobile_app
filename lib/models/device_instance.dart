@@ -22,11 +22,11 @@ import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
 
-import '../exceptions/argument_exception.dart';
-import '../native_pipe.dart';
-import '../shared/isar.dart';
-import 'device_command.dart';
-import 'network.dart';
+import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/native_pipe.dart';
+import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/network.dart';
 
 part 'device_instance.g.dart';
 

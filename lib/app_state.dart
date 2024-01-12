@@ -61,15 +61,15 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mutex/mutex.dart';
 import 'package:nsd/nsd.dart';
 
-import 'models/characteristic.dart';
-import 'models/concept.dart';
-import 'models/device_class.dart';
-import 'models/device_command_response.dart';
-import 'models/device_instance.dart';
-import 'models/device_search_filter.dart';
-import 'models/device_type.dart';
-import 'models/exception_log_element.dart';
-import 'native_pipe.dart';
+import 'package:mobile_app/models/characteristic.dart';
+import 'package:mobile_app/models/concept.dart';
+import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
+import 'package:mobile_app/native_pipe.dart';
 
 const notificationUpdateType = "put notification";
 const notificationDeleteManyType = "delete notifications";

@@ -21,7 +21,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/content_variable.dart';
 
-import '../config/characteristics/characteristic_config.dart';
+import 'package:mobile_app/config/characteristics/characteristic_config.dart';
 
 part 'characteristic.g.dart';
 

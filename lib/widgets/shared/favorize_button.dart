@@ -22,9 +22,9 @@ import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:provider/provider.dart';
 
-import '../../app_state.dart';
-import '../../exceptions/argument_exception.dart';
-import '../../services/devices.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/services/devices.dart';
 
 class FavorizeButton extends StatelessWidget {
   final DeviceInstance? _device;

@@ -19,8 +19,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/config/characteristics/tz.dart';
 import 'package:mobile_app/models/characteristic.dart';
 
-import 'location.dart';
-import 'rgb.dart';
+import 'package:mobile_app/config/characteristics/location.dart';
+import 'package:mobile_app/config/characteristics/rgb.dart';
 
 
 final Map<String?, Widget Function(BuildContext context, Characteristic characteristic, StateSetter setState)> characteristicConfigs = {

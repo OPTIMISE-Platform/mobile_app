@@ -21,9 +21,9 @@ import 'package:intl/intl.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 import 'package:stats/stats.dart';
 
-import '../../../../theme.dart';
-import '../../../shared/indicator.dart';
-import '../dashboard.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/indicator.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSePieChart extends SmSeRequest {
   bool preview = false;

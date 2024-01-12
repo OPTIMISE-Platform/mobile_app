@@ -17,8 +17,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../../../theme.dart';
-import 'bar_chart.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart.dart';
 
 class SmSeBarChartEstimate extends SmSeBarChart {
 

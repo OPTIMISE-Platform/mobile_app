@@ -20,7 +20,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/foundation.dart';
 
-import '../app_state.dart';
+import 'package:mobile_app/app_state.dart';
 
 class AppHttpClientAdapter implements HttpClientAdapter {
   late final HttpClientAdapter _adapter;
