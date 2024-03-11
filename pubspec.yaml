@@ -19,6 +19,7 @@ version: 0.0.288+288
 
 environment:
   sdk: ">=2.17.0 <3.0.0"
+  flutter: 3.7.1
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -29,7 +30,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -84,6 +84,8 @@ dependencies:
   isar_flutter_libs: 3.0.5
   flutter_material_symbols: ^0.0.4
   arrow_path: ^3.1.0
+  device_info_plus: ^8.2.2
+  #ory_kratos_client: 1.0.0
 
 dev_dependencies:
   flutter_test:

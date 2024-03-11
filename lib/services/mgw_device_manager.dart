@@ -19,23 +19,22 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/device_manager_old.dart';
+import 'package:mobile_app/services/mgw/device_manager_new.dart';
+import 'package:mobile_app/services/mgw/error.dart';
 
 class MgwDeviceManager {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  static final dio = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
-    ..interceptors.add(ApiAvailableInterceptor());
+  static var useNewDeviceManager = false;
 
   static Future<void> updateDeviceConnectionStatusFromMgw(
       Iterable<DeviceInstance> devices) async {
@@ -69,30 +68,55 @@ class MgwDeviceManager {
         "updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
   }
 
+  static Future<void> _setupDeviceManager(String host) async {
+    // TODO: remove this check when the old port based deployment of device manager is not running anymore
+    _logger.d("Find out which device manager to use by checking endpoints");
+    var deviceManagerEndpoints = [];
+    try {
+      deviceManagerEndpoints = await DeviceManagerNew(host).getDeviceManagerEndpoints();
+    } on Failure catch (e) {
+      _logger.e("Cant check device manager endpoints: " + e.detailedMessage);
+      return;
+    } catch (e) {
+      _logger.e("Cant check device manager endpoints: " + e.toString());
+      return;
+    }
+
+    if(deviceManagerEndpoints.isEmpty) {
+      useNewDeviceManager = false;
+      _logger.d("No endpoints found for device manager -> use port based device manager");
+      return;
+    }
+    _logger.d("Endpoints found for device manager -> use new path based device manager");
+    useNewDeviceManager = true;
+  }
+
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
     final service = network.localService;
+    var host = "";
     if (service == null) {
       throw ArgumentException("localService must not be null");
-    }
-    String uri = "http://${service.host!}:7002/devices";
-
-    final Response<Map<String, dynamic>> resp;
-    try {
-      resp = await dio.get<Map<String, dynamic>>(uri);
-    } on DioError catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
-      rethrow;
+    } else if(service.host == null) {
+      throw ArgumentException("Host must not be null");
+    } else {
+      host = service.host!;
     }
 
+    await _setupDeviceManager(host);
+    Response<dynamic> devicesFromMgw;
+    _logger.d("Load devices from new device manager: " + useNewDeviceManager.toString());
+    if(useNewDeviceManager) {
+      devicesFromMgw = await DeviceManagerNew(host).getDevices();
+    } else {
+      devicesFromMgw = await DeviceManagerOld(host).getDevices();
+    }
+    _logger.d("Loaded devices: "+devicesFromMgw.toString());
     for (final device in devices) {
-      if (resp.data?.containsKey(device.local_id) != true) {
+      if (devicesFromMgw.data?.containsKey(device.local_id) != true) {
         device.connectionStatus = DeviceConnectionStatus.unknown;
       } else {
-        final String status = resp.data![device.local_id]["state"];
+        final String status = devicesFromMgw.data![device.local_id]["state"];
         device.connectionStatus = status == "online"
             ? DeviceConnectionStatus.online
             : DeviceConnectionStatus.offline;

@@ -18,3 +18,10 @@ In development
 perl -i -pe 's/^(version:\s+\d+\.\d+\.)(\d+)(\+)(\d+)$/$1.($2+1).$3.($4+1)/e' pubspec.yaml
 git add pubspec.yaml
 ```
+
+## Development Setup
+Supported setup:
+Android Studio Hedgehog | 2023.1.1 Patch 2
+SDK Platform: Android 13
+SDK CLI Tools: 10
+Flutter: 3.7.1

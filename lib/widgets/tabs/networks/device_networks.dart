@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -80,110 +81,112 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
     return Consumer<AppState>(builder: (context, state, child) {
       final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
       return Scrollbar(
-          child: state.loadingNetworks()
-              ? const Center(child: DelayedCircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: () async {
-                    HapticFeedbackProxy.lightImpact();
-                    await _refresh();
-                  },
-                  child: _selected == null
-                      ? state.networks.isEmpty
-                          ? LayoutBuilder(
-                              builder: (context, constraint) {
-                                return SingleChildScrollView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  child: ConstrainedBox(
-                                    constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                    child: IntrinsicHeight(
-                                      child: Column(
-                                        children: const [
-                                          Expanded(
-                                            child: Center(child: Text("No Networks")),
-                                          ),
-                                        ],
+            child: state.loadingNetworks()
+                ? const Center(child: DelayedCircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: () async {
+                      HapticFeedbackProxy.lightImpact();
+                      await _refresh();
+                    },
+                    child: _selected == null
+                        ? state.networks.isEmpty
+                            ? LayoutBuilder(
+                                builder: (context, constraint) {
+                                  return SingleChildScrollView(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    child: ConstrainedBox(
+                                      constraints: BoxConstraints(minHeight: constraint.maxHeight),
+                                      child: IntrinsicHeight(
+                                        child: Column(
+                                          children: const [
+                                            Expanded(
+                                              child: Center(child: Text("No Networks")),
+                                            ),
+
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                );
-                              },
-                            )
-                          : ListView.builder(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              padding: MyTheme.inset,
-                              itemCount: state.networks.length,
-                              itemBuilder: (context, i) {
-                                return Column(children: [
-                                  i > 0 ? const Divider() : const SizedBox.shrink(),
-                                  ListTile(
-                                      title: Row(children: [
-                                        Text(state.networks[i].name),
-                                        Badge(
-                                          label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-                                          isLabelVisible: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
-                                          alignment: AlignmentDirectional.topCenter,
-                                          largeSize: 16,
-                                          backgroundColor: Colors.transparent,
-                                          child: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline ? const Text("") : null,
-                                        )
-                                      ]),
-                                      subtitle: Text(
-                                          "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
-                                      onTap: (state.networks[i].device_local_ids ?? []).isEmpty
-                                          ? null
-                                          : () {
-                                              _loading = true;
-                                              parentState?.filter.addNetwork(state.networks[i].id);
-                                              state
-                                                  .searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]),
-                                                      context, true)
-                                                  .then((_) => setState(() => _loading = false));
-                                              parentState?.setState(() {
-                                                parentState.hideSearch = false;
-                                                parentState.onBackCallback = () {
-                                                  parentState.setState(() {
-                                                    parentState.filter.networkIds = null;
-                                                    parentState.customAppBarTitle = null;
-                                                    parentState.onBackCallback = null;
-                                                    parentState.hideSearch = true;
-                                                  });
-                                                  setState(() => _selected = null);
-                                                };
-                                                parentState.customAppBarTitle = state.networks[i].name;
-
-                                                setState(() {
-                                                  _selected = i;
-                                                });
-                                              });
-                                            },
-                                      trailing: state.networks[i].localService == null
-                                          ? null
-                                          : (const Tooltip(
-                                              message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined))))
-                                ]);
-                              },
-                            )
-                      : state.devices.isEmpty
-                          ? state.loadingDevices || _loading
-                              ? const Center(
-                                  child: DelayedCircularProgressIndicator(),
-                                )
-                              : const Center(child: Text("No Devices"))
-                          : ListView.builder(
-                              padding: MyTheme.inset,
-                              itemCount: state.totalDevices,
-                              itemBuilder: (_, i) {
-                                if (i > state.devices.length - 1) {
-                                  return const SizedBox.shrink();
-                                }
-                                return Column(
-                                  children: [
+                                  );
+                                },
+                              )
+                            : ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: MyTheme.inset,
+                                itemCount: state.networks.length,
+                                itemBuilder: (context, i) {
+                                  return Column(children: [
                                     i > 0 ? const Divider() : const SizedBox.shrink(),
-                                    DeviceListItem(state.devices[i], null)
-                                  ],
-                                );
-                              },
-                            )));
+                                    ListTile(
+                                        title: Row(children: [
+                                          Text(state.networks[i].name),
+                                          Badge(
+                                            label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
+                                            isLabelVisible: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
+                                            alignment: AlignmentDirectional.topCenter,
+                                            largeSize: 16,
+                                            backgroundColor: Colors.transparent,
+                                            child: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline ? const Text("") : null,
+                                          )
+                                        ]),
+                                        subtitle: Text(
+                                            "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
+                                        onTap: (state.networks[i].device_local_ids ?? []).isEmpty
+                                            ? null
+                                            : () {
+                                                _loading = true;
+                                                parentState?.filter.addNetwork(state.networks[i].id);
+                                                state
+                                                    .searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]),
+                                                        context, true)
+                                                    .then((_) => setState(() => _loading = false));
+                                                parentState?.setState(() {
+                                                  parentState.hideSearch = false;
+                                                  parentState.onBackCallback = () {
+                                                    parentState.setState(() {
+                                                      parentState.filter.networkIds = null;
+                                                      parentState.customAppBarTitle = null;
+                                                      parentState.onBackCallback = null;
+                                                      parentState.hideSearch = true;
+                                                    });
+                                                    setState(() => _selected = null);
+                                                  };
+                                                  parentState.customAppBarTitle = state.networks[i].name;
+
+                                                  setState(() {
+                                                    _selected = i;
+                                                  });
+                                                });
+                                              },
+                                        trailing: state.networks[i].localService == null
+                                            ? null
+                                            : (const Tooltip(
+                                                message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined))))
+                                  ]);
+                                },
+                              )
+                        : state.devices.isEmpty
+                            ? state.loadingDevices || _loading
+                                ? const Center(
+                                    child: DelayedCircularProgressIndicator(),
+                                  )
+                                : const Center(child: Text("No Devices"))
+                            : ListView.builder(
+                                padding: MyTheme.inset,
+                                itemCount: state.totalDevices,
+                                itemBuilder: (_, i) {
+                                  if (i > state.devices.length - 1) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Column(
+                                    children: [
+                                      i > 0 ? const Divider() : const SizedBox.shrink(),
+                                      DeviceListItem(state.devices[i], null),
+                                    ],
+                                  );
+                                },
+                              ))
+          );
     });
   }
 }

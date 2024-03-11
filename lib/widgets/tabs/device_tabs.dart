@@ -32,6 +32,7 @@ import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
+import 'package:mobile_app/widgets/tabs/gateways/gateways.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
 
@@ -58,6 +59,7 @@ const tabGroups = 4;
 const tabNetworks = 5;
 const tabDevices = 6;
 const tabSmartServices = 7;
+const tabGateways = 8;
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
@@ -88,6 +90,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   final controller = CupertinoTabController(initialIndex: 0);
 
   final _tabKeys = [
+    GlobalKey(),
     GlobalKey(),
     GlobalKey(),
     GlobalKey(),
@@ -183,6 +186,10 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           hideSearch = true;
           showFab = false;
           break;
+          case tabGateways:
+          hideSearch = true;
+          showFab = true;
+          break;
       }
     });
   }
@@ -223,6 +230,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       state.networks.isEmpty && !NetworksService.isAvailable(),
       false,
       !SmartServiceService.isAvailable(),
+      false
     ];
   }
 
@@ -277,6 +285,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           icon: Icon(Icons.auto_fix_high,
               key: _tabKeys[7], color: disabled[7] ? disabledColor : null),
           label: "Services"),
+      BottomNavigationBarItem(
+          tooltip: disabled[8] ? "Currently unavailable" : null,
+          icon: Icon(Icons.device_hub,
+              key: _tabKeys[8], color: disabled[8] ? disabledColor : null),
+          label: "Gateways"),
     ];
 
     return PlatformNavBar(
@@ -702,6 +715,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                               return const SmartServicesInstances();
                             case tabDashboard:
                               return const Dashboard();
+                            case tabGateways:
+                              return const Gateways();
                             default:
                               return Center(
                                   child: Row(

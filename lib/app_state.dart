@@ -33,6 +33,7 @@ import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/location.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/app_update.dart';
@@ -50,6 +51,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
@@ -188,6 +190,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final List<Network> networks = [];
   final Mutex _networksMutex = Mutex();
 
+  final List<MGW> gateways = [];
+  final Mutex _gatewaysMutex = Mutex();
+
   final Map<String, Aspect> aspects = {};
   final Mutex _aspectsMutex = Mutex();
 
@@ -212,6 +217,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       loadConcepts(),
       loadCharacteristics(),
       initMessaging(),
+      loadStoredMGWs()
     ];
     try {
       await Future.wait(futures);
@@ -878,6 +884,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   _mergeDiscoveredServicesWithNetworks() {
+    // TODO get serial ID from the mDNS response or try to query it from device connector deployment which should return the hub id in the future
     networks.forEach((n) => n.localService = null);
     _discovery?.services.forEach((service) {
       final nI = networks.indexWhere((n) =>
@@ -889,6 +896,13 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         networks[nI].localService = service;
       }
     });
+  }
+
+  loadStoredMGWs() async {
+    await _gatewaysMutex.acquire();
+    gateways.addAll(await MgwStorage.LoadPairedMGWs());
+    // TODO: REfresh host names and ip adresses
+    _gatewaysMutex.release();
   }
 
   onLogout() async {
