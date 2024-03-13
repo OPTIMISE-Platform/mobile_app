@@ -106,6 +106,7 @@ class MgwDeviceManager {
     await _setupDeviceManager(host);
     Response<dynamic> devicesFromMgw;
     _logger.d("Load devices from new device manager: " + useNewDeviceManager.toString());
+    // TODO remove this part when port based device manager are not used anymore in the future
     if(useNewDeviceManager) {
       devicesFromMgw = await DeviceManagerNew(host).getDevices();
     } else {
