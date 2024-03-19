@@ -72,7 +72,6 @@ class MgwModuleService {
     _logger.d(LOG_PREFIX + ": MGW-Module-Manager: Got deployments: " + resp.data.toString());
 
     for (final value in resp.data!.values) {
-      _logger.d(value);
       var deployment = Deployment.fromJson(value);
       deployments.add(deployment);
     }

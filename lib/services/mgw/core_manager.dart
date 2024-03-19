@@ -35,7 +35,7 @@ class MgwCoreService {
   );
 
   Future<List<Endpoint>> getEndpointsOfModule(String moduleID) async {
-    var path = basePath + "/endpoints?mod_id=" + moduleID;
+    var path = basePath + "/endpoints?labels=mod_id=" + moduleID;
     _logger.d(LOG_PREFIX + ": Load endpoints from MGW at " + path);
     var resp = await mgwApiService.Get(path, Options());
     List<Endpoint> endpoints = [];
