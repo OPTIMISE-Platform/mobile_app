@@ -45,6 +45,7 @@ class MgwDeviceManager {
       if (network?.localService != null) {
         futures.add(_updateFromMgw(network!, devices)
             .onError((error, stackTrace) async {
+              _logger.e(error);
           final deviceIds = devices.map((e) => e.id).toList();
           try {
             await DevicesService.getDevices(devices.length, 0,
@@ -94,23 +95,20 @@ class MgwDeviceManager {
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
     final service = network.localService;
-    var host = "";
-    if (service == null) {
-      throw ArgumentException("localService must not be null");
-    } else if(service.host == null) {
-      throw ArgumentException("Host must not be null");
-    } else {
-      host = service.host!;
+    var ip = service?.addresses?[0].address;
+    if (ip == null) {
+      _logger.d("ip not set");
+      return;
     }
 
-    await _setupDeviceManager(host);
+    await _setupDeviceManager(ip);
     Response<dynamic> devicesFromMgw;
     _logger.d("Load devices from new device manager: " + useNewDeviceManager.toString());
     // TODO remove this part when port based device manager are not used anymore in the future
     if(useNewDeviceManager) {
-      devicesFromMgw = await DeviceManagerNew(host).getDevices();
+      devicesFromMgw = await DeviceManagerNew(ip).getDevices();
     } else {
-      devicesFromMgw = await DeviceManagerOld(host).getDevices();
+      devicesFromMgw = await DeviceManagerOld(ip).getDevices();
     }
     _logger.d("Loaded devices: "+devicesFromMgw.toString());
     for (final device in devices) {

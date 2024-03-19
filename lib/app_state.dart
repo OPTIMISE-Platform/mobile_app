@@ -879,7 +879,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   _manageNetworkDiscovery() async {
     if (kIsWeb) return; // no mDNS in browser
     if (_discovery != null) return;
-    _discovery = await startDiscovery('_snrgy._tcp');
+    _discovery = await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
     _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
   }
 
