@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/auth.dart';
@@ -46,6 +47,14 @@ class MgwService {
     return loginResponse.token;
   }
 
+  Future<String> GetBasicAuthValue() async {
+    _logger.d(LOG_PREFIX + ": Load basic auth credentials from storage");
+    var password = await MgwStorage.LoadBasicAuthCredentials();
+    String basicAuth =
+        'Basic ' + base64.encode(utf8.encode('admin:$password'));
+    return basicAuth;
+  }
+
   LoadCredentialsFromStorage() async {
     _logger.d(LOG_PREFIX + ": Load device credentials from storage");
     deviceCredentials = await MgwStorage.LoadCredentials();
@@ -58,7 +67,13 @@ class MgwService {
     if(authenticate) {
       dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
         _logger.d(LOG_PREFIX + ": Set auth headers");
-        options.headers?['X-Session-Token'] = await GetSessionToken();
+        try {
+          _logger.d("Try to get session token");
+          options.headers?['X-Session-Token'] = await GetSessionToken();
+        } catch (e) {
+          _logger.d("Try to get basic auth");
+          options.headers?['Authorization'] = await GetBasicAuthValue();
+        }
         _logger.d(LOG_PREFIX + ": End interceptor");
         return handler.next(options);
       }));

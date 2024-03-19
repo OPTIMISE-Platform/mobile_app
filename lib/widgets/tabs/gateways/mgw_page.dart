@@ -30,9 +30,46 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:nsd/nsd.dart';
 import 'package:provider/provider.dart';
 
+const double TOP_PADDING = 100;
+const textStyle = TextStyle(color: Colors.white, fontSize: 35);
+
 final _logger = Logger(
   printer: SimplePrinter(),
 );
+
+TextEditingController _textFieldController = TextEditingController();
+
+Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
+  // TODO remove pairing with basic auth credentials
+  await showDialog<void>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: Text('Password'),
+        content: TextField(
+          controller: _textFieldController,
+          decoration: InputDecoration(hintText: "Password"),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: Text('CANCEL'),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+          TextButton(
+            child: Text('OK'),
+            onPressed: () async {
+              var password = _textFieldController.text;
+              await MgwStorage.StoreBasicAuthCredentials(password);
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
 
 Future<List<MGW>> DiscoverLocalGatewayHosts() async {
   _logger.d("Discover local gateways...");
@@ -46,7 +83,7 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
       var serviceName = service.name??"";
       var coreId = utf8.decode(service.txt?["core-id"]??[]);
 
-      var ip = service.addresses?[0].host??"";
+      var ip = service.addresses?[0].address??"";
       if(!foundHostnames.contains(hostname)) {
         var gateway = MGW(hostname, serviceName, coreId, ip);
         gateways.add(gateway);
@@ -60,7 +97,8 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
   return gateways;
 }
 
-Future<void> PairWithGateway(String host) async {
+Future<void> PairWithGateway(MGW mgw) async {
+  var host = mgw.ip;
   MgwAuthService authService = MgwAuthService(host);
 
   _logger.d("Pair with gateway: "+ host);
@@ -72,13 +110,23 @@ Future<void> PairWithGateway(String host) async {
   _logger.d("Stored credentials");
 }
 
-const double TOP_PADDING = 100;
-const textStyle = TextStyle(color: Colors.white, fontSize: 35);
+Future<void> StoreGateway(MGW mgw, AppState appState) async {
+  _logger.d("Store paired mgw");
+  await MgwStorage.StorePairedMGW(mgw);
+  _logger.d("Stored mgw");
 
-class AddLocalNetwork extends StatelessWidget {
+  appState.gateways.add(mgw);
+}
+
+class AddLocalNetwork extends StatefulWidget {
   const AddLocalNetwork({Key? key}) : super(key: key);
 
-  handleData(List<MGW> mgws, AppState appState) {
+  @override
+  _AddLocalNetworkState createState() => _AddLocalNetworkState();
+}
+
+class _AddLocalNetworkState extends State<AddLocalNetwork> {
+  handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
     if (mgws.length == 0) {
       return Column(
           children: [
@@ -110,18 +158,26 @@ class AddLocalNetwork extends StatelessWidget {
                             Icons.add
                         ),
                         onPressed: () async {
-                          var ip = mgw.ip;
                           try {
-                            await PairWithGateway(ip);
-                            appState.gateways.add(mgw);
+                            _logger.d("Try to pair token based");
+                            await PairWithGateway(mgw);
+                            await StoreGateway(mgw, appState);
                           } on Failure catch (e) {
-                            if (e.errorCode == ErrorCode.SERVER_ERROR) {
-                              // TODO dont use 500 to inidcate that pairing is closed
-                              Toast.showToastNoContext(
-                                  "Pairing was not possible. Check if pairing mode is enabled!");
+                            _logger.e("Pairing is not possible: " + e.detailedMessage);
+                            if (e.errorCode == ErrorCode.UNAUTHORIZED) {
+                              // MGW is still using basic auth protection -> ask user for password
+                              try {
+                                _logger.d("Try to pair basic auth based");
+                                await pairWithBasicAuth(widgetBuildContext, mgw);
+                                await StoreGateway(mgw, appState);
+                              } catch (e) {
+                                _logger.e("Pairing is not possible: " + e.toString());
+                                Toast.showToastNoContext(
+                                    "Pairing was not possible");
+                              }
                             } else {
                               Toast.showToastNoContext(
-                                  "Pairing was not possible!");
+                                  "Pairing was not possible. Check if pairing mode is enabled!");
                             }
                           }
                           Navigator.pop(context);
@@ -154,7 +210,8 @@ class AddLocalNetwork extends StatelessWidget {
 
   handleLoading() {
     return Column(
-        children: [
+        crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
           Padding(
             padding: const EdgeInsets.only(top: TOP_PADDING),
             child: SizedBox(
@@ -170,9 +227,9 @@ class AddLocalNetwork extends StatelessWidget {
         ]);
   }
 
-  handleResponse(servicesWrapper, AppState appState) {
+  handleResponse(servicesWrapper, AppState appState, context) {
     if (servicesWrapper.hasData) {
-      return handleData(servicesWrapper.data!, appState);
+      return handleData(servicesWrapper.data!, appState, context);
     }
     if (servicesWrapper.hasError) {
       return handleError(servicesWrapper.error);
@@ -191,7 +248,7 @@ class AddLocalNetwork extends StatelessWidget {
               future: DiscoverLocalGatewayHosts(),
               builder: (BuildContext context,
                   AsyncSnapshot<List<MGW>> servicesWrapper) {
-                return handleResponse(servicesWrapper, state);
+                return handleResponse(servicesWrapper, state, context);
               })
       );
     });

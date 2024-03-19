@@ -10,6 +10,7 @@ const LOG_PREFIX = "MGW-STORAGE-SERVICE";
 
 class MgwStorage {
   static const _mgwCredentialsKeyPrefix = "credentials_";
+  static const _mgwBasicAuthCredentialsKeyPrefix = "basic_auth_credentials_";
   static const _mgwConnectedKeyPrefix = "connected_mgws_";
 
   static const _boxName = "mgw.box";
@@ -23,11 +24,13 @@ class MgwStorage {
     if(isInitialized) return;
     Hive.init((await getApplicationDocumentsDirectory()).path);
     _box = await Hive.openBox<String>(_boxName);
+    _logger.d("TEST");
+    _logger.d(_box?.get(_mgwConnectedKeyPrefix));
     isInitialized = true;
   }
 
   static Future<void> StoreCredentials(DeviceUserCredentials user) async {
-    init();
+    await init();
     _logger.d(LOG_PREFIX + ": Store mgw device credentials for: " + user.login);
     var credentials = json.encode(user);
     return await _box?.put(_mgwCredentialsKeyPrefix, credentials).then((
@@ -35,7 +38,7 @@ class MgwStorage {
   }
 
   static Future<DeviceUserCredentials> LoadCredentials() async {
-    init();
+    await init();
     _logger.d(LOG_PREFIX + ": Load mgw device credentials");
     var credentials = await _box?.get(_mgwCredentialsKeyPrefix);
     if(credentials != null) {
@@ -47,7 +50,7 @@ class MgwStorage {
   }
 
   static Future<void> StorePairedMGW(MGW mgw) async {
-    init();
+    await init();
     _logger.d(LOG_PREFIX + ": Store paired mgw: " + mgw.mDNSServiceName);
     var storedMGWs = await LoadPairedMGWs();
     storedMGWs.add(mgw);
@@ -56,14 +59,38 @@ class MgwStorage {
   }
 
   static Future<List<MGW>> LoadPairedMGWs() async {
-    init();
-    _logger.d(LOG_PREFIX + ": Load mgw device credentials");
+    await init();
+    _logger.d(LOG_PREFIX + ": Load paired mgws");
     var encodedMgws = await _box?.get(_mgwConnectedKeyPrefix);
+    List<MGW> mgws = [];
     if(encodedMgws != null) {
-      List<MGW> mgws = json.decode(encodedMgws);
-      _logger.d(LOG_PREFIX + ": Loaded mgws");
+      for(final mgw in jsonDecode(encodedMgws)) {
+        mgws.add(MGW.fromJson(mgw));
+      }
       return mgws;
     }
-    return [];
+    _logger.d(LOG_PREFIX + ": Loaded mgws: " + mgws.toString());
+    return mgws;
+  }
+
+
+
+  // TODO: remove loading and saving of basic auth credentials later
+  static Future<void> StoreBasicAuthCredentials(String password) async {
+    await init();
+    _logger.d(LOG_PREFIX + ": Store mgw device basic auth credentials: " + password);
+    return await _box?.put(_mgwBasicAuthCredentialsKeyPrefix, password).then((
+        value) => _box?.flush());
+  }
+
+  static Future<String> LoadBasicAuthCredentials() async {
+    await init();
+    _logger.d(LOG_PREFIX + ": Load mgw device basic auth credentials");
+    var password = await _box?.get(_mgwBasicAuthCredentialsKeyPrefix);
+    if(password != null) {
+      _logger.d(LOG_PREFIX + ": Loaded mgw device basic auth credentials");
+      return password;
+    }
+    throw("Credentials not stored");
   }
 }
