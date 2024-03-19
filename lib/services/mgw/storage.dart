@@ -24,8 +24,6 @@ class MgwStorage {
     if(isInitialized) return;
     Hive.init((await getApplicationDocumentsDirectory()).path);
     _box = await Hive.openBox<String>(_boxName);
-    _logger.d("TEST");
-    _logger.d(_box?.get(_mgwConnectedKeyPrefix));
     isInitialized = true;
   }
 
