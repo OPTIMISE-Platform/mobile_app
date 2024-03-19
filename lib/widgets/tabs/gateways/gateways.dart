@@ -119,6 +119,8 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
                     padding: MyTheme.inset,
                     itemCount: state.gateways.length,
                     itemBuilder: (context, i) {
+                      var mgw = state.gateways[i];
+
                       return Column(children: [
                         i > 0 ? const Divider() : const SizedBox.shrink(),
                         ListTile(
@@ -126,10 +128,18 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
                               Text(state.gateways[i].mDNSServiceName),
                             ]),
                           onTap: () {
-                              var mgw = state.gateways[i];
                               Navigator.push(context, MaterialPageRoute(builder: (context) => MGWDetail(mgw: mgw)));
                           },
-                      )]);
+                          trailing: MaterialButton(
+                              child: Icon(
+                                  Icons.delete
+                              ),
+                              onPressed: () async {
+                                await MgwStorage.RemovePairedMGW(mgw);
+                                await state.loadStoredMGWs();
+                              }
+                          ),
+                        )]);
                     },
               )
       );

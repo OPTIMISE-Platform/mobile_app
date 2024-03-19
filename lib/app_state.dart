@@ -899,10 +899,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   loadStoredMGWs() async {
+    _logger.d("App State: Load stored mgw");
     await _gatewaysMutex.acquire();
-    gateways.addAll(await MgwStorage.LoadPairedMGWs());
+    var storedMGWs = await MgwStorage.LoadPairedMGWs();
+    gateways.clear();
+    gateways.addAll(storedMGWs);
     // TODO: REfresh host names and ip adresses
     _gatewaysMutex.release();
+    notifyListeners();
   }
 
   onLogout() async {

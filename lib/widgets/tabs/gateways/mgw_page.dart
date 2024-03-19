@@ -118,6 +118,32 @@ Future<void> StoreGateway(MGW mgw, AppState appState) async {
   appState.gateways.add(mgw);
 }
 
+Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildContext, BuildContext context) async {
+  try {
+    _logger.d("Try to pair token based");
+    await PairWithGateway(mgw);
+    await StoreGateway(mgw, appState);
+  } on Failure catch (e) {
+    _logger.e("Pairing is not possible: " + e.detailedMessage);
+    if (e.errorCode == ErrorCode.UNAUTHORIZED) {
+      // MGW is still using basic auth protection -> ask user for password
+      try {
+        _logger.d("Try to pair basic auth based");
+        await pairWithBasicAuth(widgetBuildContext, mgw);
+        await StoreGateway(mgw, appState);
+      } catch (e) {
+        _logger.e("Pairing is not possible: " + e.toString());
+        Toast.showToastNoContext(
+            "Pairing was not possible");
+      }
+    } else {
+      Toast.showToastNoContext(
+          "Pairing was not possible. Check if pairing mode is enabled!");
+    }
+  }
+  Navigator.pop(context);
+}
+
 class AddLocalNetwork extends StatefulWidget {
   const AddLocalNetwork({Key? key}) : super(key: key);
 
@@ -157,32 +183,8 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
                         child: Icon(
                             Icons.add
                         ),
-                        onPressed: () async {
-                          try {
-                            _logger.d("Try to pair token based");
-                            await PairWithGateway(mgw);
-                            await StoreGateway(mgw, appState);
-                          } on Failure catch (e) {
-                            _logger.e("Pairing is not possible: " + e.detailedMessage);
-                            if (e.errorCode == ErrorCode.UNAUTHORIZED) {
-                              // MGW is still using basic auth protection -> ask user for password
-                              try {
-                                _logger.d("Try to pair basic auth based");
-                                await pairWithBasicAuth(widgetBuildContext, mgw);
-                                await StoreGateway(mgw, appState);
-                              } catch (e) {
-                                _logger.e("Pairing is not possible: " + e.toString());
-                                Toast.showToastNoContext(
-                                    "Pairing was not possible");
-                              }
-                            } else {
-                              Toast.showToastNoContext(
-                                  "Pairing was not possible. Check if pairing mode is enabled!");
-                            }
-                          }
-                          Navigator.pop(context);
-                        }
-                    ),
+                        onPressed: () => StartPairing(mgw, appState, widgetBuildContext, context)
+                    )
                   )
               );
             }

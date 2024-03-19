@@ -65,12 +65,25 @@ class MgwStorage {
       for(final mgw in jsonDecode(encodedMgws)) {
         mgws.add(MGW.fromJson(mgw));
       }
-      return mgws;
     }
     _logger.d(LOG_PREFIX + ": Loaded mgws: " + mgws.toString());
     return mgws;
   }
 
+  static Future<void> RemovePairedMGW(MGW mgw) async {
+    // TODO use core-id published via mDNS as identifier. Atm this is not advertised.
+    await init();
+    _logger.d(LOG_PREFIX + ": Remove paired mgw: " + mgw.mDNSServiceName);
+    var storedMGWs = await LoadPairedMGWs();
+    var filteredMGWs = [];
+    for(final storedMgw in storedMGWs) {
+      if(storedMgw.hostname != mgw.hostname) {
+        filteredMGWs.add(storedMgw);
+      }
+    }
+    return await _box?.put(_mgwConnectedKeyPrefix, json.encode(filteredMGWs)).then((
+        value) => _box?.flush());
+  }
 
 
   // TODO: remove loading and saving of basic auth credentials later
