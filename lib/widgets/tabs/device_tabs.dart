@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -33,6 +34,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:mobile_app/widgets/tabs/gateways/gateways.dart';
+import 'package:mobile_app/widgets/tabs/nav.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
 
@@ -43,6 +45,7 @@ import 'package:mobile_app/widgets/tabs/groups/group_list.dart';
 import 'package:mobile_app/widgets/tabs/locations/device_location.dart';
 import 'package:mobile_app/widgets/tabs/networks/device_networks.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
+import 'package:sidebarx/sidebarx.dart';
 
 class DeviceTabs extends StatefulWidget {
   const DeviceTabs({Key? key}) : super(key: key);
@@ -50,16 +53,6 @@ class DeviceTabs extends StatefulWidget {
   @override
   State<DeviceTabs> createState() => DeviceTabsState();
 }
-
-const tabFavorites = 0;
-const tabDashboard = 1;
-const tabClasses = 2;
-const tabLocations = 3;
-const tabGroups = 4;
-const tabNetworks = 5;
-const tabDevices = 6;
-const tabSmartServices = 7;
-const tabGateways = 8;
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
@@ -88,6 +81,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   final _cupertinoSearchController = RestorableTextEditingController();
 
   final controller = CupertinoTabController(initialIndex: 0);
+
+  final _sidebarController =
+      SidebarXController(selectedIndex: 0, extended: true);
 
   final _tabKeys = [
     GlobalKey(),
@@ -186,7 +182,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           hideSearch = true;
           showFab = false;
           break;
-          case tabGateways:
+        case tabGateways:
           hideSearch = true;
           showFab = true;
           break;
@@ -234,6 +230,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     ];
   }
 
+  /// Bottom Bar Logic
   PlatformNavBar _buildBottom(BuildContext context) {
     final disabled = _tabDisabled();
 
@@ -244,57 +241,33 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       disabledColor = Theme.of(context).disabledColor;
     }
 
-    final items = [
-      BottomNavigationBarItem(
-          tooltip: disabled[0] ? "Currently unavailable" : null,
-          icon: Icon(Icons.star_border,
-              key: _tabKeys[0], color: disabled[0] ? disabledColor : null),
-          label: "Favorites"),
-      BottomNavigationBarItem(
-          tooltip: disabled[1] ? "Currently unavailable" : null,
-          icon: Icon(Icons.dashboard,
-              key: _tabKeys[1], color: disabled[1] ? disabledColor : null),
-          label: "Board"),
-      BottomNavigationBarItem(
-          tooltip: disabled[2] ? "Currently unavailable" : null,
-          icon: Icon(Icons.devices,
-              key: _tabKeys[2], color: disabled[2] ? disabledColor : null),
-          label: "Classes"),
-      BottomNavigationBarItem(
-          tooltip: disabled[3] ? "Currently unavailable" : null,
-          icon: Icon(PlatformIcons(context).location,
-              key: _tabKeys[3], color: disabled[3] ? disabledColor : null),
-          label: "Locations"),
-      BottomNavigationBarItem(
-          tooltip: disabled[4] ? "Currently unavailable" : null,
-          icon: Icon(Icons.devices_other,
-              key: _tabKeys[4], color: disabled[4] ? disabledColor : null),
-          label: "Groups"),
-      BottomNavigationBarItem(
-          tooltip: disabled[5] ? "Currently unavailable" : null,
-          icon: Icon(Icons.device_hub,
-              key: _tabKeys[5], color: disabled[5] ? disabledColor : null),
-          label: "Networks"),
-      BottomNavigationBarItem(
-          tooltip: disabled[6] ? "Currently unavailable" : null,
-          icon: Icon(Icons.sensors,
-              key: _tabKeys[6], color: disabled[6] ? disabledColor : null),
-          label: "Devices"),
-      BottomNavigationBarItem(
-          tooltip: disabled[7] ? "Currently unavailable" : null,
-          icon: Icon(Icons.auto_fix_high,
-              key: _tabKeys[7], color: disabled[7] ? disabledColor : null),
-          label: "Services"),
-      BottomNavigationBarItem(
-          tooltip: disabled[8] ? "Currently unavailable" : null,
-          icon: Icon(Icons.device_hub,
-              key: _tabKeys[8], color: disabled[8] ? disabledColor : null),
-          label: "Gateways"),
-    ];
+    final List<BottomNavigationBarItem> items = [];
+
+    if (Platform.isIOS) {
+      navItems.forEach((navItem) {
+        items.add(BottomNavigationBarItem(
+            tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
+            icon: Icon(navItem.icon,
+                key: _tabKeys[navItem.index],
+                color: disabled[navItem.index] ? disabledColor : null),
+            label: navItem.name));
+      });
+    } else {
+      navItems.forEach((navItem) {
+        if (["Favorites", "Dashboard"].contains(navItem.name)) {
+          items.add(BottomNavigationBarItem(
+              tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
+              icon: Icon(navItem.icon,
+                  key: _tabKeys[navItem.index],
+                  color: disabled[navItem.index] ? disabledColor : null),
+              label: navItem.name));
+        }
+      });
+    }
 
     return PlatformNavBar(
         items: items,
-        currentIndex: _bottomBarIndex,
+        currentIndex: _bottomBarIndex > items.length - 1 ? 0 : _bottomBarIndex,
         itemChanged: (i) {
           if (disabled[i]) {
             controller.index = _bottomBarIndex;
@@ -320,6 +293,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   void dispose() {
     _searchDebounce?.cancel();
     _fabPressedController.close();
+    _cupertinoSearchController.dispose();
+    _sidebarController.dispose();
     super.dispose();
   }
 
@@ -656,6 +631,72 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               icon: Icon(PlatformIcons(context).back));
         }
 
+        final List<SidebarXItem> sidebarItems = [];
+
+        navItems.forEach((navItem) {
+          sidebarItems.add(SidebarXItem(
+              icon: navItem.icon,
+              label: navItem.name,
+              onTap: () {
+                setState(() {
+                  _bottomBarIndex = navItem.index;
+                  Navigator.pop(context);
+                });
+              }));
+        });
+
+        var textColor = MyTheme.textColor;
+        var selectorColor = Colors.teal.shade50;
+        var iconColor = textColor;
+
+        if (MyTheme.isDarkMode){
+          selectorColor = MyTheme.appColor;
+          iconColor = selectorColor;
+        }
+
+        final divider = Divider(color: textColor?.withOpacity(0.3), height: 1);
+
+        final drawer = SidebarX(
+          controller: _sidebarController,
+          extendedTheme: const SidebarXTheme(
+            width: 200,
+            margin: EdgeInsets.only(right: 10),
+          ),
+          items: sidebarItems,
+          headerDivider: divider,
+          footerDivider: divider,
+          headerBuilder: (context, extended) {
+            return SafeArea(
+              child: SizedBox(
+                height: 100,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Image.asset('assets/icon/icon.png'),
+                ),
+              ),
+            );
+          },
+          theme: SidebarXTheme(
+            textStyle: TextStyle(color: textColor),
+            selectedTextStyle: TextStyle(color: textColor),
+            itemTextPadding: const EdgeInsets.only(left: 30),
+            selectedItemTextPadding: const EdgeInsets.only(left: 30),
+            selectedItemDecoration: BoxDecoration(
+              color: selectorColor,
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(10),
+                bottomRight: Radius.circular(10),
+                topLeft: Radius.circular(10),
+                bottomLeft: Radius.circular(10),
+              ),
+            ),
+            iconTheme: IconThemeData(
+              color: iconColor,
+              size: 20,
+            ),
+          ),
+        );
+
         return WillPopScope(
             onWillPop: () async {
               if (onBackCallback == null) return true;
@@ -677,6 +718,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                         splashFactory: _getCustomSplashFactory(context),
                         highlightColor: Colors.transparent),
                     child: PlatformScaffold(
+                      material: (_, __) => MaterialScaffoldData(
+                        drawer: drawer,
+                      ),
                       appBar: appBar.getAppBar(context, actions, leadingAction),
                       body: Column(children: [
                         PlatformWidget(
@@ -824,7 +868,8 @@ class _CustomInkSplash extends InkSplash {
         continue;
       }
       //final box = keys[i].currentContext?.findRenderObject() as RenderBox?;
-      final box = keys[i].currentContext?.findAncestorRenderObjectOfType<RenderStack>();
+      final box =
+          keys[i].currentContext?.findAncestorRenderObjectOfType<RenderStack>();
       if (box == null) {
         continue;
       }

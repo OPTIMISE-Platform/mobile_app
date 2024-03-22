@@ -87,6 +87,7 @@ dependencies:
   arrow_path: ^3.1.0
   device_info_plus: ^8.2.2
   #ory_kratos_client: 1.0.0
+  sidebarx: ^0.16.2
 
 dev_dependencies:
   flutter_test:
