@@ -640,6 +640,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               onTap: () {
                 setState(() {
                   _bottomBarIndex = navItem.index;
+                  switchBottomBar(_bottomBarIndex, true);
                   Navigator.pop(context);
                 });
               }));
