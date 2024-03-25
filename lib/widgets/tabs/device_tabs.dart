@@ -255,7 +255,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             return;
           }
           setState(() {
-            _navigationIndex = _bottomBarIndex;
+            _navigationIndex = i;
+            _sidebarController.selectIndex(i);
           });
           HapticFeedbackProxy.lightImpact();
           switchScreen(i, false);
@@ -788,7 +789,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     if (filter.favorites == true && _navigationIndex != tabFavorites) {
       count++;
     }
-    switch (_bottomBarIndex) {
+    switch (_navigationIndex) {
       case tabLocations:
         count -= (filter.locationIds ?? []).length;
         break;
