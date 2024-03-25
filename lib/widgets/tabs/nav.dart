@@ -18,11 +18,11 @@ import 'package:flutter/material.dart';
 
 const tabFavorites = 0;
 const tabDashboard = 1;
-const tabClasses = 2;
+const tabDevices = 2;
 const tabLocations = 3;
 const tabGroups = 4;
 const tabNetworks = 5;
-const tabDevices = 6;
+const tabClasses = 6;
 const tabSmartServices = 7;
 const tabGateways = 8;
 

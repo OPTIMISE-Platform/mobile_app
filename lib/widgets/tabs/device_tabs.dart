@@ -57,6 +57,7 @@ class DeviceTabs extends StatefulWidget {
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
   int _bottomBarIndex = 0;
+  int _navigationIndex = 0;
   bool _initialized = false;
   bool _searchClosed = false;
   final DeviceSearchFilter filter = DeviceSearchFilter.empty();
@@ -107,20 +108,22 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     filter.query = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      switchBottomBar(_bottomBarIndex, true);
+      switchScreen(_navigationIndex, true);
     });
   }
 
-  switchBottomBar(int i, bool force) {
-    if (_bottomBarIndex == i && !force) {
+  switchScreen(int selectedIndex, bool force) {
+    debugPrint("switchScreen selectedIndex: $selectedIndex  _navigationIndex: $_navigationIndex $force");
+    if (_navigationIndex == selectedIndex && !force) {
       return;
     }
     setState(() {
-      if (_bottomBarIndex != i) {
+      if (_navigationIndex != selectedIndex) {
+        debugPrint("set Filter Null");
         // dont overwrite on force
         customAppBarTitle = null;
         onBackCallback = null;
-        switch (_bottomBarIndex) {
+        switch (_navigationIndex) {
           case tabLocations:
             filter.locationIds = null;
             break;
@@ -136,13 +139,25 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           case tabFavorites:
             filter.favorites = null;
             break;
+          case tabDevices:
+            filter.favorites = null;
+            break;
           case tabDashboard:
             // no-op
             break;
         }
-        _bottomBarIndex = i;
+        _navigationIndex = selectedIndex;
       }
-      switch (i) {
+      switch (selectedIndex) {
+        case tabFavorites:
+          hideSearch = false;
+          AppState().searchDevices(filter, context);
+          showFab = false;
+          break;
+        case tabDashboard:
+          hideSearch = true;
+          showFab = false;
+          break;
         case tabDevices:
           hideSearch = false;
           AppState().searchDevices(filter, context);
@@ -163,12 +178,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           AppState().searchDevices(filter, context);
           showFab = false;
           break;
-        case tabFavorites:
-          hideSearch = false;
-          filter.favorites = true;
-          AppState().searchDevices(filter, context);
-          showFab = false;
-          break;
         case tabClasses:
           hideSearch = true;
           AppState().searchDevices(filter, context);
@@ -178,41 +187,12 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           hideSearch = true;
           showFab = true;
           break;
-        case tabDashboard:
-          hideSearch = true;
-          showFab = false;
-          break;
         case tabGateways:
           hideSearch = true;
           showFab = true;
           break;
       }
     });
-  }
-
-  int _filterCount() {
-    var count = (filter.locationIds ?? []).length +
-        (filter.deviceGroupIds ?? []).length +
-        (filter.networkIds ?? []).length +
-        (filter.deviceClassIds ?? []).length;
-    if (filter.favorites == true && _bottomBarIndex != tabFavorites) {
-      count++;
-    }
-    switch (_bottomBarIndex) {
-      case tabLocations:
-        count -= (filter.locationIds ?? []).length;
-        break;
-      case tabGroups:
-        count -= (filter.deviceGroupIds ?? []).length;
-        break;
-      case tabNetworks:
-        count -= (filter.networkIds ?? []).length;
-        break;
-      case tabClasses:
-        count -= (filter.deviceClassIds ?? []).length;
-        break;
-    }
-    return count;
   }
 
   List<bool> _tabDisabled() {
@@ -230,7 +210,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     ];
   }
 
-  /// Bottom Bar Logic
+  /// create BottomNavigationBar with items
   PlatformNavBar _buildBottom(BuildContext context) {
     final disabled = _tabDisabled();
 
@@ -269,12 +249,16 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         items: items,
         currentIndex: _bottomBarIndex > items.length - 1 ? 0 : _bottomBarIndex,
         itemChanged: (i) {
+          debugPrint("BottomBar: $i");
           if (disabled[i]) {
             controller.index = _bottomBarIndex;
             return;
           }
+          setState(() {
+            _navigationIndex = _bottomBarIndex;
+          });
           HapticFeedbackProxy.lightImpact();
-          switchBottomBar(i, false);
+          switchScreen(i, false);
         },
         material: (context, _) => MaterialNavBarData(
             selectedItemColor: MyTheme.appColor,
@@ -307,7 +291,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             state.loadDeviceGroups(context);
             state.loadNetworks(context);
             state.loadLocations(context);
-            switchBottomBar(_bottomBarIndex, true);
+            switchScreen(_bottomBarIndex, true);
           });
           _initialized = true;
         }
@@ -344,282 +328,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                 CupertinoIconButtonData(padding: EdgeInsets.zero),
           ));
         }
-        if (_bottomBarIndex != tabGroups &&
-            _bottomBarIndex != tabSmartServices &&
-            _bottomBarIndex != tabDashboard) {
-          // TODO move decision to showFab etc.
-          final List<PopupMenuOption> filterActions = [];
-          if (_bottomBarIndex != tabClasses && state.deviceClasses.isNotEmpty) {
-            filterActions.add(PopupMenuOption(
-                label: 'Classes',
-                onTap: (_) => showPlatformDialog(
-                      context: context,
-                      builder: (context) => PlatformAlertDialog(
-                        title: const Text('Filter Classes'),
-                        content: SizedBox(
-                            width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height -
-                                MediaQuery.textScaleFactorOf(context) * 172,
-                            child: Material(
-                                color: const Color(0x00000000),
-                                // required for ListTile
-                                child: ListView.builder(
-                                    itemCount:
-                                        state.deviceClasses.values.length,
-                                    itemBuilder: (context, i) {
-                                      final deviceClass = state
-                                          .deviceClasses.values
-                                          .elementAt(i);
-                                      return StatefulBuilder(
-                                          builder: (context, setState) =>
-                                              ListTile(
-                                                  trailing: PlatformSwitch(
-                                                    onChanged: (checked) {
-                                                      if (checked == true) {
-                                                        filter.addDeviceClass(
-                                                            deviceClass.id);
-                                                      } else {
-                                                        filter
-                                                            .removeDeviceClass(
-                                                                deviceClass.id);
-                                                      }
-                                                      setState(() {});
-                                                    },
-                                                    value: filter.deviceClassIds
-                                                            ?.contains(
-                                                                deviceClass
-                                                                    .id) ??
-                                                        false,
-                                                  ),
-                                                  title:
-                                                      Text(deviceClass.name)));
-                                    }))),
-                        actions: <Widget>[
-                          PlatformDialogAction(
-                            child: const Text("OK"),
-                            onPressed: () {
-                              switchBottomBar(_bottomBarIndex, true);
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    )));
-          }
-          if (_bottomBarIndex != tabLocations && state.locations.isNotEmpty) {
-            filterActions.add(PopupMenuOption(
-                label: 'Locations',
-                onTap: (_) => showPlatformDialog(
-                      context: context,
-                      builder: (context) => PlatformAlertDialog(
-                        title: const Text('Filter Locations'),
-                        content: SizedBox(
-                            width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height -
-                                MediaQuery.textScaleFactorOf(context) * 172,
-                            child: Material(
-                                color: const Color(0x00000000),
-                                // required for ListTile
-                                child: ListView.builder(
-                                    itemCount: state.locations.length,
-                                    itemBuilder: (context, i) {
-                                      final location =
-                                          state.locations.elementAt(i);
-                                      return StatefulBuilder(
-                                          builder: (context, setState) =>
-                                              ListTile(
-                                                  trailing: PlatformSwitch(
-                                                    onChanged: (checked) {
-                                                      setState(() {
-                                                        if (checked == true) {
-                                                          filter.addLocation(
-                                                              location.id);
-                                                        } else {
-                                                          filter.removeLocation(
-                                                              location.id);
-                                                        }
-                                                      });
-                                                    },
-                                                    value: filter.locationIds
-                                                            ?.contains(
-                                                                location.id) ??
-                                                        false,
-                                                  ),
-                                                  title: Text(location.name)));
-                                    }))),
-                        actions: <Widget>[
-                          PlatformDialogAction(
-                            child: const Text("OK"),
-                            onPressed: () {
-                              switchBottomBar(_bottomBarIndex, true);
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    )));
-          }
-          if (_bottomBarIndex != tabGroups && state.deviceGroups.isNotEmpty) {
-            filterActions.add(PopupMenuOption(
-                label: 'Groups',
-                onTap: (_) => showPlatformDialog(
-                      context: context,
-                      builder: (context) => PlatformAlertDialog(
-                        title: const Text('Filter Groups'),
-                        content: SizedBox(
-                            width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height -
-                                MediaQuery.textScaleFactorOf(context) * 172,
-                            child: Material(
-                                color: const Color(0x00000000),
-                                // required for ListTile
-                                child: ListView.builder(
-                                    itemCount: state.deviceGroups.length,
-                                    itemBuilder: (context, i) {
-                                      final deviceGroup =
-                                          state.deviceGroups.elementAt(i);
-                                      return StatefulBuilder(
-                                          builder: (context, setState) =>
-                                              ListTile(
-                                                  trailing: PlatformSwitch(
-                                                    onChanged: (checked) {
-                                                      setState(() {
-                                                        if (checked == true) {
-                                                          filter.addDeviceGroup(
-                                                              deviceGroup.id);
-                                                        } else {
-                                                          filter
-                                                              .removeDeviceGroup(
-                                                                  deviceGroup
-                                                                      .id);
-                                                        }
-                                                      });
-                                                    },
-                                                    value: filter.deviceGroupIds
-                                                            ?.contains(
-                                                                deviceGroup
-                                                                    .id) ??
-                                                        false,
-                                                  ),
-                                                  title:
-                                                      Text(deviceGroup.name)));
-                                    }))),
-                        actions: <Widget>[
-                          PlatformDialogAction(
-                            child: const Text("OK"),
-                            onPressed: () {
-                              switchBottomBar(_bottomBarIndex, true);
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    )));
-          }
-          if (_bottomBarIndex != tabNetworks && state.networks.isNotEmpty) {
-            filterActions.add(PopupMenuOption(
-                label: 'Networks',
-                onTap: (_) => showPlatformDialog(
-                      context: context,
-                      builder: (context) => PlatformAlertDialog(
-                        title: const Text('Filter Networks'),
-                        content: SizedBox(
-                            width: double.maxFinite,
-                            height: MediaQuery.of(context).size.height -
-                                MediaQuery.textScaleFactorOf(context) * 172,
-                            child: Material(
-                                color: const Color(0x00000000),
-                                // required for ListTile
-                                child: ListView.builder(
-                                    itemCount: state.networks.length,
-                                    itemBuilder: (context, i) {
-                                      final network =
-                                          state.networks.elementAt(i);
-                                      return StatefulBuilder(
-                                          builder: (context, setState) =>
-                                              ListTile(
-                                                  trailing: PlatformSwitch(
-                                                    onChanged: (checked) {
-                                                      setState(() {
-                                                        if (checked == true) {
-                                                          filter.addNetwork(
-                                                              network.id);
-                                                        } else {
-                                                          filter.removeNetwork(
-                                                              network.id);
-                                                        }
-                                                      });
-                                                    },
-                                                    value: filter.networkIds
-                                                            ?.contains(
-                                                                network.id) ??
-                                                        false,
-                                                  ),
-                                                  title: Text(network.name)));
-                                    }))),
-                        actions: <Widget>[
-                          PlatformDialogAction(
-                            child: const Text("OK"),
-                            onPressed: () {
-                              switchBottomBar(_bottomBarIndex, true);
-                              Navigator.pop(context);
-                            },
-                          ),
-                        ],
-                      ),
-                    )));
-          }
 
-          if (_bottomBarIndex != tabFavorites) {
-            filterActions.add(PopupMenuOption(
-                label: '${filter.favorites == true ? '✓ ' : ''}Favorites',
-                onTap: (_) => setState(() {
-                      filter.favorites = filter.favorites == true ? null : true;
-                      switchBottomBar(_bottomBarIndex, true);
-                    })));
-          }
 
-          final filterCount = _filterCount();
-          if (filterCount > 0) {
-            filterActions.add(PopupMenuOption(
-                material: (context, __) => MaterialPopupMenuOptionData(
-                        child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [Divider(), Text("Reset")],
-                    )),
-                cupertino: (context, __) =>
-                    CupertinoPopupMenuOptionData(isDestructiveAction: true),
-                label: 'Reset',
-                onTap: (_) {
-                  if (_bottomBarIndex != tabLocations)
-                    filter.locationIds = null;
-                  if (_bottomBarIndex != tabGroups)
-                    filter.deviceGroupIds = null;
-                  if (_bottomBarIndex != tabNetworks) filter.networkIds = null;
-                  if (_bottomBarIndex != tabClasses)
-                    filter.deviceClassIds = null;
-                  if (_bottomBarIndex != tabFavorites) filter.favorites = null;
-                  switchBottomBar(_bottomBarIndex, true);
-                }));
-          }
-
-          actions.add(PlatformPopupMenu(
-            options: filterActions,
-            icon: Badge(
-              label: Text(filterCount.toString()),
-              isLabelVisible: filterCount > 0,
-              textColor: Colors.white,
-              child: Icon(Icons.filter_alt,
-                  color: isCupertino(context) ? MyTheme.appColor : null),
-            ),
-            cupertino: (context, _) => CupertinoPopupMenuData(
-                title: const Text("Select Filters"),
-                cancelButtonData: CupertinoPopupMenuCancelButtonData(
-                  child: const Text('Close'),
-                  onPressed: () => Navigator.pop(context),
-                )),
-          ));
-        }
+        populateAndShowFilterMenu(state, context, actions);
 
         actions.addAll(MyAppBar.getDefaultActions(context));
 
@@ -639,8 +350,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               label: navItem.name,
               onTap: () {
                 setState(() {
-                  _bottomBarIndex = navItem.index;
-                  switchBottomBar(_bottomBarIndex, true);
+                  _navigationIndex = navItem.index;
+                  switchScreen(_navigationIndex, true);
                   Navigator.pop(context);
                 });
               }));
@@ -650,7 +361,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         var selectorColor = Colors.teal.shade50;
         var iconColor = textColor;
 
-        if (MyTheme.isDarkMode){
+        if (MyTheme.isDarkMode) {
           selectorColor = MyTheme.appColor;
           iconColor = selectorColor;
         }
@@ -743,7 +454,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                               : null,
                         ),
                         Expanded(child: (() {
-                          switch (_bottomBarIndex) {
+                          switch (_navigationIndex) {
                             case tabDevices:
                               return const DeviceList();
                             case tabLocations:
@@ -791,8 +502,312 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     );
   }
 
+  /// Populate and show filter menu
+  /// uncomment to disable
+  void populateAndShowFilterMenu(AppState state, BuildContext context, List<Widget> actions) {
+    if (_navigationIndex != tabGroups &&
+        _navigationIndex != tabSmartServices &&
+        _navigationIndex != tabDashboard) {
+      // TODO move decision to showFab etc.
+
+      final filterOkAction = PlatformDialogAction(
+        child: const Text("OK"),
+        onPressed: () {
+          switchScreen(_navigationIndex, true);
+          Navigator.pop(context);
+        },
+      );
+
+      final List<PopupMenuOption> filterActions = [];
+      if (_navigationIndex != tabClasses && state.deviceClasses.isNotEmpty) {
+        filterActions.add(PopupMenuOption(
+            label: '${filter.deviceClassIds != null ? '✓ ' : ''}Classes',
+            onTap: (_) => showPlatformDialog(
+                  context: context,
+                  builder: (context) => PlatformAlertDialog(
+                    title: const Text('Filter Classes'),
+                    content: SizedBox(
+                        width: double.maxFinite,
+                        height: MediaQuery.of(context).size.height -
+                            MediaQuery.textScaleFactorOf(context) * 172,
+                        child: Material(
+                            color: const Color(0x00000000),
+                            // required for ListTile
+                            child: ListView.builder(
+                                itemCount:
+                                    state.deviceClasses.values.length,
+                                itemBuilder: (context, i) {
+                                  final deviceClass = state
+                                      .deviceClasses.values
+                                      .elementAt(i);
+                                  return StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          ListTile(
+                                              trailing: PlatformSwitch(
+                                                onChanged: (checked) {
+                                                  if (checked == true) {
+                                                    filter.addDeviceClass(
+                                                        deviceClass.id);
+                                                  } else {
+                                                    filter
+                                                        .removeDeviceClass(
+                                                            deviceClass.id);
+                                                  }
+                                                  setState(() {});
+                                                },
+                                                value: filter.deviceClassIds
+                                                        ?.contains(
+                                                            deviceClass
+                                                                .id) ??
+                                                    false,
+                                              ),
+                                              title:
+                                                  Text(deviceClass.name)));
+                                }))),
+                    actions: <Widget>[
+                      filterOkAction
+                    ],
+                  ),
+                )));
+      }
+      if (_navigationIndex != tabLocations && state.locations.isNotEmpty) {
+        filterActions.add(PopupMenuOption(
+            label: '${filter.locationIds != null ? '✓ ' : ''}Locations',
+            onTap: (_) => showPlatformDialog(
+                  context: context,
+                  builder: (context) => PlatformAlertDialog(
+                    title: const Text('Filter Locations'),
+                    content: SizedBox(
+                        width: double.maxFinite,
+                        height: MediaQuery.of(context).size.height -
+                            MediaQuery.textScaleFactorOf(context) * 172,
+                        child: Material(
+                            color: const Color(0x00000000),
+                            // required for ListTile
+                            child: ListView.builder(
+                                itemCount: state.locations.length,
+                                itemBuilder: (context, i) {
+                                  final location =
+                                      state.locations.elementAt(i);
+                                  return StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          ListTile(
+                                              trailing: PlatformSwitch(
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      filter.addLocation(
+                                                          location.id);
+                                                    } else {
+                                                      filter.removeLocation(
+                                                          location.id);
+                                                    }
+                                                  });
+                                                },
+                                                value: filter.locationIds
+                                                        ?.contains(
+                                                            location.id) ??
+                                                    false,
+                                              ),
+                                              title: Text(location.name)));
+                                }))),
+                    actions: <Widget>[
+                      filterOkAction
+                    ],
+                  ),
+                )));
+      }
+      if (_navigationIndex != tabGroups && state.deviceGroups.isNotEmpty) {
+        filterActions.add(PopupMenuOption(
+            label: '${filter.deviceGroupIds != null ? '✓ ' : ''}Groups',
+            onTap: (_) => showPlatformDialog(
+                  context: context,
+                  builder: (context) => PlatformAlertDialog(
+                    title: const Text('Filter Groups'),
+                    content: SizedBox(
+                        width: double.maxFinite,
+                        height: MediaQuery.of(context).size.height -
+                            MediaQuery.textScaleFactorOf(context) * 172,
+                        child: Material(
+                            color: const Color(0x00000000),
+                            // required for ListTile
+                            child: ListView.builder(
+                                itemCount: state.deviceGroups.length,
+                                itemBuilder: (context, i) {
+                                  final deviceGroup =
+                                      state.deviceGroups.elementAt(i);
+                                  return StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          ListTile(
+                                              trailing: PlatformSwitch(
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      filter.addDeviceGroup(
+                                                          deviceGroup.id);
+                                                    } else {
+                                                      filter
+                                                          .removeDeviceGroup(
+                                                              deviceGroup
+                                                                  .id);
+                                                    }
+                                                  });
+                                                },
+                                                value: filter.deviceGroupIds
+                                                        ?.contains(
+                                                            deviceGroup
+                                                                .id) ??
+                                                    false,
+                                              ),
+                                              title:
+                                                  Text(deviceGroup.name)));
+                                }))),
+                    actions: <Widget>[
+                      filterOkAction
+                    ],
+                  ),
+                )));
+      }
+      if (_navigationIndex != tabNetworks && state.networks.isNotEmpty) {
+        filterActions.add(PopupMenuOption(
+            label: '${filter.networkIds != null ? '✓ ' : ''}Networks',
+            onTap: (_) => showPlatformDialog(
+                  context: context,
+                  builder: (context) => PlatformAlertDialog(
+                    title: const Text('Filter Networks'),
+                    content: SizedBox(
+                        width: double.maxFinite,
+                        height: MediaQuery.of(context).size.height -
+                            MediaQuery.textScaleFactorOf(context) * 172,
+                        child: Material(
+                            color: const Color(0x00000000),
+                            // required for ListTile
+                            child: ListView.builder(
+                                itemCount: state.networks.length,
+                                itemBuilder: (context, i) {
+                                  final network =
+                                      state.networks.elementAt(i);
+                                  return StatefulBuilder(
+                                      builder: (context, setState) =>
+                                          ListTile(
+                                              trailing: PlatformSwitch(
+                                                onChanged: (checked) {
+                                                  setState(() {
+                                                    if (checked == true) {
+                                                      filter.addNetwork(
+                                                          network.id);
+                                                    } else {
+                                                      filter.removeNetwork(
+                                                          network.id);
+                                                    }
+                                                  });
+                                                },
+                                                value: filter.networkIds
+                                                        ?.contains(
+                                                            network.id) ??
+                                                    false,
+                                              ),
+                                              title: Text(network.name)));
+                                }))),
+                    actions: <Widget>[
+                      filterOkAction
+                    ],
+                  ),
+                )));
+      }
+
+      if (_navigationIndex != tabFavorites) {
+        filterActions.add(PopupMenuOption(
+            label: '${filter.favorites == true ? '✓ ' : ''}Favorites',
+            onTap: (_) => setState(() {
+                  filter.favorites = filter.favorites == true ? null : true;
+                  switchScreen(_navigationIndex, true);
+                })));
+      }
+
+      addFilterMenuResetOption(filterActions, actions, context);
+    }
+  }
+
+  /*
+   * Add a reset option to the filter menu
+   */
+  void addFilterMenuResetOption(List<PopupMenuOption> filterActions,
+      List<Widget> actions, BuildContext context) {
+    final filterCount = _filterCount();
+    if (filterCount > 0) {
+      filterActions.add(PopupMenuOption(
+          material: (context, __) => MaterialPopupMenuOptionData(
+                  child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [Divider(), Text("Reset")],
+              )),
+          cupertino: (context, __) =>
+              CupertinoPopupMenuOptionData(isDestructiveAction: true),
+          label: 'Reset',
+          onTap: (_) {
+            if (_navigationIndex != tabLocations) {
+              filter.locationIds = null;
+            }
+            if (_navigationIndex != tabGroups) {
+              filter.deviceGroupIds = null;
+            }
+            if (_navigationIndex != tabNetworks) filter.networkIds = null;
+            if (_navigationIndex != tabClasses) {
+              filter.deviceClassIds = null;
+            }
+            if (_navigationIndex != tabFavorites) filter.favorites = null;
+            switchScreen(_navigationIndex, true);
+          }));
+    }
+
+    actions.add(PlatformPopupMenu(
+      options: filterActions,
+      icon: Badge(
+        label: Text(filterCount.toString()),
+        isLabelVisible: filterCount > 0,
+        textColor: Colors.white,
+        child: Icon(Icons.filter_alt,
+            color: isCupertino(context) ? MyTheme.appColor : null),
+      ),
+      cupertino: (context, _) => CupertinoPopupMenuData(
+          title: const Text("Select Filters"),
+          cancelButtonData: CupertinoPopupMenuCancelButtonData(
+            child: const Text('Close'),
+            onPressed: () => Navigator.pop(context),
+          )),
+    ));
+  }
+
+  /// Returns the number of filters that are currently active
+  int _filterCount() {
+    var count = (filter.locationIds ?? []).length +
+        (filter.deviceGroupIds ?? []).length +
+        (filter.networkIds ?? []).length +
+        (filter.deviceClassIds ?? []).length;
+    if (filter.favorites == true && _navigationIndex != tabFavorites) {
+      count++;
+    }
+    switch (_bottomBarIndex) {
+      case tabLocations:
+        count -= (filter.locationIds ?? []).length;
+        break;
+      case tabGroups:
+        count -= (filter.deviceGroupIds ?? []).length;
+        break;
+      case tabNetworks:
+        count -= (filter.networkIds ?? []).length;
+        break;
+      case tabClasses:
+        count -= (filter.deviceClassIds ?? []).length;
+        break;
+    }
+    return count;
+  }
+
   @override
   String? get restorationId => "device_list";
+
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
