@@ -136,6 +136,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                         parentState.hideSearch = false;
                                         parentState.onBackCallback = () {
                                           parentState.setState(() {
+                                            parentState.filter.deviceClassIds = null;
                                             parentState.customAppBarTitle = null;
                                             parentState.onBackCallback = null;
                                             parentState.hideSearch = true;
