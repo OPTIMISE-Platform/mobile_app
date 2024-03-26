@@ -48,33 +48,41 @@ class MgwService {
   }
 
   Future<String> GetBasicAuthValue() async {
-    _logger.d(LOG_PREFIX + ": Load basic auth credentials from storage");
-    var password = await MgwStorage.LoadBasicAuthCredentials();
-    String basicAuth =
-        'Basic ' + base64.encode(utf8.encode('admin:$password'));
-    return basicAuth;
+    _logger.d("$LOG_PREFIX: Load basic auth credentials from storage");
+    try {
+      var password = await MgwStorage.LoadBasicAuthCredentials();
+      String basicAuth =
+          'Basic ${base64.encode(utf8.encode('admin:$password'))}';
+      return basicAuth;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   LoadCredentialsFromStorage() async {
-    _logger.d(LOG_PREFIX + ": Load device credentials from storage");
+    _logger.d("$LOG_PREFIX: Load device credentials from storage");
     deviceCredentials = await MgwStorage.LoadCredentials();
   }
 
   MgwService(String host, bool authenticate) {
-    baseUrl = "http://" + host + ":8080";
+    baseUrl = "http://$host:8080";
     mgwAuthService = MgwAuth(host);
 
     if(authenticate) {
       dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
-        _logger.d(LOG_PREFIX + ": Set auth headers");
+        _logger.d("$LOG_PREFIX: Set auth headers");
         try {
           _logger.d("Try to get session token");
-          options.headers?['X-Session-Token'] = await GetSessionToken();
+          options.headers['X-Session-Token'] = await GetSessionToken();
         } catch (e) {
-          _logger.d("Try to get basic auth");
-          options.headers?['Authorization'] = await GetBasicAuthValue();
+          try {
+            _logger.d("Try to get basic auth");
+            options.headers['Authorization'] = await GetBasicAuthValue();
+          } catch (e) {
+            _logger.d(e);
+          }
         }
-        _logger.d(LOG_PREFIX + ": End interceptor");
+        _logger.d("$LOG_PREFIX: End interceptor");
         return handler.next(options);
       }));
     }
