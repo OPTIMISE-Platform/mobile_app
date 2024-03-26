@@ -37,7 +37,9 @@ import 'package:mobile_app/services/cache_helper.dart';
 
 class AppUpdater {
   static final _dio = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000, headers: {
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds:15000), headers: {
         "User-Agent": dotenv.env["GITHUB_REPO"] ??
             "" + "/" + (dotenv.env["VERSION"] ?? "")
       }))
@@ -130,9 +132,9 @@ class AppUpdater {
           "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
 
       final dio = Dio(BaseOptions(
-          connectTimeout: 5000,
-          sendTimeout: 5000,
-          receiveTimeout: 5000,
+          connectTimeout: const Duration(milliseconds: 5000),
+          sendTimeout: const Duration(milliseconds: 5000),
+          receiveTimeout: const Duration(milliseconds: 5000),
           headers: {
             "User-Agent": dotenv.env["GITHUB_REPO"] ??
                 "" + "/" + (dotenv.env["VERSION"] ?? "")

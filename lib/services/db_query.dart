@@ -27,7 +27,9 @@ import 'package:mobile_app/services/auth.dart';
 
 class DbQueryService {
   static final _dio = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 15000),))
     ..interceptors.add(ApiAvailableInterceptor());
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {

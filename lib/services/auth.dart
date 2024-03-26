@@ -45,7 +45,11 @@ class Auth extends ChangeNotifier {
   final _m = Mutex();
   final _clientSetupMutex = Mutex();
 
-  static final _dio = Dio(BaseOptions(connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+  static final _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(milliseconds: 5000),
+    sendTimeout: const Duration(milliseconds: 5000),
+    receiveTimeout: const Duration(milliseconds: 5000)
+  ))
     ..interceptors.add(ApiAvailableInterceptor())
     ..httpClientAdapter = AppHttpClientAdapter();
   static DateTime? _lastOnlineCheck;

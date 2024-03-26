@@ -64,7 +64,9 @@ class DeviceTypesPermSearchService {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio(BaseOptions(
-        connectTimeout: 5000, sendTimeout: 5000, receiveTimeout: 5000))
+        connectTimeout: const Duration(milliseconds: 5000),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();

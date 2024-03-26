@@ -33,7 +33,7 @@ class ApiAvailableInterceptor extends Interceptor {
       RequestInterceptorHandler handler,
       ) {
     if (!ApiAvailableService().isAvailable(options.path)) {
-      handler.reject(DioError(requestOptions: options, type: DioErrorType.other, error: ApiUnavailableException()), true);
+      handler.reject(DioException(requestOptions: options, type: DioExceptionType.unknown, error: ApiUnavailableException()), true);
     } else {
       handler.next(options);
     }

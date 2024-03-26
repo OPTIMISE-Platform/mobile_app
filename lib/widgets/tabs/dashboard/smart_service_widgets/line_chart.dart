@@ -92,10 +92,10 @@ class SmSeLineChart extends SmSeRequest {
                     minX: left.toDouble(),
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles: AxisTitles(
+                      rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
-                      topTitles: AxisTitles(
+                      topTitles: const AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false,
                         ),
@@ -152,7 +152,7 @@ class SmSeLineChart extends SmSeRequest {
                                             MyTheme.getSomeColor(e.barIndex))))
                                 .toList())),
                   ),
-                  swapAnimationDuration: Duration.zero,
+                  duration: Duration.zero,
                 )));
     return parentFlexible ? Expanded(child: w) : w;
   }

@@ -282,16 +282,16 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                     minY: !_allValuesEqual || _spots == null || _spots!.isEmpty ? null : (_spots?.first.y ?? 0) - 1,
                     lineBarsData: [
                       LineChartBarData(
-                        spots: _spots,
+                        spots: _spots!,
                         color: MyTheme.appColor,
                       )
                     ],
                     titlesData: FlTitlesData(
                       show: true,
-                      rightTitles: AxisTitles(
+                      rightTitles: const AxisTitles(
                         sideTitles: SideTitles(showTitles: false),
                       ),
-                      topTitles: AxisTitles(
+                      topTitles: const AxisTitles(
                         sideTitles: SideTitles(
                           showTitles: false,
                         ),
@@ -323,7 +323,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                     ),
                     lineTouchData: LineTouchData(touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
                   ),
-                  swapAnimationDuration: const Duration(milliseconds: 400),
+                  duration: const Duration(milliseconds: 400),
                 )));
   }
 

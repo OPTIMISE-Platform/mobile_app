@@ -53,7 +53,10 @@ class NotificationsService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
 
-    _dio = Dio(BaseOptions(connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+    _dio = Dio(BaseOptions(
+        connectTimeout: const Duration(milliseconds: 1500),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();

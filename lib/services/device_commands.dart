@@ -79,7 +79,9 @@ class DeviceCommandPort {
   );
 
   final _dioH1 = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 15000),))
     ..interceptors.add(ApiAvailableInterceptor());
 
   Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
@@ -102,7 +104,9 @@ class DeviceCommandCloud {
     printer: SimplePrinter(),
   );
   static final _dio2H2 = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 15000))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 15000),))
     ..interceptors.add(ApiAvailableInterceptor())
     ..httpClientAdapter = AppHttpClientAdapter();
 
@@ -174,7 +178,7 @@ class DeviceCommandsService {
       try {
         retryRes = await _runCommands(cloudRetries, true, "", preferEventValue);
       } on DioError catch (e) {
-        _logger.e("Cant run cloud commands :" + e.message);
+        _logger.e("Cant run cloud commands :${e.message!}");
         retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length,
             (index) => DeviceCommandResponse(502, e.toString()));
       }

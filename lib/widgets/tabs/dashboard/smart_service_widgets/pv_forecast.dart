@@ -93,7 +93,7 @@ class SmSePvForecast extends SmSeRequest {
                 ),
                 lineTouchData: LineTouchData(enabled: false),
               ),
-              swapAnimationDuration: const Duration(milliseconds: 400),
+              duration: const Duration(milliseconds: 400),
             )),
     Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text("Upcoming timeframes:   "), Text(_recommendations.join("\n"))])]);
     return parentFlexible ? Expanded(child: w) : w;
@@ -180,8 +180,7 @@ Future<SizedPicture> sunsvg() async {
     </svg>
     """
       .replaceAll("#FFFFFF", "rgb(${MyTheme.appColor.red}, ${MyTheme.appColor.green}, ${MyTheme.appColor.blue})");
-  final svgRoot = await svg.fromSvgString(rawSvg, rawSvg, theme: const SvgTheme(currentColor: MyTheme.appColor, fontSize: 8));
-  final picture = svgRoot.toPicture();
-  final sizedPicture = SizedPicture(picture, 24, 24);
+  final PictureInfo pictureInfo = await vg.loadPicture(SvgStringLoader(rawSvg, theme: const SvgTheme(currentColor: MyTheme.appColor, fontSize: 8)), null);
+  final sizedPicture = SizedPicture(pictureInfo.picture, 24, 24);
   return sizedPicture;
 }

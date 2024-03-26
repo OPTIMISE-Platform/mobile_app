@@ -28,11 +28,22 @@ class DefaultFirebaseOptions {
         return ios;
       case TargetPlatform.macOS:
         return macos;
-    }
-
-    throw UnsupportedError(
-      'DefaultFirebaseOptions are not supported for this platform.',
-    );
+      case TargetPlatform.fuchsia:
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for fuchsia - '
+              'you can reconfigure this by running the FlutterFire CLI again.',
+        );
+      case TargetPlatform.linux:
+      throw UnsupportedError(
+        'DefaultFirebaseOptions have not been configured for linux - '
+            'you can reconfigure this by running the FlutterFire CLI again.',
+      );
+      case TargetPlatform.windows:
+        // TODO: Handle this case.
+        throw UnsupportedError(
+          'DefaultFirebaseOptions have not been configured for windows - '
+          'you can reconfigure this by running the FlutterFire CLI again.',
+        );}
   }
 
   static final FirebaseOptions web = FirebaseOptions(

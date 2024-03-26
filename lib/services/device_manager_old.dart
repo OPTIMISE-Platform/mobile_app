@@ -35,7 +35,9 @@ class DeviceManagerOld {
   );
 
   final dio = Dio(BaseOptions(
-      connectTimeout: 1500, sendTimeout: 5000, receiveTimeout: 5000))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),))
     ..interceptors.add(ApiAvailableInterceptor());
 
 
@@ -46,8 +48,8 @@ class DeviceManagerOld {
       _logger.d("$LOG_PREFIX: Try to load devices from: $devicesUrl");
       resp = await dio.get<Map<String, dynamic>>(devicesUrl);
       return resp;
-    } on DioError catch (e) {
-      if (e.type == DioErrorType.connectTimeout) {
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.connectionTimeout) {
         throw ApiUnavailableException();
       }
       _logger.d("$LOG_PREFIX: Could not load devices: ${e.message}");

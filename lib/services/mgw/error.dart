@@ -34,16 +34,16 @@ Failure handleDioError(DioError error) {
 
   Failure failure;
   switch (error.type) {
-    case DioErrorType.connectTimeout:
-      failure = Failure(ErrorCode.CONNECT_TIMEOUT, error.message);
+    case DioExceptionType.connectionTimeout:
+      failure = Failure(ErrorCode.CONNECT_TIMEOUT, error.message!);
       break;
-    case DioErrorType.sendTimeout:
-      failure = Failure(ErrorCode.SEND_TIMEOUT, error.message);
+    case DioExceptionType.sendTimeout:
+      failure = Failure(ErrorCode.SEND_TIMEOUT, error.message!);
       break;
-    case DioErrorType.receiveTimeout:
-      failure = Failure(ErrorCode.RECEIVE_TIMEOUT, error.message);
+    case DioExceptionType.receiveTimeout:
+      failure = Failure(ErrorCode.RECEIVE_TIMEOUT, error.message!);
       break;
-    case DioErrorType.response:
+    case DioExceptionType.badResponse:
       if (error.response != null &&
           error.response?.statusCode != null &&
           error.response?.statusMessage != null) {
@@ -65,14 +65,14 @@ Failure handleDioError(DioError error) {
         }
         break;
       } else {
-        failure = Failure(ErrorCode.DEFAULT, error.message);
+        failure = Failure(ErrorCode.DEFAULT, error.message!);
         break;
       }
-    case DioErrorType.cancel:
-      failure = Failure(ErrorCode.CANCEL, error.message);
+    case DioExceptionType.cancel:
+      failure = Failure(ErrorCode.CANCEL, error.message!);
       break;
     default:
-      failure = Failure(ErrorCode.DEFAULT, error.message);
+      failure = Failure(ErrorCode.DEFAULT, error.message!);
       break;
   }
 
