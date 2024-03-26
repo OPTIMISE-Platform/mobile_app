@@ -479,7 +479,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                   child: element.transitioning
                       ? DelayedCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
-                          Text("${formatValue(element.value)} ${unit}", style: const TextStyle(fontStyle: FontStyle.italic)),
+                          Text("${formatValue(element.value)} ${unit}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 )),
           );
         } else {

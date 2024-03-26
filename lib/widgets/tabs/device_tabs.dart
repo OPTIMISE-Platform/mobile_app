@@ -221,11 +221,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       disabledColor = Theme.of(context).disabledColor;
     }
 
-    final List<BottomNavigationBarItem> items = [];
+    final List<BottomNavigationBarItem> bottomBarItems = [];
 
     if (Platform.isIOS) {
       navItems.forEach((navItem) {
-        items.add(BottomNavigationBarItem(
+        bottomBarItems.add(BottomNavigationBarItem(
             tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
             icon: Icon(navItem.icon,
                 key: _tabKeys[navItem.index],
@@ -235,7 +235,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     } else {
       navItems.forEach((navItem) {
         if (["Favorites", "Dashboard"].contains(navItem.name)) {
-          items.add(BottomNavigationBarItem(
+          bottomBarItems.add(BottomNavigationBarItem(
               tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
               icon: Icon(navItem.icon,
                   key: _tabKeys[navItem.index],
@@ -246,8 +246,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     }
 
     return PlatformNavBar(
-        items: items,
-        currentIndex: _bottomBarIndex > items.length - 1 ? 0 : _bottomBarIndex,
+        items: bottomBarItems,
+        currentIndex: _bottomBarIndex,
         itemChanged: (i) {
           debugPrint("BottomBar: $i");
           if (disabled[i]) {
@@ -255,15 +255,14 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             return;
           }
           setState(() {
+            _bottomBarIndex = i;
             _navigationIndex = i;
             _sidebarController.selectIndex(i);
           });
           HapticFeedbackProxy.lightImpact();
           switchScreen(i, false);
         },
-        material: (context, _) => MaterialNavBarData(
-            selectedItemColor: MyTheme.appColor,
-            unselectedItemColor: MyTheme.appColor));
+    );
   }
 
   @override
@@ -335,7 +334,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         actions.addAll(MyAppBar.getDefaultActions(context));
 
-        final appBar = MyAppBar(customAppBarTitle ?? "OPTIMISE");
+        final appBar = MyAppBar(customAppBarTitle ?? "");
         Widget? leadingAction;
         if (onBackCallback != null) {
           leadingAction = IconButton(
@@ -347,6 +346,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         navItems.forEach((navItem) {
           sidebarItems.add(SidebarXItem(
+
               icon: navItem.icon,
               label: navItem.name,
               onTap: () {
@@ -360,11 +360,13 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         var textColor = MyTheme.textColor;
         var selectorColor = Colors.teal.shade50;
-        var iconColor = textColor;
+        var iconColor = MyTheme.appColor;
+        var backgroundColor = Colors.white;
 
         if (MyTheme.isDarkMode) {
-          selectorColor = MyTheme.appColor;
-          iconColor = selectorColor;
+            selectorColor = MyTheme.appColor;
+            iconColor = Colors.white;
+            backgroundColor = const Color(0xFF424242);
         }
 
         final divider = Divider(color: textColor?.withOpacity(0.3), height: 1);
@@ -390,6 +392,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
             );
           },
           theme: SidebarXTheme(
+            decoration: BoxDecoration(
+              color: backgroundColor,
+            ),
             textStyle: TextStyle(color: textColor),
             selectedTextStyle: TextStyle(color: textColor),
             itemTextPadding: const EdgeInsets.only(left: 30),
@@ -403,6 +408,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                 bottomLeft: Radius.circular(10),
               ),
             ),
+            selectedIconTheme: IconThemeData(color: iconColor),
             iconTheme: IconThemeData(
               color: iconColor,
               size: 20,

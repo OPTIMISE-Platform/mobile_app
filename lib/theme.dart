@@ -57,6 +57,8 @@ class MyTheme {
   static final formatEddMMy = DateFormat('E, dd.MM.y');
 
   static ThemeData materialTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF32b8ba)),
       cupertinoOverrideTheme: cupertinoTheme,
       primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
         50: Color.fromRGBO(50, 184, 186, 0.1),
@@ -76,9 +78,43 @@ class MyTheme {
           foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: MyTheme.appColor));
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: MyTheme.appColor
+      ),
+      appBarTheme: const AppBarTheme(
+          backgroundColor: MyTheme.appColor,
+          foregroundColor: Colors.black,
+          scrolledUnderElevation: 0,
+      ),
+      navigationBarTheme:  const NavigationBarThemeData(
+        shadowColor: Colors.black,
+          height: 60,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          indicatorColor: Colors.white,
+      ),
+      scaffoldBackgroundColor: Colors.white,
+      elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+              backgroundColor: MyTheme.appColor,
+              foregroundColor: Colors.black,
+          )
+      ),
+      cardTheme:  CardTheme(
+        shape: BeveledRectangleBorder(
+            borderRadius: BorderRadius.circular(0),
+            side: const BorderSide(color: Colors.white24, width: 1)))
+  );
 
   static ThemeData materialDarkTheme = ThemeData(
+    primaryColor: const Color(0xFF32b8ba),
+    colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF32b8ba),
+        brightness: Brightness.dark,
+        secondary: const Color(0xFF33cca0),
+      background: const Color(0xFF303030),
+    ),
+    useMaterial3: true,
     cupertinoOverrideTheme: cupertinoTheme,
     primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
       50: Color.fromRGBO(50, 184, 186, 0.1),
@@ -92,14 +128,32 @@ class MyTheme {
       800: Color.fromRGBO(50, 184, 186, 0.9),
       900: Color.fromRGBO(50, 184, 186, 1),
     }),
-    brightness: Brightness.dark,
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
         padding: MaterialStateProperty.all(MyTheme.inset),
         foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: MyTheme.appColor),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: MyTheme.appColor
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: Color(0xFF424242),
+      foregroundColor: Colors.white,
+      scrolledUnderElevation: 0,
+    ),
+    navigationBarTheme:  const NavigationBarThemeData(
+        backgroundColor: Color(0xFF424242),
+        surfaceTintColor: Color(0xFF424242),
+        indicatorColor: Color(0xFF424242),
+      height: 60
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: MyTheme.appColor,
+          foregroundColor: Colors.black,
+        )
+    ),
   );
 
   static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
@@ -136,6 +190,8 @@ class MyTheme {
           : themeMaterial;
   static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
 
+  static ThemeMode? themeMode = ThemeMode.light;
+
   static loadTheme() async {
     var val = Settings.getTheme();
     if (val == themeMaterial) {
@@ -148,8 +204,10 @@ class MyTheme {
 
     val = Settings.getThemeColor();
     if (val == dark) {
+      themeMode = ThemeMode.dark;
       currentColor = dark;
     } else if (val == light) {
+      themeMode = ThemeMode.light;
       currentColor = light;
     }
   }
@@ -185,8 +243,12 @@ class MyTheme {
   static selectThemeColor(ThemeColor? theme) async {
     switch (theme) {
       case dark:
+        await Settings.setThemeColor(theme!);
+        currentColor = theme;
+        themeMode = ThemeMode.dark;
       case light:
         await Settings.setThemeColor(theme!);
+        themeMode = ThemeMode.light;
         currentColor = theme;
         break;
       default:

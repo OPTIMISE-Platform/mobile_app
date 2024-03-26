@@ -21,7 +21,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import "package:intl/intl_standalone.dart" if (dart.library.html) "package:intl/intl_browser.dart";
+import "package:intl/intl_standalone.dart"
+    if (dart.library.html) "package:intl/intl_browser.dart";
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -82,7 +83,8 @@ Future main() async {
   print("Auth init took ${DateTime.now().difference(sub)}");
 
   sub = DateTime.now();
-  await CacheHelper.scheduleCacheUpdates().catchError((_) => Toast.showToastNoContext("Could not refresh cache"));
+  await CacheHelper.scheduleCacheUpdates()
+      .catchError((_) => Toast.showToastNoContext("Could not refresh cache"));
   print("Cache init took ${DateTime.now().difference(sub)}");
 
   print("App init took ${DateTime.now().difference(start)}");
@@ -131,28 +133,36 @@ class MyAppState extends State<MyApp> {
           if (pos == null) return null;
           return LatLng(pos.latitude, pos.longitude);
         },
-        getLocationStream: () => Geolocator.getPositionStream().map((event) => LatLng(event.latitude, event.longitude)),
+        getLocationStream: () => Geolocator.getPositionStream()
+            .map((event) => LatLng(event.latitude, event.longitude)),
         child: Theme(
           key: key,
           data: MyTheme.materialTheme,
           child: PlatformProvider(
-            initialPlatform: MyTheme.initialPlatform,
-            settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
-            builder: (context) => PlatformApp(
-              navigatorKey: navigatorKey,
-              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-                DefaultMaterialLocalizations.delegate,
-                DefaultWidgetsLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-              ],
-              home: const Home(),
-              material: (_, __) => MaterialAppData(
-                title: "OPTIMISE",
-                theme: MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme,
+              initialPlatform: MyTheme.initialPlatform,
+              settings: PlatformSettingsData(
+                iosUsesMaterialWidgets: true,
               ),
-              cupertino: (_, __) => MyTheme.cupertinoAppData,
-            ),
-          ),
+              builder: (context) => PlatformTheme(
+                themeMode: MyTheme.themeMode,
+                materialLightTheme: MyTheme.materialTheme,
+                materialDarkTheme: MyTheme.materialDarkTheme,
+                matchCupertinoSystemChromeBrightness: true,
+                onThemeModeChanged: (themeMode) {
+                  MyTheme.themeMode = themeMode; /* you can save to storage */
+                },
+                builder: (context) => PlatformApp(
+                  navigatorKey: navigatorKey,
+                  localizationsDelegates: const <LocalizationsDelegate<
+                      dynamic>>[
+                        DefaultMaterialLocalizations.delegate,
+                        DefaultWidgetsLocalizations.delegate,
+                        DefaultCupertinoLocalizations.delegate,
+                      ],
+                  home: const Home(),
+                  cupertino: (_, __) => MyTheme.cupertinoAppData,
+                    ),
+                  )),
         ));
   }
 }

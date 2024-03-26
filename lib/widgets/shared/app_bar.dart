@@ -68,26 +68,26 @@ class MyAppBar {
   static PreferredSizeWidget? _localMode(BuildContext context) {
     bool? localMode = SettingsService.Settings.getLocalMode();
 
-    return localMode != true
-        ? null
-        : PreferredSize(
-            preferredSize:
-                const Size(128, 23),
+    return localMode != true ? null : const PreferredSize(
+            preferredSize: Size(128, 23),
             child: ColoredBox(
                 color: Colors.black,
-                child: (Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(
-                      Icons.lan_outlined,
-                      color: Colors.white,
-                    ),
-                    Text(
-                      " Local Mode",
-                      style: TextStyle(color: Colors.white),
+                child: (
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lan_outlined,
+                          color: Colors.white,
+                        ),
+                        Text(
+                          " Local Mode",
+                          style: TextStyle(color: Colors.white),
+                        )],
                     )
-                  ],
-                ))));
+                )
+            )
+    );
   }
 
   static Widget _updateIcon(BuildContext context) {
@@ -136,7 +136,9 @@ class MyAppBar {
     return PlatformAppBar(
       title: PlatformWidget(
           material: (_, __) => Text(_title, overflow: TextOverflow.fade),
-          cupertino: (_, __) => Text(_title + (SettingsService.Settings.getLocalMode() ? " (Offline)" : ""),
+          cupertino: (_, __) => Text(
+              _title +
+                  (SettingsService.Settings.getLocalMode() ? " (Offline)" : ""),
               style: const TextStyle(color: Colors.white),
               overflow: TextOverflow.fade)),
       cupertino: (_, __) => CupertinoNavigationBarData(
