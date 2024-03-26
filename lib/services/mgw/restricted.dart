@@ -40,9 +40,9 @@ class MgwService {
 
   Future<String> GetSessionToken() async {
     // TODO dont load credentials + request token at every request
-    _logger.d(LOG_PREFIX + ": Load device credentials from storage");
+    _logger.d("$LOG_PREFIX: Load device credentials from storage");
     await LoadCredentialsFromStorage();
-    _logger.d(LOG_PREFIX + ": Perform Login");
+    _logger.d("$LOG_PREFIX: Perform Login");
     var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
     return loginResponse.token;
   }
@@ -90,29 +90,29 @@ class MgwService {
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
     var url = baseUrl + path;
-    _logger.d(LOG_PREFIX + ": POST to: " + url);
+    _logger.d("$LOG_PREFIX: POST to: $url");
     Response resp;
     try {
       resp = await dio.post(url, data: data, options: options);
       return resp;
     } on DioError catch (e) {
-      _logger.e(LOG_PREFIX + ": Request error");
+      _logger.e("$LOG_PREFIX: Request error");
       var failure = handleDioError(e);
       throw(failure);
-    };
+    }
   }
 
   Future<Response<dynamic>> Get(String path, Options options) async {
     var url = baseUrl + path;
-    _logger.d(LOG_PREFIX + ": GET from: " + url);
+    _logger.d("$LOG_PREFIX: GET from: $url");
     Response resp;
     try {
       resp = await dio.get(url, options: options);
       return resp;
     } on DioError catch (e) {
-      _logger.e(LOG_PREFIX + ": Request error");
+      _logger.e("$LOG_PREFIX: Request error");
       var failure = handleDioError(e);
       throw(failure);
-    };
+    }
   }
 }

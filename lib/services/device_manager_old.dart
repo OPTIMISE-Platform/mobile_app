@@ -47,14 +47,17 @@ class DeviceManagerOld {
 
 
   Future<Response<Map<String, dynamic>>> getDevices() async {
-    final devicesUrl = basePath + "/devices";
+    final devicesUrl = "$basePath/devices";
     final Response<Map<String, dynamic>> resp;
     try {
-      _logger.d(LOG_PREFIX + ": Try to load devices from: " + devicesUrl);
+      _logger.d("$LOG_PREFIX: Try to load devices from: $devicesUrl");
       resp = await dio.get<Map<String, dynamic>>(devicesUrl);
       return resp;
     } on DioError catch (e) {
-      _logger.d(LOG_PREFIX + ": Could not load devices: " + e.message);
+      if (e.type == DioErrorType.connectTimeout) {
+        throw ApiUnavailableException();
+      }
+      _logger.d("$LOG_PREFIX: Could not load devices: ${e.message}");
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$devicesUrl ${e.message}");
       }
