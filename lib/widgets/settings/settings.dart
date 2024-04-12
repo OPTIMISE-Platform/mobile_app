@@ -235,6 +235,20 @@ class Settings extends StatelessWidget {
       children.addAll([
         const Divider(),
         ListTile(
+          title: const Text("Show Filter"),
+          trailing: PlatformSwitch(
+            onChanged: (bool value) async {
+              await settings_service.Settings.setFilterMode(value);
+              state.notifyListeners();
+              HapticFeedbackProxy.lightImpact();
+            },
+            value: settings_service.Settings.getFilterMode(),
+          ),
+        )
+      ]);
+      children.addAll([
+        const Divider(),
+        ListTile(
             title: const Text("Show Debug Information"),
             onTap: () async {
               var txt = "Version: ${dotenv.env["VERSION"]}\n"

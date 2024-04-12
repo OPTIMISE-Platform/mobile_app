@@ -47,6 +47,8 @@ import 'package:mobile_app/widgets/tabs/networks/device_networks.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 import 'package:sidebarx/sidebarx.dart';
 
+import '../../services/settings.dart';
+
 class DeviceTabs extends StatefulWidget {
   const DeviceTabs({Key? key}) : super(key: key);
 
@@ -330,8 +332,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         }
 
 
-        populateAndShowFilterMenu(state, context, actions);
-
+        if (Settings.getFilterMode()){
+          populateAndShowFilterMenu(state, context, actions);
+        }
         actions.addAll(MyAppBar.getDefaultActions(context));
 
         final appBar = MyAppBar(customAppBarTitle ?? "");

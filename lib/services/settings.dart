@@ -55,6 +55,8 @@ class Settings {
 
   static const _localModeKey = "local_mode";
 
+  static const _filterModeKey = "filter_mode";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -297,6 +299,16 @@ class Settings {
   static Future<void> setLocalMode(bool? value) {
     checkInit();
     return _box!.put(_localModeKey, value.toString());
+  }
+
+  static bool getFilterMode() {
+    checkInit();
+    return _box!.get(_filterModeKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setFilterMode(bool? value) {
+    checkInit();
+    return _box!.put(_filterModeKey, value.toString());
   }
 }
 
