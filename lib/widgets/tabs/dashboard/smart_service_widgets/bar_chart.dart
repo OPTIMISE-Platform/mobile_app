@@ -47,14 +47,20 @@ class SmSeBarChart extends SmSeLineChart {
         ? const Center(child: Text("No Data"))
         : Container(
             height: height * heightUnit - MyTheme.insetSize,
-            padding:
-                const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+            padding: const EdgeInsets.only(
+                top: MyTheme.insetSize,
+                right: MyTheme.insetSize,
+                left: MyTheme.insetSize / 2,
+                bottom: MyTheme.insetSize / 2),
             child: gestureDetector(
                 context,
                 BarChart(
                   BarChartData(
                       borderData: FlBorderData(show: false),
-                      barGroups: barGroups.where((element) => element.x >= left && element.x <= right).toList(),
+                      barGroups: barGroups
+                          .where((element) =>
+                              element.x >= left && element.x <= right)
+                          .toList(),
                       titlesData: FlTitlesData(
                         show: true,
                         rightTitles: const AxisTitles(
@@ -66,19 +72,23 @@ class SmSeBarChart extends SmSeLineChart {
                           ),
                         ),
                         bottomTitles: AxisTitles(
-                          sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat)
+                          sideTitles: BaseChartFormatter.getBottomTitles(
+                              context, dateFormat),
                         ),
                         leftTitles: AxisTitles(
-                          sideTitles: BaseChartFormatter.getLeftTitles(context)
-                        ),
+                            sideTitles:
+                                BaseChartFormatter.getLeftTitles(context)),
                       ),
                       barTouchData: BarTouchData(
                           enabled: !preview,
                           touchTooltipData: BarTouchTooltipData(
                               fitInsideHorizontally: true,
                               fitInsideVertically: true,
-                              getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                                  "${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}", TextStyle(color: rod.color))))),
+                              getTooltipItem: (group, groupIndex, rod,
+                                      rodIndex) =>
+                                  BarTooltipItem(
+                                      "${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}",
+                                      TextStyle(color: rod.color))))),
                   swapAnimationDuration: Duration.zero,
                 )));
     return parentFlexible ? Expanded(child: w) : w;
@@ -98,8 +108,12 @@ class SmSeBarChart extends SmSeLineChart {
           .asMap()
           .entries
           .map<BarChartRodData>((e) => BarChartRodData(
-              toY: double.parse((e.value is int ? e.value.toDouble() : e.value ?? 0).toStringAsFixed(precision)),
-              color: i == values.length - 1 && colorLatestSpecial && initialTimestampDifference == null
+              toY: double.parse(
+                  (e.value is int ? e.value.toDouble() : e.value ?? 0)
+                      .toStringAsFixed(precision)),
+              color: i == values.length - 1 &&
+                      colorLatestSpecial &&
+                      initialTimestampDifference == null
                   ? getSpecialColor(e.key)
                   : MyTheme.getSomeColor(e.key),
               width: 20,
@@ -119,8 +133,11 @@ class SmSeBarChart extends SmSeLineChart {
 
   Color getSpecialColor(int key) {
     return MyTheme.getSomeColor(key)
-        .withRed((MyTheme.getSomeColor(key).red * specialColorMultiplier).toInt())
-        .withGreen((MyTheme.getSomeColor(key).green * specialColorMultiplier).toInt())
-        .withBlue((MyTheme.getSomeColor(key).blue * specialColorMultiplier).toInt());
+        .withRed(
+            (MyTheme.getSomeColor(key).red * specialColorMultiplier).toInt())
+        .withGreen(
+            (MyTheme.getSomeColor(key).green * specialColorMultiplier).toInt())
+        .withBlue(
+            (MyTheme.getSomeColor(key).blue * specialColorMultiplier).toInt());
   }
 }
