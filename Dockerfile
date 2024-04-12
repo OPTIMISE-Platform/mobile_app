@@ -1,4 +1,4 @@
-FROM cirrusci/flutter:3.7.1 AS builder
+FROM cirrusci/flutter:3.19.4 AS builder
 RUN mkdir app
 WORKDIR app
 COPY . .
