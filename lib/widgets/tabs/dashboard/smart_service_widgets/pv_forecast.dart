@@ -18,6 +18,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/theme.dart';
@@ -26,6 +27,8 @@ import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 class SmSePvForecast extends SmSeRequest {
   @override
   setPreview(bool enabled) => null;
+
+  DateFormat dateFormat = MyTheme.formatHHMM;
 
   final List<LineChartBarData> _lines = [];
   final List<VerticalLine> _verticalLines = [];
@@ -56,42 +59,22 @@ class SmSePvForecast extends SmSeRequest {
                 lineBarsData: _lines,
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: AxisTitles(
+                  rightTitles: const AxisTitles(
                     sideTitles: SideTitles(showTitles: false),
                   ),
-                  topTitles: AxisTitles(
+                  topTitles: const AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: false,
                     ),
                   ),
                   bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 36,
-                        interval: 6 * 60 * 60 * 1000,
-                        getTitlesWidget: (val, meta) {
-                          if (val == meta.max || val == meta.min) {
-                            return const SizedBox.shrink();
-                          }
-                          final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                          return Container(
-                              padding: const EdgeInsets.only(top: 18),
-                              child: Text(MyTheme.formatHHMM.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                        }),
+                    sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat, reservedSize: 36, interval: 6 * 60 * 60 * 1000)
                   ),
                   leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 32,
-                        getTitlesWidget: (val, meta) {
-                          if (val == meta.max || val == meta.min) {
-                            return const SizedBox.shrink();
-                          }
-                          return Text("${meta.formattedValue} %", style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                        }),
+                    sideTitles: BaseChartFormatter.getLeftTitles(context, suffix: "%")
                   ),
                 ),
-                lineTouchData: LineTouchData(enabled: false),
+                lineTouchData: const LineTouchData(enabled: false),
               ),
               duration: const Duration(milliseconds: 400),
             )),

@@ -63,7 +63,7 @@ dependencies:
   hive: ^2.2.3
   open_file_plus: ^3.4.1
   share_plus: ^8.0.2
-  fl_chart: ^0.66.2
+  fl_chart: ^0.67.0
   numberpicker: ^2.1.1
   flutter_native_splash: ^2.3.1
   tutorial_coach_mark: ^1.2.11

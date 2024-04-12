@@ -21,6 +21,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_char
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/indicator.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 
 class SmSeStackedBarChart extends SmSeBarChart {
   int touchedIndex = -1;
@@ -81,38 +82,19 @@ class SmSeStackedBarChart extends SmSeBarChart {
                           barGroups: barGroups.where((e) => e.x >= left && e.x <= right).toList(),
                           titlesData: FlTitlesData(
                             show: true,
-                            rightTitles: AxisTitles(
+                            rightTitles: const AxisTitles(
                               sideTitles: SideTitles(showTitles: false),
                             ),
-                            topTitles: AxisTitles(
+                            topTitles: const AxisTitles(
                               sideTitles: SideTitles(
                                 showTitles: false,
                               ),
                             ),
                             bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 14,
-                                  getTitlesWidget: (val, meta) {
-                                    if (val == meta.max || val == meta.min) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                                    return Container(
-                                        padding: const EdgeInsets.only(top: 3),
-                                        child: Text(dateFormat.format(dt), style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11)));
-                                  }),
+                              sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat)
                             ),
                             leftTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                  showTitles: true,
-                                  reservedSize: 24,
-                                  getTitlesWidget: (val, meta) {
-                                    if (val == meta.max || val == meta.min) {
-                                      return const SizedBox.shrink();
-                                    }
-                                    return Text(meta.formattedValue, style: TextStyle(fontSize: MediaQuery.textScaleFactorOf(context) * 11));
-                                  }),
+                              sideTitles: BaseChartFormatter.getLeftTitles(context)
                             ),
                           ),
                           barTouchData: BarTouchData(enabled: false)),

@@ -21,6 +21,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/models/db_query.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 import 'package:mutex/mutex.dart';
 import 'package:stats/stats.dart';
@@ -72,6 +73,7 @@ class SmSeLineChart extends SmSeRequest {
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
+
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -101,42 +103,10 @@ class SmSeLineChart extends SmSeRequest {
                         ),
                       ),
                       bottomTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 14,
-                            //interval: 5 * 60 * 1000,
-                            getTitlesWidget: (val, meta) {
-                              if (val == meta.max || val == meta.min) {
-                                return const SizedBox.shrink();
-                              }
-                              final dt = DateTime.fromMillisecondsSinceEpoch(
-                                      val.floor(),
-                                      isUtc: true)
-                                  .toLocal();
-                              return Container(
-                                  padding: const EdgeInsets.only(top: 3),
-                                  child: Text(dateFormat.format(dt),
-                                      style: TextStyle(
-                                          fontSize:
-                                              MediaQuery.textScaleFactorOf(
-                                                      context) *
-                                                  11)));
-                            }),
+                        sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat),
                       ),
                       leftTitles: AxisTitles(
-                        sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 24,
-                            getTitlesWidget: (val, meta) {
-                              if (val == meta.max || val == meta.min) {
-                                return const SizedBox.shrink();
-                              }
-                              return Text(meta.formattedValue,
-                                  style: TextStyle(
-                                      fontSize: MediaQuery.textScaleFactorOf(
-                                              context) *
-                                          11));
-                            }),
+                        sideTitles: BaseChartFormatter.getLeftTitles(context),
                       ),
                     ),
                     lineTouchData: LineTouchData(
@@ -196,13 +166,13 @@ class SmSeLineChart extends SmSeRequest {
           return d < 0 ? d.floor() : d.ceil();
         });
         _lines[e.key] = LineChartBarData(
-          dotData: FlDotData(show: false),
+          dotData: const FlDotData(show: false),
           spots: _lines[e.key].spots,
           color: MyTheme.getSomeColor(e.key + colorOffset),
         );
       } else {
         _lines.add(LineChartBarData(
-          dotData: FlDotData(show: false),
+          dotData: const FlDotData(show: false),
           spots: e.value,
           color: MyTheme.getSomeColor(e.key + colorOffset),
         ));
