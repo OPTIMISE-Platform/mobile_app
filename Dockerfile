@@ -1,4 +1,4 @@
-FROM cirrusci/flutter:3.19.4 AS builder
+FROM ghcr.io/cirruslabs/flutter:3.19.4 AS builder
 RUN mkdir app
 WORKDIR app
 COPY . .
