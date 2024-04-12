@@ -43,6 +43,7 @@ class SmSeBarChart extends SmSeLineChart {
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
+    debugPrint("barGroups: ${barGroups.length}");
     final Widget w = barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -106,6 +107,7 @@ class SmSeBarChart extends SmSeLineChart {
   @override
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
+    debugPrint("values: ${values.length}");
     for (int i = 0; i < values.length; i++) {
       final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
       timestamps.add(values[i][0]);
@@ -137,6 +139,12 @@ class SmSeBarChart extends SmSeLineChart {
     }
     barGroups.sort((a, b) => a.x - b.x);
     rawTimestamps.sort();
+    final cutOff = barGroups.length - 12;
+    if (cutOff > 0) {
+      barGroups.removeRange(0, cutOff);
+      timestamps.removeRange(0, cutOff);
+      rawTimestamps.removeRange(0, cutOff);
+    }
     setDateFormat(timestamps, rawTimestamps);
   }
 

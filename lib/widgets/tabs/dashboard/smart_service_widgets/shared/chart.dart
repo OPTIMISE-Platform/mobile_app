@@ -44,7 +44,7 @@ class BaseChartFormatter {
                     child: Text(formatted,
                         style: TextStyle(
                             fontSize:
-                            MediaQuery.textScalerOf(context).scale(12)))));
+                            MediaQuery.textScalerOf(context).scale(11)))));
           }
           return Container(
               padding: const EdgeInsets.only(top: 3),
