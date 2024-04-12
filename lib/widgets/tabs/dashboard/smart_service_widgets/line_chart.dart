@@ -73,7 +73,6 @@ class SmSeLineChart extends SmSeRequest {
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
-
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -103,7 +102,15 @@ class SmSeLineChart extends SmSeRequest {
                         ),
                       ),
                       bottomTitles: AxisTitles(
-                        sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat),
+                        sideTitles:
+                                (rawTimestamps.length > 100 &&
+                                    MediaQuery.of(context).orientation ==
+                                        Orientation.landscape)
+                            ? BaseChartFormatter.getBottomTitles(
+                                    context, dateFormat,
+                                    rotated: true, reservedSize: 50)
+                            : BaseChartFormatter.getBottomTitles(
+                                context, dateFormat),
                       ),
                       leftTitles: AxisTitles(
                         sideTitles: BaseChartFormatter.getLeftTitles(context),
@@ -314,7 +321,9 @@ class SmSeLineChart extends SmSeRequest {
 
   Future<void> addFromRequest(Request request) async {
     final resp = await request.perform<List<dynamic>>();
-    if (resp.statusCode == null || resp.statusCode! > 299 || resp.data == null) {
+    if (resp.statusCode == null ||
+        resp.statusCode! > 299 ||
+        resp.data == null) {
       return;
     } else {
       final respArr = resp.data!;

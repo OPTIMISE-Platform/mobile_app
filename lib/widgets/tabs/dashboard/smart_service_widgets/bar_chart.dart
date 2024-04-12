@@ -72,8 +72,17 @@ class SmSeBarChart extends SmSeLineChart {
                           ),
                         ),
                         bottomTitles: AxisTitles(
-                          sideTitles: BaseChartFormatter.getBottomTitles(
-                              context, dateFormat),
+                          sideTitles: (rawTimestamps.length < 10 &&
+                                      MediaQuery.of(context).orientation ==
+                                          Orientation.portrait) ||
+                                  (rawTimestamps.length < 21 &&
+                                      MediaQuery.of(context).orientation ==
+                                          Orientation.landscape)
+                              ? BaseChartFormatter.getBottomTitles(
+                                  context, dateFormat)
+                              : BaseChartFormatter.getBottomTitles(
+                                  context, dateFormat,
+                                  rotated: true, reservedSize: 50),
                         ),
                         leftTitles: AxisTitles(
                             sideTitles:

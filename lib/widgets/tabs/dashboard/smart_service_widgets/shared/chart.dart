@@ -19,8 +19,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
 class BaseChartFormatter {
-
-  static SideTitles getBottomTitles(BuildContext context, DateFormat dtFormat, {double reservedSize = 20, bool isUtc = true, double? interval, }) {
+  static SideTitles getBottomTitles(BuildContext context, DateFormat dtFormat,
+      {double reservedSize = 20,
+      bool isUtc = true,
+      double? interval,
+      bool rotated = false}) {
     return SideTitles(
         showTitles: true,
         reservedSize: reservedSize,
@@ -32,18 +35,28 @@ class BaseChartFormatter {
           final dt =
               DateTime.fromMillisecondsSinceEpoch(val.floor(), isUtc: isUtc)
                   .toLocal();
-          debugPrint(dt.toString());
           final formatted = dtFormat.format(dt);
-          debugPrint(formatted);
+          if (rotated) {
+            return Container(
+                padding: const EdgeInsets.only(top: 3),
+                child: RotatedBox(
+                    quarterTurns: -1,
+                    child: Text(formatted,
+                        style: TextStyle(
+                            fontSize:
+                            MediaQuery.textScalerOf(context).scale(12)))));
+          }
           return Container(
               padding: const EdgeInsets.only(top: 3),
               child: Text(formatted,
-                  style: TextStyle(
-                      fontSize: MediaQuery.textScalerOf(context).scale(12))));
+                      style: TextStyle(
+                          fontSize:
+                              MediaQuery.textScalerOf(context).scale(12))));
         });
   }
 
-  static SideTitles getLeftTitles(BuildContext context, {double reservedSize = 30, String? suffix}) {
+  static SideTitles getLeftTitles(BuildContext context,
+      {double reservedSize = 30, String? suffix}) {
     return SideTitles(
         showTitles: true,
         reservedSize: reservedSize,
@@ -51,7 +64,10 @@ class BaseChartFormatter {
           if (val == meta.max || val == meta.min) {
             return const SizedBox.shrink();
           }
-          return Text(suffix == null ? meta.formattedValue : "${meta.formattedValue} $suffix",
+          return Text(
+              suffix == null
+                  ? meta.formattedValue
+                  : "${meta.formattedValue} $suffix",
               style: TextStyle(
                   fontSize: MediaQuery.textScalerOf(context).scale(12)));
         });
