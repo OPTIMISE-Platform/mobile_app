@@ -154,6 +154,11 @@ class MyTheme {
           foregroundColor: Colors.black,
         )
     ),
+      cardTheme:  CardTheme(
+          shape: BeveledRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+          )
+      )
   );
 
   static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
