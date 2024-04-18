@@ -50,7 +50,7 @@ import 'package:sidebarx/sidebarx.dart';
 import '../../services/settings.dart';
 
 class DeviceTabs extends StatefulWidget {
-  const DeviceTabs({Key? key}) : super(key: key);
+  const DeviceTabs({super.key});
 
   @override
   State<DeviceTabs> createState() => DeviceTabsState();
@@ -416,11 +416,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           ),
         );
 
-        return WillPopScope(
-            onWillPop: () async {
-              if (onBackCallback == null) return true;
+        return PopScope(
+            onPopInvoked: (didPop) {
+              //do your logic here:
+              if (onBackCallback == null) return;
               onBackCallback!();
-              return false;
             },
             child: Scaffold(
                 floatingActionButton: showFab
@@ -491,8 +491,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                                       color: MyTheme.errorColor,
                                     ),
                                     SizedBox(
-                                        width: MediaQuery.of(context)
-                                                .textScaleFactor *
+                                        width: MediaQuery.textScalerOf(context).scale(1) *
                                             12,
                                         height: 0),
                                     const Text("not implemented")
@@ -536,7 +535,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     content: SizedBox(
                         width: double.maxFinite,
                         height: MediaQuery.of(context).size.height -
-                            MediaQuery.textScaleFactorOf(context) * 172,
+                            MediaQuery.textScalerOf(context).scale(172),
                         child: Material(
                             color: const Color(0x00000000),
                             // required for ListTile
@@ -587,7 +586,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     content: SizedBox(
                         width: double.maxFinite,
                         height: MediaQuery.of(context).size.height -
-                            MediaQuery.textScaleFactorOf(context) * 172,
+                            MediaQuery.textScalerOf(context).scale(172),
                         child: Material(
                             color: const Color(0x00000000),
                             // required for ListTile
@@ -634,7 +633,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     content: SizedBox(
                         width: double.maxFinite,
                         height: MediaQuery.of(context).size.height -
-                            MediaQuery.textScaleFactorOf(context) * 172,
+                            MediaQuery.textScalerOf(context).scale(172),
                         child: Material(
                             color: const Color(0x00000000),
                             // required for ListTile
@@ -685,7 +684,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     content: SizedBox(
                         width: double.maxFinite,
                         height: MediaQuery.of(context).size.height -
-                            MediaQuery.textScaleFactorOf(context) * 172,
+                            MediaQuery.textScalerOf(context).scale(172),
                         child: Material(
                             color: const Color(0x00000000),
                             // required for ListTile
@@ -745,9 +744,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     if (filterCount > 0) {
       filterActions.add(PopupMenuOption(
           material: (context, __) => MaterialPopupMenuOptionData(
-                  child: Column(
+                  child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [Divider(), Text("Reset")],
+                children: [Divider(), Text("Reset")],
               )),
           cupertino: (context, __) =>
               CupertinoPopupMenuOptionData(isDestructiveAction: true),
@@ -871,19 +870,19 @@ class _CustomInkSplash extends InkSplash {
   final List<bool> keysDisabled;
 
   _CustomInkSplash({
-    required MaterialInkController super.controller,
+    required super.controller,
     required super.referenceBox,
-    required TextDirection super.textDirection,
+    required super.textDirection,
     Offset? position,
-    required Color super.color,
-    bool super.containedInkWell = false,
-    RectCallback? super.rectCallback,
-    BorderRadius? super.borderRadius,
-    ShapeBorder? super.customBorder,
-    double? super.radius,
+    required super.color,
+    super.containedInkWell = false,
+    super.rectCallback,
+    super.borderRadius,
+    super.customBorder,
+    super.radius,
     super.onRemoved,
-    required List<GlobalKey> this.keys,
-    required List<bool> this.keysDisabled,
+    required this.keys,
+    required this.keysDisabled,
   }) : super(position: position) {
     assert(keys.length == keysDisabled.length);
     for (int i = 0; i < keys.length; i++) {
