@@ -115,13 +115,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   }
 
   switchScreen(int selectedIndex, bool force) {
-    debugPrint("switchScreen selectedIndex: $selectedIndex  _navigationIndex: $_navigationIndex $force");
     if (_navigationIndex == selectedIndex && !force) {
       return;
     }
     setState(() {
       if (_navigationIndex != selectedIndex) {
-        debugPrint("set Filter Null");
         // dont overwrite on force
         customAppBarTitle = null;
         onBackCallback = null;
@@ -251,7 +249,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         items: bottomBarItems,
         currentIndex: _bottomBarIndex,
         itemChanged: (i) {
-          debugPrint("BottomBar: $i");
           if (disabled[i]) {
             controller.index = _bottomBarIndex;
             return;
