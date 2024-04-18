@@ -7,16 +7,16 @@ part of 'exception_log_element.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
 extension GetExceptionLogElementCollection on Isar {
   IsarCollection<ExceptionLogElement> get exceptionLogElements =>
       this.collection();
 }
 
-final ExceptionLogElementSchema = CollectionSchema(
+const ExceptionLogElementSchema = CollectionSchema(
   name: r'ExceptionLogElement',
-  id: int.parse('-4945544615666128633'),
+  id: -4945544615666128633,
   properties: {
     r'logTime': PropertySchema(
       id: 0,
@@ -41,7 +41,7 @@ final ExceptionLogElementSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'logTime': IndexSchema(
-      id: int.parse('-2612057588556721033'),
+      id: -2612057588556721033,
       name: r'logTime',
       unique: false,
       replace: false,
@@ -59,7 +59,7 @@ final ExceptionLogElementSchema = CollectionSchema(
   getId: _exceptionLogElementGetId,
   getLinks: _exceptionLogElementGetLinks,
   attach: _exceptionLogElementAttach,
-  version: '3.0.5',
+  version: '3.1.0+1',
 );
 
 int _exceptionLogElementEstimateSize(

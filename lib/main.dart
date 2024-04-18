@@ -16,6 +16,7 @@
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -23,11 +24,13 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import "package:intl/intl_standalone.dart"
     if (dart.library.html) "package:intl/intl_browser.dart";
+import 'package:isar/isar.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
@@ -70,6 +73,7 @@ Future main() async {
   sub = DateTime.now();
   WidgetsFlutterBinding.ensureInitialized();
   print("WidgetsFlutterBinding init took ${DateTime.now().difference(sub)}");
+  isar = kIsWeb ? null : await IsarService().db;
 
   sub = DateTime.now();
   await Firebase.initializeApp(

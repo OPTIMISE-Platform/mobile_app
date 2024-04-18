@@ -7,15 +7,15 @@ part of 'device_instance.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
 extension GetDeviceInstanceCollection on Isar {
   IsarCollection<DeviceInstance> get deviceInstances => this.collection();
 }
 
-final DeviceInstanceSchema = CollectionSchema(
+const DeviceInstanceSchema = CollectionSchema(
   name: r'DeviceInstance',
-  id: int.parse('-8399428298092944646'),
+  id: -8399428298092944646,
   properties: {
     r'annotations': PropertySchema(
       id: 0,
@@ -77,7 +77,7 @@ final DeviceInstanceSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: int.parse('-3268401673993471357'),
+      id: -3268401673993471357,
       name: r'id',
       unique: false,
       replace: false,
@@ -90,7 +90,7 @@ final DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'local_id': IndexSchema(
-      id: int.parse('3920594403020751642'),
+      id: 3920594403020751642,
       name: r'local_id',
       unique: false,
       replace: false,
@@ -103,7 +103,7 @@ final DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'display_name': IndexSchema(
-      id: int.parse('-7654124764797891805'),
+      id: -7654124764797891805,
       name: r'display_name',
       unique: false,
       replace: false,
@@ -116,7 +116,7 @@ final DeviceInstanceSchema = CollectionSchema(
       ],
     ),
     r'favorite': IndexSchema(
-      id: int.parse('4264748667377999100'),
+      id: 4264748667377999100,
       name: r'favorite',
       unique: false,
       replace: false,
@@ -137,7 +137,7 @@ final DeviceInstanceSchema = CollectionSchema(
   getId: _deviceInstanceGetId,
   getLinks: _deviceInstanceGetLinks,
   attach: _deviceInstanceAttach,
-  version: '3.0.5',
+  version: '3.1.0+1',
 );
 
 int _deviceInstanceEstimateSize(

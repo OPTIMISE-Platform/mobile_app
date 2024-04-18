@@ -7,15 +7,15 @@ part of 'location.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
 extension GetLocationCollection on Isar {
   IsarCollection<Location> get locations => this.collection();
 }
 
-final LocationSchema = CollectionSchema(
+const LocationSchema = CollectionSchema(
   name: r'Location',
-  id: int.parse('-8833727672639471650'),
+  id: -8833727672639471650,
   properties: {
     r'description': PropertySchema(
       id: 0,
@@ -55,7 +55,7 @@ final LocationSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: int.parse('-3268401673993471357'),
+      id: -3268401673993471357,
       name: r'id',
       unique: false,
       replace: false,
@@ -68,7 +68,7 @@ final LocationSchema = CollectionSchema(
       ],
     ),
     r'name': IndexSchema(
-      id: int.parse('879695947855722453'),
+      id: 879695947855722453,
       name: r'name',
       unique: false,
       replace: false,
@@ -86,7 +86,7 @@ final LocationSchema = CollectionSchema(
   getId: _locationGetId,
   getLinks: _locationGetLinks,
   attach: _locationAttach,
-  version: '3.0.5',
+  version: '3.1.0+1',
 );
 
 int _locationEstimateSize(
@@ -202,7 +202,8 @@ extension LocationQueryWhere on QueryBuilder<Location, Location, QWhereClause> {
     });
   }
 
-  QueryBuilder<Location, Location, QAfterWhereClause> isarIdNotEqualTo(Id isarId) {
+  QueryBuilder<Location, Location, QAfterWhereClause> isarIdNotEqualTo(
+      Id isarId) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -224,7 +225,9 @@ extension LocationQueryWhere on QueryBuilder<Location, Location, QWhereClause> {
     });
   }
 
-  QueryBuilder<Location, Location, QAfterWhereClause> isarIdGreaterThan(Id isarId, {bool include = false}) {
+  QueryBuilder<Location, Location, QAfterWhereClause> isarIdGreaterThan(
+      Id isarId,
+      {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.greaterThan(lower: isarId, includeLower: include),
@@ -232,7 +235,8 @@ extension LocationQueryWhere on QueryBuilder<Location, Location, QWhereClause> {
     });
   }
 
-  QueryBuilder<Location, Location, QAfterWhereClause> isarIdLessThan(Id isarId, {bool include = false}) {
+  QueryBuilder<Location, Location, QAfterWhereClause> isarIdLessThan(Id isarId,
+      {bool include = false}) {
     return QueryBuilder.apply(this, (query) {
       return query.addWhereClause(
         IdWhereClause.lessThan(upper: isarId, includeUpper: include),
@@ -308,7 +312,8 @@ extension LocationQueryWhere on QueryBuilder<Location, Location, QWhereClause> {
     });
   }
 
-  QueryBuilder<Location, Location, QAfterWhereClause> nameNotEqualTo(String name) {
+  QueryBuilder<Location, Location, QAfterWhereClause> nameNotEqualTo(
+      String name) {
     return QueryBuilder.apply(this, (query) {
       if (query.whereSort == Sort.asc) {
         return query
@@ -343,7 +348,8 @@ extension LocationQueryWhere on QueryBuilder<Location, Location, QWhereClause> {
   }
 }
 
-extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterCondition> {
+extension LocationQueryFilter
+    on QueryBuilder<Location, Location, QFilterCondition> {
   QueryBuilder<Location, Location, QAfterFilterCondition> descriptionEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -357,7 +363,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionGreaterThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      descriptionGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -432,7 +439,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionContains(
+      String value,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'description',
@@ -442,7 +451,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'description',
@@ -461,7 +472,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> descriptionIsNotEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      descriptionIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'description',
@@ -470,7 +482,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementEqualTo(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -483,7 +496,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementGreaterThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -498,7 +512,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementLessThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -513,7 +528,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementBetween(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -532,7 +548,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementStartsWith(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -545,7 +562,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementEndsWith(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -558,7 +576,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementContains(String value,
+          {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'device_group_ids',
@@ -568,7 +588,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementMatches(String pattern,
+          {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'device_group_ids',
@@ -578,7 +600,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementIsEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'device_group_ids',
@@ -587,7 +610,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsElementIsNotEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsElementIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'device_group_ids',
@@ -596,7 +620,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsLengthEqualTo(int length) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'device_group_ids',
@@ -608,7 +633,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsIsEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'device_group_ids',
@@ -620,7 +646,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsIsNotEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'device_group_ids',
@@ -632,7 +659,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsLengthLessThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsLengthLessThan(
     int length, {
     bool include = false,
   }) {
@@ -647,7 +675,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsLengthGreaterThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
@@ -662,7 +691,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_group_idsLengthBetween(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_group_idsLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -679,7 +709,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementEqualTo(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementEqualTo(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -692,7 +723,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementGreaterThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementGreaterThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -707,7 +739,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementLessThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementLessThan(
     String value, {
     bool include = false,
     bool caseSensitive = true,
@@ -722,7 +755,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementBetween(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementBetween(
     String lower,
     String upper, {
     bool includeLower = true,
@@ -741,7 +775,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementStartsWith(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementStartsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -754,7 +789,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementEndsWith(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementEndsWith(
     String value, {
     bool caseSensitive = true,
   }) {
@@ -767,7 +803,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementContains(String value, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'device_ids',
@@ -777,7 +814,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementMatches(String pattern, {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'device_ids',
@@ -787,7 +825,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementIsEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementIsEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'device_ids',
@@ -796,7 +835,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsElementIsNotEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsElementIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'device_ids',
@@ -805,7 +845,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsLengthEqualTo(int length) {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsLengthEqualTo(int length) {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'device_ids',
@@ -829,7 +870,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsIsNotEmpty() {
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsIsNotEmpty() {
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'device_ids',
@@ -841,7 +883,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsLengthLessThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsLengthLessThan(
     int length, {
     bool include = false,
   }) {
@@ -856,7 +899,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsLengthGreaterThan(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsLengthGreaterThan(
     int length, {
     bool include = false,
   }) {
@@ -871,7 +915,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> device_idsLengthBetween(
+  QueryBuilder<Location, Location, QAfterFilterCondition>
+      device_idsLengthBetween(
     int lower,
     int upper, {
     bool includeLower = true,
@@ -976,7 +1021,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> idContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> idContains(
+      String value,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'id',
@@ -986,7 +1033,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> idMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> idMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'id',
@@ -1102,7 +1151,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> imageContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> imageContains(
+      String value,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'image',
@@ -1112,7 +1163,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> imageMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> imageMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'image',
@@ -1140,7 +1193,8 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> isarIdEqualTo(Id value) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> isarIdEqualTo(
+      Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isarId',
@@ -1280,7 +1334,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> nameContains(String value, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> nameContains(
+      String value,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.contains(
         property: r'name',
@@ -1290,7 +1346,9 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
     });
   }
 
-  QueryBuilder<Location, Location, QAfterFilterCondition> nameMatches(String pattern, {bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QAfterFilterCondition> nameMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.matches(
         property: r'name',
@@ -1319,9 +1377,11 @@ extension LocationQueryFilter on QueryBuilder<Location, Location, QFilterConditi
   }
 }
 
-extension LocationQueryObject on QueryBuilder<Location, Location, QFilterCondition> {}
+extension LocationQueryObject
+    on QueryBuilder<Location, Location, QFilterCondition> {}
 
-extension LocationQueryLinks on QueryBuilder<Location, Location, QFilterCondition> {}
+extension LocationQueryLinks
+    on QueryBuilder<Location, Location, QFilterCondition> {}
 
 extension LocationQuerySortBy on QueryBuilder<Location, Location, QSortBy> {
   QueryBuilder<Location, Location, QAfterSortBy> sortByDescription() {
@@ -1373,7 +1433,8 @@ extension LocationQuerySortBy on QueryBuilder<Location, Location, QSortBy> {
   }
 }
 
-extension LocationQuerySortThenBy on QueryBuilder<Location, Location, QSortThenBy> {
+extension LocationQuerySortThenBy
+    on QueryBuilder<Location, Location, QSortThenBy> {
   QueryBuilder<Location, Location, QAfterSortBy> thenByDescription() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'description', Sort.asc);
@@ -1435,8 +1496,10 @@ extension LocationQuerySortThenBy on QueryBuilder<Location, Location, QSortThenB
   }
 }
 
-extension LocationQueryWhereDistinct on QueryBuilder<Location, Location, QDistinct> {
-  QueryBuilder<Location, Location, QDistinct> distinctByDescription({bool caseSensitive = true}) {
+extension LocationQueryWhereDistinct
+    on QueryBuilder<Location, Location, QDistinct> {
+  QueryBuilder<Location, Location, QDistinct> distinctByDescription(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'description', caseSensitive: caseSensitive);
     });
@@ -1454,26 +1517,30 @@ extension LocationQueryWhereDistinct on QueryBuilder<Location, Location, QDistin
     });
   }
 
-  QueryBuilder<Location, Location, QDistinct> distinctById({bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QDistinct> distinctById(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'id', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<Location, Location, QDistinct> distinctByImage({bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QDistinct> distinctByImage(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'image', caseSensitive: caseSensitive);
     });
   }
 
-  QueryBuilder<Location, Location, QDistinct> distinctByName({bool caseSensitive = true}) {
+  QueryBuilder<Location, Location, QDistinct> distinctByName(
+      {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
     });
   }
 }
 
-extension LocationQueryProperty on QueryBuilder<Location, Location, QQueryProperty> {
+extension LocationQueryProperty
+    on QueryBuilder<Location, Location, QQueryProperty> {
   QueryBuilder<Location, int, QQueryOperations> isarIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isarId');
@@ -1486,7 +1553,8 @@ extension LocationQueryProperty on QueryBuilder<Location, Location, QQueryProper
     });
   }
 
-  QueryBuilder<Location, List<String>, QQueryOperations> device_group_idsProperty() {
+  QueryBuilder<Location, List<String>, QQueryOperations>
+      device_group_idsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'device_group_ids');
     });
@@ -1527,7 +1595,9 @@ Location _$LocationFromJson(Map<String, dynamic> json) => Location(
       json['description'] as String,
       json['image'] as String,
       (json['device_ids'] as List<dynamic>).map((e) => e as String).toList(),
-      (json['device_group_ids'] as List<dynamic>).map((e) => e as String).toList(),
+      (json['device_group_ids'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
     );
 
 Map<String, dynamic> _$LocationToJson(Location instance) => <String, dynamic>{

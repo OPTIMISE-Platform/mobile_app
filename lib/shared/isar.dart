@@ -14,16 +14,42 @@
  *  limitations under the License.
  */
 
+
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
-import 'package:mobile_app/models/device_group.dart';
-import 'package:mobile_app/models/exception_log_element.dart';
-import 'package:mobile_app/models/location.dart';
-import 'package:mobile_app/models/network.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'package:mobile_app/models/device_instance.dart';
+import '../models/device_instance.dart';
+import '../models/device_group.dart';
+import '../models/network.dart';
+import '../models/location.dart';
+import '../models/exception_log_element.dart';
 
-final Isar? isar = kIsWeb ? null : Isar.openSync([DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema]);
+
+late final Isar? isar;
+
+class IsarService {
+  late Future<Isar> db;
+
+  IsarService() {
+    db = openDB();
+  }
+
+  Future<Isar> openDB() async {
+    if (Isar.instanceNames.isEmpty) {
+      final dir = await getApplicationDocumentsDirectory();
+      final isar = await Isar.open(
+        [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema], // Here we will add a schema's
+        directory: dir.path,
+        inspector: true,
+      );
+
+      return isar;
+    }
+
+    return Future.value(Isar.getInstance());
+  }
+}
 
 /// FNV-1a 64bit hash algorithm optimized for Dart Strings
 /// Adopted from https://isar.dev/recipes/string_ids.html

@@ -76,8 +76,8 @@ dependencies:
   flutter_svg: ^2.0.10+1
   flutter_native_timezone: ^2.0.0
   stats: ^2.1.0
-  isar: 3.0.5
-  isar_flutter_libs: 3.0.5
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
   flutter_material_symbols: ^0.0.4
   arrow_path: ^3.1.0
   device_info_plus: ^10.0.1
@@ -98,7 +98,7 @@ dev_dependencies:
   build_runner: ^2.1.7
   json_serializable: ^6.7.1
   flutter_launcher_icons: ^0.13.1
-  isar_generator: 3.0.5
+  isar_generator: ^3.1.0+1
 
 flutter_icons:
   android: "launcher_icon"

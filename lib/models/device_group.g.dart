@@ -7,15 +7,15 @@ part of 'device_group.dart';
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
 extension GetDeviceGroupCollection on Isar {
   IsarCollection<DeviceGroup> get deviceGroups => this.collection();
 }
 
-final DeviceGroupSchema = CollectionSchema(
+const DeviceGroupSchema = CollectionSchema(
   name: r'DeviceGroup',
-  id: int.parse('-7548998771799459115'),
+  id: -7548998771799459115,
   properties: {
     r'attributes': PropertySchema(
       id: 0,
@@ -62,7 +62,7 @@ final DeviceGroupSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: int.parse('-3268401673993471357'),
+      id: -3268401673993471357,
       name: r'id',
       unique: false,
       replace: false,
@@ -75,7 +75,7 @@ final DeviceGroupSchema = CollectionSchema(
       ],
     ),
     r'name': IndexSchema(
-      id: int.parse('879695947855722453'),
+      id: 879695947855722453,
       name: r'name',
       unique: false,
       replace: false,
@@ -88,7 +88,7 @@ final DeviceGroupSchema = CollectionSchema(
       ],
     ),
     r'favorite': IndexSchema(
-      id: int.parse('4264748667377999100'),
+      id: 4264748667377999100,
       name: r'favorite',
       unique: false,
       replace: false,
@@ -109,7 +109,7 @@ final DeviceGroupSchema = CollectionSchema(
   getId: _deviceGroupGetId,
   getLinks: _deviceGroupGetLinks,
   attach: _deviceGroupAttach,
-  version: '3.0.5',
+  version: '3.1.0+1',
 );
 
 int _deviceGroupEstimateSize(
@@ -1592,11 +1592,11 @@ extension DeviceGroupQueryProperty
 // **************************************************************************
 
 // coverage:ignore-file
-// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters
+// ignore_for_file: duplicate_ignore, non_constant_identifier_names, constant_identifier_names, invalid_use_of_protected_member, unnecessary_cast, prefer_const_constructors, lines_longer_than_80_chars, require_trailing_commas, inference_failure_on_function_invocation, unnecessary_parenthesis, unnecessary_raw_strings, unnecessary_null_checks, join_return_with_assignment, prefer_final_locals, avoid_js_rounded_ints, avoid_positional_boolean_parameters, always_specify_types
 
-final DeviceGroupCriteriaSchema = Schema(
+const DeviceGroupCriteriaSchema = Schema(
   name: r'DeviceGroupCriteria',
-  id: int.parse('7285243210016566965'),
+  id: 7285243210016566965,
   properties: {
     r'aspect_id': PropertySchema(
       id: 0,
