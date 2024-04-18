@@ -301,10 +301,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio
-      sha256: "50fec96118958b97c727d0d8f67255d3683f16cc1f90d9bc917b5d4fe3abeca9"
+      sha256: "11e40df547d418cc0c4900a9318b26304e665da6fa4755399a9ff9efd09034b5"
       url: "https://pub.dev"
     source: hosted
-    version: "5.4.2"
+    version: "5.4.3+1"
   dio_cache_interceptor:
     dependency: "direct main"
     description:
@@ -325,10 +325,10 @@ packages:
     dependency: "direct main"
     description:
       name: dio_http2_adapter
-      sha256: e4006f18c8f69b64f36d4e90737ed9aed63bf1108c04156b8071a6625253bb24
+      sha256: ea2f5e7906a157cb049abce95f89a693459f82e5b376be4636086368e3a350f1
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.1"
+    version: "2.5.2"
   equatable:
     dependency: transitive
     description:

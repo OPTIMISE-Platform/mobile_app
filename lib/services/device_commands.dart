@@ -41,24 +41,24 @@ const LOG_PREFIX = "DEVICE-COMMAND";
 class DeviceCommandPath {
   var mgwCoreService;
   var mgwEndpointService;
-  var _logger = Logger(
+  final _logger = Logger(
     printer: SimplePrinter(),
   );
 
   DeviceCommandPath(String host) {
-    this.mgwCoreService = MgwCoreService(host);
-    this.mgwEndpointService = MgwEndpointService(host);
+    mgwCoreService = MgwCoreService(host);
+    mgwEndpointService = MgwEndpointService(host);
   }
 
   Future<List<Endpoint>> getEndpoints() async {
     // TODO change module
-    _logger.d(LOG_PREFIX + ": Get deployment endpoint");
+    _logger.d("$LOG_PREFIX: Get deployment endpoint");
     var endpoints = await mgwCoreService.getEndpointsOfModule("github.com/SENERGY-Platform/mgw-device-command");
     return endpoints;
   }
 
   Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
-    _logger.d(LOG_PREFIX + ": Run commands via exposed path");
+    _logger.d("$LOG_PREFIX: Run commands via exposed path");
     var endpoints = await getEndpoints();
     var endpoint = endpoints.first.location;
     var path = endpoint + commandUrlPrefix + preferEventValue.toString();
@@ -86,8 +86,8 @@ class DeviceCommandPort {
 
   Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
     // TODO service.port was used  but shoud be device command port ?????
-    var url = "http://${host}:8002" + commandUrlPrefix + preferEventValue.toString();
-    _logger.d(LOG_PREFIX + ": Run commands via exposed port at: " + url);
+    var url = "http://${host}:8002$commandUrlPrefix$preferEventValue";
+    _logger.d("$LOG_PREFIX: Run commands via exposed port at: $url");
 
     final Response<List<dynamic>> resp;
 

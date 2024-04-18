@@ -205,7 +205,7 @@ class Auth extends ChangeNotifier {
     if (!(await refreshToken())) {
       return {};
     }
-    return {"authorization": "Bearer ${await getToken()}"};
+    return {"authorization": "Bearer ${await getToken()}", "content-type": Headers.jsonContentType};
   }
 
   Future<bool> refreshToken({bool skipLock = false}) async {

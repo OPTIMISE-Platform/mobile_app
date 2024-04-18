@@ -34,12 +34,12 @@ class MgwEndpointService {
   }
 
   Future<Response<dynamic>> GetFromExposedPath(String path) async {
-    _logger.d(LOG_PREFIX + ": Get from exposed deployment path: " + path);
-    return await mgwService.Get(path, Options());
+    _logger.d("$LOG_PREFIX: Get from exposed deployment path: $path");
+    return await mgwService.Get(path, Options(contentType: Headers.jsonContentType));
   }
 
   Future<Response<dynamic>> PostToExposedPath(String path, commands) async {
-    _logger.d(LOG_PREFIX + ": Post to exposed deployment path: " + path);
-    return await mgwService.Post(path, commands, Options());
+    _logger.d("$LOG_PREFIX: Post to exposed deployment path: $path");
+    return await mgwService.Post(path, commands, Options(contentType: Headers.jsonContentType));
   }
 }

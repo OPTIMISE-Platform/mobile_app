@@ -16,10 +16,12 @@
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
+import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/releases.dart';
 import 'package:mutex/mutex.dart';
 
@@ -30,6 +32,8 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_details.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
+
+import '../../shared/toast.dart';
 
 class SmartServicesInstances extends StatefulWidget {
   const SmartServicesInstances({Key? key}) : super(key: key);
@@ -67,7 +71,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
           platformPageRoute(
             context: context,
             builder: (context) {
-              final target = const SmartServicesReleases();
+              const target = SmartServicesReleases();
               return target;
             },
           ));
@@ -134,9 +138,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                             child: ConstrainedBox(
                               constraints: BoxConstraints(
                                   minHeight: constraint.maxHeight),
-                              child: IntrinsicHeight(
+                              child: const IntrinsicHeight(
                                 child: Column(
-                                  children: const [
+                                  children: [
                                     Expanded(
                                       child:
                                           Center(child: Text("No Instances")),
@@ -212,40 +216,49 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                                     upgradingInstances[i] =
                                                         true;
                                                   });
-                                                  final p =
+                                                  final Pair<List<SmartServiceExtendedParameter>, bool> p;
+                                                  try {
+                                                    p = await SmartServiceService
+                                                        .prepareUpgrade(
+                                                        instances[i]);
+                                                    if (!p.t) {
                                                       await SmartServiceService
-                                                          .prepareUpgrade(
-                                                              instances[i]);
-                                                  if (!p.t) {
-                                                    await SmartServiceService
-                                                        .updateInstanceParameters(
-                                                            instances[i].id,
-                                                            p.k
-                                                                .map((e) => e
-                                                                    .toSmartServiceParameter())
-                                                                .toList(),
-                                                            releaseId: instances[
-                                                                    i]
-                                                                .new_release_id);
-                                                  } else {
-                                                    final release =
-                                                        await SmartServiceService
-                                                            .getRelease(instances[
-                                                                    i]
-                                                                .new_release_id!);
-                                                    await Navigator.push(
-                                                        context,
-                                                        platformPageRoute(
-                                                            context: context,
-                                                            builder: (context) =>
-                                                                SmartServicesReleaseLaunch(
-                                                                  release,
-                                                                  instance:
-                                                                      instances[
-                                                                          i],
-                                                                  parameters:
-                                                                      p.k,
-                                                                )));
+                                                          .updateInstanceParameters(
+                                                          instances[i].id,
+                                                          p.k
+                                                              .map((e) => e
+                                                              .toSmartServiceParameter())
+                                                              .toList(),
+                                                          releaseId: instances[
+                                                          i]
+                                                              .new_release_id);
+                                                    } else {
+                                                      final release =
+                                                      await SmartServiceService
+                                                          .getRelease(instances[
+                                                      i]
+                                                          .new_release_id!);
+                                                      await Navigator.push(
+                                                          context,
+                                                          platformPageRoute(
+                                                              context: context,
+                                                              builder: (context) =>
+                                                                  SmartServicesReleaseLaunch(
+                                                                    release,
+                                                                    instance:
+                                                                    instances[
+                                                                    i],
+                                                                    parameters:
+                                                                    p.k,
+                                                                  )));
+                                                    }
+                                                  } catch (e) {
+                                                    setState(() {
+                                                      upgradingInstances[i] =
+                                                          false;
+                                                    });
+                                                    Toast.showToastNoContext(
+                                                        "Upgrade was not possible: ${e}");
                                                   }
                                                   upgradingInstances[i] = false;
                                                   if (!upgradingInstances
@@ -255,7 +268,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                               ),
                                   )
                                 ])
-                              : Column(children: const [
+                              : const Column(children: [
                                   Divider(),
                                   ListTile(),
                                 ]);

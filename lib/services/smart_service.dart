@@ -205,7 +205,7 @@ class SmartServiceService {
     final Response<List<dynamic>?> resp;
     try {
       resp = await _dio.get<List<dynamic>?>(url, options: Options(headers: headers));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
       }
@@ -302,7 +302,12 @@ class SmartServiceService {
 
   static Future<Pair<List<SmartServiceExtendedParameter>, bool>> prepareUpgrade(SmartServiceInstance oldInstance) async {
     if (oldInstance.new_release_id == null) throw ArgumentError("No Update available");
-    final params = await getReleaseParameters(oldInstance.new_release_id!);
+    final params;
+    try {
+       params = await getReleaseParameters(oldInstance.new_release_id!);
+    } catch (e) {
+      rethrow;
+    }
     bool newParamsAdded = false;
     for (final param in params) {
       final i = oldInstance.parameters?.indexWhere((e) => e.id == param.id) ?? -1;

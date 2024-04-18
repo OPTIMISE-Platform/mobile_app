@@ -42,7 +42,7 @@ class MgwService {
 
   Future<String> GetSessionToken() async {
     // TODO dont load credentials + request token at every request
-    _logger.d("$LOG_PREFIX: Load device credentials from storage");
+    _logger.d("$LOG_PREFIX: Get Session Token");
     await LoadCredentialsFromStorage();
     _logger.d("$LOG_PREFIX: Perform Login");
     var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
@@ -97,8 +97,8 @@ class MgwService {
     try {
       resp = await dio.post(url, data: data, options: options);
       return resp;
-    } on DioError catch (e) {
-      _logger.e("$LOG_PREFIX: Request error");
+    } on DioException catch (e) {
+      _logger.e("$LOG_PREFIX: Request error: $e");
       var failure = handleDioError(e);
       throw(failure);
     }
