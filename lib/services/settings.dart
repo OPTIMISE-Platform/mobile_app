@@ -57,7 +57,7 @@ class Settings {
 
   static const _filterModeKey = "filter_mode";
 
-  static const _dmModeKey = "filter_mode";
+  static const _dmModeKey = "dm_mode";
 
   static checkInit() {
     if (!isInitialized) {
