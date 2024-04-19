@@ -15,7 +15,6 @@
  */
 
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/core_manager.dart';
@@ -23,7 +22,6 @@ import 'package:mobile_app/services/mgw/endpoint.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 
 import '../../shared/isar.dart';
-import 'error.dart';
 
 const LOG_PREFIX = "MGW-DEVICE-MANAGER-SERVICE";
 
@@ -72,7 +70,6 @@ class DeviceManagerNew {
     }
     _logger.d(
         "$LOG_PREFIX: Load devices from device manager location: ${deviceManagerEndpoints.first.location}/devices");
-    final Response<dynamic> resp;
     try {
       return await mgwEndpointService!.GetFromExposedPath(
           "${deviceManagerEndpoints.first.location}/devices");

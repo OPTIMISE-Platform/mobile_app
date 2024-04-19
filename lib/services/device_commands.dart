@@ -198,7 +198,7 @@ class DeviceCommandsService {
       List<DeviceCommandResponse> retryRes;
       try {
         retryRes = await _runCommands(cloudRetries, true, "", preferEventValue);
-      } on DioError catch (e) {
+      } on DioException catch (e) {
         _logger.e("Cant run cloud commands :${e.message!}");
         retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length,
             (index) => DeviceCommandResponse(502, e.toString()));

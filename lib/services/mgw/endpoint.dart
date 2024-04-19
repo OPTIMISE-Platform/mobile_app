@@ -15,12 +15,9 @@
  */
 
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
 
-import '../../shared/isar.dart';
 import 'error.dart';
 
 const LOG_PREFIX = "MGW-ENDPOINT-SERVICE";
