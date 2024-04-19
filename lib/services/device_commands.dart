@@ -18,6 +18,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:isar/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
@@ -34,6 +35,8 @@ import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
+
+import '../shared/isar.dart';
 
 const commandUrlPrefix = "/commands/batch?timeout=10s&prefer_event_value=";
 const LOG_PREFIX = "DEVICE-COMMAND";
@@ -53,7 +56,25 @@ class DeviceCommandPath {
   Future<List<Endpoint>> getEndpoints() async {
     // TODO change module
     _logger.d("$LOG_PREFIX: Get deployment endpoint");
-    var endpoints = await mgwCoreService.getEndpointsOfModule("github.com/SENERGY-Platform/mgw-device-command");
+    List<Endpoint> endpoints;
+    const deviceManagerModuleName =
+        "github.com/SENERGY-Platform/mgw-device-command";
+    if (isar != null) {
+      endpoints = await isar!.endpoints
+          .where()
+          .moduleNameEqualTo(deviceManagerModuleName)
+          .findAll();
+      if (endpoints.isNotEmpty) {
+        return endpoints;
+      }
+    }
+    endpoints =
+    await mgwCoreService!.getEndpointsOfModule(deviceManagerModuleName);
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.endpoints.putAll(endpoints);
+      });
+    }
     return endpoints;
   }
 

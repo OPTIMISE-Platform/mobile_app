@@ -15,8 +15,13 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
+
+import '../../shared/isar.dart';
+import 'error.dart';
 
 const LOG_PREFIX = "MGW-ENDPOINT-SERVICE";
 
@@ -35,7 +40,11 @@ class MgwEndpointService {
 
   Future<Response<dynamic>> GetFromExposedPath(String path) async {
     _logger.d("$LOG_PREFIX: Get from exposed deployment path: $path");
-    return await mgwService.Get(path, Options(contentType: Headers.jsonContentType));
+    try {
+      return await mgwService.Get(path, Options(contentType: Headers.jsonContentType));
+    } on Failure {
+      rethrow;
+    }
   }
 
   Future<Response<dynamic>> PostToExposedPath(String path, commands) async {

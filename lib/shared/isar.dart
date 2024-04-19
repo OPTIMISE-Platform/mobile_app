@@ -14,9 +14,8 @@
  *  limitations under the License.
  */
 
-
-import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
+import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../models/device_instance.dart';
@@ -39,7 +38,7 @@ class IsarService {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       final isar = await Isar.open(
-        [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema], // Here we will add a schema's
+        [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema, EndpointSchema], // Here we will add a schema's
         directory: dir.path,
         inspector: true,
       );

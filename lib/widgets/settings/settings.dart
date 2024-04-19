@@ -44,7 +44,7 @@ import 'package:mobile_app/widgets/shared/page_spinner.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 class Settings extends StatelessWidget {
-  Settings({Key? key}) : super(key: key);
+  Settings({super.key});
 
   String _functionSearch = "";
 
@@ -243,6 +243,20 @@ class Settings extends StatelessWidget {
               HapticFeedbackProxy.lightImpact();
             },
             value: settings_service.Settings.getFilterMode(),
+          ),
+        )
+      ]);
+      children.addAll([
+        const Divider(),
+        ListTile(
+          title: const Text("New Device Manager"),
+          trailing: PlatformSwitch(
+            onChanged: (bool value) async {
+              await settings_service.Settings.setDeviceManagerMode(value);
+              state.notifyListeners();
+              HapticFeedbackProxy.lightImpact();
+            },
+            value: settings_service.Settings.getDeviceManagerMode(),
           ),
         )
       ]);

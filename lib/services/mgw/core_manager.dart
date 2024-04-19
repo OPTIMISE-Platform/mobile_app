@@ -28,24 +28,25 @@ class MgwCoreService {
   MgwApiService mgwApiService = MgwApiService("", true);
 
   MgwCoreService(String host) {
-    this.mgwApiService = MgwApiService(host, true);
+    mgwApiService = MgwApiService(host, true);
   }
   final _logger = Logger(
     printer: SimplePrinter(),
   );
 
   Future<List<Endpoint>> getEndpointsOfModule(String moduleID) async {
-    var path = basePath + "/endpoints?labels=mod_id=" + moduleID;
-    _logger.d(LOG_PREFIX + ": Load endpoints from MGW at " + path);
+    var path = "$basePath/endpoints?labels=mod_id=$moduleID";
+    _logger.d("$LOG_PREFIX: Load endpoints from MGW at $path");
     var resp = await mgwApiService.Get(path, Options());
     List<Endpoint> endpoints = [];
     if(resp.data == null) {
-      _logger.e(LOG_PREFIX + ": Endpoint response is null");
+      _logger.e("$LOG_PREFIX: Endpoint response is null");
       throw("Endpoint response is null");
     }
 
     for (final value in resp.data!.values) {
       var endpoint = Endpoint.fromJson(value);
+      endpoint.moduleName = moduleID;
       endpoints.add(endpoint);
     }
     return endpoints;

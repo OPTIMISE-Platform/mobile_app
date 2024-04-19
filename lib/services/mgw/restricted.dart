@@ -111,8 +111,8 @@ class MgwService {
     try {
       resp = await dio.get(url, options: options);
       return resp;
-    } on DioError catch (e) {
-      _logger.e("$LOG_PREFIX: Request error");
+    } on DioException catch (e) {
+      _logger.e("$LOG_PREFIX: Get: Request error");
       var failure = handleDioError(e);
       throw(failure);
     }

@@ -14,15 +14,28 @@
  *  limitations under the License.
  */
 
+import 'package:isar/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
+
+import '../shared/isar.dart';
 
 part 'mgw_deployment.g.dart';
 
 @JsonSerializable()
+@collection
 class Endpoint {
   String id, location, ref;
 
-  Endpoint(this.id, this.location, this.ref);
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @Index()
+  String moduleName;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  Id isarId = Isar.autoIncrement;
+
+  Endpoint(this.id, this.location, this.ref, {this.moduleName = ""}){
+    isarId = fastHash(id);
+  }
   factory Endpoint.fromJson(Map<String, dynamic> json) => _$EndpointFromJson(json);
   Map<String, dynamic> toJson() => _$EndpointToJson(this);
 }

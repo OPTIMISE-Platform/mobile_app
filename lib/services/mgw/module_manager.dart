@@ -37,12 +37,12 @@ class MgwModuleService {
   );
 
   Future<List<Module>> getModules() async {
-    var path = basePath + "/modules";
-    _logger.d(LOG_PREFIX + ": Load modules from MGW at " + path);
+    var path = "$basePath/modules";
+    _logger.d("$LOG_PREFIX: Load modules from MGW at $path");
     var resp = await mgwApiService.Get(path, Options());
     List<Module> modules = [];
     if(resp.data == null) {
-      _logger.e(LOG_PREFIX + ": Modules response is null");
+      _logger.e("$LOG_PREFIX: Modules response is null");
       throw("Modules response is null");
     }
 
