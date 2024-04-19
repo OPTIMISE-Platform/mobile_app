@@ -110,7 +110,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     printer: SimplePrinter(),
   );
 
-  static const _storage = FlutterSecureStorage();
+  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions(
+    encryptedSharedPreferences: true,
+  ));
 
   static final _messageMutex = Mutex();
 

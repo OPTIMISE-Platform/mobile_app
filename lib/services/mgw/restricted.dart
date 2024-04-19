@@ -16,6 +16,7 @@
 
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/auth.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
@@ -30,6 +31,13 @@ class MgwService {
   String baseUrl = "";
   MgwAuth mgwAuthService = MgwAuth("");
   DeviceUserCredentials deviceCredentials = DeviceUserCredentials("", "", "");
+
+  static const  _storage = FlutterSecureStorage(aOptions: AndroidOptions(
+    encryptedSharedPreferences: true,
+  ));
+  static const sessionStorageKey = "mgw-session";
+  static const sessionExpirationStorageKey = "mgw-session-expiration";
+
   final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -39,32 +47,6 @@ class MgwService {
       sendTimeout: const Duration(milliseconds: 5000),
       receiveTimeout: const Duration(milliseconds: 5000),))
     ..interceptors.add(ApiAvailableInterceptor());
-
-  Future<String> GetSessionToken() async {
-    // TODO dont load credentials + request token at every request
-    _logger.d("$LOG_PREFIX: Get Session Token");
-    await LoadCredentialsFromStorage();
-    _logger.d("$LOG_PREFIX: Perform Login");
-    var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
-    return loginResponse.token;
-  }
-
-  Future<String> GetBasicAuthValue() async {
-    _logger.d("$LOG_PREFIX: Load basic auth credentials from storage");
-    try {
-      var password = await MgwStorage.LoadBasicAuthCredentials();
-      String basicAuth =
-          'Basic ${base64.encode(utf8.encode('admin:$password'))}';
-      return basicAuth;
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  LoadCredentialsFromStorage() async {
-    _logger.d("$LOG_PREFIX: Load device credentials from storage");
-    deviceCredentials = await MgwStorage.LoadCredentials();
-  }
 
   MgwService(String host, bool authenticate) {
     baseUrl = "http://$host:8080";
@@ -89,6 +71,45 @@ class MgwService {
       }));
     }
   }
+
+  Future<String> GetSessionToken() async {
+    _logger.d("$LOG_PREFIX: Get Session Token");
+    await LoadCredentialsFromStorage();
+    final now = DateTime.now();
+    String? session = await _storage.read(key: sessionStorageKey);
+    String? sessionExpiration = await _storage.read(key: sessionExpirationStorageKey);
+    if (sessionExpiration != null) {
+      final sessionExpirationDate = DateTime.parse(sessionExpiration);
+      if (sessionExpirationDate.isAfter(now.add(const Duration(hours:3))) && session != null) {
+        _logger.d("$LOG_PREFIX: Use stored session");
+        return session;
+      }
+    }
+    _logger.d("$LOG_PREFIX: Get new Session");
+    var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
+    await _storage.write(key: sessionStorageKey, value: loginResponse.token);
+    await _storage.write(key: sessionExpirationStorageKey, value: loginResponse.expires_at);
+    return loginResponse.token;
+  }
+
+  Future<String> GetBasicAuthValue() async {
+    _logger.d("$LOG_PREFIX: Load basic auth credentials from storage");
+    try {
+      var password = await MgwStorage.LoadBasicAuthCredentials();
+      String basicAuth =
+          'Basic ${base64.encode(utf8.encode('admin:$password'))}';
+      return basicAuth;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  LoadCredentialsFromStorage() async {
+    _logger.d("$LOG_PREFIX: Load device credentials from storage");
+    deviceCredentials = await MgwStorage.LoadCredentials();
+  }
+
+
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
     var url = baseUrl + path;
