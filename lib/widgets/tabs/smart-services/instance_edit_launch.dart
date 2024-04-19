@@ -28,6 +28,7 @@ import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class SmartServicesReleaseLaunch extends StatefulWidget {
   final SmartServiceRelease release;
@@ -229,7 +230,14 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.parameters == null) {
-        parameters = await SmartServiceService.getReleaseParameters(widget.release.id);
+        try {
+          parameters =
+          await SmartServiceService.getReleaseParameters(widget.release.id);
+        } catch (e) {
+          _logger.e("Could not load release parameters: $e");
+          Navigator.pop(context);
+          Toast.showToastNoContext("Could not load smart service release");
+        }
       } else {
         parameters = widget.parameters;
       }
@@ -340,13 +348,25 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                         });
                     if (nameDescription == null) return;
 
-                    await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
+                    try {
+                      await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
                         nameDescription["name"], nameDescription["description"]);
+                    } catch (e) {
+                      _logger.e("Could not create smart service instance: $e");
+                      Toast.showToastNoContext("Could not start smart service");
+                    }
                     Navigator.pop(context);
                   } else {
-                    await SmartServiceService.updateInstanceParameters(
-                        widget.instance!.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
-                        releaseId: widget.release.id);
+                    try {
+                      await SmartServiceService.updateInstanceParameters(
+                          widget.instance!.id,
+                          parameters!.map((e) => e.toSmartServiceParameter())
+                              .toList(),
+                          releaseId: widget.release.id);
+                    } catch (e) {
+                      _logger.e("Could not update smart service instance: $e");
+                      Toast.showToastNoContext("Could not update smart service");
+                    }
                   }
                   Navigator.pop(this.context);
                 },
