@@ -45,8 +45,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
 
   _openFavorites(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-    //TODO: Why is this here?
-    //parentState?.switchScreen(6, true);
+    parentState?.switchScreen(6, true);
   }
 
   @override

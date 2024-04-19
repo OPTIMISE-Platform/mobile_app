@@ -151,7 +151,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       switch (selectedIndex) {
         case tabFavorites:
           hideSearch = false;
+          filter.favorites = true;
           AppState().searchDevices(filter, context);
+          filter.favorites = false;
           showFab = false;
           break;
         case tabDashboard:
