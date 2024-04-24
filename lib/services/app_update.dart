@@ -95,6 +95,7 @@ class AppUpdater {
         _foundUpdateAt!.add(cacheAge).isAfter(DateTime.now())) {
       return _foundUpdate;
     }
+    return null;
   }
 
   static Future<bool?> updateAvailable(
