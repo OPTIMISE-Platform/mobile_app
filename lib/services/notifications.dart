@@ -71,7 +71,7 @@ class NotificationsService {
     final Response<Map<String, dynamic>> resp;
     try {
       resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
       }

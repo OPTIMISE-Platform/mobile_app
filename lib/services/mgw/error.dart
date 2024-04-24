@@ -27,7 +27,7 @@ enum ErrorCode {
   DEFAULT
 }
 
-Failure handleDioError(DioException error) {
+Failure handleDioException(DioException error) {
   final _logger = Logger(
     printer: SimplePrinter(),
   );

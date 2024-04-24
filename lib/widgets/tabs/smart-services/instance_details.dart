@@ -82,24 +82,28 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
     return Scaffold(
         floatingActionButton: FloatingActionButton(
           onPressed: () async {
-            final release = await SmartServiceService.getRelease(widget.instance.release_id);
-            final parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
-            for (SmartServiceExtendedParameter p in parameters) {
-              final existing = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id);
-              p.value = existing.value;
-              p.value_label = existing.value_label;
+            try {
+              final release = await SmartServiceService.getRelease(widget.instance.release_id);
+              final parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
+              for (SmartServiceExtendedParameter p in parameters) {
+                final existing = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id);
+                p.value = existing.value;
+                p.value_label = existing.value_label;
+              }
+              await Navigator.push(
+                  this.context,
+                  platformPageRoute(
+                    context: this.context,
+                    builder: (_) => SmartServicesReleaseLaunch(
+                      release,
+                      instance: widget.instance,
+                      parameters: parameters,
+                    ),
+                  ));
+              Navigator.pop(this.context);
+            } catch (e) {
+              Toast.showToastNoContext(e.toString());
             }
-            await Navigator.push(
-                this.context,
-                platformPageRoute(
-                  context: this.context,
-                  builder: (_) => SmartServicesReleaseLaunch(
-                    release,
-                    instance: widget.instance,
-                    parameters: parameters,
-                  ),
-                ));
-            Navigator.pop(this.context);
           },
           backgroundColor: MyTheme.appColor,
           child: Icon(Icons.edit, color: MyTheme.textColor),

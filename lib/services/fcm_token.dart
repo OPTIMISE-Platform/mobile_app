@@ -69,7 +69,7 @@ class FcmTokenService {
     final Response resp;
     try {
       resp = await _dio!.post(url, options: Options(headers: headers));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
       }

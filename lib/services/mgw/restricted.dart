@@ -120,7 +120,7 @@ class MgwService {
       return resp;
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Request error: $e");
-      var failure = handleDioError(e);
+      var failure = handleDioException(e);
       throw(failure);
     }
   }
@@ -134,7 +134,7 @@ class MgwService {
       return resp;
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Get: Request error");
-      var failure = handleDioError(e);
+      var failure = handleDioException(e);
       throw(failure);
     }
   }

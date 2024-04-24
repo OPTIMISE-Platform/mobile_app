@@ -67,7 +67,7 @@ class AspectsService {
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(
             e.response?.statusCode, "$uri ${e.message}");

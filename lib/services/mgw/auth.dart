@@ -75,9 +75,9 @@ class MgwAuth {
     Response<Map<String, dynamic>> resp;
     try {
       resp = await dio.post<Map<String, dynamic>>(baseUrl + loginPath + "?refresh=true&flow=" + flowId, data: payload, options: Options(contentType: Headers.jsonContentType));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _logger.e(LOG_PREFIX + ": Could not login");
-      var failure = handleDioError(e);
+      var failure = handleDioException(e);
       throw(failure);
     };
 
@@ -93,9 +93,9 @@ class MgwAuth {
 
     try {
       resp = await dio.get<Map<String, dynamic>>(baseUrl + loginPath + "/api");
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       _logger.e(LOG_PREFIX + ": Could not init login");
-      var failure = handleDioError(e);
+      var failure = handleDioException(e);
       throw(failure);
     };
 

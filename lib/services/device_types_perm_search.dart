@@ -74,7 +74,7 @@ class DeviceTypesPermSearchService {
     try {
       resp = await dio.get<List<dynamic>?>(uri,
           queryParameters: queryParameters, options: Options(headers: headers));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(
             e.response?.statusCode, "$uri ${e.message}");

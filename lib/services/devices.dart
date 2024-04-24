@@ -92,7 +92,7 @@ class DevicesService {
       resp = await _dio!.post<List<dynamic>?>(
           uri, options: Options(headers: headers), data: encoded);
       _logger.d("getDevices ${DateTime.now().difference(start)}");
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(
             e.response?.statusCode, "$uri ${e.message}");
@@ -132,7 +132,7 @@ class DevicesService {
     try {
       await _dio!.put<dynamic>(
           uri, options: Options(headers: headers), data: encoded);
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(
             e.response?.statusCode, "$uri ${e.message}");
@@ -174,7 +174,7 @@ class DevicesService {
       resp = await _dio!.get<int>(uri, options: Options(headers: headers),
           queryParameters: queryParameters);
       _logger.d("getTotalDevices ${DateTime.now().difference(start)}");
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(
             e.response?.statusCode, "$uri ${e.message}");

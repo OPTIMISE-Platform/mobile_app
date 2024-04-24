@@ -75,7 +75,7 @@ class DeviceTypesService {
     final Response<Map<String, dynamic>> resp;
     try {
       resp = await _dio!.get<Map<String, dynamic>>(url, options: Options(headers: headers));
-    } on DioError catch (e) {
+    } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
       }
