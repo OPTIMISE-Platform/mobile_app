@@ -204,6 +204,7 @@ DeviceGroup _deviceGroupDeserialize(
       Attribute(),
     ),
   );
+  object.favorite = reader.readBool(offsets[3]);
   object.isarId = id;
   return object;
 }

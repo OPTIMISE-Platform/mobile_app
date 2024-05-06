@@ -134,10 +134,6 @@ class DeviceInstance {
     }
   }
 
-  toggleFavorite() {
-    setFavorite(!favorite);
-  }
-
   @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   DeviceConnectionStatus get connectionStatus {

@@ -120,6 +120,7 @@ class DeviceGroupsService {
       }));
     }
     await Future.wait(futures);
+    groupsRepo.forEach((element) async {element.favorite = await element.isFavorite();});
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
         await collection.putAll(groupsRepo);

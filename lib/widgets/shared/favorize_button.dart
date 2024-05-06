@@ -30,7 +30,7 @@ import 'package:mobile_app/shared/isar.dart';
 
 class FavorizeButton extends StatelessWidget {
   final DeviceInstance? _device;
-  DeviceGroup? _group;
+  final DeviceGroup? _group;
 
   FavorizeButton(this._device, this._group, {super.key}) {
     if ((_device == null && _group == null) ||
@@ -50,8 +50,10 @@ class FavorizeButton extends StatelessWidget {
           await isar!.deviceInstances.put(_device!);
         });
     } else {
-      _group!.toggleFavorite();
-      _group = await DeviceGroupsService.saveDeviceGroup(_group!);
+      _group!.favorite = !_group!.favorite ;
+      await isar?.writeTxn(() async {
+        await isar!.deviceGroups.put(_group!);
+      });
     }
     AppState().notifyListeners();
   }

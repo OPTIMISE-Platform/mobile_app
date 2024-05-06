@@ -172,11 +172,21 @@ class DeviceGroup {
     return result;
   }
 
+  Future<bool> isFavorite() async {
+    final group =
+    await isar!.deviceGroups.where().idEqualTo(id).findFirst();
+    return group?.favorite ?? false;
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @Index()
+  bool favorite = false;
+
+  /*
   bool get favorite {
     final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
     return i != null && i != -1;
-  }
+  }*/
 
   setFavorite(bool val) {
     if (val) {
