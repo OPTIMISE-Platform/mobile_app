@@ -109,7 +109,11 @@ class DevicesService {
         l.length, (index) => DeviceInstance.fromJson(l[index]));
     _logger.d("Getting devices from remote DB took ${DateTime.now().difference(
         start)}");
-    devices.forEach((element) async {element.favorite = await element.isFavorite();});
+
+
+    List<Future> futures = [];
+    devices.forEach((element) {  futures.add(element.isFavorite().then((value) => element.favorite = value));});
+    await Future.wait(futures);
 
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
