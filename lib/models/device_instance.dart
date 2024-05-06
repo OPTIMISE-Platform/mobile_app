@@ -52,14 +52,14 @@ class DeviceInstance {
   Annotations? annotations;
   bool shared;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = -1;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   final List<DeviceState> states = [];
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   Network? network;
 
@@ -138,7 +138,7 @@ class DeviceInstance {
     setFavorite(!favorite);
   }
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   DeviceConnectionStatus get connectionStatus {
     if (annotations?.connected == null) {
@@ -151,7 +151,7 @@ class DeviceInstance {
     }
   }
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   set connectionStatus(DeviceConnectionStatus connectionStatus) {
     switch (connectionStatus) {
       case DeviceConnectionStatus.unknown:
