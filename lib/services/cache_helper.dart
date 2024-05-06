@@ -83,11 +83,6 @@ class CacheHelper {
   static clearCache() async {
     final cacheFile = (await getCacheFile());
     await HiveCacheStore(cacheFile).clean();
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.clear();
-      });
-    }
     return await Future.delayed(const Duration(seconds: 1));
   }
 
@@ -146,15 +141,16 @@ class CacheHelper {
       deviceOffset = newDevices.length;
       last = newDevices.isNotEmpty ? newDevices.last : null;
 
-      newDevices.forEach((element) =>
-      deviceTypeIds[element.device_type_id] = 0);
-      if (isar != null) {
-        await isar!.writeTxn(() async {
-          await isar!.deviceInstances.clear();
-          await isar!.deviceInstances.putAll(newDevices);
-        });
-      }
+      newDevices.forEach((element) => deviceTypeIds[element.device_type_id] = 0);
     }
+
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceInstances.clear();
+        await isar!.deviceInstances.putAll(newDevices);
+      });
+    }
+
     final List<Future> futures = [];
     deviceTypeIds.keys.forEach((element) => futures.add(DeviceTypesService.getDeviceType(element)));
     await Future.wait(futures);

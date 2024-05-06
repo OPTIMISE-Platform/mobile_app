@@ -108,11 +108,15 @@ class DeviceInstance {
     return result;
   }
 
-  @Index()
-  bool get favorite {
-    final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
-    return i != null && i != -1;
+  Future<bool> isFavorite() async {
+    final device =
+    await isar!.deviceInstances.where().idEqualTo(id).findFirst();
+    return device?.favorite ?? false;
   }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @Index()
+  bool favorite = false;
 
   setFavorite(bool val) {
     if (val) {

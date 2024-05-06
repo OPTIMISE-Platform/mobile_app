@@ -68,7 +68,7 @@ class DeviceSearchFilter {
 
   removeNetwork(String id) => networkIds = _remove(networkIds, id);
 
-  Map<String, dynamic> toBody(int limit, int offset, DeviceInstance? lastDevice) {
+  Map<String, dynamic> toBody(int limit, int offset, DeviceInstance? lastDevice, [List<String>? ids]) {
     final body = <String, dynamic>{
       "resource": "devices",
       "find": {
@@ -79,6 +79,9 @@ class DeviceSearchFilter {
         "search": query,
       }
     };
+    if (ids != null) {
+      body["list_ids"]["ids"] = ids;
+    }
     if (offset > 0 && lastDevice != null) {
       body["find"]["after"] = {
         "sort_field_value": lastDevice.name,

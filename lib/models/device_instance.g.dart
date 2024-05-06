@@ -236,6 +236,7 @@ DeviceInstance _deviceInstanceDeserialize(
     reader.readString(offsets[2]),
     reader.readStringOrNull(offsets[4]),
   );
+  object.favorite = reader.readBool(offsets[5]);
   object.isarId = id;
   return object;
 }

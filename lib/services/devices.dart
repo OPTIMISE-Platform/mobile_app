@@ -109,6 +109,7 @@ class DevicesService {
         l.length, (index) => DeviceInstance.fromJson(l[index]));
     _logger.d("Getting devices from remote DB took ${DateTime.now().difference(
         start)}");
+    devices.forEach((element) async {element.favorite = await element.isFavorite();});
 
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
