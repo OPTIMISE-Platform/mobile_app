@@ -31,6 +31,8 @@ import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
+import '../nav.dart';
+
 class DeviceListFavorites extends StatefulWidget {
   const DeviceListFavorites({Key? key}) : super(key: key);
 
@@ -43,9 +45,9 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
   StreamSubscription? _refreshSubscription;
   bool _init = false;
 
-  _openFavorites(BuildContext context) {
+  _openDeviceListView(BuildContext context) {
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-    parentState?.switchScreen(6, true);
+    parentState?.switchScreen(tabDevices, true);
   }
 
   @override
@@ -108,7 +110,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
                                 child: PlatformElevatedButton(
                           widgetKey: _keyFavButton,
                           child: const Text("Add Favorites"),
-                          onPressed: () => _openFavorites(context),
+                          onPressed: () => _openDeviceListView(context),
                         ))),
                       ],
                     ),
@@ -174,7 +176,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsB
         ],
         colorShadow: MyTheme.appColor,
         onClickTarget: (_) {
-          _openFavorites(context);
+          _openDeviceListView(context);
         },
         alignSkip: Alignment.topRight,
       ).show(context: context);
