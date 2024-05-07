@@ -329,6 +329,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
 
   int calcPrecision(List<dynamic> values) {
     final List<double> nums = [];
+    if (values.isEmpty) return 0;
     for (int i = 0; i < values.length; i++) {
       nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
     }
@@ -339,7 +340,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       precision = 1;
     } else {
       num std = stats.standardDeviation;
-      while (std < 1) {
+      while (std > 0 && std < 1) {
         std *= 10;
         precision++;
       }
