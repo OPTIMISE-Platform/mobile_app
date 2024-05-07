@@ -226,6 +226,7 @@ class Settings extends StatelessWidget {
             onChanged: (bool value) async {
               await settings_service.Settings.setLocalMode(value);
               state.notifyListeners();
+              state.setAndGetDisabledTabs();
               HapticFeedbackProxy.lightImpact();
             },
             value: settings_service.Settings.getLocalMode(),

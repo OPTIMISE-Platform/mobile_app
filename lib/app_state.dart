@@ -56,10 +56,12 @@ import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/nav.dart';
 import 'package:mutex/mutex.dart';
 import 'package:nsd/nsd.dart';
 
@@ -971,4 +973,39 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void pushRefresh() => _refreshPressedController.add(null);
+
+  List<bool> setAndGetDisabledTabs() {
+    final state = AppState();
+    final List<bool> disabledList =
+    List.generate(navItems.length, (index) => true);
+    navItems.forEach((navItem) {
+      switch (navItem.index) {
+        case tabLocations:
+          navItem.disabled =
+              state.locations.isEmpty && !LocationService.isListAvailable();
+          break;
+        case tabGroups:
+          navItem.disabled = state.deviceGroups.isEmpty &&
+              !DeviceGroupsService.isListAvailable();
+          break;
+        case tabNetworks:
+          navItem.disabled =
+              state.networks.isEmpty && !NetworksService.isAvailable();
+          break;
+        case tabClasses:
+          navItem.disabled = state.deviceClasses.isEmpty &&
+              !DeviceClassesService.isAvailable();
+          break;
+        case tabSmartServices:
+          navItem.disabled = !SmartServiceService.isAvailable();
+          break;
+        case tabDashboard:
+          navItem.disabled = !SmartServiceService.isAvailable();
+        default:
+          navItem.disabled = false;
+      }
+      disabledList[navItem.index] = navItem.disabled;
+    });
+    return disabledList;
+  }
 }

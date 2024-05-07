@@ -197,44 +197,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     });
   }
 
-  List<bool> _tabDisabled() {
-    final state = AppState();
-    final List<bool> disabledList =
-        List.generate(navItems.length, (index) => true);
-    navItems.forEach((navItem) {
-      switch (navItem.index) {
-        case tabLocations:
-          navItem.disabled =
-              state.locations.isEmpty && !LocationService.isListAvailable();
-          break;
-        case tabGroups:
-          navItem.disabled = state.deviceGroups.isEmpty &&
-              !DeviceGroupsService.isListAvailable();
-          break;
-        case tabNetworks:
-          navItem.disabled =
-              state.networks.isEmpty && !NetworksService.isAvailable();
-          break;
-        case tabClasses:
-          navItem.disabled = state.deviceClasses.isEmpty &&
-              !DeviceClassesService.isAvailable();
-          break;
-        case tabSmartServices:
-          navItem.disabled = !SmartServiceService.isAvailable();
-          break;
-        case tabDashboard:
-          navItem.disabled = !SmartServiceService.isAvailable();
-        default:
-          navItem.disabled = false;
-      }
-      disabledList[navItem.index] = navItem.disabled;
-    });
-    return disabledList;
-  }
-
   /// create BottomNavigationBar with items
   PlatformNavBar _buildBottomNavBar(BuildContext context) {
-    final disabled = _tabDisabled();
+    final disabled = AppState().setAndGetDisabledTabs();
 
     Color disabledColor;
     if (isCupertino(context)) {
@@ -823,7 +788,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   InteractiveInkFeatureFactory _getCustomSplashFactory(BuildContext context) {
     return _CustomInkSplashFactory()
       ..keys = _tabKeys
-      ..keysDisabled = _tabDisabled();
+      ..keysDisabled = AppState().setAndGetDisabledTabs();
   }
 }
 
