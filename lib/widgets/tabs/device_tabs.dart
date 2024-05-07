@@ -199,21 +199,41 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   List<bool> _tabDisabled() {
     final state = AppState();
-    return [
-      false,
-      !SmartServiceService.isAvailable(),
-      state.deviceClasses.isEmpty && !DeviceClassesService.isAvailable(),
-      state.locations.isEmpty && !LocationService.isListAvailable(),
-      state.deviceGroups.isEmpty && !DeviceGroupsService.isListAvailable(),
-      state.networks.isEmpty && !NetworksService.isAvailable(),
-      false,
-      !SmartServiceService.isAvailable(),
-      false
-    ];
+    final List<bool> disabledList =
+        List.generate(navItems.length, (index) => true);
+    navItems.forEach((navItem) {
+      switch (navItem.index) {
+        case tabLocations:
+          navItem.disabled =
+              state.locations.isEmpty && !LocationService.isListAvailable();
+          break;
+        case tabGroups:
+          navItem.disabled = state.deviceGroups.isEmpty &&
+              !DeviceGroupsService.isListAvailable();
+          break;
+        case tabNetworks:
+          navItem.disabled =
+              state.networks.isEmpty && !NetworksService.isAvailable();
+          break;
+        case tabClasses:
+          navItem.disabled = state.deviceClasses.isEmpty &&
+              !DeviceClassesService.isAvailable();
+          break;
+        case tabSmartServices:
+          navItem.disabled = !SmartServiceService.isAvailable();
+          break;
+        case tabDashboard:
+          navItem.disabled = !SmartServiceService.isAvailable();
+        default:
+          navItem.disabled = false;
+      }
+      disabledList[navItem.index] = navItem.disabled;
+    });
+    return disabledList;
   }
 
   /// create BottomNavigationBar with items
-  PlatformNavBar _buildBottom(BuildContext context) {
+  PlatformNavBar _buildBottomNavBar(BuildContext context) {
     final disabled = _tabDisabled();
 
     Color disabledColor;
@@ -228,41 +248,41 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     if (Platform.isIOS) {
       navItems.forEach((navItem) {
         bottomBarItems.add(BottomNavigationBarItem(
-            tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
+            tooltip: navItem.disabled ? "Currently unavailable" : null,
             icon: Icon(navItem.icon,
                 key: _tabKeys[navItem.index],
-                color: disabled[navItem.index] ? disabledColor : null),
+                color: navItem.disabled ? disabledColor : null),
             label: navItem.name));
       });
     } else {
       navItems.forEach((navItem) {
         if (["Favorites", "Dashboard"].contains(navItem.name)) {
           bottomBarItems.add(BottomNavigationBarItem(
-              tooltip: disabled[navItem.index] ? "Currently unavailable" : null,
+              tooltip: navItem.disabled ? "Currently unavailable" : null,
               icon: Icon(navItem.icon,
                   key: _tabKeys[navItem.index],
-                  color: disabled[navItem.index] ? disabledColor : null),
+                  color: navItem.disabled ? disabledColor : null),
               label: navItem.name));
         }
       });
     }
 
     return PlatformNavBar(
-        items: bottomBarItems,
-        currentIndex: _bottomBarIndex,
-        itemChanged: (i) {
-          if (disabled[i]) {
-            controller.index = _bottomBarIndex;
-            return;
-          }
-          setState(() {
-            _bottomBarIndex = i;
-            _navigationIndex = i;
-            _sidebarController.selectIndex(i);
-          });
-          HapticFeedbackProxy.lightImpact();
-          switchScreen(i, false);
-        },
+      items: bottomBarItems,
+      currentIndex: _bottomBarIndex,
+      itemChanged: (i) {
+        if (disabled[i]) {
+          controller.index = _bottomBarIndex;
+          return;
+        }
+        setState(() {
+          _bottomBarIndex = i;
+          _navigationIndex = i;
+          _sidebarController.selectIndex(i);
+        });
+        HapticFeedbackProxy.lightImpact();
+        switchScreen(i, false);
+      },
     );
   }
 
@@ -330,8 +350,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           ));
         }
 
-
-        if (Settings.getFilterMode()){
+        if (Settings.getFilterMode()) {
           populateAndShowFilterMenu(state, context, actions);
         }
         actions.addAll(MyAppBar.getDefaultActions(context));
@@ -347,10 +366,13 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         final List<SidebarXItem> sidebarItems = [];
 
         navItems.forEach((navItem) {
+          if (navItem.disabled) {
+            return;
+          }
           sidebarItems.add(SidebarXItem(
-
               icon: navItem.icon,
               label: navItem.name,
+              selectable: false,
               onTap: () {
                 setState(() {
                   _navigationIndex = navItem.index;
@@ -366,9 +388,9 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         var backgroundColor = Colors.white;
 
         if (MyTheme.isDarkMode) {
-            selectorColor = MyTheme.appColor;
-            iconColor = Colors.white;
-            backgroundColor = const Color(0xFF424242);
+          selectorColor = MyTheme.appColor;
+          iconColor = Colors.white;
+          backgroundColor = const Color(0xFF424242);
         }
 
         final divider = Divider(color: textColor?.withOpacity(0.3), height: 1);
@@ -493,7 +515,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                                       color: MyTheme.errorColor,
                                     ),
                                     SizedBox(
-                                        width: MediaQuery.textScalerOf(context).scale(1) *
+                                        width: MediaQuery.textScalerOf(context)
+                                                .scale(1) *
                                             12,
                                         height: 0),
                                     const Text("not implemented")
@@ -504,7 +527,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                       cupertino: (context, _) =>
                           CupertinoPageScaffoldData(controller: controller),
                       // if not used, changes to _bottomBarIndex are not reflected visually
-                      bottomNavBar: _buildBottom(context),
+                      bottomNavBar: _buildBottomNavBar(context),
                     ))));
       },
     );
@@ -512,7 +535,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   /// Populate and show filter menu
   /// uncomment to disable
-  void populateAndShowFilterMenu(AppState state, BuildContext context, List<Widget> actions) {
+  void populateAndShowFilterMenu(
+      AppState state, BuildContext context, List<Widget> actions) {
     if (_navigationIndex != tabGroups &&
         _navigationIndex != tabSmartServices &&
         _navigationIndex != tabDashboard) {
@@ -542,39 +566,31 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                             color: const Color(0x00000000),
                             // required for ListTile
                             child: ListView.builder(
-                                itemCount:
-                                    state.deviceClasses.values.length,
+                                itemCount: state.deviceClasses.values.length,
                                 itemBuilder: (context, i) {
-                                  final deviceClass = state
-                                      .deviceClasses.values
-                                      .elementAt(i);
+                                  final deviceClass =
+                                      state.deviceClasses.values.elementAt(i);
                                   return StatefulBuilder(
-                                      builder: (context, setState) =>
-                                          ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  if (checked == true) {
-                                                    filter.addDeviceClass(
-                                                        deviceClass.id);
-                                                  } else {
-                                                    filter
-                                                        .removeDeviceClass(
-                                                            deviceClass.id);
-                                                  }
-                                                  setState(() {});
-                                                },
-                                                value: filter.deviceClassIds
-                                                        ?.contains(
-                                                            deviceClass
-                                                                .id) ??
-                                                    false,
-                                              ),
-                                              title:
-                                                  Text(deviceClass.name)));
+                                      builder: (context, setState) => ListTile(
+                                          trailing: PlatformSwitch(
+                                            onChanged: (checked) {
+                                              if (checked == true) {
+                                                filter.addDeviceClass(
+                                                    deviceClass.id);
+                                              } else {
+                                                filter.removeDeviceClass(
+                                                    deviceClass.id);
+                                              }
+                                              setState(() {});
+                                            },
+                                            value: filter.deviceClassIds
+                                                    ?.contains(
+                                                        deviceClass.id) ??
+                                                false,
+                                          ),
+                                          title: Text(deviceClass.name)));
                                 }))),
-                    actions: <Widget>[
-                      filterOkAction
-                    ],
+                    actions: <Widget>[filterOkAction],
                   ),
                 )));
       }
@@ -595,33 +611,28 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                             child: ListView.builder(
                                 itemCount: state.locations.length,
                                 itemBuilder: (context, i) {
-                                  final location =
-                                      state.locations.elementAt(i);
+                                  final location = state.locations.elementAt(i);
                                   return StatefulBuilder(
-                                      builder: (context, setState) =>
-                                          ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addLocation(
-                                                          location.id);
-                                                    } else {
-                                                      filter.removeLocation(
-                                                          location.id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.locationIds
-                                                        ?.contains(
-                                                            location.id) ??
-                                                    false,
-                                              ),
-                                              title: Text(location.name)));
+                                      builder: (context, setState) => ListTile(
+                                          trailing: PlatformSwitch(
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  filter
+                                                      .addLocation(location.id);
+                                                } else {
+                                                  filter.removeLocation(
+                                                      location.id);
+                                                }
+                                              });
+                                            },
+                                            value: filter.locationIds
+                                                    ?.contains(location.id) ??
+                                                false,
+                                          ),
+                                          title: Text(location.name)));
                                 }))),
-                    actions: <Widget>[
-                      filterOkAction
-                    ],
+                    actions: <Widget>[filterOkAction],
                   ),
                 )));
       }
@@ -645,34 +656,27 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                                   final deviceGroup =
                                       state.deviceGroups.elementAt(i);
                                   return StatefulBuilder(
-                                      builder: (context, setState) =>
-                                          ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addDeviceGroup(
-                                                          deviceGroup.id);
-                                                    } else {
-                                                      filter
-                                                          .removeDeviceGroup(
-                                                              deviceGroup
-                                                                  .id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.deviceGroupIds
-                                                        ?.contains(
-                                                            deviceGroup
-                                                                .id) ??
-                                                    false,
-                                              ),
-                                              title:
-                                                  Text(deviceGroup.name)));
+                                      builder: (context, setState) => ListTile(
+                                          trailing: PlatformSwitch(
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  filter.addDeviceGroup(
+                                                      deviceGroup.id);
+                                                } else {
+                                                  filter.removeDeviceGroup(
+                                                      deviceGroup.id);
+                                                }
+                                              });
+                                            },
+                                            value: filter.deviceGroupIds
+                                                    ?.contains(
+                                                        deviceGroup.id) ??
+                                                false,
+                                          ),
+                                          title: Text(deviceGroup.name)));
                                 }))),
-                    actions: <Widget>[
-                      filterOkAction
-                    ],
+                    actions: <Widget>[filterOkAction],
                   ),
                 )));
       }
@@ -693,33 +697,27 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                             child: ListView.builder(
                                 itemCount: state.networks.length,
                                 itemBuilder: (context, i) {
-                                  final network =
-                                      state.networks.elementAt(i);
+                                  final network = state.networks.elementAt(i);
                                   return StatefulBuilder(
-                                      builder: (context, setState) =>
-                                          ListTile(
-                                              trailing: PlatformSwitch(
-                                                onChanged: (checked) {
-                                                  setState(() {
-                                                    if (checked == true) {
-                                                      filter.addNetwork(
-                                                          network.id);
-                                                    } else {
-                                                      filter.removeNetwork(
-                                                          network.id);
-                                                    }
-                                                  });
-                                                },
-                                                value: filter.networkIds
-                                                        ?.contains(
-                                                            network.id) ??
-                                                    false,
-                                              ),
-                                              title: Text(network.name)));
+                                      builder: (context, setState) => ListTile(
+                                          trailing: PlatformSwitch(
+                                            onChanged: (checked) {
+                                              setState(() {
+                                                if (checked == true) {
+                                                  filter.addNetwork(network.id);
+                                                } else {
+                                                  filter.removeNetwork(
+                                                      network.id);
+                                                }
+                                              });
+                                            },
+                                            value: filter.networkIds
+                                                    ?.contains(network.id) ??
+                                                false,
+                                          ),
+                                          title: Text(network.name)));
                                 }))),
-                    actions: <Widget>[
-                      filterOkAction
-                    ],
+                    actions: <Widget>[filterOkAction],
                   ),
                 )));
       }
@@ -815,7 +813,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   @override
   String? get restorationId => "device_list";
-
 
   @override
   void restoreState(RestorationBucket? oldBucket, bool initialRestore) {

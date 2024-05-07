@@ -24,7 +24,7 @@ class ApiAvailableInterceptor extends Interceptor {
 
   factory ApiAvailableInterceptor() => _instance;
 
-  ApiAvailableInterceptor._internal() {}
+  ApiAvailableInterceptor._internal();
 
 
   @override

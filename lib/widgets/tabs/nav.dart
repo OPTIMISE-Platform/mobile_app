@@ -42,5 +42,6 @@ class NavigationItem {
   String name;
   int index;
   IconData icon;
+  bool disabled = false;
   NavigationItem(this.name, this.index, this.icon);
 }

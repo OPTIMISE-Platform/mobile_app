@@ -29,7 +29,7 @@ class ApiAvailableService {
 
   ApiAvailableService._internal() {
     Connectivity().onConnectivityChanged.listen((event) {
-      final offline = event == ConnectivityResult.none;
+      final offline = event.contains(ConnectivityResult.none);
       if (offline != _offline) {
         _offline = offline;
         AppState().notifyListeners();
@@ -37,7 +37,7 @@ class ApiAvailableService {
     });
     Timer.periodic(const Duration(seconds: 10), (timer) async {
       // not all connectivity changes are recognized, checking periodically
-      final offline = await Connectivity().checkConnectivity() == ConnectivityResult.none;
+      final offline = await Connectivity().checkConnectivity().then((value) => value.contains(ConnectivityResult.none));
       if (offline != _offline) {
         _offline = offline;
         AppState().notifyListeners();

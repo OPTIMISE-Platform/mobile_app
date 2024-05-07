@@ -422,7 +422,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
                 refreshDeviceIds.length, 0, refreshFilter, null,
                 forceBackend: true)
             .catchError(( e) async {
-          _logger.e((e as Error).stackTrace);
           if (!Settings.getLocalMode()) {
             Toast.showToastNoContext(
                 "Error refreshing device status, using cache");
