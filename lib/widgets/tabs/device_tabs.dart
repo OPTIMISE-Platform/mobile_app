@@ -48,6 +48,7 @@ import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 import 'package:sidebarx/sidebarx.dart';
 
 import '../../services/settings.dart';
+import '../shared/toast.dart';
 
 class DeviceTabs extends StatefulWidget {
   const DeviceTabs({super.key});
@@ -332,12 +333,23 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
         navItems.forEach((navItem) {
           if (navItem.disabled) {
+            sidebarItems.add(SidebarXItem(
+                icon: Icons.disabled_by_default,
+                label: navItem.name,
+                selectable: false,
+                onTap: () {
+                  setState(() {
+                    Navigator.pop(context);
+                    Toast.showToastNoContext("Currently unavailable");
+                  });
+                })
+            );
             return;
           }
           sidebarItems.add(SidebarXItem(
               icon: navItem.icon,
               label: navItem.name,
-              selectable: false,
+              selectable: true,
               onTap: () {
                 setState(() {
                   _sidebarController.selectIndex(navItem.index);
@@ -345,7 +357,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                   switchScreen(_navigationIndex, true);
                   Navigator.pop(context);
                 });
-              }));
+              })
+          );
         });
 
         var textColor = MyTheme.textColor;
