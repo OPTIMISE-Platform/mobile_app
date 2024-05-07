@@ -340,6 +340,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               selectable: false,
               onTap: () {
                 setState(() {
+                  _sidebarController.selectIndex(navItem.index);
                   _navigationIndex = navItem.index;
                   switchScreen(_navigationIndex, true);
                   Navigator.pop(context);
