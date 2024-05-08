@@ -70,7 +70,8 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
       _refresh(context, _range);
     }
   }
@@ -97,8 +98,11 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                   _aggregation,
                   null,
                   null,
-                  Settings.getFunctionPreferredCharacteristicId(widget._state.functionId),
-                  AppState().nestedFunctions[widget._state.functionId]?.concept_id)
+                  Settings.getFunctionPreferredCharacteristicId(
+                      widget._state.functionId),
+                  AppState()
+                      .nestedFunctions[widget._state.functionId]
+                      ?.concept_id)
             ],
             null));
       } catch (e) {
@@ -116,13 +120,15 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       int fractionDigits = calcPrecision(data);
       for (final point in data) {
         if (point.length == 2 && point[0] != null && point[1] is num) {
-          double val = point[1] is int ? point[1].toDouble() : point[1] as double;
+          double val =
+              point[1] is int ? point[1].toDouble() : point[1] as double;
           if (val.isNaN) continue;
           val = double.parse(val.toStringAsFixed(fractionDigits));
           if (newSpots.isNotEmpty && _allValuesEqual) {
             _allValuesEqual = val == newSpots.first.y;
           }
-          newSpots.add(FlSpot(DateTime.parse(point[0]).millisecondsSinceEpoch.toDouble(), val));
+          newSpots.add(FlSpot(
+              DateTime.parse(point[0]).millisecondsSinceEpoch.toDouble(), val));
         }
       }
       if (mounted) {
@@ -212,9 +218,12 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
               }),
         ],
         icon: PlatformIconButton(
-          icon: Icon(Icons.show_chart, color: isCupertino(context) ? MyTheme.appColor : null),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-          material: (_, __) => MaterialIconButtonData(disabledColor: MyTheme.textColor),
+          icon: Icon(Icons.show_chart,
+              color: isCupertino(context) ? MyTheme.appColor : null),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
+          material: (_, __) =>
+              MaterialIconButtonData(disabledColor: MyTheme.textColor),
         ),
         cupertino: (context, _) => CupertinoPopupMenuData(
             title: const Text("Select Aggregation"),
@@ -252,9 +261,12 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
               }),
         ],
         icon: PlatformIconButton(
-          icon: Icon(PlatformIcons(context).clockSolid, color: isCupertino(context) ? MyTheme.appColor : null),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-          material: (_, __) => MaterialIconButtonData(disabledColor: MyTheme.textColor),
+          icon: Icon(PlatformIcons(context).clockSolid,
+              color: isCupertino(context) ? MyTheme.appColor : null),
+          cupertino: (_, __) =>
+              CupertinoIconButtonData(padding: EdgeInsets.zero),
+          material: (_, __) =>
+              MaterialIconButtonData(disabledColor: MyTheme.textColor),
         ),
         cupertino: (context, _) => CupertinoPopupMenuData(
             title: const Text("Select Range"),
@@ -265,7 +277,9 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       ),
       PlatformIconButton(
         onPressed: _refreshing ? null : () => _refresh(context, _range),
-        icon: _refreshing ? const DelayedCircularProgressIndicator() : const Icon(Icons.refresh),
+        icon: _refreshing
+            ? const DelayedCircularProgressIndicator()
+            : const Icon(Icons.refresh),
         cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )
     ];
@@ -274,12 +288,21 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
         body: _spots == null
             ? const Center(child: DelayedCircularProgressIndicator())
             : Container(
-                padding: const EdgeInsets.only(left: MyTheme.insetSize, right: MyTheme.insetSize, top: MyTheme.insetSize),
-                child: LineChart(
+                padding: const EdgeInsets.only(
+                    left: MyTheme.insetSize,
+                    right: MyTheme.insetSize,
+                    top: MyTheme.insetSize),
+                child: _spots!.isEmpty 
+                    ? const Center(child: Text("no data"))
+                    : LineChart(
                   LineChartData(
                     borderData: FlBorderData(show: false),
-                    maxY: !_allValuesEqual || _spots == null || _spots!.isEmpty ? null : (_spots?.first.y ?? 0) + 1,
-                    minY: !_allValuesEqual || _spots == null || _spots!.isEmpty ? null : (_spots?.first.y ?? 0) - 1,
+                    maxY: !_allValuesEqual || _spots == null || _spots!.isEmpty
+                        ? null
+                        : (_spots?.first.y ?? 0) + 1,
+                    minY: !_allValuesEqual || _spots == null || _spots!.isEmpty
+                        ? null
+                        : (_spots?.first.y ?? 0) - 1,
                     lineBarsData: [
                       LineChartBarData(
                         spots: _spots!,
@@ -305,8 +328,13 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                               if (val == meta.max || val == meta.min) {
                                 return const SizedBox.shrink();
                               }
-                              final dt = DateTime.fromMillisecondsSinceEpoch(val.floor()).toLocal();
-                              return Center(child: Text(_range < 4 ? MyTheme.formatHHMM.format(dt) : MyTheme.formatEHHMM.format(dt)));
+                              final dt = DateTime.fromMillisecondsSinceEpoch(
+                                      val.floor())
+                                  .toLocal();
+                              return Center(
+                                  child: Text(_range < 4
+                                      ? MyTheme.formatHHMM.format(dt)
+                                      : MyTheme.formatEHHMM.format(dt)));
                             }),
                       ),
                       leftTitles: AxisTitles(
@@ -321,7 +349,10 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                             }),
                       ),
                     ),
-                    lineTouchData: LineTouchData(touchTooltipData: LineTouchTooltipData(fitInsideVertically: true, fitInsideHorizontally: true)),
+                    lineTouchData: const LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                            fitInsideVertically: true,
+                            fitInsideHorizontally: true)),
                   ),
                   duration: const Duration(milliseconds: 400),
                 )));
@@ -331,7 +362,13 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
     final List<double> nums = [];
     if (values.isEmpty) return 0;
     for (int i = 0; i < values.length; i++) {
-      nums.addAll((values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
+      try  {
+        nums.addAll(
+            (values[i] as List).skip(1).map((e) => e is int ? e.toDouble() : e));
+      } catch (e) {
+        _logger.e(e);
+        continue;
+      }
     }
     if (nums.isEmpty) return 0;
     final stats = Stats.fromData(nums);
