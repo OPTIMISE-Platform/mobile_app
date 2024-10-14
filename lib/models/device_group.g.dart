@@ -143,13 +143,18 @@ int _deviceGroupEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
-  bytesCount += 3 + object.criteria.length * 3;
   {
-    final offsets = allOffsets[DeviceGroupCriteria]!;
-    for (var i = 0; i < object.criteria.length; i++) {
-      final value = object.criteria[i];
-      bytesCount +=
-          DeviceGroupCriteriaSchema.estimateSize(value, offsets, allOffsets);
+    final list = object.criteria;
+    if (list != null) {
+      bytesCount += 3 + list.length * 3;
+      {
+        final offsets = allOffsets[DeviceGroupCriteria]!;
+        for (var i = 0; i < list.length; i++) {
+          final value = list[i];
+          bytesCount += DeviceGroupCriteriaSchema.estimateSize(
+              value, offsets, allOffsets);
+        }
+      }
     }
   }
   bytesCount += 3 + object.device_ids.length * 3;
@@ -201,12 +206,11 @@ DeviceGroup _deviceGroupDeserialize(
     reader.readString(offsets[5]),
     reader.readString(offsets[7]),
     reader.readObjectList<DeviceGroupCriteria>(
-          offsets[2],
-          DeviceGroupCriteriaSchema.deserialize,
-          allOffsets,
-          DeviceGroupCriteria(),
-        ) ??
-        [],
+      offsets[2],
+      DeviceGroupCriteriaSchema.deserialize,
+      allOffsets,
+      DeviceGroupCriteria(),
+    ),
     reader.readString(offsets[6]),
     reader.readStringList(offsets[3]) ?? [],
     reader.readObjectList<Attribute>(
@@ -240,12 +244,11 @@ P _deviceGroupDeserializeProp<P>(
       return (reader.readStringOrNull(offset)) as P;
     case 2:
       return (reader.readObjectList<DeviceGroupCriteria>(
-            offset,
-            DeviceGroupCriteriaSchema.deserialize,
-            allOffsets,
-            DeviceGroupCriteria(),
-          ) ??
-          []) as P;
+        offset,
+        DeviceGroupCriteriaSchema.deserialize,
+        allOffsets,
+        DeviceGroupCriteria(),
+      )) as P;
     case 3:
       return (reader.readStringList(offset) ?? []) as P;
     case 4:
@@ -759,6 +762,24 @@ extension DeviceGroupQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'auto_generated_by_device',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      criteriaIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'criteria',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      criteriaIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'criteria',
       ));
     });
   }
@@ -1763,7 +1784,7 @@ extension DeviceGroupQueryProperty
     });
   }
 
-  QueryBuilder<DeviceGroup, List<DeviceGroupCriteria>, QQueryOperations>
+  QueryBuilder<DeviceGroup, List<DeviceGroupCriteria>?, QQueryOperations>
       criteriaProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'criteria');
@@ -2456,8 +2477,8 @@ extension DeviceGroupCriteriaQueryObject on QueryBuilder<DeviceGroupCriteria,
 DeviceGroup _$DeviceGroupFromJson(Map<String, dynamic> json) => DeviceGroup(
       json['id'] as String,
       json['name'] as String,
-      (json['criteria'] as List<dynamic>)
-          .map((e) => DeviceGroupCriteria.fromJson(e as Map<String, dynamic>))
+      (json['criteria'] as List<dynamic>?)
+          ?.map((e) => DeviceGroupCriteria.fromJson(e as Map<String, dynamic>))
           .toList(),
       json['image'] as String,
       (json['device_ids'] as List<dynamic>).map((e) => e as String).toList(),

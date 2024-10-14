@@ -47,7 +47,7 @@ class DeviceGroup {
   @Index(caseSensitive: false)
   String name;
   String image;
-  List<DeviceGroupCriteria> criteria;
+  List<DeviceGroupCriteria>? criteria;
   List<String> device_ids;
   List<Attribute>? attributes;
   String? auto_generated_by_device;
@@ -133,7 +133,7 @@ class DeviceGroup {
       return;
     }
     states.clear();
-    for (final criterion in criteria) {
+    for (final criterion in criteria ?? []) {
       final f = AppState().nestedFunctions[criterion.function_id];
       if (f == null) {
         _logger.e("Function is unknown: ${criterion.function_id}");
