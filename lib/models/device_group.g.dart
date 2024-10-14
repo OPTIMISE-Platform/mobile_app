@@ -23,34 +23,39 @@ const DeviceGroupSchema = CollectionSchema(
       type: IsarType.objectList,
       target: r'Attribute',
     ),
-    r'criteria': PropertySchema(
+    r'auto_generated_by_device': PropertySchema(
       id: 1,
+      name: r'auto_generated_by_device',
+      type: IsarType.string,
+    ),
+    r'criteria': PropertySchema(
+      id: 2,
       name: r'criteria',
       type: IsarType.objectList,
       target: r'DeviceGroupCriteria',
     ),
     r'device_ids': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'device_ids',
       type: IsarType.stringList,
     ),
     r'favorite': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'favorite',
       type: IsarType.bool,
     ),
     r'id': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'id',
       type: IsarType.string,
     ),
     r'image': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'image',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'name',
       type: IsarType.string,
     )
@@ -132,6 +137,12 @@ int _deviceGroupEstimateSize(
       }
     }
   }
+  {
+    final value = object.auto_generated_by_device;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.criteria.length * 3;
   {
     final offsets = allOffsets[DeviceGroupCriteria]!;
@@ -166,17 +177,18 @@ void _deviceGroupSerialize(
     AttributeSchema.serialize,
     object.attributes,
   );
+  writer.writeString(offsets[1], object.auto_generated_by_device);
   writer.writeObjectList<DeviceGroupCriteria>(
-    offsets[1],
+    offsets[2],
     allOffsets,
     DeviceGroupCriteriaSchema.serialize,
     object.criteria,
   );
-  writer.writeStringList(offsets[2], object.device_ids);
-  writer.writeBool(offsets[3], object.favorite);
-  writer.writeString(offsets[4], object.id);
-  writer.writeString(offsets[5], object.image);
-  writer.writeString(offsets[6], object.name);
+  writer.writeStringList(offsets[3], object.device_ids);
+  writer.writeBool(offsets[4], object.favorite);
+  writer.writeString(offsets[5], object.id);
+  writer.writeString(offsets[6], object.image);
+  writer.writeString(offsets[7], object.name);
 }
 
 DeviceGroup _deviceGroupDeserialize(
@@ -186,17 +198,17 @@ DeviceGroup _deviceGroupDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = DeviceGroup(
-    reader.readString(offsets[4]),
-    reader.readString(offsets[6]),
+    reader.readString(offsets[5]),
+    reader.readString(offsets[7]),
     reader.readObjectList<DeviceGroupCriteria>(
-          offsets[1],
+          offsets[2],
           DeviceGroupCriteriaSchema.deserialize,
           allOffsets,
           DeviceGroupCriteria(),
         ) ??
         [],
-    reader.readString(offsets[5]),
-    reader.readStringList(offsets[2]) ?? [],
+    reader.readString(offsets[6]),
+    reader.readStringList(offsets[3]) ?? [],
     reader.readObjectList<Attribute>(
       offsets[0],
       AttributeSchema.deserialize,
@@ -204,7 +216,8 @@ DeviceGroup _deviceGroupDeserialize(
       Attribute(),
     ),
   );
-  object.favorite = reader.readBool(offsets[3]);
+  object.auto_generated_by_device = reader.readStringOrNull(offsets[1]);
+  object.favorite = reader.readBool(offsets[4]);
   object.isarId = id;
   return object;
 }
@@ -224,6 +237,8 @@ P _deviceGroupDeserializeProp<P>(
         Attribute(),
       )) as P;
     case 1:
+      return (reader.readStringOrNull(offset)) as P;
+    case 2:
       return (reader.readObjectList<DeviceGroupCriteria>(
             offset,
             DeviceGroupCriteriaSchema.deserialize,
@@ -231,15 +246,15 @@ P _deviceGroupDeserializeProp<P>(
             DeviceGroupCriteria(),
           ) ??
           []) as P;
-    case 2:
-      return (reader.readStringList(offset) ?? []) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 4:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 5:
       return (reader.readString(offset)) as P;
     case 6:
+      return (reader.readString(offset)) as P;
+    case 7:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -589,6 +604,162 @@ extension DeviceGroupQueryFilter
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'auto_generated_by_device',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'auto_generated_by_device',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'auto_generated_by_device',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceContains(String value,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'auto_generated_by_device',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceMatches(String pattern,
+          {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'auto_generated_by_device',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'auto_generated_by_device',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterFilterCondition>
+      auto_generated_by_deviceIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'auto_generated_by_device',
+        value: '',
+      ));
     });
   }
 
@@ -1386,6 +1557,20 @@ extension DeviceGroupQueryLinks
 
 extension DeviceGroupQuerySortBy
     on QueryBuilder<DeviceGroup, DeviceGroup, QSortBy> {
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy>
+      sortByAuto_generated_by_device() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'auto_generated_by_device', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy>
+      sortByAuto_generated_by_deviceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'auto_generated_by_device', Sort.desc);
+    });
+  }
+
   QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy> sortByFavorite() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'favorite', Sort.asc);
@@ -1437,6 +1622,20 @@ extension DeviceGroupQuerySortBy
 
 extension DeviceGroupQuerySortThenBy
     on QueryBuilder<DeviceGroup, DeviceGroup, QSortThenBy> {
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy>
+      thenByAuto_generated_by_device() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'auto_generated_by_device', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy>
+      thenByAuto_generated_by_deviceDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'auto_generated_by_device', Sort.desc);
+    });
+  }
+
   QueryBuilder<DeviceGroup, DeviceGroup, QAfterSortBy> thenByFavorite() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'favorite', Sort.asc);
@@ -1500,6 +1699,14 @@ extension DeviceGroupQuerySortThenBy
 
 extension DeviceGroupQueryWhereDistinct
     on QueryBuilder<DeviceGroup, DeviceGroup, QDistinct> {
+  QueryBuilder<DeviceGroup, DeviceGroup, QDistinct>
+      distinctByAuto_generated_by_device({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'auto_generated_by_device',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<DeviceGroup, DeviceGroup, QDistinct> distinctByDevice_ids() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'device_ids');
@@ -1546,6 +1753,13 @@ extension DeviceGroupQueryProperty
       attributesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'attributes');
+    });
+  }
+
+  QueryBuilder<DeviceGroup, String?, QQueryOperations>
+      auto_generated_by_deviceProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'auto_generated_by_device');
     });
   }
 
@@ -2250,7 +2464,7 @@ DeviceGroup _$DeviceGroupFromJson(Map<String, dynamic> json) => DeviceGroup(
       (json['attributes'] as List<dynamic>?)
           ?.map((e) => Attribute.fromJson(e as Map<String, dynamic>))
           .toList(),
-    );
+    )..auto_generated_by_device = json['auto_generated_by_device'] as String?;
 
 Map<String, dynamic> _$DeviceGroupToJson(DeviceGroup instance) =>
     <String, dynamic>{
@@ -2260,6 +2474,7 @@ Map<String, dynamic> _$DeviceGroupToJson(DeviceGroup instance) =>
       'criteria': instance.criteria,
       'device_ids': instance.device_ids,
       'attributes': instance.attributes,
+      'auto_generated_by_device': instance.auto_generated_by_device,
     };
 
 DeviceGroupCriteria _$DeviceGroupCriteriaFromJson(Map<String, dynamic> json) =>

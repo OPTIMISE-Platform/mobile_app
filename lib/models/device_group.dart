@@ -50,6 +50,7 @@ class DeviceGroup {
   List<DeviceGroupCriteria> criteria;
   List<String> device_ids;
   List<Attribute>? attributes;
+  String? auto_generated_by_device;
 
   @JsonKey(ignore: true)
   @ignore
