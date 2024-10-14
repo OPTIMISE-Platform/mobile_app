@@ -3,7 +3,7 @@ name: 'Web Dev'
 on:
   push:
     branches:
-      - master
+      #- master
   workflow_dispatch:
 
 jobs:
