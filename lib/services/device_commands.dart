@@ -42,8 +42,8 @@ const commandUrlPrefix = "/commands/batch?timeout=10s&prefer_event_value=";
 const LOG_PREFIX = "DEVICE-COMMAND";
 
 class DeviceCommandPath {
-  var mgwCoreService;
-  var mgwEndpointService;
+  late MgwCoreService mgwCoreService;
+  late MgwEndpointService mgwEndpointService;
   final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -69,7 +69,7 @@ class DeviceCommandPath {
       }
     }
     endpoints =
-    await mgwCoreService!.getEndpointsOfModule(deviceManagerModuleName);
+    await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.endpoints.putAll(endpoints);
@@ -83,7 +83,7 @@ class DeviceCommandPath {
     var endpoints = await getEndpoints();
     var endpoint = endpoints.first.location;
     var path = endpoint + commandUrlPrefix + preferEventValue.toString();
-    var resp = mgwEndpointService.PostToExposedPath(path, commands);
+    var resp = await mgwEndpointService.PostToExposedPath(path, commands);
     List<DeviceCommandResponse> commandResponses = [];
     for(final response in resp.data) {
       commandResponses.add(DeviceCommandResponse.fromJson(response));
