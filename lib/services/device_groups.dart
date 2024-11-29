@@ -107,7 +107,7 @@ class DeviceGroupsService {
     queryParameters.clear();
     queryParameters["filter_generic_duplicate_criteria"] = "true";
     for(int i = 0; i< groupsPerm.length; i++) {
-      if (groupsPerm[i].auto_generated_by_device != null) {
+      if (groupsPerm[i].auto_generated_by_device != null && groupsPerm[i].auto_generated_by_device != "") {
         continue;
       }
       final uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${groupsPerm[i].id}';
