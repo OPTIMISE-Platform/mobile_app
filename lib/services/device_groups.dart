@@ -36,7 +36,6 @@ import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
 class DeviceGroupsService {
-
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -58,9 +57,10 @@ class DeviceGroupsService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
     _dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 15000),))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 15000),
+    ))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
@@ -77,41 +77,54 @@ class DeviceGroupsService {
     }
 
     String uri =
-        '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/device-groups';
+        '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
-
+    var cont = true;
+    final rawGroups = <DeviceGroup>[];
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final Response<List<dynamic>?> resp;
-    try {
-      resp = await _dio!.get<List<dynamic>?>(uri,
-          queryParameters: queryParameters, options: Options(headers: headers));
-    } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
+    while (cont) {
+      queryParameters["offset"] = rawGroups.length.toString();
+      await initOptions();
+      final Response<List<dynamic>?> resp;
+      try {
+        resp = await _dio!.get<List<dynamic>?>(uri,
+            queryParameters: queryParameters,
+            options: Options(headers: headers));
+      } on DioException catch (e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+        rethrow;
       }
-      rethrow;
-    }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached device groups");
-    }
+      if (resp.statusCode == 304) {
+        _logger.d("Using cached device groups");
+      }
 
-    final l = resp.data ?? [];
-    final groupsPerm = List<DeviceGroup>.generate(
-        l.length, (index) => DeviceGroup.fromJson(l[index]));
+      final l = resp.data ?? [];
+      final add = List<DeviceGroup>.generate(
+          l.length, (index) => DeviceGroup.fromJson(l[index]));
+      rawGroups.addAll(add);
+      cont = l.length == 9999;
+    }
 
     List<DeviceGroup> groupsRepo = [];
     List<Future> futures = [];
     queryParameters.clear();
     queryParameters["filter_generic_duplicate_criteria"] = "true";
-    for(int i = 0; i< groupsPerm.length; i++) {
-      if (groupsPerm[i].auto_generated_by_device != null && groupsPerm[i].auto_generated_by_device != "") {
+    for (int i = 0; i < rawGroups.length; i++) {
+      if (rawGroups[i].auto_generated_by_device != null &&
+          rawGroups[i].auto_generated_by_device != "") {
         continue;
       }
-      final uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${groupsPerm[i].id}';
-      futures.add(_dio!.get<dynamic>(uri, queryParameters: queryParameters, options: Options(headers: headers)).then((value) {
+      final uri =
+          '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${rawGroups[i].id}';
+      futures.add(_dio!
+          .get<dynamic>(uri,
+              queryParameters: queryParameters,
+              options: Options(headers: headers))
+          .then((value) {
         if (value.data != null) {
           groupsRepo.add(DeviceGroup.fromJson(value.data));
         }
@@ -123,12 +136,15 @@ class DeviceGroupsService {
       }));
     }
     await Future.wait(futures);
-    groupsRepo.forEach((element) async {element.favorite = await element.isFavorite();});
+    groupsRepo.forEach((element) async {
+      element.favorite = await element.isFavorite();
+    });
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
         await collection.putAll(groupsRepo);
       });
     }
+
     return groupsRepo.map((e) => e.initImage()).toList(growable: false);
   }
 
@@ -275,7 +291,7 @@ class DeviceGroupsService {
 
   static bool isListAvailable() {
     String uri =
-        '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/device-groups';
+        '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups';
     return ApiAvailableService().isAvailable(uri);
   }
 
