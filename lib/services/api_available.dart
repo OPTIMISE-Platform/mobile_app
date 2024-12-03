@@ -35,7 +35,7 @@ class ApiAvailableService {
         AppState().notifyListeners();
       }
     });
-    Timer.periodic(const Duration(seconds: 10), (timer) async {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
       // not all connectivity changes are recognized, checking periodically
       final offline = await Connectivity().checkConnectivity().then((value) => value.contains(ConnectivityResult.none));
       if (offline != _offline) {
