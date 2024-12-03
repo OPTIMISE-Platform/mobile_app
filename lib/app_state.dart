@@ -46,7 +46,6 @@ import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/device_types.dart';
-import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/functions.dart';
@@ -161,10 +160,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final Map<String, DeviceClass> deviceClasses = {};
   final Mutex _deviceClassesMutex = Mutex();
 
-  final Map<String, DeviceTypePermSearch> deviceTypesPermSearch = {};
-  final Mutex _deviceTypesPermSearchMutex = Mutex();
-
   final Map<String, DeviceType> deviceTypes = {};
+  final Mutex _deviceTypesMutex = Mutex();
+
 
   final Map<String, NestedFunction> nestedFunctions = {};
   final Mutex _nestedFunctionsMutex = Mutex();
@@ -258,15 +256,15 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   loadDeviceTypes() async {
-    final locked = _deviceTypesPermSearchMutex.isLocked;
-    await _deviceTypesPermSearchMutex.acquire();
+    final locked = _deviceTypesMutex.isLocked;
+    await _deviceTypesMutex.acquire();
     if (locked) {
-      return deviceTypesPermSearch;
+      return deviceTypes;
     }
     try {
       for (var element
-          in (await DeviceTypesPermSearchService.getDeviceTypes())) {
-        deviceTypesPermSearch[element.id] = element;
+          in (await DeviceTypesService.getDeviceTypes())) {
+        deviceTypes[element.id] = element;
       }
     } catch (e) {
       final err = "Could not get device types $e";
@@ -274,7 +272,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       Toast.showToastNoContext(err);
     }
     notifyListeners();
-    _deviceTypesPermSearchMutex.release();
+    _deviceTypesMutex.release();
   }
 
   loadNestedFunctions() async {
@@ -403,7 +401,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
       for (int i = 0; i < newDevices.length; i++) {
-        await loadDeviceType(newDevices[i].device_type_id);
         newDevices[i].prepareStates(deviceTypes[newDevices[i].device_type_id]!);
       }
 
@@ -463,23 +460,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get allDevicesLoaded {
     return _allDevicesLoaded;
-  }
-
-  Future<void> loadDeviceType(String id, [bool force = false]) async {
-    if (!force && deviceTypes.containsKey(id)) {
-      return;
-    }
-    try {
-      final t = await DeviceTypesService.getDeviceType(id);
-      if (t == null) {
-        return;
-      }
-      deviceTypes[id] = t;
-    } catch (e) {
-      final err = "Could not load device type $e";
-      _logger.e(err);
-      Toast.showToastNoContext(err);
-    }
   }
 
   loadStates(List<DeviceInstance> devices, List<DeviceGroup> groups,
@@ -925,7 +905,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _initialized = false;
     deviceClasses.clear();
 
-    deviceTypesPermSearch.clear();
+    deviceTypes.clear();
     deviceTypes.clear();
 
     nestedFunctions.clear();

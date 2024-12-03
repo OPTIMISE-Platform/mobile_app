@@ -41,8 +41,8 @@ class NativePipe {
           final devices = await isar!.deviceInstances.where().findAll();
           final List<Future> futures = [];
           devices.forEach((element) => futures.add(AppState()
-              .loadDeviceType(element.device_type_id)
-              .then((value) => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
+              .loadDeviceTypes()
+              .then(() => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
           await Future.wait(futures);
           final resp = json
               .encode(devices.map((e) => e.states).expand((e) => e).where((e) => e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).toList());
@@ -50,8 +50,8 @@ class NativePipe {
         case "setToggle":
           final DeviceState state = DeviceState.fromJson(json.decode(call.arguments));
           final device = await isar!.deviceInstances.where().idEqualTo(state.deviceId!).findFirst();
-          await AppState().loadDeviceType(device!.device_type_id);
-          await device.prepareStates(AppState().deviceTypes[device.device_type_id]!);
+          await AppState().loadDeviceTypes();
+          await device!.prepareStates(AppState().deviceTypes[device.device_type_id]!);
           final controllingFunction = functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(!(state.value as bool));
           final controllingStates = device.states
               .where((s) =>

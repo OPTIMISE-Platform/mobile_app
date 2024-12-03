@@ -33,7 +33,6 @@ import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/device_types.dart';
-import 'package:mobile_app/services/device_types_perm_search.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -99,7 +98,7 @@ class CacheHelper {
       AspectsService.getAspects(),
       ConceptsService.getConcepts(),
       CharacteristicsService.getCharacteristics(),
-      DeviceTypesPermSearchService.getDeviceTypes(),
+      DeviceTypesService.getDeviceTypes(),
       DeviceClassesService.getDeviceClasses(),
     ]);
   }
@@ -152,7 +151,6 @@ class CacheHelper {
     }
 
     final List<Future> futures = [];
-    deviceTypeIds.keys.forEach((element) => futures.add(DeviceTypesService.getDeviceType(element)));
     await Future.wait(futures);
     await Settings.setCacheUpdated("devices");
     if (reschedule) {

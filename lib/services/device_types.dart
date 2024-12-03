@@ -39,7 +39,7 @@ class DeviceTypesService {
 
   static Mutex m = Mutex();
 
-  static String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-types';
+  static String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-types';
 
   static initOptions() async {
     return await m.protect(() async {
@@ -90,6 +90,53 @@ class DeviceTypesService {
     }
 
     return DeviceType.fromJson(resp.data!);
+  }
+
+  static Future<List<DeviceType>> getDeviceTypes(
+      [List<String>? ids]) async {
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = "9999";
+    if (ids != null && ids.isNotEmpty) {
+      queryParameters["ids"] = ids.join(",");
+    }
+
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(milliseconds: 5000),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
+      ..httpClientAdapter = AppHttpClientAdapter();
+
+    var cont = true;
+    final res = <DeviceType>[];
+
+    while (cont) {
+      queryParameters["offset"] = res.length.toString();
+      final Response<List<dynamic>?> resp;
+      try {
+        resp = await dio.get<List<dynamic>?>(uri,
+            queryParameters: queryParameters, options: Options(headers: headers));
+      } on DioException catch (e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+        rethrow;
+      }
+      if (resp.statusCode == 304) {
+        _logger.d("Using cached device types");
+      }
+
+      final l = resp.data ?? [];
+      final add = List<DeviceType>.generate(
+          l.length, (index) => DeviceType.fromJson(l[index]));
+      res.addAll(add);
+      cont = add.length == 9999 && (ids == null || ids.isNotEmpty);
+    }
+    return res;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
