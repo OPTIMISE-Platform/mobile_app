@@ -36,7 +36,7 @@ class CharacteristicsService {
   static CacheOptions? _options;
 
   static String uri =
-      '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/characteristics';
+      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/characteristics';
 
   static initOptions() async {
     if (_options != null) {
@@ -55,46 +55,39 @@ class CharacteristicsService {
 
   static Future<List<Characteristic>> getCharacteristics() async {
     final List<Characteristic> result = [];
-    bool cont = true;
-    while (cont) {
-      final Map<String, String> queryParameters = {};
-      queryParameters["limit"] = "9999";
-      queryParameters["sort"] = "name.desc";
-      if (result.isNotEmpty) {
-        queryParameters["after.id"] = result.last.id;
-        queryParameters["after.sort_field_value"] = result.last.name;
-      }
 
-      final headers = await Auth().getHeaders();
-      await initOptions();
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
-        ..interceptors.add(DioCacheInterceptor(options: _options!))
-        ..interceptors.add(ApiAvailableInterceptor())
-        ..httpClientAdapter = AppHttpClientAdapter();
-      final Response<List<dynamic>?> resp;
-      try {
-        resp = await dio.get<List<dynamic>?>(uri,
-            queryParameters: queryParameters,
-            options: Options(headers: headers));
-      } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
-        }
-        rethrow;
-      }
-      if (resp.statusCode == 304) {
-        _logger.d("Using cached characteristics");
-      }
+    final Map<String, String> queryParameters = {};
+    queryParameters["leafsOnly"] = "false";
 
-      final l = resp.data ?? [];
-      cont = l.length == 9999;
-      result.addAll(List<Characteristic>.generate(
-          l.length, (index) => Characteristic.fromJson(l[index]["raw"])));
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(milliseconds: 5000),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),
+    ))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
+      ..httpClientAdapter = AppHttpClientAdapter();
+    final Response<List<dynamic>?> resp;
+    try {
+      resp = await dio.get<List<dynamic>?>(uri,
+          queryParameters: queryParameters, options: Options(headers: headers));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
+      }
+      rethrow;
     }
+    if (resp.statusCode == 304) {
+      _logger.d("Using cached characteristics");
+    }
+
+    final l = resp.data ?? [];
+    result.addAll(List<Characteristic>.generate(
+        l.length, (index) => Characteristic.fromJson(l[index])));
+
     return result;
   }
 
