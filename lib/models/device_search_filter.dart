@@ -68,69 +68,36 @@ class DeviceSearchFilter {
 
   removeNetwork(String id) => networkIds = _remove(networkIds, id);
 
-  Map<String, dynamic> toBody(int limit, int offset, DeviceInstance? lastDevice, [List<String>? ids]) {
-    final body = <String, dynamic>{
-      "resource": "devices",
-      "find": {
-        "limit": limit,
-        "offset": offset,
-        "sort_by": "display_name",
-        "sort_desc": false,
-        "search": query,
-      }
-    };
-    if (ids != null) {
-      body["list_ids"]["ids"] = ids;
-    }
-    if (offset > 0 && lastDevice != null) {
-      body["find"]["after"] = {
-        "sort_field_value": lastDevice.name,
-        "id": lastDevice.id,
-      };
-    }
+  Map<String, String> toQueryParams(int limit, int offset, DeviceInstance? lastDevice, [List<String>? ids]) {
+    final queryParameters = <String, String>{};
+    queryParameters["limit"] = limit.toString();
+    queryParameters["offset"] = offset.toString();
+    queryParameters["sort"] = "display_name.asc";
+    queryParameters["search"] = query;
 
-    List<Map<String, dynamic>> conditions = [];
+    if (ids != null) {
+      queryParameters["ids"] = ids.join(",");
+    }
 
     List<String>? allDeviceIds;
     if ((allDeviceIds = _allDeviceIds) != null) {
-      conditions.add({
-        "condition": {
-          "feature": "id",
-          "operation": "any_value_in_feature",
-          "value": allDeviceIds!.join(","),
-        }
-      });
+      final ids = (queryParameters["ids"] ?? "").split(",");
+      ids.addAll(allDeviceIds!);
+      queryParameters["ids"] = ids.join(",");
     }
 
     if (networkIds != null) {
       final List<String> localIds = [];
-      AppState().networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
-      conditions.add({
-        "condition": {
-          "feature": "features.local_id",
-          "operation": "any_value_in_feature",
-          "value": localIds.join(","),
-        }
-      });
+      AppState().networks.where((element) => networkIds!.contains(element.id))
+          .forEach((element) =>
+          localIds.addAll(element.device_local_ids ?? []));
+      queryParameters["local_ids"] = localIds.join(",");
     }
 
     if (favorites == true) {
-      conditions.add({
-        "condition": {
-          "feature": "features.attributes.key",
-          "operation": "==",
-          "value": attributeFavorite,
-        }
-      });
+      queryParameters["attr-keys"] = attributeFavorite;
     }
-
-    if (conditions.isNotEmpty) {
-      body["find"]["filter"] = {
-        "and": conditions,
-      };
-    }
-
-    return body;
+    return queryParameters;
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterLimit> isarQuery(int limit, int offset, IsarCollection<DeviceInstance> collection) {

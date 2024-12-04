@@ -17,51 +17,51 @@ const DeviceInstanceSchema = CollectionSchema(
   name: r'DeviceInstance',
   id: -8399428298092944646,
   properties: {
-    r'annotations': PropertySchema(
-      id: 0,
-      name: r'annotations',
-      type: IsarType.object,
-      target: r'Annotations',
-    ),
     r'attributes': PropertySchema(
-      id: 1,
+      id: 0,
       name: r'attributes',
       type: IsarType.objectList,
       target: r'Attribute',
     ),
-    r'creator': PropertySchema(
-      id: 2,
-      name: r'creator',
-      type: IsarType.string,
+    r'connection_state': PropertySchema(
+      id: 1,
+      name: r'connection_state',
+      type: IsarType.byte,
+      enumMap: _DeviceInstanceconnection_stateEnumValueMap,
     ),
     r'device_type_id': PropertySchema(
-      id: 3,
+      id: 2,
       name: r'device_type_id',
       type: IsarType.string,
     ),
     r'display_name': PropertySchema(
-      id: 4,
+      id: 3,
       name: r'display_name',
       type: IsarType.string,
     ),
     r'favorite': PropertySchema(
-      id: 5,
+      id: 4,
       name: r'favorite',
       type: IsarType.bool,
     ),
     r'id': PropertySchema(
-      id: 6,
+      id: 5,
       name: r'id',
       type: IsarType.string,
     ),
     r'local_id': PropertySchema(
-      id: 7,
+      id: 6,
       name: r'local_id',
       type: IsarType.string,
     ),
     r'name': PropertySchema(
-      id: 8,
+      id: 7,
       name: r'name',
+      type: IsarType.string,
+    ),
+    r'owner_id': PropertySchema(
+      id: 8,
+      name: r'owner_id',
       type: IsarType.string,
     ),
     r'shared': PropertySchema(
@@ -130,10 +130,7 @@ const DeviceInstanceSchema = CollectionSchema(
     )
   },
   links: {},
-  embeddedSchemas: {
-    r'Attribute': AttributeSchema,
-    r'Annotations': AnnotationsSchema
-  },
+  embeddedSchemas: {r'Attribute': AttributeSchema},
   getId: _deviceInstanceGetId,
   getLinks: _deviceInstanceGetLinks,
   attach: _deviceInstanceAttach,
@@ -146,14 +143,6 @@ int _deviceInstanceEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  {
-    final value = object.annotations;
-    if (value != null) {
-      bytesCount += 3 +
-          AnnotationsSchema.estimateSize(
-              value, allOffsets[Annotations]!, allOffsets);
-    }
-  }
   {
     final list = object.attributes;
     if (list != null) {
@@ -168,7 +157,6 @@ int _deviceInstanceEstimateSize(
       }
     }
   }
-  bytesCount += 3 + object.creator.length * 3;
   bytesCount += 3 + object.device_type_id.length * 3;
   {
     final value = object.display_name;
@@ -179,6 +167,7 @@ int _deviceInstanceEstimateSize(
   bytesCount += 3 + object.id.length * 3;
   bytesCount += 3 + object.local_id.length * 3;
   bytesCount += 3 + object.name.length * 3;
+  bytesCount += 3 + object.owner_id.length * 3;
   return bytesCount;
 }
 
@@ -188,25 +177,20 @@ void _deviceInstanceSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeObject<Annotations>(
-    offsets[0],
-    allOffsets,
-    AnnotationsSchema.serialize,
-    object.annotations,
-  );
   writer.writeObjectList<Attribute>(
-    offsets[1],
+    offsets[0],
     allOffsets,
     AttributeSchema.serialize,
     object.attributes,
   );
-  writer.writeString(offsets[2], object.creator);
-  writer.writeString(offsets[3], object.device_type_id);
-  writer.writeString(offsets[4], object.display_name);
-  writer.writeBool(offsets[5], object.favorite);
-  writer.writeString(offsets[6], object.id);
-  writer.writeString(offsets[7], object.local_id);
-  writer.writeString(offsets[8], object.name);
+  writer.writeByte(offsets[1], object.connection_state.index);
+  writer.writeString(offsets[2], object.device_type_id);
+  writer.writeString(offsets[3], object.display_name);
+  writer.writeBool(offsets[4], object.favorite);
+  writer.writeString(offsets[5], object.id);
+  writer.writeString(offsets[6], object.local_id);
+  writer.writeString(offsets[7], object.name);
+  writer.writeString(offsets[8], object.owner_id);
   writer.writeBool(offsets[9], object.shared);
 }
 
@@ -217,26 +201,24 @@ DeviceInstance _deviceInstanceDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = DeviceInstance(
+    reader.readString(offsets[5]),
     reader.readString(offsets[6]),
     reader.readString(offsets[7]),
-    reader.readString(offsets[8]),
     reader.readObjectList<Attribute>(
-      offsets[1],
+      offsets[0],
       AttributeSchema.deserialize,
       allOffsets,
       Attribute(),
     ),
-    reader.readString(offsets[3]),
-    reader.readObjectOrNull<Annotations>(
-      offsets[0],
-      AnnotationsSchema.deserialize,
-      allOffsets,
-    ),
-    reader.readBool(offsets[9]),
     reader.readString(offsets[2]),
-    reader.readStringOrNull(offsets[4]),
+    reader.readBool(offsets[9]),
+    reader.readString(offsets[8]),
+    reader.readStringOrNull(offsets[3]),
+    _DeviceInstanceconnection_stateValueEnumMap[
+            reader.readByteOrNull(offsets[1])] ??
+        DeviceConnectionStatus.online,
   );
-  object.favorite = reader.readBool(offsets[5]);
+  object.favorite = reader.readBool(offsets[4]);
   object.isarId = id;
   return object;
 }
@@ -249,26 +231,24 @@ P _deviceInstanceDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readObjectOrNull<Annotations>(
-        offset,
-        AnnotationsSchema.deserialize,
-        allOffsets,
-      )) as P;
-    case 1:
       return (reader.readObjectList<Attribute>(
         offset,
         AttributeSchema.deserialize,
         allOffsets,
         Attribute(),
       )) as P;
+    case 1:
+      return (_DeviceInstanceconnection_stateValueEnumMap[
+              reader.readByteOrNull(offset)] ??
+          DeviceConnectionStatus.online) as P;
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
-      return (reader.readString(offset)) as P;
-    case 4:
       return (reader.readStringOrNull(offset)) as P;
-    case 5:
+    case 4:
       return (reader.readBool(offset)) as P;
+    case 5:
+      return (reader.readString(offset)) as P;
     case 6:
       return (reader.readString(offset)) as P;
     case 7:
@@ -281,6 +261,17 @@ P _deviceInstanceDeserializeProp<P>(
       throw IsarError('Unknown property with id $propertyId');
   }
 }
+
+const _DeviceInstanceconnection_stateEnumValueMap = {
+  'online': 0,
+  'offline': 1,
+  'unknown': 2,
+};
+const _DeviceInstanceconnection_stateValueEnumMap = {
+  0: DeviceConnectionStatus.online,
+  1: DeviceConnectionStatus.offline,
+  2: DeviceConnectionStatus.unknown,
+};
 
 Id _deviceInstanceGetId(DeviceInstance object) {
   return object.isarId;
@@ -587,24 +578,6 @@ extension DeviceInstanceQueryWhere
 extension DeviceInstanceQueryFilter
     on QueryBuilder<DeviceInstance, DeviceInstance, QFilterCondition> {
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      annotationsIsNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'annotations',
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      annotationsIsNotNull() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'annotations',
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
       attributesIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -712,137 +685,57 @@ extension DeviceInstanceQueryFilter
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorEqualTo(
-    String value, {
-    bool caseSensitive = true,
-  }) {
+      connection_stateEqualTo(DeviceConnectionStatus value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'creator',
+        property: r'connection_state',
         value: value,
-        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorGreaterThan(
-    String value, {
+      connection_stateGreaterThan(
+    DeviceConnectionStatus value, {
     bool include = false,
-    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.greaterThan(
         include: include,
-        property: r'creator',
+        property: r'connection_state',
         value: value,
-        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorLessThan(
-    String value, {
+      connection_stateLessThan(
+    DeviceConnectionStatus value, {
     bool include = false,
-    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.lessThan(
         include: include,
-        property: r'creator',
+        property: r'connection_state',
         value: value,
-        caseSensitive: caseSensitive,
       ));
     });
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorBetween(
-    String lower,
-    String upper, {
+      connection_stateBetween(
+    DeviceConnectionStatus lower,
+    DeviceConnectionStatus upper, {
     bool includeLower = true,
     bool includeUpper = true,
-    bool caseSensitive = true,
   }) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.between(
-        property: r'creator',
+        property: r'connection_state',
         lower: lower,
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorStartsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.startsWith(
-        property: r'creator',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorEndsWith(
-    String value, {
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.endsWith(
-        property: r'creator',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.contains(
-        property: r'creator',
-        value: value,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.matches(
-        property: r'creator',
-        wildcard: pattern,
-        caseSensitive: caseSensitive,
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'creator',
-        value: '',
-      ));
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      creatorIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.greaterThan(
-        property: r'creator',
-        value: '',
       ));
     });
   }
@@ -1611,6 +1504,142 @@ extension DeviceInstanceQueryFilter
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'owner_id',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'owner_id',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'owner_id',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'owner_id',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
+      owner_idIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'owner_id',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
       sharedEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1624,13 +1653,6 @@ extension DeviceInstanceQueryFilter
 extension DeviceInstanceQueryObject
     on QueryBuilder<DeviceInstance, DeviceInstance, QFilterCondition> {
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
-      annotations(FilterQuery<Annotations> q) {
-    return QueryBuilder.apply(this, (query) {
-      return query.object(q, r'annotations');
-    });
-  }
-
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition>
       attributesElement(FilterQuery<Attribute> q) {
     return QueryBuilder.apply(this, (query) {
       return query.object(q, r'attributes');
@@ -1643,16 +1665,17 @@ extension DeviceInstanceQueryLinks
 
 extension DeviceInstanceQuerySortBy
     on QueryBuilder<DeviceInstance, DeviceInstance, QSortBy> {
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> sortByCreator() {
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
+      sortByConnection_state() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'creator', Sort.asc);
+      return query.addSortBy(r'connection_state', Sort.asc);
     });
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
-      sortByCreatorDesc() {
+      sortByConnection_stateDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'creator', Sort.desc);
+      return query.addSortBy(r'connection_state', Sort.desc);
     });
   }
 
@@ -1734,6 +1757,19 @@ extension DeviceInstanceQuerySortBy
     });
   }
 
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> sortByOwner_id() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'owner_id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
+      sortByOwner_idDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'owner_id', Sort.desc);
+    });
+  }
+
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> sortByShared() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shared', Sort.asc);
@@ -1750,16 +1786,17 @@ extension DeviceInstanceQuerySortBy
 
 extension DeviceInstanceQuerySortThenBy
     on QueryBuilder<DeviceInstance, DeviceInstance, QSortThenBy> {
-  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> thenByCreator() {
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
+      thenByConnection_state() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'creator', Sort.asc);
+      return query.addSortBy(r'connection_state', Sort.asc);
     });
   }
 
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
-      thenByCreatorDesc() {
+      thenByConnection_stateDesc() {
     return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'creator', Sort.desc);
+      return query.addSortBy(r'connection_state', Sort.desc);
     });
   }
 
@@ -1854,6 +1891,19 @@ extension DeviceInstanceQuerySortThenBy
     });
   }
 
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> thenByOwner_id() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'owner_id', Sort.asc);
+    });
+  }
+
+  QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy>
+      thenByOwner_idDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'owner_id', Sort.desc);
+    });
+  }
+
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterSortBy> thenByShared() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'shared', Sort.asc);
@@ -1870,10 +1920,10 @@ extension DeviceInstanceQuerySortThenBy
 
 extension DeviceInstanceQueryWhereDistinct
     on QueryBuilder<DeviceInstance, DeviceInstance, QDistinct> {
-  QueryBuilder<DeviceInstance, DeviceInstance, QDistinct> distinctByCreator(
-      {bool caseSensitive = true}) {
+  QueryBuilder<DeviceInstance, DeviceInstance, QDistinct>
+      distinctByConnection_state() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'creator', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'connection_state');
     });
   }
 
@@ -1919,6 +1969,13 @@ extension DeviceInstanceQueryWhereDistinct
     });
   }
 
+  QueryBuilder<DeviceInstance, DeviceInstance, QDistinct> distinctByOwner_id(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'owner_id', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<DeviceInstance, DeviceInstance, QDistinct> distinctByShared() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'shared');
@@ -1934,13 +1991,6 @@ extension DeviceInstanceQueryProperty
     });
   }
 
-  QueryBuilder<DeviceInstance, Annotations?, QQueryOperations>
-      annotationsProperty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'annotations');
-    });
-  }
-
   QueryBuilder<DeviceInstance, List<Attribute>?, QQueryOperations>
       attributesProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -1948,9 +1998,10 @@ extension DeviceInstanceQueryProperty
     });
   }
 
-  QueryBuilder<DeviceInstance, String, QQueryOperations> creatorProperty() {
+  QueryBuilder<DeviceInstance, DeviceConnectionStatus, QQueryOperations>
+      connection_stateProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'creator');
+      return query.addPropertyName(r'connection_state');
     });
   }
 
@@ -1992,6 +2043,12 @@ extension DeviceInstanceQueryProperty
     });
   }
 
+  QueryBuilder<DeviceInstance, String, QQueryOperations> owner_idProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'owner_id');
+    });
+  }
+
   QueryBuilder<DeviceInstance, bool, QQueryOperations> sharedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'shared');
@@ -2012,12 +2069,10 @@ DeviceInstance _$DeviceInstanceFromJson(Map<String, dynamic> json) =>
           ?.map((e) => Attribute.fromJson(e as Map<String, dynamic>))
           .toList(),
       json['device_type_id'] as String,
-      json['annotations'] == null
-          ? null
-          : Annotations.fromJson(json['annotations'] as Map<String, dynamic>),
       json['shared'] as bool,
-      json['creator'] as String,
+      json['owner_id'] as String,
       json['display_name'] as String?,
+      $enumDecode(_$DeviceConnectionStatusEnumMap, json['connection_state']),
     );
 
 Map<String, dynamic> _$DeviceInstanceToJson(DeviceInstance instance) =>
@@ -2026,9 +2081,16 @@ Map<String, dynamic> _$DeviceInstanceToJson(DeviceInstance instance) =>
       'local_id': instance.local_id,
       'name': instance.name,
       'device_type_id': instance.device_type_id,
-      'creator': instance.creator,
+      'owner_id': instance.owner_id,
       'display_name': instance.display_name,
       'attributes': instance.attributes,
-      'annotations': instance.annotations,
       'shared': instance.shared,
+      'connection_state':
+          _$DeviceConnectionStatusEnumMap[instance.connection_state]!,
     };
+
+const _$DeviceConnectionStatusEnumMap = {
+  DeviceConnectionStatus.online: 'online',
+  DeviceConnectionStatus.offline: 'offline',
+  DeviceConnectionStatus.unknown: '',
+};

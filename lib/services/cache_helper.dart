@@ -127,9 +127,9 @@ class CacheHelper {
 
     while (!allDevicesLoaded) {
       try {
-        newDevices.addAll(await DevicesService.getDevices(
+        newDevices.addAll((await DevicesService.getDevices(
             limit, deviceOffset, DeviceSearchFilter(""), last,
-            forceBackend: true));
+            forceBackend: true)).devices);
       } catch (e) {
         final err = "Could not get devices: $e";
         _logger.e(err);

@@ -33,6 +33,7 @@ part 'device_instance.g.dart';
 enum DeviceConnectionStatus {
   online,
   offline,
+  @JsonValue('')
   unknown,
 }
 
@@ -44,12 +45,11 @@ const attributeNickname = "$sharedOrigin/nickname";
 class DeviceInstance {
   @Index(type: IndexType.hash)
   String id, local_id;
-  String name, device_type_id, creator;
+  String name, device_type_id, owner_id;
 
   @Index(caseSensitive: false)
   String? display_name;
   List<Attribute>? attributes;
-  Annotations? annotations;
   bool shared;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -63,8 +63,11 @@ class DeviceInstance {
   @ignore
   Network? network;
 
+  @enumerated
+  DeviceConnectionStatus connection_state;
+
   DeviceInstance(
-      this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.annotations, this.shared, this.creator, this.display_name) {
+      this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.shared, this.owner_id, this.display_name, this.connection_state) {
     isarId = fastHash(id);
     final networkIndex = AppState().networks.indexWhere((n) => n.device_local_ids?.contains(local_id) ?? false);
     if (networkIndex != -1) network = AppState().networks[networkIndex];
@@ -131,44 +134,6 @@ class DeviceInstance {
       if (i != null && i != -1) {
         attributes!.removeAt(i);
       }
-    }
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @ignore
-  DeviceConnectionStatus get connectionStatus {
-    if (annotations?.connected == null) {
-      return DeviceConnectionStatus.unknown;
-    }
-    if (annotations!.connected!) {
-      return DeviceConnectionStatus.online;
-    } else {
-      return DeviceConnectionStatus.offline;
-    }
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  set connectionStatus(DeviceConnectionStatus connectionStatus) {
-    switch (connectionStatus) {
-      case DeviceConnectionStatus.unknown:
-        if (annotations?.connected != null) {
-          annotations!.connected = null;
-        }
-        break;
-      case DeviceConnectionStatus.online:
-        if (annotations != null) {
-          annotations!.connected = true;
-        } else {
-          annotations = Annotations.New(true);
-        }
-        break;
-      case DeviceConnectionStatus.offline:
-        if (annotations != null) {
-          annotations!.connected = false;
-        } else {
-          annotations = Annotations.New(false);
-        }
-        break;
     }
   }
 

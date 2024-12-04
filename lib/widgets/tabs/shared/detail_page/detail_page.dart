@@ -318,7 +318,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         states = deviceGroup!.states;
       }
 
-      final connectionStatus = device?.connectionStatus;
+      final connectionStatus = device?.connection_state;
       final appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
       if (state.devices.isEmpty) {
         state.loadDevices(context);

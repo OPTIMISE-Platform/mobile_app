@@ -35,6 +35,13 @@ import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
+class DeviceInstanceWithTotal {
+  final List<DeviceInstance> devices;
+  final int total;
+
+  DeviceInstanceWithTotal(this.devices, this.total);
+}
+
 class DevicesService {
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -62,7 +69,7 @@ class DevicesService {
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<DeviceInstance>> getDevices(int limit, int offset,
+  static Future<DeviceInstanceWithTotal> getDevices(int limit, int offset,
       DeviceSearchFilter filter, DeviceInstance? lastDevice,
       {bool forceBackend = false}) async {
     final start = DateTime.now();
@@ -77,20 +84,19 @@ class DevicesService {
           .findAll();
       _logger.d("Getting devices from local DB took ${DateTime.now().difference(
           start)}");
-      return devices;
+      return DeviceInstanceWithTotal(devices, devices.length);
     }
     final headers = await Auth().getHeaders();
 
-    final body = filter.toBody(limit, offset, lastDevice);
+    final queryParameters = filter.toQueryParams(limit, offset, lastDevice);
     final uri = '${Settings.getApiUrl() ??
-        'localhost'}/permissions/query/v3/query';
-    final encoded = json.encode(body);
-    _logger.d("Devices: $encoded");
+        'localhost'}/device-repository/extended-devices';
+    _logger.d("Devices: $queryParameters");
     final Response<List<dynamic>?> resp;
     try {
       final DateTime start = DateTime.now();
-      resp = await _dio!.post<List<dynamic>?>(
-          uri, options: Options(headers: headers), data: encoded);
+      resp = await _dio!.get<List<dynamic>?>(
+          uri, options: Options(headers: headers), queryParameters: queryParameters,);
       _logger.d("getDevices ${DateTime.now().difference(start)}");
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
@@ -103,6 +109,8 @@ class DevicesService {
     if (resp.statusCode == 304) {
       _logger.d("Using cached devices");
     }
+    
+    final total = int.parse(resp.headers.value('X-Total-Count') ?? "0");
 
     final l = resp.data ?? [];
     final devices = List<DeviceInstance>.generate(
@@ -120,7 +128,7 @@ class DevicesService {
         await collection.putAll(devices);
       });
     }
-    return devices;
+    return DeviceInstanceWithTotal(devices, total);
   }
 
   static Future<void> saveDevice(DeviceInstance device) async {
@@ -153,49 +161,8 @@ class DevicesService {
     return;
   }
 
-  /// Only returns an upper limit of devices, which only respects the filter.query and no further filters
-  static Future<int> getTotalDevices(DeviceSearchFilter filter,
-      {bool forceBackend = false}) async {
-    await initOptions();
-    final collection = isar?.collection<DeviceInstance>();
-
-    if (!forceBackend && isar != null && collection != null) {
-      return await filter.isarQuery(double.maxFinite.toInt(), 0, collection)
-          .build()
-          .count();
-    }
-
-    String uri = '${Settings.getApiUrl() ??
-        'localhost'}/permissions/query/v3/total/devices';
-
-    final Map<String, String> queryParameters = {};
-    if (filter.query.isNotEmpty) {
-      queryParameters["search"] = filter.query;
-    }
-    final headers = await Auth().getHeaders();
-    final Response<int> resp;
-    try {
-      final DateTime start = DateTime.now();
-      resp = await _dio!.get<int>(uri, options: Options(headers: headers),
-          queryParameters: queryParameters);
-      _logger.d("getTotalDevices ${DateTime.now().difference(start)}");
-    } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
-      rethrow;
-    }
-
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached total devices");
-    }
-
-    return resp.data ?? 0;
-  }
-
   static bool isListAvailable() {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3';
+    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-devices';
     return ApiAvailableService().isAvailable(uri);
   }
 

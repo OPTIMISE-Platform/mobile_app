@@ -50,9 +50,9 @@ class MgwDeviceManager {
             await DevicesService.getDevices(devices.length, 0,
                     DeviceSearchFilter("", null, deviceIds), null,
                     forceBackend: true)
-                .then((ds) => ds.forEach((d) => devices
+                .then((ds) => ds.devices.forEach((d) => devices
                     .firstWhere((d2) => d2.id == d.id)
-                    .annotations = d.annotations));
+                    .connection_state = d.connection_state));
           } on DioException catch (e) {
             if (e.error! is ApiUnavailableException) {
               Toast.showToastNoContext(
@@ -125,10 +125,10 @@ class MgwDeviceManager {
     _logger.d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
     for (final device in devices) {
       if (devicesFromMgw.data?.containsKey(device.local_id) != true) {
-        device.connectionStatus = DeviceConnectionStatus.unknown;
+        device.connection_state = DeviceConnectionStatus.unknown;
       } else {
         final String status = devicesFromMgw.data![device.local_id]["state"];
-        device.connectionStatus = status == "online"
+        device.connection_state = status == "online"
             ? DeviceConnectionStatus.online
             : DeviceConnectionStatus.offline;
       }

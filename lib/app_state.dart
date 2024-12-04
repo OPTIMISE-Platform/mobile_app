@@ -332,22 +332,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _characteristicsMutex.release();
   }
 
-  updateTotalDevices() async {
-    await _totalDevicesMutex.protect(() async {
-      try {
-        final total = await DevicesService.getTotalDevices(_deviceSearchFilter);
-        if (total != totalDevices) {
-          totalDevices = total;
-          notifyListeners();
-        }
-      } catch (e) {
-        final err = "Could not get total devices $e";
-        _logger.e(err);
-        Toast.showToastNoContext(err);
-      }
-    });
-  }
-
   Future searchDevices(DeviceSearchFilter filter, BuildContext context,
       [bool force = false]) async {
     if (!force && _deviceSearchFilter == filter) {
@@ -357,7 +341,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
-    await updateTotalDevices();
     await loadDevices(context, null, true);
   }
 
@@ -388,8 +371,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     late final List<DeviceInstance> newDevices;
     const limit = 50;
     try {
-      newDevices = await DevicesService.getDevices(limit, _deviceOffset,
-          _deviceSearchFilter, devices.isNotEmpty ? devices.last : null);
+      final d = (await DevicesService.getDevices(limit, _deviceOffset,
+          _deviceSearchFilter, devices.isNotEmpty ? devices.last : null));
+      newDevices = d.devices;
+      totalDevices = d.total;
     } catch (e) {
       _logger.e("Could not get devices: $e");
       Toast.showToastNoContext("Could not load devices");
@@ -425,15 +410,15 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
             Toast.showToastNoContext(
                 "Error refreshing device status, using cache");
           }
-          final devices = await DevicesService.getDevices(
+          final devices = (await DevicesService.getDevices(
               refreshDeviceIds.length, 0, refreshFilter, null,
-              forceBackend: false);
+              forceBackend: false)).devices;
           devices.forEach((element) =>
-              element.connectionStatus = DeviceConnectionStatus.unknown);
-          return devices;
-        }).then((ds) => ds.forEach((d) => newDevices
+              element.connection_state = DeviceConnectionStatus.unknown);
+          return DeviceInstanceWithTotal(devices, devices.length);
+        }).then((ds) => ds.devices.forEach((d) => newDevices
                 .firstWhere((d2) => d2.id == d.id)
-                .annotations = d.annotations)));
+                .connection_state = d.connection_state)));
       }
       try {
         await Future.wait(connectionStatusFutures);
@@ -446,9 +431,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         _logger.e(err);
         Toast.showToastNoContext(err);
       }
-    }
-    if (totalDevices <= _deviceOffset) {
-      await updateTotalDevices(); // when loadDevices called directly
     }
     notifyListeners();
     _devicesMutex.release();
@@ -467,7 +449,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     final List<CommandCallback> commandCallbacks = [];
     for (var element in devices) {
       final callbacks = element.getStateFillFunctions(limitToFunctionIds);
-      if (element.connectionStatus == DeviceConnectionStatus.offline) {
+      if (element.connection_state == DeviceConnectionStatus.offline) {
         callbacks.forEach((element) => element.callback(null));
       } else {
         commandCallbacks.addAll(callbacks);

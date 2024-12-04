@@ -99,11 +99,11 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                   dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                               ?.displayValue(element.value, context) ??
                           const Icon(Icons.help_outline),
-                      onPressed: device.connectionStatus ==
+                      onPressed: device.connection_state ==
                               DeviceConnectionStatus.offline
                           ? null
                           : () async {
-                              if (device.connectionStatus ==
+                              if (device.connection_state ==
                                   DeviceConnectionStatus.offline) {
                                 Toast.showToastNoContext("Device is offline");
                                 return;
@@ -192,7 +192,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         ));
       });
 
-      final connectionStatus = device.connectionStatus;
+      final connectionStatus = device.connection_state;
       final unavailable = connectionStatus == DeviceConnectionStatus.offline ||
           device.network?.localService == null && Settings.getLocalMode();
       final List<Widget> columnWidgets = [];
