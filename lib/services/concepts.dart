@@ -36,7 +36,7 @@ class ConceptsService {
   static CacheOptions? _options;
 
   static String uri =
-      '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/concepts';
+      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/v2/concepts-with-characteristics';
 
   static initOptions() async {
     if (_options != null) {
@@ -54,26 +54,24 @@ class ConceptsService {
   }
 
   static Future<List<Concept>> getConcepts() async {
+    final headers = await Auth().getHeaders();
+    await initOptions();
+    final dio = Dio(BaseOptions(
+      connectTimeout: const Duration(milliseconds: 5000),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),))
+      ..interceptors.add(DioCacheInterceptor(options: _options!))
+      ..interceptors.add(ApiAvailableInterceptor())
+      ..httpClientAdapter = AppHttpClientAdapter();
+
     final List<Concept> result = [];
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = "9999";
+    queryParameters["sub-class"] = "true";
     bool cont = true;
     while (cont) {
-      final Map<String, String> queryParameters = {};
-      queryParameters["limit"] = "9999";
+      queryParameters["offset"] = result.length.toString();
       queryParameters["sort"] = "name.desc";
-      if (result.isNotEmpty) {
-        queryParameters["after.id"] = result.last.id;
-        queryParameters["after.sort_field_value"] = result.last.name;
-      }
-
-      final headers = await Auth().getHeaders();
-      await initOptions();
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
-        ..interceptors.add(DioCacheInterceptor(options: _options!))
-        ..interceptors.add(ApiAvailableInterceptor())
-        ..httpClientAdapter = AppHttpClientAdapter();
       final Response<List<dynamic>?> resp;
       try {
         resp = await dio.get<List<dynamic>?>(uri,

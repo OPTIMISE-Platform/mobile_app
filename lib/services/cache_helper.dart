@@ -94,7 +94,7 @@ class CacheHelper {
       _refreshDeviceGroups(Duration.zero, reschedule: false),
       _refreshNetworks(Duration.zero, reschedule: false),
       _refreshLocations(Duration.zero, reschedule: false),
-      FunctionsService.getNestedFunctions(),
+      FunctionsService.getFunctions(),
       AspectsService.getAspects(),
       ConceptsService.getConcepts(),
       CharacteristicsService.getCharacteristics(),

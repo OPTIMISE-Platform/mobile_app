@@ -89,10 +89,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       return;
     }
     FunctionConfig? functionConfig;
-    NestedFunction? function;
+    PlatformFunction? function;
     if (!element.isControlling) {
       functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
-      function = AppState().nestedFunctions[functionConfig.getRelatedControllingFunction(element.value)];
+      function = AppState().platformFunctions[functionConfig.getRelatedControllingFunction(element.value)];
 
       final controllingFunction = functionConfig.getRelatedControllingFunction(element.value);
       if (controllingFunction == null) {
@@ -122,7 +122,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
     } else {
       functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
-      function = AppState().nestedFunctions[element.functionId];
+      function = AppState().platformFunctions[element.functionId];
     }
 
     if (function == null) {
@@ -171,7 +171,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     }
 
     dynamic input;
-    if (function.hasInput()) {
+    if (AppState().concepts[function.concept_id]?.getBaseCharacteristic().hasInput() ?? false) {
       Widget? content = functionConfig.build(context, setState, transitioningStates.length == 1 ? states[transitioningStates[0]].value : null);
       if (content == null) {
         const err = "Function Config missing build()";
@@ -258,7 +258,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
   }
 
   String _getTitle(DeviceState element) {
-    final function = AppState().nestedFunctions[element.functionId];
+    final function = AppState().platformFunctions[element.functionId];
     String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
     if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
     return title;
@@ -455,8 +455,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         if (preferred != null) {
           unit = state.characteristics[preferred]?.display_unit;
         } else {
-          unit = state.nestedFunctions[element.functionId]?.concept
-              .base_characteristic?.display_unit ?? "";
+          unit = state.concepts[state.platformFunctions[element.functionId]?.concept_id]?.getBaseCharacteristic().display_unit ?? "";
         }
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
           functionWidgets.insert(

@@ -164,8 +164,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   final Mutex _deviceTypesMutex = Mutex();
 
 
-  final Map<String, NestedFunction> nestedFunctions = {};
-  final Mutex _nestedFunctionsMutex = Mutex();
+  final Map<String, PlatformFunction> platformFunctions = {};
+  final Mutex _platformFunctionsMutex = Mutex();
 
   final Map<String, Concept> concepts = {};
   final Mutex _conceptsMutex = Mutex();
@@ -276,14 +276,14 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   loadNestedFunctions() async {
-    final locked = _nestedFunctionsMutex.isLocked;
-    await _nestedFunctionsMutex.acquire();
+    final locked = _platformFunctionsMutex.isLocked;
+    await _platformFunctionsMutex.acquire();
     if (locked) {
-      return nestedFunctions;
+      return platformFunctions;
     }
     try {
-      for (var element in (await FunctionsService.getNestedFunctions())) {
-        nestedFunctions[element.id] = element;
+      for (var element in (await FunctionsService.getFunctions())) {
+        platformFunctions[element.id] = element;
       }
     } catch (e) {
       final err = "Could not get nested functions $e";
@@ -291,7 +291,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       Toast.showToastNoContext(err);
     }
     notifyListeners();
-    _nestedFunctionsMutex.release();
+    _platformFunctionsMutex.release();
   }
 
   loadConcepts() async {
@@ -890,7 +890,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     deviceTypes.clear();
     deviceTypes.clear();
 
-    nestedFunctions.clear();
+    platformFunctions.clear();
     _deviceSearchFilter = DeviceSearchFilter.empty();
     totalDevices = 0;
 

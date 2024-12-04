@@ -134,7 +134,7 @@ class DeviceGroup {
     }
     states.clear();
     for (final criterion in criteria ?? []) {
-      final f = AppState().nestedFunctions[criterion.function_id];
+      final f = AppState().platformFunctions[criterion.function_id];
       if (f == null) {
         _logger.e("Function is unknown: ${criterion.function_id}");
         continue;

@@ -101,7 +101,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
                   Settings.getFunctionPreferredCharacteristicId(
                       widget._state.functionId),
                   AppState()
-                      .nestedFunctions[widget._state.functionId]
+                      .platformFunctions[widget._state.functionId]
                       ?.concept_id)
             ],
             null));

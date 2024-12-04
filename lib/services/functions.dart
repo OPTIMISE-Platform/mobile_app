@@ -35,7 +35,7 @@ class FunctionsService {
 
   static CacheOptions? _options;
   static String uri =
-      '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/nested-function-infos';
+      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/functions';
 
   static initOptions() async {
     if (_options != null) {
@@ -52,7 +52,7 @@ class FunctionsService {
     );
   }
 
-  static Future<List<NestedFunction>> getNestedFunctions() async {
+  static Future<List<PlatformFunction>> getFunctions() async {
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio(BaseOptions(
@@ -62,24 +62,36 @@ class FunctionsService {
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
-    final Response<List<dynamic>?> resp;
-    try {
-      resp = await dio.get<List<dynamic>?>(uri,
-          options: Options(headers: headers));
-    } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
-      rethrow;
-    }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached nested functions");
-    }
+    final Map<String, String> queryParameters = {};
+    queryParameters["limit"] = "9999";
 
-    final l = resp.data ?? [];
-    return List<NestedFunction>.generate(
-        l.length, (index) => NestedFunction.fromJson(l[index]));
+    final functions = <PlatformFunction>[];
+    var cont = true;
+
+    while (cont) {
+      queryParameters["offset"] = functions.length.toString();
+
+      final Response<List<dynamic>?> resp;
+      try {
+        resp = await dio.get<List<dynamic>?>(uri,
+            options: Options(headers: headers), queryParameters: queryParameters);
+      } on DioException catch (e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+        rethrow;
+      }
+      if (resp.statusCode == 304) {
+        _logger.d("Using cached functions");
+      }
+
+      final l = resp.data ?? [];
+      cont = l.length == 9999;
+      functions.addAll(List<PlatformFunction>.generate(
+          l.length, (index) => PlatformFunction.fromJson(l[index])));
+    }
+    return functions;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

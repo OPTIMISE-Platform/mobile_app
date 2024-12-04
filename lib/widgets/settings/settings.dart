@@ -444,10 +444,10 @@ class Settings extends StatelessWidget {
   Widget _getFunctionPreferredCharacteristicsList(
       BuildContext context, StateSetter setState) {
     final functions = AppState()
-        .nestedFunctions
+        .platformFunctions
         .values
         .where((f) =>
-            (f.concept.characteristic_ids ?? []).length > 1 &&
+            (AppState().concepts[f.concept_id]?.characteristics ?? []).length > 1 &&
             f.name.toLowerCase().contains(_functionSearch.toLowerCase()))
         .toList();
     final list = ListView.builder(
@@ -460,14 +460,12 @@ class Settings extends StatelessWidget {
                   material: (_, __) => PopupMenuButton<String?>(
                         initialValue: settings_service.Settings
                                 .getFunctionPreferredCharacteristicId(f.id) ??
-                            f.concept.base_characteristic_id,
-                        itemBuilder: (_) => f.concept.characteristic_ids!
+                            AppState().concepts[f.concept_id]?.base_characteristic_id,
+                        itemBuilder: (_) => (AppState().concepts[f.concept_id]?.characteristics ?? [])
                             .map(
                               (e) => PopupMenuItem<String?>(
-                                  value: e,
-                                  child: Text(
-                                      AppState().characteristics[e]?.name ??
-                                          "MISSING_CHARACTERISTIC_NAME")),
+                                  value: e.id,
+                                  child: Text(e.name)),
                             )
                             .toList()
                           ..add(PopupMenuItem<String?>(
@@ -490,23 +488,18 @@ class Settings extends StatelessWidget {
                         onTap: () => showPlatformModalSheet(
                             context: context,
                             builder: (context) => CupertinoActionSheet(
-                                  actions: f.concept.characteristic_ids!
+                                  actions: AppState().concepts[f.concept_id]?.characteristics
                                       .map((e) => CupertinoActionSheetAction(
                                             isDefaultAction: (settings_service
                                                             .Settings
                                                         .getFunctionPreferredCharacteristicId(
                                                             f.id) ??
-                                                    f.concept
-                                                        .base_characteristic_id) ==
-                                                e,
-                                            child: Text(AppState()
-                                                    .characteristics[e]
-                                                    ?.name ??
-                                                "MISSING_CHARACTERISTIC_NAME"),
+                                                AppState().concepts[f.concept_id]?.base_characteristic_id) == e.id,
+                                            child: Text(e.name),
                                             onPressed: () {
                                               settings_service.Settings
                                                   .setFunctionPreferredCharacteristicId(
-                                                      f.id, e);
+                                                      f.id, e.id);
                                               reinit();
                                               AppState().notifyListeners();
                                               setState(() {});
@@ -515,7 +508,7 @@ class Settings extends StatelessWidget {
                                             },
                                           ))
                                       .toList()
-                                    ..add(CupertinoActionSheetAction(
+                                    ?..add(CupertinoActionSheetAction(
                                       isDestructiveAction: true,
                                       child: const Text("Reset"),
                                       onPressed: () {

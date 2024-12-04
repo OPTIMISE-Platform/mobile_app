@@ -406,4 +406,8 @@ class Characteristic {
       ),
     );
   }
+
+  bool hasInput() {
+    return type != "";
+  }
 }

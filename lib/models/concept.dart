@@ -22,10 +22,13 @@ part 'concept.g.dart';
 @JsonSerializable()
 class Concept {
   String id, name, base_characteristic_id;
-  List<String>? characteristic_ids;
-  Characteristic? base_characteristic;
+  List<Characteristic> characteristics;
 
-  Concept(this.id, this.name, this.base_characteristic_id, this.characteristic_ids, this.base_characteristic);
+  Concept(this.id, this.name, this.base_characteristic_id, this.characteristics);
   factory Concept.fromJson(Map<String, dynamic> json) => _$ConceptFromJson(json);
   Map<String, dynamic> toJson() => _$ConceptToJson(this);
+
+  Characteristic getBaseCharacteristic() {
+    return characteristics.firstWhere((element) => element.id == base_characteristic_id);
+  }
 }

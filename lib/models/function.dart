@@ -28,22 +28,8 @@ class PlatformFunction {
   PlatformFunction(this.id, this.name, this.concept_id, this.display_name);
   factory PlatformFunction.fromJson(Map<String, dynamic> json) => _$PlatformFunctionFromJson(json);
   Map<String, dynamic> toJson() => _$PlatformFunctionToJson(this);
-}
-
-@JsonSerializable()
-class NestedFunction extends PlatformFunction {
-  Concept concept;
-
-  NestedFunction(String id, String name, String concept_id, String display_name, this.concept): super(id, name, concept_id, display_name);
-  factory NestedFunction.fromJson(Map<String, dynamic> json) => _$NestedFunctionFromJson(json);
-  @override
-  Map<String, dynamic> toJson() => _$NestedFunctionToJson(this);
 
   bool isControlling() {
     return id.startsWith(controllingFunctionPrefix);
-  }
-
-  bool hasInput() {
-    return concept.base_characteristic != null && concept.base_characteristic!.type != "";
   }
 }

@@ -90,7 +90,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                       material: (_, __) => MaterialIconButtonData(
                           splashRadius: 25,
                           tooltip: state
-                              .nestedFunctions[functionConfigs[
+                              .platformFunctions[functionConfigs[
                                       dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                                   ?.getRelatedControllingFunction(
                                       element.value)]

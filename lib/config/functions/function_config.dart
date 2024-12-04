@@ -106,7 +106,7 @@ abstract class FunctionConfig {
     if (preferred != null) {
       characteristic = AppState().characteristics[preferred]?.clone();
     } else {
-      characteristic = AppState().nestedFunctions[functionId]?.concept.base_characteristic?.clone();
+      characteristic = AppState().concepts[AppState().platformFunctions[functionId]?.concept_id]?.getBaseCharacteristic().clone();
     }
   }
 }
@@ -125,12 +125,12 @@ class FunctionConfigDefault extends FunctionConfig {
 
   @override
   String? getRelatedControllingFunction(value) {
-    final conceptId = AppState().nestedFunctions[functionId]?.concept.id;
+    final conceptId = AppState().platformFunctions[functionId]?.concept_id;
     if (conceptId == null) {
       return null;
     }
     final controllingFunctions =
-        AppState().nestedFunctions.values.where((element) => element.isControlling() && element.concept.id == conceptId).toList(growable: false);
+        AppState().platformFunctions.values.where((element) => element.isControlling() && element.concept_id == conceptId).toList(growable: false);
     if (controllingFunctions.length == 1) {
       return controllingFunctions[0].id;
     }
@@ -140,14 +140,14 @@ class FunctionConfigDefault extends FunctionConfig {
 
   @override
   List<String>? getAllRelatedControllingFunctions() {
-    final conceptId = AppState().nestedFunctions[functionId]?.concept.id;
+    final conceptId = AppState().platformFunctions[functionId]?.concept_id;
     if (conceptId == null) {
       return null;
     }
     return AppState()
-        .nestedFunctions
+        .platformFunctions
         .values
-        .where((element) => element.isControlling() && element.concept.id == conceptId)
+        .where((element) => element.isControlling() && element.concept_id == conceptId)
         .toList(growable: false)
         .map((e) => e.id)
         .toList(growable: false);
