@@ -36,7 +36,7 @@ class NetworksService {
   );
 
   static CacheOptions? _options;
-  static     String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/hubs?limit=9999';
+  static     String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-hubs';
 
 
   static initOptions() async {
@@ -64,31 +64,45 @@ class NetworksService {
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
     }
+    queryParameters["limit"] = "9999";
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
-    final Response<List<dynamic>?> resp;
-    try {
-      resp = await dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
-    } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
-      }
-      rethrow;
-    }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached device classes");
-    }
 
-    final l = resp.data ?? [];
-    final networks = List<Network>.generate(l.length, (index) => Network.fromJson(l[index]));
+    var cont = true;
+    final networks = <Network>[];
+
+    while (cont) {
+      queryParameters["offset"] = networks.length.toString();
+      final Response<List<dynamic>?> resp;
+      try {
+        resp = await dio.get<List<dynamic>?>(
+            uri, queryParameters: queryParameters,
+            options: Options(headers: headers));
+      } on DioException catch (e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+        rethrow;
+      }
+      if (resp.statusCode == 304) {
+        _logger.d("Using cached device classes");
+      }
+
+      final l = resp.data ?? [];
+      final add = List<Network>.generate(
+          l.length, (index) => Network.fromJson(l[index]));
+      networks.addAll(add);
+      cont = add.length == 9999;
+    }
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.networks.putAll(networks);

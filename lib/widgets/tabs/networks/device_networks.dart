@@ -122,11 +122,11 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
                                           Text(state.networks[i].name),
                                           Badge(
                                             label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-                                            isLabelVisible: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline,
+                                            isLabelVisible: state.networks[i].connection_state == DeviceConnectionStatus.offline,
                                             alignment: AlignmentDirectional.topCenter,
                                             largeSize: 16,
                                             backgroundColor: Colors.transparent,
-                                            child: state.networks[i].getConnectionStatus() == DeviceConnectionStatus.offline ? const Text("") : null,
+                                            child: state.networks[i].connection_state == DeviceConnectionStatus.offline ? const Text("") : null,
                                           )
                                         ]),
                                         subtitle: Text(

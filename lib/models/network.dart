@@ -32,10 +32,11 @@ class Network {
   String id;
   @Index(caseSensitive: false)
   String name;
-  String creator;
-  Annotations? annotations;
+  String hash, owner_id;
   bool shared;
   List<String>? device_local_ids, device_ids;
+  @enumerated
+  DeviceConnectionStatus connection_state;
 
   @JsonKey(ignore: true)
   Id isarId = -1;
@@ -48,7 +49,7 @@ class Network {
   @ignore
   final List<DeviceState> states = [];
 
-  Network(this.id, this.name,  this.annotations, this.shared, this.creator, this.device_local_ids, this.device_ids) {
+  Network(this.id, this.name, this.shared, this.device_local_ids, this.device_ids, this.connection_state, this.hash, this.owner_id) {
     isarId = fastHash(id);
   }
 
@@ -57,16 +58,4 @@ class Network {
       _$NetworkFromJson(json);
 
   Map<String, dynamic> toJson() => _$NetworkToJson(this);
-
-
-  DeviceConnectionStatus getConnectionStatus() {
-    if (annotations?.connected == null) {
-      return DeviceConnectionStatus.unknown;
-    }
-    if (annotations!.connected!) {
-      return DeviceConnectionStatus.online;
-    } else {
-      return DeviceConnectionStatus.offline;
-    }
-  }
 }
