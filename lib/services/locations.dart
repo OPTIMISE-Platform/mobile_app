@@ -52,40 +52,58 @@ class LocationService {
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
     _dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),
+    ))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<List<Future<Location>>> getLocations({bool forceBackend = false}) async {
+  static Future<List<Future<Location>>> getLocations(
+      {bool forceBackend = false}) async {
     if (!forceBackend && isar != null) {
-      return (await isar!.locations.where().sortByName().findAll()).map((e) => e.initImage()).toList();
+      return (await isar!.locations.where().sortByName().findAll())
+          .map((e) => e.initImage())
+          .toList();
     }
 
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/locations';
+    String uri =
+        '${Settings.getApiUrl() ?? 'localhost'}/device-repository/locations';
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final Response<List<dynamic>?> resp;
-    try {
-      resp = await _dio.get<List<dynamic>?>(uri, queryParameters: queryParameters, options: Options(headers: headers));
-    } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
-      }
-      rethrow;
-    }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached device locations");
-    }
 
-    final l = resp.data ?? [];
-    final locations = List<Location>.generate(l.length, (index) => Location.fromJson(l[index]));
+    var cont = true;
+    final locations = <Location>[];
+
+    while (cont) {
+      queryParameters["offset"] = locations.length.toString();
+      final Response<List<dynamic>?> resp;
+      try {
+        resp = await _dio.get<List<dynamic>?>(uri,
+            queryParameters: queryParameters,
+            options: Options(headers: headers));
+      } on DioException catch (e) {
+        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+          throw UnexpectedStatusCodeException(
+              e.response?.statusCode, "$uri ${e.message}");
+        }
+        rethrow;
+      }
+      if (resp.statusCode == 304) {
+        _logger.d("Using cached device locations");
+      }
+
+      final l = resp.data ?? [];
+      final add = List<Location>.generate(
+          l.length, (index) => Location.fromJson(l[index]));
+      locations.addAll(add);
+      cont = add.length == 9999;
+    }
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.locations.putAll(locations);
@@ -95,16 +113,19 @@ class LocationService {
   }
 
   static Future<Location> saveLocation(Location location) async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/${location.id}';
+    String uri =
+        '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/${location.id}';
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.put<dynamic>(uri, options: Options(headers: headers), data: location.toJson());
+      resp = await _dio.put<dynamic>(uri,
+          options: Options(headers: headers), data: location.toJson());
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -119,16 +140,20 @@ class LocationService {
   }
 
   static Future<Location> createLocation(String name) async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/';
+    String uri =
+        '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/';
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.post<dynamic>(uri, options: Options(headers: headers), data: Location("", name, "", "", [], []).toJson());
+      resp = await _dio.post<dynamic>(uri,
+          options: Options(headers: headers),
+          data: Location("", name, "", "", [], []).toJson());
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -142,7 +167,8 @@ class LocationService {
   }
 
   static Future<void> deleteLocation(String id) async {
-    String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/$id';
+    String uri =
+        '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/$id';
 
     final headers = await Auth().getHeaders();
     await initOptions();
@@ -150,7 +176,8 @@ class LocationService {
       await _dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -164,7 +191,9 @@ class LocationService {
     return;
   }
 
-  static bool isListAvailable() => ApiAvailableService().isAvailable('${Settings.getApiUrl() ?? 'localhost'}/permissions/query/v3/resources/locations');
-  static bool isCreateEditDeleteAvailable() => ApiAvailableService().isAvailable('${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations');
-
+  static bool isListAvailable() => ApiAvailableService().isAvailable(
+      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/locations');
+  static bool isCreateEditDeleteAvailable() =>
+      ApiAvailableService().isAvailable(
+          '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations');
 }
