@@ -28,6 +28,7 @@ class ApiAvailableService {
   factory ApiAvailableService() => _instance;
 
   ApiAvailableService._internal() {
+    /* Disable connectivity checks: too unreliable
     Connectivity().onConnectivityChanged.listen((event) {
       final offline = event.contains(ConnectivityResult.none);
       if (offline != _offline) {
@@ -43,6 +44,7 @@ class ApiAvailableService {
         AppState().notifyListeners();
       }
     });
+    */
   }
 
   // performance evaluated, adds less than 2 ms to each request
