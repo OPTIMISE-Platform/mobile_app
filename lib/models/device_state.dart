@@ -113,7 +113,13 @@ class StateHelper {
       final state = DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!, contentVariable.aspect_id, isInput, null,
           null, device.id, path, serviceGroupName);
       state.deviceInstance = device;
-      states.add(state);
+      final idx = states.indexWhere((element) => element.serviceGroupKey == service.service_group_key
+          && element.functionId == contentVariable.function_id!
+          && element.aspectId == contentVariable.aspect_id
+          && element.isControlling == isInput);
+      if (idx == -1) {
+        states.add(state);
+      }
     }
     contentVariable.sub_content_variables
         ?.forEach((element) => _addStateFromContentVariable(service, element, isInput, path, states, device, serviceGroupName));
