@@ -84,7 +84,7 @@ class DevicesService {
           .findAll();
       _logger.d("Getting devices from local DB took ${DateTime.now().difference(
           start)}");
-      return DeviceInstanceWithTotal(devices, devices.length);
+      return DeviceInstanceWithTotal(devices, await collection.count());
     }
     final headers = await Auth().getHeaders();
 
