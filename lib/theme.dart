@@ -16,8 +16,6 @@
 
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -27,7 +25,6 @@ import 'package:mobile_app/services/settings.dart';
 typedef ThemeStyle = String;
 
 const ThemeStyle themeMaterial = "material";
-const ThemeStyle themeCupertino = "cupertino";
 
 typedef ThemeColor = String;
 
@@ -59,7 +56,6 @@ class MyTheme {
   static ThemeData materialTheme = ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF32b8ba)),
-      cupertinoOverrideTheme: cupertinoTheme,
       primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
         50: Color.fromRGBO(50, 184, 186, 0.1),
         100: Color.fromRGBO(50, 184, 186, 0.2),
@@ -115,7 +111,6 @@ class MyTheme {
       background: const Color(0xFF303030),
     ),
     useMaterial3: true,
-    cupertinoOverrideTheme: cupertinoTheme,
     primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
       50: Color.fromRGBO(50, 184, 186, 0.1),
       100: Color.fromRGBO(50, 184, 186, 0.2),
@@ -161,18 +156,11 @@ class MyTheme {
       )
   );
 
-  static CupertinoThemeData cupertinoTheme = const CupertinoThemeData(
-    primaryColor: Color(0xFF32b8ba),
-    brightness: Brightness.light,
-  );
-
-  static CupertinoAppData cupertinoAppData = CupertinoAppData(theme: cupertinoTheme);
-
   static TextStyle? get textStyle {
     if (isDarkMode) {
-      return currentTheme == themeMaterial ? materialDarkTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
+      return materialDarkTheme.textTheme.bodyMedium;
     }
-    return currentTheme == themeMaterial ? materialTheme.textTheme.bodyMedium : cupertinoTheme.textTheme.textStyle;
+    return materialTheme.textTheme.bodyMedium;
   }
 
   static Color? get textColor {
@@ -183,29 +171,16 @@ class MyTheme {
     return currentColor == dark;
   }
 
-  static TargetPlatform initialPlatform = kIsWeb
-      ? TargetPlatform.android
-      : Platform.isIOS
-          ? TargetPlatform.iOS
-          : TargetPlatform.android;
-  static ThemeStyle currentTheme = kIsWeb
-      ? themeMaterial
-      : Platform.isIOS
-          ? themeCupertino
-          : themeMaterial;
+  static TargetPlatform initialPlatform = TargetPlatform.android;
+
+  static ThemeStyle currentTheme = themeMaterial;
+
   static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
 
   static ThemeMode? themeMode = ThemeMode.light;
 
   static loadTheme() async {
     var val = Settings.getTheme();
-    if (val == themeMaterial) {
-      initialPlatform = TargetPlatform.android;
-      currentTheme = themeMaterial;
-    } else if (val == themeCupertino) {
-      initialPlatform = TargetPlatform.iOS;
-      currentTheme = themeCupertino;
-    }
 
     val = Settings.getThemeColor();
     if (val == dark) {
@@ -214,34 +189,6 @@ class MyTheme {
     } else if (val == light) {
       themeMode = ThemeMode.light;
       currentColor = light;
-    }
-  }
-
-  static toggleTheme(BuildContext context) async {
-    final p = PlatformProvider.of(context);
-    if (p == null) {
-      return;
-    }
-    isMaterial(context) ? await selectTheme(context, themeCupertino) : await selectTheme(context, themeMaterial);
-  }
-
-  static selectTheme(BuildContext context, ThemeStyle? theme) async {
-    final p = PlatformProvider.of(context);
-    switch (theme) {
-      case themeMaterial:
-        await Settings.setTheme(theme!);
-        currentTheme = themeMaterial;
-        p?.changeToMaterialPlatform();
-        break;
-      case themeCupertino:
-        await Settings.setTheme(theme!);
-        currentTheme = themeCupertino;
-        p?.changeToCupertinoPlatform();
-        break;
-      default:
-        await Settings.resetTheme();
-        currentTheme = Platform.isIOS ? themeCupertino : themeMaterial;
-        p?.changeToAutoDetectPlatform();
     }
   }
 

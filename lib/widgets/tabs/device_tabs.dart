@@ -15,7 +15,6 @@
  */
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -24,12 +23,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/locations.dart';
-import 'package:mobile_app/services/networks.dart';
-import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
@@ -211,27 +207,16 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
     final List<BottomNavigationBarItem> bottomBarItems = [];
 
-    if (Platform.isIOS) {
-      navItems.forEach((navItem) {
+    navItems.forEach((navItem) {
+      if (["Favorites", "Dashboard"].contains(navItem.name)) {
         bottomBarItems.add(BottomNavigationBarItem(
             tooltip: navItem.disabled ? "Currently unavailable" : null,
             icon: Icon(navItem.icon,
                 key: _tabKeys[navItem.index],
                 color: navItem.disabled ? disabledColor : null),
             label: navItem.name));
-      });
-    } else {
-      navItems.forEach((navItem) {
-        if (["Favorites", "Dashboard"].contains(navItem.name)) {
-          bottomBarItems.add(BottomNavigationBarItem(
-              tooltip: navItem.disabled ? "Currently unavailable" : null,
-              icon: Icon(navItem.icon,
-                  key: _tabKeys[navItem.index],
-                  color: navItem.disabled ? disabledColor : null),
-              label: navItem.name));
-        }
-      });
-    }
+      }
+    });
 
     return PlatformNavBar(
       items: bottomBarItems,
@@ -342,8 +327,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                     Navigator.pop(context);
                     Toast.showToastNoContext("Currently unavailable");
                   });
-                })
-            );
+                }));
             return;
           }
           sidebarItems.add(SidebarXItem(
@@ -357,8 +341,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                   switchScreen(_navigationIndex, true);
                   Navigator.pop(context);
                 });
-              })
-          );
+              }));
         });
 
         var textColor = MyTheme.textColor;

@@ -24,7 +24,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import "package:intl/intl_standalone.dart"
     if (dart.library.html) "package:intl/intl_browser.dart";
-import 'package:isar/isar.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -164,7 +163,6 @@ class MyAppState extends State<MyApp> {
                         DefaultCupertinoLocalizations.delegate,
                       ],
                   home: const Home(),
-                  cupertino: (_, __) => MyTheme.cupertinoAppData,
                     ),
                   )),
         ));

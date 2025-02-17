@@ -55,11 +55,6 @@ class Settings extends StatelessWidget {
     return Consumer<AppState>(builder: (context, state, _) {
       final List<Widget> children = [
         ListTile(
-          title: const Text("Switch Style"),
-          onTap: () => MyTheme.toggleTheme(context),
-        ),
-        const Divider(),
-        ListTile(
             title: const Text("Set Displayed Fraction Digits"),
             onTap: () => showPlatformDialog(
                   context: context,
