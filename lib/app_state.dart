@@ -591,6 +591,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
+    if(Platform.isIOS){
+      String? apnsToken = await messaging.getAPNSToken();
+    }
     final token =
         await messaging.getToken(vapidKey: dotenv.env["FireBaseVapidKey"]);
     if (token == null) {

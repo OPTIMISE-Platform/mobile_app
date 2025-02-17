@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -22,12 +24,23 @@ class Toast {
   static FToast fToast = FToast();
 
   static showToastNoContext(String text) {
-    Fluttertoast.showToast(
+    if (Platform.isIOS){
+      Fluttertoast.showToast(
+        msg: text,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 2,
+        textColor: Colors.black,
+        fontSize: 16.0,
+        backgroundColor: Colors.grey
+      );
+    } else {
+      Fluttertoast.showToast(
         msg: text,
         gravity: ToastGravity.CENTER,
         timeInSecForIosWeb: 2,
         textColor: Colors.black,
         fontSize: 16.0,
-    );
+      );
+    }
   }
 }
