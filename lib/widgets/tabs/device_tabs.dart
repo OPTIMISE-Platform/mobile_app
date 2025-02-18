@@ -94,7 +94,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     GlobalKey(),
     GlobalKey(),
     GlobalKey(),
-    GlobalKey()
   ];
 
   _searchChanged(String search) {
@@ -183,10 +182,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           showFab = false;
           break;
         case tabSmartServices:
-          hideSearch = true;
-          showFab = true;
-          break;
-        case tabGateways:
           hideSearch = true;
           showFab = true;
           break;
@@ -464,8 +459,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                               return const SmartServicesInstances();
                             case tabDashboard:
                               return const Dashboard();
-                            case tabGateways:
-                              return const Gateways();
                             default:
                               return Center(
                                   child: Row(

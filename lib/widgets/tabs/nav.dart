@@ -24,7 +24,6 @@ const tabGroups = 4;
 const tabNetworks = 5;
 const tabClasses = 6;
 const tabSmartServices = 7;
-const tabGateways = 8;
 
 List<NavigationItem> navItems = [
   NavigationItem("Favorites",tabFavorites, Icons.star_border),
@@ -35,7 +34,6 @@ List<NavigationItem> navItems = [
   NavigationItem("Networks",tabNetworks, Icons.hub_outlined),
   NavigationItem("Classes",tabClasses, Icons.category),
   NavigationItem("Services",tabSmartServices, Icons.auto_fix_high),
-  NavigationItem("Gateways",tabGateways, Icons.device_hub),
 ];
 
 class NavigationItem {

@@ -853,19 +853,26 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
   }
 
-  _mergeDiscoveredServicesWithNetworks() {
+  _mergeDiscoveredServicesWithNetworks() async {
+    var storedMGWs = await MgwStorage.LoadPairedMGWs();
     // TODO get serial ID from the mDNS response or try to query it from device connector deployment which should return the hub id in the future
     networks.forEach((n) => n.localService = null);
-    _discovery?.services.forEach((service) {
-      final nI = networks.indexWhere((n) =>
-          n.id ==
-          utf8.decode((service.txt?["serial"] ?? Uint8List(0))
-              .map((e) => e.toInt())
-              .toList()));
-      if (nI != -1) {
-        networks[nI].localService = service;
-      }
-    });
+    if (storedMGWs.isNotEmpty) {
+      _discovery?.services.forEach((service) {
+        final nI = networks.indexWhere((n) =>
+        n.id ==
+            utf8.decode((service.txt?["serial"] ?? Uint8List(0))
+                .map((e) => e.toInt())
+                .toList()));
+        var nG = -1;
+        if (nI != -1){
+          nG = storedMGWs.indexWhere((mgw) => mgw.coreId == networks[nI].id);
+        }
+        if (nI != -1 && nG != -1) {
+          networks[nI].localService = service;
+        }
+      });
+    }
   }
 
   loadStoredMGWs() async {

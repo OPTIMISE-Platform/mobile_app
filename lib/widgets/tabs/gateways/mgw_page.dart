@@ -81,7 +81,7 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
       _logger.d("Found service: $service");
       var hostname = service.host??"";
       var serviceName = service.name??"";
-      var coreId = utf8.decode(service.txt?["core-id"]??[]);
+      var coreId = utf8.decode(service.txt?["serial"]??[]);
 
       var ip = service.addresses?[0].address??"";
       if(!foundHostnames.contains(hostname)) {
