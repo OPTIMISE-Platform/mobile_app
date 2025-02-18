@@ -43,7 +43,6 @@ class Gateways extends StatefulWidget {
 
 class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
   int? _selected;
-  bool _loading = false;
   StreamSubscription? _refreshSubscription;
   StreamSubscription? _fabSubscription;
   late final DeviceTabsState? parentState;
@@ -60,14 +59,14 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
       _refresh();
     });
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
-    as DeviceTabsState?;
+        as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       await Navigator.push(
           context,
           platformPageRoute(
             context: context,
             builder: (context) {
-              final target = const AddLocalNetwork();
+              const target = AddLocalNetwork();
               return target;
             },
           ));
@@ -76,73 +75,74 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
   }
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _refreshSubscription?.cancel();
-    _fabSubscription?.cancel();
-    super.dispose();
+  Widget build(BuildContext context) {
+    return Consumer<AppState>(builder: (context, state, child) {
+      return Scrollbar(
+          child: state.gateways.isEmpty
+              ? LayoutBuilder(
+                  builder: (context, constraint) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ConstrainedBox(
+                        constraints:
+                            BoxConstraints(minHeight: constraint.maxHeight),
+                        child: const IntrinsicHeight(
+                          child: Column(
+                            children: [
+                              Expanded(
+                                child: Center(child: Text("No Gateways")),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                )
+              : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: MyTheme.inset,
+                  itemCount: state.gateways.length,
+                  itemBuilder: (context, i) {
+                    var mgw = state.gateways[i];
+
+                    return Column(children: [
+                      i > 0 ? const Divider() : const SizedBox.shrink(),
+                      ListTile(
+                        title: Row(children: [
+                          Text(state.gateways[i].mDNSServiceName),
+                        ]),
+                        onTap: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => MGWDetail(mgw: mgw)));
+                        },
+                        trailing: MaterialButton(
+                            child: const Icon(Icons.delete),
+                            onPressed: () async {
+                              await MgwStorage.RemovePairedMGW(mgw);
+                              await state.loadStoredMGWs();
+                            }),
+                      )
+                    ]);
+                  },
+                ));
+    });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh();
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) _refresh();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
-      return Scrollbar(
-              child: state.gateways.isEmpty
-                      ? LayoutBuilder(
-                    builder: (context, constraint) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                          child: IntrinsicHeight(
-                            child: Column(
-                              children: const [
-                                Expanded(
-                                  child: Center(child: Text("No Gateways")),
-                                ),
-
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                      : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: MyTheme.inset,
-                    itemCount: state.gateways.length,
-                    itemBuilder: (context, i) {
-                      var mgw = state.gateways[i];
-
-                      return Column(children: [
-                        i > 0 ? const Divider() : const SizedBox.shrink(),
-                        ListTile(
-                            title: Row(children: [
-                              Text(state.gateways[i].mDNSServiceName),
-                            ]),
-                          onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => MGWDetail(mgw: mgw)));
-                          },
-                          trailing: MaterialButton(
-                              child: Icon(
-                                  Icons.delete
-                              ),
-                              onPressed: () async {
-                                await MgwStorage.RemovePairedMGW(mgw);
-                                await state.loadStoredMGWs();
-                              }
-                          ),
-                        )]);
-                    },
-              )
-      );
-    });
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _refreshSubscription?.cancel();
+    _fabSubscription?.cancel();
+    super.dispose();
   }
 }

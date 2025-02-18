@@ -45,20 +45,20 @@ Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
     context: context,
     builder: (context) {
       return AlertDialog(
-        title: Text('Password'),
+        title: const Text('Password'),
         content: TextField(
           controller: _textFieldController,
-          decoration: InputDecoration(hintText: "Password"),
+          decoration: const InputDecoration(hintText: "Password"),
         ),
         actions: <Widget>[
           TextButton(
-            child: Text('CANCEL'),
+            child: const Text('CANCEL'),
             onPressed: () {
               Navigator.pop(context);
             },
           ),
           TextButton(
-            child: Text('OK'),
+            child: const Text('OK'),
             onPressed: () async {
               var password = _textFieldController.text;
               await MgwStorage.StoreBasicAuthCredentials(password);
@@ -78,7 +78,7 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
   List<String> foundHostnames = [];
   discovery.addListener(() {
     discovery.services.forEach((service) {
-      _logger.d("Found service: " + service.toString());
+      _logger.d("Found service: $service");
       var hostname = service.host??"";
       var serviceName = service.name??"";
       var coreId = utf8.decode(service.txt?["core-id"]??[]);
@@ -101,9 +101,9 @@ Future<void> PairWithGateway(MGW mgw) async {
   var host = mgw.ip;
   MgwAuthService authService = MgwAuthService(host);
 
-  _logger.d("Pair with gateway: "+ host);
+  _logger.d("Pair with gateway: $host");
   DeviceUserCredentials credentials = await authService.RegisterDevice();
-  _logger.d("Paired successfully with gateway: "+ host);
+  _logger.d("Paired successfully with gateway: $host");
 
   _logger.d("Store device credentials");
   await MgwStorage.StoreCredentials(credentials);
@@ -124,7 +124,7 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
     await PairWithGateway(mgw);
     await StoreGateway(mgw, appState);
   } on Failure catch (e) {
-    _logger.e("Pairing is not possible: " + e.detailedMessage);
+    _logger.e("Pairing is not possible: ${e.detailedMessage}");
     if (e.errorCode == ErrorCode.UNAUTHORIZED) {
       // MGW is still using basic auth protection -> ask user for password
       try {
@@ -132,7 +132,7 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
         await pairWithBasicAuth(widgetBuildContext, mgw);
         await StoreGateway(mgw, appState);
       } catch (e) {
-        _logger.e("Pairing is not possible: " + e.toString());
+        _logger.e("Pairing is not possible: $e");
         Toast.showToastNoContext(
             "Pairing was not possible");
       }
@@ -154,15 +154,15 @@ class AddLocalNetwork extends StatefulWidget {
 class _AddLocalNetworkState extends State<AddLocalNetwork> {
   handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
     if (mgws.length == 0) {
-      return Column(
+      return const Column(
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               color: Colors.red,
               size: 40,
             ),
             Padding(
-              padding: const EdgeInsets.only(top: TOP_PADDING),
+              padding: EdgeInsets.only(top: TOP_PADDING),
               child: Text('No gateways found'),
             ),
           ]);
@@ -180,7 +180,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
                   child: ListTile(
                     title: Text(mgw.mDNSServiceName ?? "No name provided"),
                     trailing: MaterialButton(
-                        child: Icon(
+                        child: const Icon(
                             Icons.add
                         ),
                         onPressed: () => StartPairing(mgw, appState, widgetBuildContext, context)
@@ -195,9 +195,9 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
   handleError(error) {
     return Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: const Icon(
+          const Padding(
+            padding: EdgeInsets.only(top: TOP_PADDING),
+            child: Icon(
               Icons.error_outline,
               color: Colors.red,
               size: 40,
@@ -205,17 +205,17 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
           ),
           Padding(
             padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Error: ${error}', style: textStyle),
+            child: Text('Error: $error', style: textStyle),
           ),
         ]);
   }
 
   handleLoading() {
-    return Column(
+    return const Column(
         crossAxisAlignment: CrossAxisAlignment.center,
       children: [
           Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
+            padding: EdgeInsets.only(top: TOP_PADDING),
             child: SizedBox(
               width: 40,
               height: 40,
@@ -244,7 +244,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
     return Consumer<AppState>(builder: (context, state, child) {
       return Scaffold(
           appBar: AppBar(
-            title: Text("Gateways"),
+            title: const Text("Gateways"),
           ),
           body: FutureBuilder(
               future: DiscoverLocalGatewayHosts(),
