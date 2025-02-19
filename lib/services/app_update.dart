@@ -129,9 +129,12 @@ class AppUpdater {
         keyBuilder: CacheHelper.bodyCacheIDBuilder,
       );
 
-      final url =
-          "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
-
+      var url =
+          "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases/latest";
+      if (Settings.getPreReleaseMode()){
+        url =
+        "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
+      }
       final dio = Dio(BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
           sendTimeout: const Duration(milliseconds: 5000),
@@ -142,18 +145,33 @@ class AppUpdater {
           }))
         ..interceptors.add(DioCacheInterceptor(options: options))
         ..interceptors.add(ApiAvailableInterceptor());
-      final Response<List<dynamic>> resp;
-      try {
-        resp = await dio.get<List<dynamic>>(url);
-      } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          UnexpectedStatusCodeException(
-              e.response?.statusCode, "$url ${e.message}"); // for logging
-        }
-        return _foundUpdate = false;
-      }
 
-      final decoded = (resp.data?[0] ?? {}) as Map<String, dynamic>;
+      Map decoded;
+      if (Settings.getPreReleaseMode()){
+        final Response<List<dynamic>> resp;
+        try {
+          resp = await dio.get<List<dynamic>>(url);
+        } on DioException catch (e) {
+          if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+            UnexpectedStatusCodeException(
+                e.response?.statusCode, "$url ${e.message}"); // for logging
+          }
+          return _foundUpdate = false;
+        }
+        decoded = (resp.data?[0] ?? {}) as Map<String, dynamic>;
+      } else {
+        final Response<dynamic> resp;
+        try {
+          resp = await dio.get<dynamic>(url);
+        } on DioException catch (e) {
+          if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+            UnexpectedStatusCodeException(
+                e.response?.statusCode, "$url ${e.message}"); // for logging
+          }
+          return _foundUpdate = false;
+        }
+        decoded = (resp.data ?? {}) as Map<dynamic, dynamic>;
+      }
       latestBuild = int.parse((decoded["tag_name"] as String).split("+")[1]);
       currentBuild = int.parse(dotenv.env["VERSION"]!.split("+")[1]);
 

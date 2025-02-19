@@ -59,6 +59,8 @@ class Settings {
 
   static const _dmModeKey = "dm_mode";
 
+  static const _preReleaseModeKey = "preRelease_mode";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -321,6 +323,16 @@ class Settings {
   static Future<void> setDeviceManagerMode(bool? value) {
     checkInit();
     return _box!.put(_dmModeKey, value.toString());
+  }
+
+  static bool getPreReleaseMode() {
+    checkInit();
+    return _box!.get(_preReleaseModeKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setPreReleaseMode(bool? value) {
+    checkInit();
+    return _box!.put(_preReleaseModeKey, value.toString());
   }
 }
 

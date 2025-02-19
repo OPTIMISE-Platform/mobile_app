@@ -202,6 +202,20 @@ class Settings extends StatelessWidget {
       children.addAll([
         const Divider(),
         ListTile(
+          title: const Text("Get Pre-Releases"),
+          trailing: PlatformSwitch(
+            onChanged: (bool value) async {
+              await settings_service.Settings.setPreReleaseMode(value);
+              state.notifyListeners();
+              HapticFeedbackProxy.lightImpact();
+            },
+            value: settings_service.Settings.getPreReleaseMode(),
+          ),
+        )
+      ]);
+      children.addAll([
+        const Divider(),
+        ListTile(
           title: const Text("Vibration"),
           trailing: PlatformSwitch(
             onChanged: (bool value) async {
