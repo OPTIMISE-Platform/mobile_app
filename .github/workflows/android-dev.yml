@@ -45,4 +45,4 @@ jobs:
         uses: senergy-platform/firebase-cloud-messaging-action@latest
         with:
           CREDENTIALS: ${{ secrets.FCM_CREDENTIALS }}
-          MESSAGE: '{"topic": "android-dev", "data": {"type": "release_info"}}'
+          MESSAGE: '{"topic": "android", "data": {"type": "release_info"}}'
