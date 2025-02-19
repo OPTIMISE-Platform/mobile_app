@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
+import 'package:mobile_app/services/mgw/restricted.dart';
 import 'package:path_provider/path_provider.dart';
 
 const LOG_PREFIX = "MGW-STORAGE-SERVICE";
@@ -73,7 +74,7 @@ class MgwStorage {
   static Future<void> RemovePairedMGW(MGW mgw) async {
     // TODO use core-id published via mDNS as identifier. Atm this is not advertised.
     await init();
-    _logger.d(LOG_PREFIX + ": Remove paired mgw: " + mgw.mDNSServiceName);
+    _logger.d("$LOG_PREFIX: Remove paired mgw: ${mgw.mDNSServiceName}");
     var storedMGWs = await LoadPairedMGWs();
     var filteredMGWs = [];
     for(final storedMgw in storedMGWs) {
@@ -81,6 +82,7 @@ class MgwStorage {
         filteredMGWs.add(storedMgw);
       }
     }
+    MgwService.ResetSessionData();
     return await _box?.put(_mgwConnectedKeyPrefix, json.encode(filteredMGWs)).then((
         value) => _box?.flush());
   }
