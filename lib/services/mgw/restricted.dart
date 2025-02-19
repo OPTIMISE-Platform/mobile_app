@@ -60,6 +60,7 @@ class MgwService {
     if(authenticate) {
       dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
         _logger.d("$LOG_PREFIX: Set auth headers");
+        options.headers['X-No-Auth-Redirect'] = 'true';
         try {
           _logger.d("Try to get session token");
           options.headers['X-Session-Token'] = await GetSessionToken();
