@@ -130,7 +130,7 @@ class AppUpdater {
       );
 
       final url =
-          "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
+          "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases/latest";
 
       final dio = Dio(BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
@@ -142,9 +142,9 @@ class AppUpdater {
           }))
         ..interceptors.add(DioCacheInterceptor(options: options))
         ..interceptors.add(ApiAvailableInterceptor());
-      final Response<List<dynamic>> resp;
+      final Response<dynamic> resp;
       try {
-        resp = await dio.get<List<dynamic>>(url);
+        resp = await dio.get<dynamic>(url);
       } on DioException catch (e) {
         if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
           UnexpectedStatusCodeException(
@@ -153,7 +153,7 @@ class AppUpdater {
         return _foundUpdate = false;
       }
 
-      final decoded = (resp.data?[0] ?? {}) as Map<String, dynamic>;
+      final decoded = (resp.data ?? {}) as Map<dynamic, dynamic>;
       latestBuild = int.parse((decoded["tag_name"] as String).split("+")[1]);
       currentBuild = int.parse(dotenv.env["VERSION"]!.split("+")[1]);
 
