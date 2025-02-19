@@ -1,4 +1,4 @@
-name: 'Android App'
+name: 'Android App dev'
 
 on:
   push:
