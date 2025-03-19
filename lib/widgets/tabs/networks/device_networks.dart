@@ -30,6 +30,8 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
+import '../../../services/mgw/storage.dart';
+
 class DeviceListByNetwork extends StatefulWidget {
   const DeviceListByNetwork({Key? key}) : super(key: key);
 
@@ -37,7 +39,8 @@ class DeviceListByNetwork extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByNetworkState();
 }
 
-class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsBindingObserver {
+class _DeviceListByNetworkState extends State<DeviceListByNetwork>
+    with WidgetsBindingObserver {
   int? _selected;
   bool _loading = false;
   StreamSubscription? _refreshSubscription;
@@ -47,8 +50,11 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
       AppState().loadNetworks(context);
     } else {
       AppState().searchDevices(
-          (context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?)?.filter ??
-              DeviceSearchFilter("", null, null, [AppState().networks[_selected!].id]),
+          (context.findAncestorStateOfType<State<DeviceTabs>>()
+                      as DeviceTabsState?)
+                  ?.filter ??
+              DeviceSearchFilter(
+                  "", null, null, [AppState().networks[_selected!].id]),
           context,
           true);
     }
@@ -73,120 +79,225 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork> with WidgetsB
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh();
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) _refresh();
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
+          as DeviceTabsState?;
       return Scrollbar(
-            child: state.loadingNetworks()
-                ? const Center(child: DelayedCircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () async {
-                      HapticFeedbackProxy.lightImpact();
-                      await _refresh();
-                    },
-                    child: _selected == null
-                        ? state.networks.isEmpty
-                            ? LayoutBuilder(
-                                builder: (context, constraint) {
-                                  return SingleChildScrollView(
-                                    physics: const AlwaysScrollableScrollPhysics(),
-                                    child: ConstrainedBox(
-                                      constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                      child: IntrinsicHeight(
-                                        child: Column(
-                                          children: const [
-                                            Expanded(
-                                              child: Center(child: Text("No Networks")),
-                                            ),
-
-                                          ],
-                                        ),
+          child: state.loadingNetworks()
+              ? const Center(child: DelayedCircularProgressIndicator())
+              : RefreshIndicator(
+                  onRefresh: () async {
+                    HapticFeedbackProxy.lightImpact();
+                    await _refresh();
+                  },
+                  child: _selected == null
+                      ? state.networks.isEmpty
+                          ? LayoutBuilder(
+                              builder: (context, constraint) {
+                                return SingleChildScrollView(
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                        minHeight: constraint.maxHeight),
+                                    child: const IntrinsicHeight(
+                                      child: Column(
+                                        children: [
+                                          Expanded(
+                                            child: Center(
+                                                child: Text("No Networks")),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  );
-                                },
-                              )
-                            : ListView.builder(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: MyTheme.inset,
-                                itemCount: state.networks.length,
-                                itemBuilder: (context, i) {
-                                  return Column(children: [
-                                    i > 0 ? const Divider() : const SizedBox.shrink(),
-                                    ListTile(
-                                        title: Row(children: [
-                                          Text(state.networks[i].name),
-                                          Badge(
-                                            label: Icon(PlatformIcons(context).error, size: 16, color: MyTheme.warnColor),
-                                            isLabelVisible: state.networks[i].connection_state == DeviceConnectionStatus.offline,
-                                            alignment: AlignmentDirectional.topCenter,
-                                            largeSize: 16,
-                                            backgroundColor: Colors.transparent,
-                                            child: state.networks[i].connection_state == DeviceConnectionStatus.offline ? const Text("") : null,
-                                          )
-                                        ]),
-                                        subtitle: Text(
-                                            "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
-                                        onTap: (state.networks[i].device_local_ids ?? []).isEmpty
-                                            ? null
-                                            : () {
-                                                _loading = true;
-                                                parentState?.filter.addNetwork(state.networks[i].id);
-                                                state
-                                                    .searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [state.networks[i].id]),
-                                                        context, true)
-                                                    .then((_) => setState(() => _loading = false));
-                                                parentState?.setState(() {
-                                                  parentState.hideSearch = false;
-                                                  parentState.onBackCallback = () {
-                                                    parentState.setState(() {
-                                                      parentState.filter.networkIds = null;
-                                                      parentState.customAppBarTitle = null;
-                                                      parentState.onBackCallback = null;
-                                                      parentState.hideSearch = true;
-                                                    });
-                                                    setState(() => _selected = null);
-                                                  };
-                                                  parentState.customAppBarTitle = state.networks[i].name;
-
-                                                  setState(() {
-                                                    _selected = i;
+                                  ),
+                                );
+                              },
+                            )
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: MyTheme.inset,
+                              itemCount: state.networks.length,
+                              itemBuilder: (context, i) {
+                                return Column(children: [
+                                  i > 0
+                                      ? const Divider()
+                                      : const SizedBox.shrink(),
+                                  ListTile(
+                                      title: Row(children: [
+                                        Text(state.networks[i].name),
+                                        Badge(
+                                          label: Icon(
+                                              PlatformIcons(context).error,
+                                              size: 16,
+                                              color: MyTheme.warnColor),
+                                          isLabelVisible: state.networks[i]
+                                                  .connection_state ==
+                                              DeviceConnectionStatus.offline,
+                                          alignment:
+                                              AlignmentDirectional.topCenter,
+                                          largeSize: 16,
+                                          backgroundColor: Colors.transparent,
+                                          child: state.networks[i]
+                                                      .connection_state ==
+                                                  DeviceConnectionStatus.offline
+                                              ? const Text("")
+                                              : null,
+                                        )
+                                      ]),
+                                      subtitle: Text(
+                                          "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
+                                      onTap: (state.networks[i]
+                                                      .device_local_ids ??
+                                                  [])
+                                              .isEmpty
+                                          ? null
+                                          : () {
+                                              _loading = true;
+                                              parentState?.filter.addNetwork(
+                                                  state.networks[i].id);
+                                              state
+                                                  .searchDevices(
+                                                      parentState?.filter ??
+                                                          DeviceSearchFilter(
+                                                              "", null, null, [
+                                                            state.networks[i].id
+                                                          ]),
+                                                      context,
+                                                      true)
+                                                  .then((_) => setState(
+                                                      () => _loading = false));
+                                              parentState?.setState(() {
+                                                parentState.hideSearch = false;
+                                                parentState.onBackCallback =
+                                                    () {
+                                                  parentState.setState(() {
+                                                    parentState.filter
+                                                        .networkIds = null;
+                                                    parentState
+                                                            .customAppBarTitle =
+                                                        null;
+                                                    parentState.onBackCallback =
+                                                        null;
+                                                    parentState.hideSearch =
+                                                        true;
                                                   });
+                                                  setState(
+                                                      () => _selected = null);
+                                                };
+                                                parentState.customAppBarTitle =
+                                                    state.networks[i].name;
+
+                                                setState(() {
+                                                  _selected = i;
                                                 });
-                                              },
-                                        trailing: state.networks[i].localService == null
-                                            ? null
-                                            : (const Tooltip(
-                                                message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined))))
-                                  ]);
-                                },
-                              )
-                        : state.devices.isEmpty
-                            ? state.loadingDevices || _loading
-                                ? const Center(
-                                    child: DelayedCircularProgressIndicator(),
-                                  )
-                                : const Center(child: Text("No Devices"))
-                            : ListView.builder(
-                                padding: MyTheme.inset,
-                                itemCount: state.totalDevices,
-                                itemBuilder: (_, i) {
-                                  if (i > state.devices.length - 1) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Column(
-                                    children: [
-                                      i > 0 ? const Divider() : const SizedBox.shrink(),
-                                      DeviceListItem(state.devices[i], null),
-                                    ],
-                                  );
-                                },
-                              ))
-          );
+                                              });
+                                            },
+                                      trailing:
+                                          state.networks[i].localService == null
+                                              ? IconButton(
+                                                  onPressed: () async => {
+                                                        await Navigator.push(
+                                                            context,
+                                                            platformPageRoute(
+                                                              context: context,
+                                                              builder:
+                                                                  (context) {
+                                                                const target =
+                                                                    AddLocalNetwork();
+                                                                return target;
+                                                              },
+                                                            )
+                                                        ),
+                                                    _refresh()
+                                                      },
+                                                  icon: const Icon(Icons.add))
+                                              : IconButton(
+                                                  onPressed: () async {
+                                                    var storedMGWs =
+                                                        await MgwStorage
+                                                            .LoadPairedMGWs();
+                                                    final mgwIndex = storedMGWs
+                                                        .indexWhere((mgw) =>
+                                                            mgw.coreId ==
+                                                            state.networks[i]
+                                                                .id);
+                                                    final mgw = storedMGWs[mgwIndex];
+                                                    showDialog(
+                                                        context: context,
+                                                        builder:
+                                                            (BuildContext
+                                                                    context) =>
+                                                                SimpleDialog(
+                                                                  title: const Text(
+                                                                      'Remove Pairing'),
+                                                                  children: <Widget>[
+                                                                    Padding(
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          vertical:
+                                                                          16.0,
+                                                                          horizontal:
+                                                                          16.0),
+                                                                      child: Text("${mgw.mDNSServiceName} - ${mgw.ip}"),
+                                                                    ),
+                                                                    Padding(
+                                                                      padding: const EdgeInsets
+                                                                          .symmetric(
+                                                                          vertical:
+                                                                              16.0,
+                                                                          horizontal:
+                                                                              16.0),
+                                                                      child:
+                                                                          ElevatedButton(
+                                                                        onPressed:
+                                                                            () async {
+                                                                          MgwStorage.RemovePairedMGW(mgw);
+                                                                          Navigator.pop(
+                                                                              context,
+                                                                              'OK');
+                                                                          _refresh();
+                                                                        },
+                                                                        child: const Text(
+                                                                            'OK'),
+                                                                      ),
+                                                                    )
+                                                                  ],
+                                                                ));
+                                                  },
+                                                  icon: const Icon(Icons.lan_outlined)))
+                                ]);
+                              },
+                            )
+                      : state.devices.isEmpty
+                          ? state.loadingDevices || _loading
+                              ? const Center(
+                                  child: DelayedCircularProgressIndicator(),
+                                )
+                              : const Center(child: Text("No Devices"))
+                          : ListView.builder(
+                              padding: MyTheme.inset,
+                              itemCount: state.totalDevices,
+                              itemBuilder: (_, i) {
+                                if (i > state.devices.length - 1) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Column(
+                                  children: [
+                                    i > 0
+                                        ? const Divider()
+                                        : const SizedBox.shrink(),
+                                    DeviceListItem(state.devices[i], null),
+                                  ],
+                                );
+                              },
+                            )));
     });
   }
 }

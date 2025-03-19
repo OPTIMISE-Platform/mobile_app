@@ -38,6 +38,11 @@ class MgwService {
   static const sessionStorageKey = "mgw-session";
   static const sessionExpirationStorageKey = "mgw-session-expiration";
 
+  static ResetSessionData () async{
+    await _storage.delete(key: sessionStorageKey);
+    await _storage.delete(key: sessionExpirationStorageKey);
+  }
+
   final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -55,6 +60,7 @@ class MgwService {
     if(authenticate) {
       dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
         _logger.d("$LOG_PREFIX: Set auth headers");
+        options.headers['X-No-Auth-Redirect'] = 'true';
         try {
           _logger.d("Try to get session token");
           options.headers['X-Session-Token'] = await GetSessionToken();
@@ -109,8 +115,6 @@ class MgwService {
     deviceCredentials = await MgwStorage.LoadCredentials();
   }
 
-
-
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
     var url = baseUrl + path;
     _logger.d("$LOG_PREFIX: POST to: $url");
@@ -134,6 +138,9 @@ class MgwService {
       return resp;
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Get: Request error");
+      if (e.response?.statusCode == 401){
+        ResetSessionData();
+      }
       var failure = handleDioException(e);
       throw(failure);
     }
