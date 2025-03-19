@@ -139,7 +139,7 @@ private class StatelessResultHandler(
     }
 
     override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
-        Log.e("StatelessResultHandler", "ERROR: ($errorCode) $errorMessage")
+        Log.e("StatelessResultHandler", "ERROR: ($errorCode) $errorMessage $errorDetails")
         processor.onError(Throwable(errorCode))
     }
 

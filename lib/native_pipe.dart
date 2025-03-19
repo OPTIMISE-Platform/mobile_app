@@ -32,27 +32,40 @@ import 'package:mobile_app/main.dart';
 import 'package:mobile_app/models/device_state.dart';
 
 class NativePipe {
-  static const MethodChannel controlMethodChannel = MethodChannel("flutter/controlMethodChannel");
+  static const MethodChannel controlMethodChannel =
+      MethodChannel("flutter/controlMethodChannel");
 
   static void init() {
     controlMethodChannel.setMethodCallHandler((call) async {
       switch (call.method) {
         case "getToggleStateless":
           final devices = await isar!.deviceInstances.where().findAll();
-          final List<Future> futures = [];
-          devices.forEach((element) => futures.add(AppState()
-              .loadDeviceTypes()
-              .then(() => element.prepareStates(AppState().deviceTypes[element.device_type_id]!))));
-          await Future.wait(futures);
-          final resp = json
-              .encode(devices.map((e) => e.states).expand((e) => e).where((e) => e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']).toList());
+          final deviceTypes = AppState().deviceTypes;
+          devices.forEach((element) {
+            if (deviceTypes.containsKey(element.device_type_id)) {
+              element.prepareStates(deviceTypes[element.device_type_id]!);
+            }
+          });
+          final resp = json.encode(devices
+              .map((e) => e.states)
+              .expand((e) => e)
+              .where((e) =>
+                  e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'])
+              .toList());
           return resp;
         case "setToggle":
-          final DeviceState state = DeviceState.fromJson(json.decode(call.arguments));
-          final device = await isar!.deviceInstances.where().idEqualTo(state.deviceId!).findFirst();
+          final DeviceState state =
+              DeviceState.fromJson(json.decode(call.arguments));
+          final device = await isar!.deviceInstances
+              .where()
+              .idEqualTo(state.deviceId!)
+              .findFirst();
           await AppState().loadDeviceTypes();
-          await device!.prepareStates(AppState().deviceTypes[device.device_type_id]!);
-          final controllingFunction = functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]?.getRelatedControllingFunction(!(state.value as bool));
+          await device!
+              .prepareStates(AppState().deviceTypes[device.device_type_id]!);
+          final controllingFunction =
+              functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
+                  ?.getRelatedControllingFunction(!(state.value as bool));
           final controllingStates = device.states
               .where((s) =>
                   s.isControlling &&
@@ -66,11 +79,16 @@ class NativePipe {
           if (controllingStates.length > 1) {
             throw "Found more than one controlling service, check device type!";
           }
-          return json.encode(await DeviceCommandsService.runCommands([controllingStates[0].toCommand()]));
+          return json.encode(await DeviceCommandsService.runCommands(
+              [controllingStates[0].toCommand()]));
         case "getToggleStates":
           final List<dynamic> ljson = json.decode(call.arguments);
-          final states = List.generate(ljson.length, (index) => DeviceState.fromJson(ljson[index] as Map<String, dynamic>)).toList();
-          final res = await DeviceCommandsService.runCommands(states.map((e) => e.toCommand()).toList());
+          final states = List.generate(
+              ljson.length,
+              (index) => DeviceState.fromJson(
+                  ljson[index] as Map<String, dynamic>)).toList();
+          final res = await DeviceCommandsService.runCommands(
+              states.map((e) => e.toCommand()).toList());
           for (var i = 0; i < states.length; i++) {
             if (res[i].status_code == 200) {
               states[i].value = res[i].message[0];
@@ -78,10 +96,16 @@ class NativePipe {
           }
           return json.encode(states);
         case "openDetailPage":
-          final device = await isar!.deviceInstances.where().idEqualTo(call.arguments).findFirst();
+          final device = await isar!.deviceInstances
+              .where()
+              .idEqualTo(call.arguments)
+              .findFirst();
           if (navigatorKey.currentContext != null) {
             Navigator.push(
-                navigatorKey.currentContext!, platformPageRoute(context: navigatorKey.currentContext!, builder: (context) => DetailPage(device, null)));
+                navigatorKey.currentContext!,
+                platformPageRoute(
+                    context: navigatorKey.currentContext!,
+                    builder: (context) => DetailPage(device, null)));
           } else {
             throw "No root context";
           }
@@ -93,9 +117,11 @@ class NativePipe {
   }
 
   static void handleDeviceStateUpdate(DeviceState state) async {
-    if (state.deviceId != null && state.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+    if (state.deviceId != null &&
+        state.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
       try {
-        await controlMethodChannel.invokeMethod("toggleEvent", json.encode(state));
+        await controlMethodChannel.invokeMethod(
+            "toggleEvent", json.encode(state));
       } on MissingPluginException {
         // pass
       }
