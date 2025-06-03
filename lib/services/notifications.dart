@@ -37,7 +37,8 @@ class NotificationsService {
 
   static CacheOptions? _options;
   static late final Dio? _dio;
-  static final baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications';
+  static final baseUrl =
+      '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
@@ -54,26 +55,30 @@ class NotificationsService {
     );
 
     _dio = Dio(BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),
+    ))
       ..interceptors.add(DioCacheInterceptor(options: _options!))
       ..interceptors.add(ApiAvailableInterceptor())
       ..httpClientAdapter = AppHttpClientAdapter();
   }
 
-  static Future<app.NotificationResponse?> getNotifications(int limit, int offset) async {
+  static Future<app.NotificationResponse?> getNotifications(
+      int limit, int offset) async {
     String uri =
-        "$baseUrl?limit=${limit.toString()}&offset=${offset.toString()}";
+        "$baseUrl?limit=${limit.toString()}&offset=${offset.toString()}&channel=push";
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!.get<Map<String, dynamic>>(uri, options: Options(headers: headers));
+      resp = await _dio!
+          .get<Map<String, dynamic>>(uri, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$uri ${e.message}");
+        throw UnexpectedStatusCodeException(
+            e.response?.statusCode, "$uri ${e.message}");
       }
       rethrow;
     }
@@ -94,7 +99,8 @@ class NotificationsService {
     final headers = await Auth().getHeaders();
     await initOptions();
 
-    final resp = await _dio!.put(url, options: Options(headers: headers), data: json.encode(notification));
+    final resp = await _dio!.put(url,
+        options: Options(headers: headers), data: json.encode(notification));
 
     if (resp.statusCode == null || resp.statusCode! > 201) {
       throw UnexpectedStatusCodeException(resp.statusCode, url);
@@ -102,10 +108,10 @@ class NotificationsService {
   }
 
   static Future deleteNotifications(List<String> ids) async {
-
     final headers = await Auth().getHeaders();
     await initOptions();
-    final resp = await _dio!.delete(baseUrl, options: Options(headers: headers), data: json.encode(ids));
+    final resp = await _dio!.delete(baseUrl,
+        options: Options(headers: headers), data: json.encode(ids));
 
     if (resp.statusCode == null || resp.statusCode! > 204) {
       throw UnexpectedStatusCodeException(resp.statusCode, baseUrl);
@@ -113,5 +119,4 @@ class NotificationsService {
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);
-
 }
