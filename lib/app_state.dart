@@ -111,7 +111,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     printer: SimplePrinter(),
   );
 
-  static const _storage = FlutterSecureStorage(aOptions: AndroidOptions(
+  static const _storage = FlutterSecureStorage(
+      aOptions: AndroidOptions(
     encryptedSharedPreferences: true,
   ));
 
@@ -162,7 +163,6 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
 
   final Map<String, DeviceType> deviceTypes = {};
   final Mutex _deviceTypesMutex = Mutex();
-
 
   final Map<String, PlatformFunction> platformFunctions = {};
   final Mutex _platformFunctionsMutex = Mutex();
@@ -262,8 +262,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
       return deviceTypes;
     }
     try {
-      for (var element
-          in (await DeviceTypesService.getDeviceTypes())) {
+      for (var element in (await DeviceTypesService.getDeviceTypes())) {
         deviceTypes[element.id] = element;
       }
     } catch (e) {
@@ -386,7 +385,10 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     _deviceOffset += newDevices.length;
     if (newDevices.isNotEmpty) {
       for (int i = 0; i < newDevices.length; i++) {
-        newDevices[i].prepareStates(deviceTypes[newDevices[i].device_type_id]!);
+        if (deviceTypes[newDevices[i].device_type_id] != null) {
+          newDevices[i]
+              .prepareStates(deviceTypes[newDevices[i].device_type_id]!);
+        }
       }
 
       final connectionStatusFutures = <Future>[
@@ -405,14 +407,15 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         connectionStatusFutures.add(DevicesService.getDevices(
                 refreshDeviceIds.length, 0, refreshFilter, null,
                 forceBackend: true)
-            .catchError(( e) async {
+            .catchError((e) async {
           if (!Settings.getLocalMode()) {
             Toast.showToastNoContext(
                 "Error refreshing device status, using cache");
           }
           final devices = (await DevicesService.getDevices(
-              refreshDeviceIds.length, 0, refreshFilter, null,
-              forceBackend: false)).devices;
+                  refreshDeviceIds.length, 0, refreshFilter, null,
+                  forceBackend: false))
+              .devices;
           devices.forEach((element) =>
               element.connection_state = DeviceConnectionStatus.unknown);
           return DeviceInstanceWithTotal(devices, devices.length);
@@ -591,7 +594,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
 
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
-    if(Platform.isIOS){
+    if (Platform.isIOS) {
       String? apnsToken = await messaging.getAPNSToken();
     }
     final token =
@@ -677,8 +680,9 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
         break;
       case notificationReleaseInfoType:
         Future.delayed(Duration(
-                seconds:
-                    10 + Random().nextInt(60))) // ensure actually available and spread requests
+                seconds: 10 +
+                    Random().nextInt(
+                        60))) // ensure actually available and spread requests
             .then((_) => AppUpdater.updateAvailable().then((res) {
                   if (res == true) {
                     notifyListeners();
@@ -849,7 +853,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   _manageNetworkDiscovery() async {
     if (kIsWeb) return; // no mDNS in browser
     if (_discovery != null) return;
-    _discovery = await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
+    _discovery =
+        await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
     _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
   }
 
@@ -860,12 +865,12 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
     if (storedMGWs.isNotEmpty) {
       _discovery?.services.forEach((service) {
         final nI = networks.indexWhere((n) =>
-        n.id ==
+            n.id ==
             utf8.decode((service.txt?["serial"] ?? Uint8List(0))
                 .map((e) => e.toInt())
                 .toList()));
         var nG = -1;
-        if (nI != -1){
+        if (nI != -1) {
           nG = storedMGWs.indexWhere((mgw) => mgw.coreId == networks[nI].id);
         }
         if (nI != -1 && nG != -1) {
@@ -949,7 +954,7 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
   List<bool> setAndGetDisabledTabs() {
     final state = AppState();
     final List<bool> disabledList =
-    List.generate(navItems.length, (index) => true);
+        List.generate(navItems.length, (index) => true);
     navItems.forEach((navItem) {
       switch (navItem.index) {
         case tabLocations:
