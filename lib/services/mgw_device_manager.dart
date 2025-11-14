@@ -20,6 +20,7 @@ import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
@@ -45,19 +46,25 @@ class MgwDeviceManager {
       if (network?.localService != null) {
         futures.add(_updateFromMgw(network!, devices)
             .onError((error, stackTrace) async {
-          final deviceIds = devices.map((e) => e.id).toList();
-          try {
-            await DevicesService.getDevices(devices.length, 0,
-                    DeviceSearchFilter("", null, deviceIds), null,
-                    forceBackend: true)
-                .then((ds) => ds.devices.forEach((d) => devices
-                    .firstWhere((d2) => d2.id == d.id)
-                    .connection_state = d.connection_state));
-          } on DioException catch (e) {
-            if (e.error! is ApiUnavailableException) {
-              Toast.showToastNoContext(
-                  "Device status could not be loaded from network or cloud");
+          ExceptionLogElement.Log(error.toString());
+          if (!Settings.getLocalMode()) {
+            final deviceIds = devices.map((e) => e.id).toList();
+            try {
+              await DevicesService.getDevices(devices.length, 0,
+                      DeviceSearchFilter("", null, deviceIds), null,
+                      forceBackend: true)
+                  .then((ds) => ds.devices.forEach((d) => devices
+                      .firstWhere((d2) => d2.id == d.id)
+                      .connection_state = d.connection_state));
+            } on DioException catch (e) {
+              if (e.error! is ApiUnavailableException) {
+                Toast.showToastNoContext(
+                    "Device status could not be loaded from network or cloud");
+              }
             }
+          } else {
+            Toast.showToastNoContext(
+                "Device status could not be loaded and lcoal mode is enabled");
           }
         }));
       }
@@ -122,7 +129,8 @@ class MgwDeviceManager {
         rethrow;
       }
     }
-    _logger.d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
+    _logger
+        .d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
     for (final device in devices) {
       if (devicesFromMgw.data?.containsKey(device.local_id) != true) {
         device.connection_state = DeviceConnectionStatus.unknown;
