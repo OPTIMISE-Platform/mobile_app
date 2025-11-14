@@ -874,7 +874,8 @@ class AppState extends ChangeNotifier with WidgetsBindingObserver {
           nG = storedMGWs.indexWhere((mgw) => mgw.coreId == networks[nI].id);
         }
         if (nI != -1 && nG != -1) {
-          networks[nI].localService = service;
+          networks[nI].localService ??= List.empty(growable: true);
+          networks[nI].localService?.add(service);
         }
       });
     }

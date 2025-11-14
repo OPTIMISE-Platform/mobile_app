@@ -35,19 +35,18 @@ Failure handleDioException(DioException error) {
   Failure failure;
   switch (error.type) {
     case DioExceptionType.connectionTimeout:
-      failure = Failure(ErrorCode.CONNECT_TIMEOUT, error.message!);
+      failure = Failure(ErrorCode.CONNECT_TIMEOUT, error.message ?? "");
       break;
     case DioExceptionType.sendTimeout:
-      failure = Failure(ErrorCode.SEND_TIMEOUT, error.message!);
+      failure = Failure(ErrorCode.SEND_TIMEOUT, error.message ?? "");
       break;
     case DioExceptionType.receiveTimeout:
-      failure = Failure(ErrorCode.RECEIVE_TIMEOUT, error.message!);
+      failure = Failure(ErrorCode.RECEIVE_TIMEOUT, error.message ?? "");
       break;
     case DioExceptionType.badResponse:
       if (error.response != null &&
           error.response?.statusCode != null &&
           error.response?.statusMessage != null) {
-
         var message = error.response?.statusMessage ?? "";
         switch (error.response?.statusCode) {
           case 404:
@@ -65,17 +64,18 @@ Failure handleDioException(DioException error) {
         }
         break;
       } else {
-        failure = Failure(ErrorCode.DEFAULT, error.message!);
+        failure = Failure(ErrorCode.DEFAULT, error.message ?? "");
         break;
       }
     case DioExceptionType.cancel:
-      failure = Failure(ErrorCode.CANCEL, error.message!);
+      failure = Failure(ErrorCode.CANCEL, error.message ?? "");
       break;
     default:
-      failure = Failure(ErrorCode.DEFAULT, error.message!);
+      failure = Failure(ErrorCode.DEFAULT, error.message ?? "");
       break;
   }
 
-  _logger.e("Error Code: ${failure.errorCode} - Detail: ${failure.detailedMessage}");
+  _logger.e(
+      "Error Code: ${failure.errorCode} - Detail: ${failure.detailedMessage}");
   return failure;
 }

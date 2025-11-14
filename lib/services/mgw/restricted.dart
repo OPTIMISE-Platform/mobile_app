@@ -25,6 +25,7 @@ import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 const LOG_PREFIX = "MGW-RESTRICTED-API-SERVICE";
+
 class MgwService {
   // Use this service to perform request with automatically added session tokens
 
@@ -32,13 +33,14 @@ class MgwService {
   MgwAuth mgwAuthService = MgwAuth("");
   DeviceUserCredentials deviceCredentials = DeviceUserCredentials("", "", "");
 
-  static const  _storage = FlutterSecureStorage(aOptions: AndroidOptions(
+  static const _storage = FlutterSecureStorage(
+      aOptions: AndroidOptions(
     encryptedSharedPreferences: true,
   ));
   static const sessionStorageKey = "mgw-session";
   static const sessionExpirationStorageKey = "mgw-session-expiration";
 
-  static ResetSessionData () async{
+  static ResetSessionData() async {
     await _storage.delete(key: sessionStorageKey);
     await _storage.delete(key: sessionExpirationStorageKey);
   }
@@ -48,17 +50,19 @@ class MgwService {
   );
 
   final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),))
+    connectTimeout: const Duration(milliseconds: 1500),
+    sendTimeout: const Duration(milliseconds: 5000),
+    receiveTimeout: const Duration(milliseconds: 5000),
+  ))
     ..interceptors.add(ApiAvailableInterceptor());
 
   MgwService(String host, bool authenticate) {
     baseUrl = "http://$host:8080";
     mgwAuthService = MgwAuth(host);
 
-    if(authenticate) {
-      dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
+    if (authenticate) {
+      dio.interceptors
+          .add(InterceptorsWrapper(onRequest: (options, handler) async {
         _logger.d("$LOG_PREFIX: Set auth headers");
         options.headers['X-No-Auth-Redirect'] = 'true';
         try {
@@ -83,18 +87,22 @@ class MgwService {
     await LoadCredentialsFromStorage();
     final now = DateTime.now();
     String? session = await _storage.read(key: sessionStorageKey);
-    String? sessionExpiration = await _storage.read(key: sessionExpirationStorageKey);
+    String? sessionExpiration =
+        await _storage.read(key: sessionExpirationStorageKey);
     if (sessionExpiration != null) {
       final sessionExpirationDate = DateTime.parse(sessionExpiration);
-      if (sessionExpirationDate.isAfter(now.add(const Duration(hours:3))) && session != null) {
+      if (sessionExpirationDate.isAfter(now.add(const Duration(hours: 3))) &&
+          session != null) {
         _logger.d("$LOG_PREFIX: Use stored session");
         return session;
       }
     }
     _logger.d("$LOG_PREFIX: Get new Session");
-    var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
+    var loginResponse = await mgwAuthService.Login(
+        deviceCredentials.login, deviceCredentials.secret);
     await _storage.write(key: sessionStorageKey, value: loginResponse.token);
-    await _storage.write(key: sessionExpirationStorageKey, value: loginResponse.expires_at);
+    await _storage.write(
+        key: sessionExpirationStorageKey, value: loginResponse.expires_at);
     return loginResponse.token;
   }
 
@@ -115,7 +123,8 @@ class MgwService {
     deviceCredentials = await MgwStorage.LoadCredentials();
   }
 
-  Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
+  Future<Response<dynamic>> Post(
+      String path, dynamic data, Options options) async {
     var url = baseUrl + path;
     _logger.d("$LOG_PREFIX: POST to: $url");
     Response resp;
@@ -125,7 +134,7 @@ class MgwService {
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Request error: $e");
       var failure = handleDioException(e);
-      throw(failure);
+      throw (failure);
     }
   }
 
@@ -138,11 +147,11 @@ class MgwService {
       return resp;
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Get: Request error");
-      if (e.response?.statusCode == 401){
+      if (e.response?.statusCode == 401) {
         ResetSessionData();
       }
       var failure = handleDioException(e);
-      throw(failure);
+      throw (failure);
     }
   }
 }

@@ -69,7 +69,7 @@ class DeviceCommandPath {
       }
     }
     endpoints =
-    await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
+        await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.endpoints.putAll(endpoints);
@@ -78,14 +78,15 @@ class DeviceCommandPath {
     return endpoints;
   }
 
-  Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
+  Future<List<DeviceCommandResponse>> runCommands(
+      commands, preferEventValue) async {
     _logger.d("$LOG_PREFIX: Run commands via exposed path");
     var endpoints = await getEndpoints();
     var endpoint = endpoints.first.location;
     var path = endpoint + commandUrlPrefix + preferEventValue.toString();
     var resp = await mgwEndpointService.PostToExposedPath(path, commands);
     List<DeviceCommandResponse> commandResponses = [];
-    for(final response in resp.data) {
+    for (final response in resp.data) {
       commandResponses.add(DeviceCommandResponse.fromJson(response));
     }
     return commandResponses;
@@ -100,23 +101,24 @@ class DeviceCommandPort {
   );
 
   final _dioH1 = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 15000),))
+    connectTimeout: const Duration(milliseconds: 1500),
+    sendTimeout: const Duration(milliseconds: 5000),
+    receiveTimeout: const Duration(milliseconds: 15000),
+  ))
     ..interceptors.add(ApiAvailableInterceptor());
 
-  Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
+  Future<List<DeviceCommandResponse>> runCommands(
+      commands, preferEventValue) async {
     // TODO service.port was used  but shoud be device command port ?????
     var url = "http://${host}:8002$commandUrlPrefix$preferEventValue";
     _logger.d("$LOG_PREFIX: Run commands via exposed port at: $url");
 
     final Response<List<dynamic>> resp;
 
-    resp = await _dioH1.post<List<dynamic>>(url,
-        data: json.encode(commands));
+    resp = await _dioH1.post<List<dynamic>>(url, data: json.encode(commands));
 
     return List<DeviceCommandResponse>.generate(resp.data!.length,
-            (index) => DeviceCommandResponse.fromJson(resp.data![index]));
+        (index) => DeviceCommandResponse.fromJson(resp.data![index]));
   }
 }
 
@@ -125,25 +127,28 @@ class DeviceCommandCloud {
     printer: SimplePrinter(),
   );
   static final _dio2H2 = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 15000),))
+    connectTimeout: const Duration(milliseconds: 1500),
+    sendTimeout: const Duration(milliseconds: 5000),
+    receiveTimeout: const Duration(milliseconds: 15000),
+  ))
     ..interceptors.add(ApiAvailableInterceptor())
     ..httpClientAdapter = AppHttpClientAdapter();
 
-  Future<List<DeviceCommandResponse>> runCommands(commands, preferEventValue) async {
-    var url = "${Settings.getApiUrl() ?? 'localhost'}/device-command" + commandUrlPrefix + preferEventValue.toString();
+  Future<List<DeviceCommandResponse>> runCommands(
+      commands, preferEventValue) async {
+    var url = "${Settings.getApiUrl() ?? 'localhost'}/device-command" +
+        commandUrlPrefix +
+        preferEventValue.toString();
     _logger.d(LOG_PREFIX + ": Run commands via platform at: " + url);
     final headers = await Auth().getHeaders();
 
     final Response<dynamic> resp;
 
     resp = await _dio2H2.post(url,
-        options: Options(headers: headers),
-        data: json.encode(commands));
+        options: Options(headers: headers), data: json.encode(commands));
 
     List<DeviceCommandResponse> commandResponses = [];
-    for(final response in resp.data) {
+    for (final response in resp.data) {
       commandResponses.add(DeviceCommandResponse.fromJson(response));
     }
     return commandResponses;
@@ -174,8 +179,9 @@ class DeviceCommandsService {
     final List<DeviceCommand> cloudRetries = [];
 
     map.entries.forEach((network) {
-      final service = network.key?.localService;
-      futures.add(_runCommands(network.value, service == null, service?.host??"", preferEventValue)
+      final service = network.key?.localService?.first;
+      futures.add(_runCommands(network.value, service == null,
+              service?.host ?? "", preferEventValue)
           .onError((_, __) {
         cloudRetries.addAll(network.value);
         return [];
@@ -214,7 +220,8 @@ class DeviceCommandsService {
   }
 
   static Future<bool> checkPathBasedCommandServiceAvailable(String host) async {
-    _logger.d("Find out which device command service to use by checking endpoints");
+    _logger.d(
+        "Find out which device command service to use by checking endpoints");
     var endpoints = [];
     try {
       endpoints = await DeviceCommandPath(host).getEndpoints();
@@ -226,23 +233,30 @@ class DeviceCommandsService {
       return false;
     }
 
-    if(endpoints.isEmpty) {
-      _logger.d("No endpoints found for device command -> use port based device command");
+    if (endpoints.isEmpty) {
+      _logger.d(
+          "No endpoints found for device command -> use port based device command");
       return false;
     }
-    _logger.d("Endpoints found for device command -> use new path based device command");
+    _logger.d(
+        "Endpoints found for device command -> use new path based device command");
     return true;
   }
 
   static Future<List<DeviceCommandResponse>> _runCommands(
-      List<DeviceCommand> commands, bool sendToCloud, String host, bool preferEventValue) async {
-    if(sendToCloud) {
+      List<DeviceCommand> commands,
+      bool sendToCloud,
+      String host,
+      bool preferEventValue) async {
+    if (sendToCloud) {
       return DeviceCommandCloud().runCommands(commands, preferEventValue);
     }
 
-    var usePathBasedCommandService = await checkPathBasedCommandServiceAvailable(host);
-    _logger.d("Load devices from new path based device command: " + usePathBasedCommandService.toString());
-    if(usePathBasedCommandService) {
+    var usePathBasedCommandService =
+        await checkPathBasedCommandServiceAvailable(host);
+    _logger.d("Load devices from new path based device command: " +
+        usePathBasedCommandService.toString());
+    if (usePathBasedCommandService) {
       return DeviceCommandPath(host).runCommands(commands, preferEventValue);
     } else {
       return DeviceCommandPort(host).runCommands(commands, preferEventValue);

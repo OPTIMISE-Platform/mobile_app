@@ -43,16 +43,16 @@ class Network {
 
   @JsonKey(ignore: true)
   @ignore
-  Service? localService;
+  List<Service>? localService;
 
   @JsonKey(ignore: true)
   @ignore
   final List<DeviceState> states = [];
 
-  Network(this.id, this.name, this.shared, this.device_local_ids, this.device_ids, this.connection_state, this.hash, this.owner_id) {
+  Network(this.id, this.name, this.shared, this.device_local_ids,
+      this.device_ids, this.connection_state, this.hash, this.owner_id) {
     isarId = fastHash(id);
   }
-
 
   factory Network.fromJson(Map<String, dynamic> json) =>
       _$NetworkFromJson(json);

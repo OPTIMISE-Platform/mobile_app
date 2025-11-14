@@ -55,8 +55,11 @@ class ApiAvailableService {
     // TODO request from backend, cache, match against routes
     final parsedUri = Uri.parse(uri);
     try {
-      AppState().networks.firstWhere(
-          (element) => element.localService?.host == parsedUri.host);
+      AppState().networks.firstWhere((element) {
+        element.localService?.firstWhere(
+            (s) => s.host?.toLowerCase() == parsedUri.host.toLowerCase());
+        return true;
+      });
       // a network has the requested host
       return true;
     } on StateError {

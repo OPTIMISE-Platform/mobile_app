@@ -64,7 +64,7 @@ class MgwDeviceManager {
             }
           } else {
             Toast.showToastNoContext(
-                "Device status could not be loaded and lcoal mode is enabled");
+                "Device status could not be loaded and local mode is enabled");
           }
         }));
       }
@@ -108,8 +108,8 @@ class MgwDeviceManager {
 
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
-    final service = network.localService;
-    var ip = service?.addresses?[0].address;
+    final service = network.localService?.first;
+    var ip = service?.host;
     if (ip == null) {
       _logger.d("ip not set");
       return;
