@@ -194,78 +194,31 @@ class SmSeLineChart extends SmSeRequest {
       dateFormat = MyTheme.formatEddMMy;
       return;
     }
-    for (int i = 1; i < rawTimestamps.length; i++) {
-      if (rawTimestamps[i] - rawTimestamps[i - 1] != 604800000) {
-        //exactly one week apart
-        break;
-      }
-      if (i == timestamps.length - 1) {
-        dateFormat = MyTheme.formatDDMM;
-        return;
-      }
-    }
-    final similarities = _similarity(timestamps);
-    final left = similarities.k;
-    var right = similarities.t;
-    if (timestamps.isEmpty) {
+
+    final dates = rawTimestamps
+        .map((ms) => DateTime.fromMillisecondsSinceEpoch(ms))
+        .toList();
+
+    bool sameYear   = dates.every((d) => d.year  == dates[0].year);
+    bool sameMonth  = sameYear  && dates.every((d) => d.month == dates[0].month);
+    bool sameDay    = sameMonth && dates.every((d) => d.day   == dates[0].day);
+    bool sameHour   = sameDay   && dates.every((d) => d.hour  == dates[0].hour);
+    bool sameMinute = sameHour  && dates.every((d) => d.minute== dates[0].minute);
+    bool sameSecond = sameMinute&& dates.every((d) => d.second== dates[0].second);
+
+    if (!sameYear) {
+      dateFormat = MyTheme.formatY;
+    } else if (!sameMonth) {
+      dateFormat = MyTheme.formatMMM;
+    } else if (!sameDay) {
+      dateFormat = MyTheme.formatDDMM;
+    } else if (!sameHour) {
+      dateFormat = MyTheme.formatHH;
+    } else if (!sameMinute) {
       dateFormat = MyTheme.formatHHMM;
     } else {
-      right += timestamps[0].length - 19; // no further precision than seconds
+      dateFormat = MyTheme.formatSS;
     }
-    if (right < 2) {
-      if (left >= 17) {
-        dateFormat = MyTheme.formatSS;
-      } else {
-        dateFormat = MyTheme.formatMMSS;
-      }
-    } else if (right <= 5) {
-      if (left >= 14) {
-        dateFormat = MyTheme.formatMM;
-      } else {
-        dateFormat = MyTheme.formatHHMM;
-      }
-    } else if (right <= 8) {
-      if (left >= 11) {
-        dateFormat = MyTheme.formatHH;
-      } else {
-        dateFormat = MyTheme.formatEHH;
-      }
-    } else if (right == 14) {
-      dateFormat = MyTheme.formatMMM;
-    } else if (right == 17) {
-      dateFormat = MyTheme.formatY;
-    } else {
-      dateFormat = MyTheme.formatE;
-    }
-  }
-
-  Pair<int, int> _similarity(List<String> timestamps) {
-    if (timestamps.isEmpty || timestamps.length == 1) {
-      return Pair(0, 0);
-    }
-    final l = timestamps[0].length;
-    int left = l;
-    int right = l;
-    for (int i = 1; i < timestamps.length; i++) {
-      assert(timestamps[i].length == l);
-      int j = 0;
-      while (j <= left &&
-          timestamps[i].codeUnitAt(j) == timestamps[0].codeUnitAt(j) &&
-          j < timestamps[i].length - 1) {
-        j++;
-      }
-      left = j;
-
-      j = 0;
-      while (j <= right &&
-          timestamps[i].codeUnitAt(l - 1 - j) ==
-              timestamps[0].codeUnitAt(l - 1 - j) &&
-          j < timestamps[i].length - 1) {
-        j++;
-      }
-      right = j;
-    }
-    return Pair(left, right);
   }
 
   int calcPrecision(List<dynamic> values) {

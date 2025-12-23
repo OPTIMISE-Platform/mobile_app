@@ -107,7 +107,7 @@ class SmSeBarChart extends SmSeLineChart {
   void add2D(List<dynamic> values, {int colorOffset = 0}) {
     final precision = calcPrecision(values);
     for (int i = 0; i < values.length; i++) {
-      final t = DateTime.parse(values[i][0]).millisecondsSinceEpoch;
+      final t = DateTime.parse(values[i][0]).toUtc().millisecondsSinceEpoch;
       timestamps.add(values[i][0]);
       rawTimestamps.add(t.toInt());
       final rods = (values[i] as List)
