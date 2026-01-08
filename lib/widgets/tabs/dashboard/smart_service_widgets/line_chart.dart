@@ -148,6 +148,7 @@ class SmSeLineChart extends SmSeRequest {
         return VerticalLine(
           x: timestamps[i].toDouble(),
           strokeWidth: 1,
+          color: Colors.blueAccent,
           dashArray: [4, 4],
           label: VerticalLineLabel(
             show: true,
