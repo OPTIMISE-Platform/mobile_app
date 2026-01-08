@@ -296,7 +296,7 @@ class SmSeLineChart extends SmSeRequest {
       if (minuteChanges) {
         dateFormat = MyTheme.formatHHMM;
       } else if (hourChanges) {
-        dateFormat = MyTheme.formatHH;
+        dateFormat = DateFormat('HH');
       } else if (dayChanges) {
         dateFormat = MyTheme.formatDDMM;
       } else if (monthChanges) {
