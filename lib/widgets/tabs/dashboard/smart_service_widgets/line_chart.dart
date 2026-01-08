@@ -89,6 +89,7 @@ class SmSeLineChart extends SmSeRequest {
                   LineChartData(
                     borderData: FlBorderData(show: false),
                     lineBarsData: _lines,
+                    extraLinesData: buildDayChangeLines(rawTimestamps),
                     maxX: right.toDouble(),
                     minX: left.toDouble(),
                     titlesData: FlTitlesData(
@@ -132,6 +133,79 @@ class SmSeLineChart extends SmSeRequest {
                   duration: Duration.zero,
                 )));
     return parentFlexible ? Expanded(child: w) : w;
+  }
+
+  ExtraLinesData buildDayChangeLines(List<int> timestamps) {
+
+    if (!isHourlySeries(timestamps)) {
+      return const ExtraLinesData(verticalLines: []);
+    }
+
+    final indices = findDayChangeIndices(timestamps);
+
+    return ExtraLinesData(
+      verticalLines: indices.map((i) {
+        return VerticalLine(
+          x: timestamps[i].toDouble(),
+          strokeWidth: 1,
+          dashArray: [4, 4],
+          label: VerticalLineLabel(
+            show: true,
+            alignment: Alignment.topRight,
+            style: const TextStyle(fontSize: 10),
+            labelResolver: (line) {
+              final d = DateTime.fromMillisecondsSinceEpoch(
+                line.x.toInt(),
+                isUtc: true,
+              ).toLocal();
+              return DateFormat.E().format(d); // Mon, Tue, etc.
+            },
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  List<int> findDayChangeIndices(List<int> timestamps) {
+    final dates = timestamps
+        .map((ms) =>
+        DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal())
+        .toList();
+
+    final result = <int>[];
+
+    for (int i = 1; i < dates.length; i++) {
+      final prev = dates[i - 1];
+      final curr = dates[i];
+
+      if (prev.year != curr.year ||
+          prev.month != curr.month ||
+          prev.day != curr.day) {
+        result.add(i);
+      }
+    }
+
+    return result;
+  }
+
+  bool isHourlySeries(List<int> timestamps) {
+    if (timestamps.length < 2) return false;
+
+    const oneHourMs = 60 * 60 * 1000;
+    const toleranceMs = 5 * 60 * 1000; // 5 min tolerance for DST / jitter
+
+    for (int i = 1; i < timestamps.length; i++) {
+      final diff = timestamps[i] - timestamps[i - 1];
+
+      // allow 1h, 2h (DST forward), or 0h (DST backward overlap)
+      if (!((diff - oneHourMs).abs() <= toleranceMs ||
+          (diff - 2 * oneHourMs).abs() <= toleranceMs ||
+          diff.abs() <= toleranceMs)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @override
