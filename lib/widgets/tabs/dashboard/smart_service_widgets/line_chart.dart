@@ -190,38 +190,51 @@ class SmSeLineChart extends SmSeRequest {
   }
 
   void setDateFormat(List<String> timestamps, List<int> rawTimestamps) {
-    if (rawTimestamps.length == 1) {
-      dateFormat = MyTheme.formatEddMMy;
-      return;
+      final dates = rawTimestamps
+          .map((ms) =>
+          DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal())
+          .toList();
+
+      if (dates.length <= 1) {
+        dateFormat = MyTheme.formatEddMMy;
+        return;
+      }
+
+      bool yearChanges = false;
+      bool monthChanges = false;
+      bool dayChanges = false;
+      bool hourChanges = false;
+      bool minuteChanges = false;
+
+      for (int i = 1; i < dates.length; i++) {
+        final prev = dates[i - 1];
+        final curr = dates[i];
+
+        if (curr.year != prev.year) yearChanges = true;
+        if (curr.month != prev.month) monthChanges = true;
+        if (curr.day != prev.day) dayChanges = true;
+        if (curr.hour != prev.hour) hourChanges = true;
+        if (curr.minute != prev.minute) minuteChanges = true;
+      }
+
+      // Now choose based on the *smallest* unit that changes
+      if (minuteChanges) {
+        dateFormat = MyTheme.formatHHMM;
+      } else if (hourChanges) {
+        dateFormat = MyTheme.formatHH;
+      } else if (dayChanges) {
+        dateFormat = MyTheme.formatDDMM;
+      } else if (monthChanges) {
+        dateFormat = MyTheme.formatMMM;       // <-- this now works across year boundaries
+      } else if (yearChanges) {
+        dateFormat = MyTheme.formatY;
+      } else {
+        dateFormat = MyTheme.formatEddMMy;
+      }
     }
 
-    final dates = rawTimestamps
-        .map((ms) => DateTime.fromMillisecondsSinceEpoch(ms))
-        .toList();
 
-    bool sameYear   = dates.every((d) => d.year  == dates[0].year);
-    bool sameMonth  = sameYear  && dates.every((d) => d.month == dates[0].month);
-    bool sameDay    = sameMonth && dates.every((d) => d.day   == dates[0].day);
-    bool sameHour   = sameDay   && dates.every((d) => d.hour  == dates[0].hour);
-    bool sameMinute = sameHour  && dates.every((d) => d.minute== dates[0].minute);
-    bool sameSecond = sameMinute&& dates.every((d) => d.second== dates[0].second);
-
-    if (!sameYear) {
-      dateFormat = MyTheme.formatY;
-    } else if (!sameMonth) {
-      dateFormat = MyTheme.formatMMM;
-    } else if (!sameDay) {
-      dateFormat = MyTheme.formatDDMM;
-    } else if (!sameHour) {
-      dateFormat = MyTheme.formatHH;
-    } else if (!sameMinute) {
-      dateFormat = MyTheme.formatHHMM;
-    } else {
-      dateFormat = MyTheme.formatSS;
-    }
-  }
-
-  int calcPrecision(List<dynamic> values) {
+    int calcPrecision(List<dynamic> values) {
     final List<double> nums = [];
     for (int i = 0; i < values.length; i++) {
       nums.addAll((values[i] as List)
