@@ -104,7 +104,7 @@ class CacheHelper {
   }
 
   static Future scheduleCacheUpdates() async {
-    if (isar == null || !Auth().loggedIn) {
+    if (isar == null || !Auth().loggedIn || Settings.getLocalMode()) {
       return;
     }
     return await Future.wait([
