@@ -34,56 +34,51 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
+  arrow_path: ^3.1.0
+  connectivity_plus: ^6.0.3
+  crypto: ^3.0.2
   cupertino_icons: ^1.0.4
-  flutter_platform_widgets: ^6.1.0
-  url_launcher: ^6.2.5
-  flutter_dotenv: ^5.1.0
-  logger: ^2.2.0
-  flutter_secure_storage: ^9.0.0
-  json_annotation: ^4.8.0
+  device_info_plus: ^10.0.1
   dio: ^5.4.3+1
   dio_cache_interceptor: ^3.5.0
   dio_cache_interceptor_hive_store: ^3.2.2
   dio_http2_adapter: ^2.5.2
-  #  git:
-  #    url: https://github.com/flutterchina/dio
-  #    path: plugins/http2_adapter
-  #    ref: develop
-  path_provider: ^2.0.11
-  mutex: ^3.1.0
-  openidconnect: ^1.0.28
-  openidconnect_platform_interface: ^1.0.15
-  connectivity_plus: ^6.0.3
-  crypto: ^3.0.2
-  fluttertoast: ^8.2.12
-  provider: ^6.0.5
-  flutter_colorpicker: ^1.1.0
-  intl: ^0.19.0
+  eraser: ^2.0.1
   firebase_core: ^3.8.0
   firebase_messaging: ^15.2.0
-  hive: ^2.2.3
-  open_file_plus: ^3.4.1
-  share_plus: ^7.2.2
   fl_chart: ^0.67.0
-  numberpicker: ^2.1.1
+  flutter_colorpicker: ^1.1.0
+  flutter_dotenv: ^5.1.0
+  flutter_material_symbols: ^0.0.4
   flutter_native_splash: ^2.3.1
-  tutorial_coach_mark: ^1.2.11
-  eraser: ^2.0.1
-  multiselect: ^0.1.0
-  geolocator: ^11.0.0
-  open_location_picker: ^1.1.0
-  http: ^1.2.1
-  nsd: ^3.0.0
-  flutter_svg: ^2.0.10+1
   flutter_native_timezone: ^2.0.0
-  stats: ^2.1.0
+  flutter_platform_widgets: ^6.1.0
+  flutter_secure_storage: ^9.0.0
+  flutter_svg: ^2.0.10+1
+  fluttertoast: ^8.2.12
+  geolocator: ^11.0.0
+  hive: ^2.2.3
+  http: ^1.2.1
+  intl: ^0.19.0
   isar: ^3.1.0+1
   isar_flutter_libs: ^3.1.0+1
-  flutter_material_symbols: ^0.0.4
-  arrow_path: ^3.1.0
-  device_info_plus: ^10.0.1
-  #ory_kratos_client: 1.0.0
+  json_annotation: ^4.8.0
+  logger: ^2.2.0
+  multiselect: ^0.1.0
+  mutex: ^3.1.0
+  nsd: ^3.0.0
+  numberpicker: ^2.1.1
+  open_file_plus: ^3.4.1
+  open_location_picker: ^1.1.0
+  openidconnect: ^1.0.28
+  openidconnect_platform_interface: ^1.0.15
+  path_provider: ^2.0.11
+  provider: ^6.0.5
+  share_plus: ^7.2.2
   sidebarx: ^0.17.1
+  stats: ^2.1.0
+  tutorial_coach_mark: ^1.2.11
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:
