@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 
 import 'package:mobile_app/shared/isar.dart';
 part 'exception_log_element.g.dart';

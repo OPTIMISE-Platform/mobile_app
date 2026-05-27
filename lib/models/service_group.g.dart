@@ -7,10 +7,10 @@ part of 'service_group.dart';
 // **************************************************************************
 
 ServiceGroup _$ServiceGroupFromJson(Map<String, dynamic> json) => ServiceGroup(
-      json['key'] as String,
-      json['name'] as String,
-      json['description'] as String,
-    );
+  json['key'] as String,
+  json['name'] as String,
+  json['description'] as String,
+);
 
 Map<String, dynamic> _$ServiceGroupToJson(ServiceGroup instance) =>
     <String, dynamic>{

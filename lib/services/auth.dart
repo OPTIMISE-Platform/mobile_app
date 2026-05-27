@@ -73,6 +73,7 @@ class Auth extends ChangeNotifier {
           _client = await OpenIdConnectClient.create(
             discoveryDocumentUrl: _discoveryUrl,
             clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
+            encryptionKey: "test123456789101",
             redirectUrl: kIsWeb
                 ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
                 : Settings.getKeycloakRedirect() ?? "https://localhost",
@@ -99,7 +100,7 @@ class Auth extends ChangeNotifier {
                 notifyListeners();
                 break;
               case AuthEventTypes.Error:
-              case AuthEventTypes.Logout:
+              case AuthEventTypes.LoggingOut:
                 await _onLogout();
             }
           });
@@ -170,7 +171,7 @@ class Auth extends ChangeNotifier {
       await FcmTokenService.deregisterFcmToken(AppState().fcmToken!);
     }
 
-    await _client!.logoutToken();
+    await _client!.logout();
     _logger.d("logout");
     await _onLogout();
     Navigator.of(context).popUntil((route) => route.isFirst);

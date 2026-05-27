@@ -7,11 +7,11 @@ part of 'permissions.dart';
 // **************************************************************************
 
 Permissions _$PermissionsFromJson(Map<String, dynamic> json) => Permissions(
-      json['a'] as bool,
-      json['r'] as bool,
-      json['w'] as bool,
-      json['x'] as bool,
-    );
+  json['a'] as bool,
+  json['r'] as bool,
+  json['w'] as bool,
+  json['x'] as bool,
+);
 
 Map<String, dynamic> _$PermissionsToJson(Permissions instance) =>
     <String, dynamic>{

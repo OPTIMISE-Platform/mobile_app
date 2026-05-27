@@ -7,15 +7,15 @@ part of 'device_command_response.dart';
 // **************************************************************************
 
 DeviceCommandResponse _$DeviceCommandResponseFromJson(
-        Map<String, dynamic> json) =>
-    DeviceCommandResponse(
-      json['status_code'] as int,
-      json['message'],
-    );
+  Map<String, dynamic> json,
+) => DeviceCommandResponse(
+  (json['status_code'] as num).toInt(),
+  json['message'],
+);
 
 Map<String, dynamic> _$DeviceCommandResponseToJson(
-        DeviceCommandResponse instance) =>
-    <String, dynamic>{
-      'status_code': instance.status_code,
-      'message': instance.message,
-    };
+  DeviceCommandResponse instance,
+) => <String, dynamic>{
+  'status_code': instance.status_code,
+  'message': instance.message,
+};

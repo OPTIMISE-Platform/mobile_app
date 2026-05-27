@@ -20,7 +20,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -28,7 +28,6 @@ import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
-import 'package:mobile_app/main.dart';
 import 'package:mobile_app/models/device_state.dart';
 
 import 'navigator_key.dart';

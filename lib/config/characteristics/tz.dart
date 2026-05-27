@@ -15,14 +15,14 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_native_timezone/flutter_native_timezone.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import 'package:mobile_app/models/characteristic.dart';
 
 class TZ {
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
     if (characteristic.value == null) {
-      FlutterNativeTimezone.getLocalTimezone().then((value) {
+      FlutterTimezone.getLocalTimezone().then((value) {
         if (characteristic.value == null) {
           characteristic.value = value;
           setState(() {});

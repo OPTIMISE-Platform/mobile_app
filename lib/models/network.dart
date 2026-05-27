@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/annotations.dart';
 import 'package:mobile_app/models/device_state.dart';

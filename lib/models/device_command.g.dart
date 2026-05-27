@@ -8,19 +8,20 @@ part of 'device_command.dart';
 
 DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
     DeviceCommand(
-      json['function_id'] as String,
-      json['device_id'] as String?,
-      json['service_id'] as String?,
-      json['aspect_id'] as String?,
-      json['group_id'] as String?,
-      json['device_class_id'] as String?,
-      json['input'],
-      json['characteristic_id'] as String?,
-    )
+        json['function_id'] as String,
+        json['device_id'] as String?,
+        json['service_id'] as String?,
+        json['aspect_id'] as String?,
+        json['group_id'] as String?,
+        json['device_class_id'] as String?,
+        json['input'],
+        json['characteristic_id'] as String?,
+      )
       ..deviceInstance = json['deviceInstance'] == null
           ? null
           : DeviceInstance.fromJson(
-              json['deviceInstance'] as Map<String, dynamic>)
+              json['deviceInstance'] as Map<String, dynamic>,
+            )
       ..deviceGroup = json['deviceGroup'] == null
           ? null
           : DeviceGroup.fromJson(json['deviceGroup'] as Map<String, dynamic>);

@@ -30,7 +30,7 @@ import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mutex/mutex.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'package:mobile_app/services/cache_helper.dart';
@@ -234,7 +234,7 @@ class AppUpdater {
       return;
     }
     final stream = (await downloadUpdate()).asBroadcastStream();
-    stream.listen(null, onDone: () => OpenFile.open(localFile));
+    stream.listen(null, onDone: () => OpenFilex.open(localFile));
     await showPlatformDialog(
       context: context,
       builder: (context) => PlatformAlertDialog(
@@ -254,7 +254,7 @@ class AppUpdater {
               initialData: 0,
               builder: (context, snapshot) => PlatformDialogAction(
                   onPressed: snapshot.data == 100
-                      ? () => OpenFile.open(localFile)
+                      ? () => OpenFilex.open(localFile)
                       : null,
                   child: PlatformText(
                       snapshot.data == 100 ? 'Install' : 'Downloading...')))

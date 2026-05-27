@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 
 part 'attribute.g.dart';

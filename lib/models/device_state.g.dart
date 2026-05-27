@@ -6,24 +6,26 @@ part of 'device_state.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-DeviceState _$DeviceStateFromJson(Map<String, dynamic> json) => DeviceState(
-      json['value'],
-      json['serviceId'] as String?,
-      json['serviceGroupKey'] as String?,
-      json['functionId'] as String,
-      json['aspectId'] as String?,
-      json['isControlling'] as bool,
-      json['groupId'] as String?,
-      json['deviceClassId'] as String?,
-      json['deviceId'] as String?,
-      json['path'] as String?,
-      json['serviceGroupName'] as String?,
-    )
+DeviceState _$DeviceStateFromJson(Map<String, dynamic> json) =>
+    DeviceState(
+        json['value'],
+        json['serviceId'] as String?,
+        json['serviceGroupKey'] as String?,
+        json['functionId'] as String,
+        json['aspectId'] as String?,
+        json['isControlling'] as bool,
+        json['groupId'] as String?,
+        json['deviceClassId'] as String?,
+        json['deviceId'] as String?,
+        json['path'] as String?,
+        json['serviceGroupName'] as String?,
+      )
       ..transitioning = json['transitioning'] as bool
       ..deviceInstance = json['deviceInstance'] == null
           ? null
           : DeviceInstance.fromJson(
-              json['deviceInstance'] as Map<String, dynamic>)
+              json['deviceInstance'] as Map<String, dynamic>,
+            )
       ..deviceGroup = json['deviceGroup'] == null
           ? null
           : DeviceGroup.fromJson(json['deviceGroup'] as Map<String, dynamic>)

@@ -19,7 +19,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -79,9 +79,7 @@ class DevicesService {
 
     if (!forceBackend && isar != null && collection != null &&
         await collection.count() >= AppState().totalDevices) {
-      final devices = await filter.isarQuery(limit, offset, collection)
-          .build()
-          .findAll();
+      final devices = await filter.isarQuery(limit, offset, collection).build().findAll();
       _logger.d("Getting devices from local DB took ${DateTime.now().difference(
           start)}");
       return DeviceInstanceWithTotal(devices, await collection.count());

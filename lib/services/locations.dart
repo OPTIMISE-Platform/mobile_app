@@ -17,7 +17,7 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:isar/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/cache_helper.dart';

@@ -7,10 +7,10 @@ part of 'device_class.dart';
 // **************************************************************************
 
 DeviceClass _$DeviceClassFromJson(Map<String, dynamic> json) => DeviceClass(
-      json['id'] as String,
-      json['name'] as String,
-      json['image'] as String,
-    );
+  json['id'] as String,
+  json['name'] as String,
+  json['image'] as String,
+);
 
 Map<String, dynamic> _$DeviceClassToJson(DeviceClass instance) =>
     <String, dynamic>{

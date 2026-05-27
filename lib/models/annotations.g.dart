@@ -17,8 +17,9 @@ const AnnotationsSchema = Schema(
       id: 0,
       name: r'connected',
       type: IsarType.bool,
-    )
+    ),
   },
+
   estimateSize: _annotationsEstimateSize,
   serialize: _annotationsSerialize,
   deserialize: _annotationsDeserialize,
@@ -71,30 +72,29 @@ P _annotationsDeserializeProp<P>(
 extension AnnotationsQueryFilter
     on QueryBuilder<Annotations, Annotations, QFilterCondition> {
   QueryBuilder<Annotations, Annotations, QAfterFilterCondition>
-      connectedIsNull() {
+  connectedIsNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNull(
-        property: r'connected',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'connected'),
+      );
     });
   }
 
   QueryBuilder<Annotations, Annotations, QAfterFilterCondition>
-      connectedIsNotNull() {
+  connectedIsNotNull() {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(const FilterCondition.isNotNull(
-        property: r'connected',
-      ));
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'connected'),
+      );
     });
   }
 
   QueryBuilder<Annotations, Annotations, QAfterFilterCondition>
-      connectedEqualTo(bool? value) {
+  connectedEqualTo(bool? value) {
     return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(FilterCondition.equalTo(
-        property: r'connected',
-        value: value,
-      ));
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'connected', value: value),
+      );
     });
   }
 }
@@ -110,6 +110,4 @@ Annotations _$AnnotationsFromJson(Map<String, dynamic> json) =>
     Annotations()..connected = json['connected'] as bool?;
 
 Map<String, dynamic> _$AnnotationsToJson(Annotations instance) =>
-    <String, dynamic>{
-      'connected': instance.connected,
-    };
+    <String, dynamic>{'connected': instance.connected};

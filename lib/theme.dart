@@ -96,7 +96,7 @@ class MyTheme {
               foregroundColor: Colors.black,
           )
       ),
-      cardTheme:  CardTheme(
+      cardTheme:  CardThemeData(
         shape: BeveledRectangleBorder(
             borderRadius: BorderRadius.circular(0),
             side: const BorderSide(color: Colors.white24, width: 1)))
@@ -149,7 +149,7 @@ class MyTheme {
           foregroundColor: Colors.black,
         )
     ),
-      cardTheme:  CardTheme(
+      cardTheme:  CardThemeData(
           shape: BeveledRectangleBorder(
               borderRadius: BorderRadius.circular(0),
           )

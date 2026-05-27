@@ -7,17 +7,17 @@ part of 'device_type.dart';
 // **************************************************************************
 
 DeviceType _$DeviceTypeFromJson(Map<String, dynamic> json) => DeviceType(
-      json['id'] as String,
-      json['name'] as String,
-      json['description'] as String,
-      json['device_class_id'] as String,
-      (json['services'] as List<dynamic>)
-          .map((e) => Service.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      (json['service_groups'] as List<dynamic>?)
-          ?.map((e) => ServiceGroup.fromJson(e as Map<String, dynamic>))
-          .toList(),
-    );
+  json['id'] as String,
+  json['name'] as String,
+  json['description'] as String,
+  json['device_class_id'] as String,
+  (json['services'] as List<dynamic>)
+      .map((e) => Service.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  (json['service_groups'] as List<dynamic>?)
+      ?.map((e) => ServiceGroup.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
 
 Map<String, dynamic> _$DeviceTypeToJson(DeviceType instance) =>
     <String, dynamic>{

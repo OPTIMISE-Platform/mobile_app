@@ -29,28 +29,27 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    compileSdk 34
+
+    namespace = "org.infai.optimise.mobile_app"
+    compileSdk = 36
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_9
-        targetCompatibility JavaVersion.VERSION_1_9
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
-    }
-
-    sourceSets {
-        main.java.srcDirs += 'src/main/kotlin'
+        jvmTarget = JavaVersion.VERSION_11.toString()
     }
 
     defaultConfig {
         applicationId "org.infai.optimise.mobile_app"
         resValue 'string', 'label', '"OPTIMISE"'
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        minSdk = 28
+        targetSdk = 36
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
         multiDexEnabled true
     }
 
@@ -71,7 +70,7 @@ android {
             resValue 'string', 'label', '"OPTI D"'
         }
         profile {
-            applicationIdSuffix ".profile"
+            //applicationIdSuffix ".profile"
             resValue 'string', 'label', '"OPTI P"'
         }
     }
@@ -82,9 +81,9 @@ flutter {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0"
     implementation 'com.android.support:multidex:1.0.3'
-    implementation 'org.reactivestreams:reactive-streams:1.0.3'
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.0'
-    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'org.reactivestreams:reactive-streams:1.0.4'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
+    implementation 'com.google.code.gson:gson:2.14.0'
 }
