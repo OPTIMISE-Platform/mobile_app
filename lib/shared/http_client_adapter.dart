@@ -15,18 +15,18 @@
  */
 
 
+import 'package:mobile_app/connection_manager.dart';
+
 import "fake_browser_adapter.dart" if (dart.library.html) 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:mobile_app/app_state.dart';
-
 class AppHttpClientAdapter implements HttpClientAdapter {
   late final HttpClientAdapter _adapter;
 
   AppHttpClientAdapter() {
-    _adapter =  kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(AppState.connectionManager);
+    _adapter =  kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(connectionManager);
   }
 
   @override

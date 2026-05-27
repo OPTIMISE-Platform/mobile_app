@@ -16,8 +16,9 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/firebase_options.dart';
+
+import 'mixins/notification_mixin.dart';
 
 /// Owns all Firebase and Firebase Cloud Messaging (FCM) setup.
 class FirebaseService {
@@ -39,5 +40,5 @@ class FirebaseService {
 Future<void> _backgroundMessageHandler(RemoteMessage message) async {
   // Firebase must be re-initialised in the background isolate.
   await Firebase.initializeApp();
-  await AppState.queueRemoteMessage(message);
+  await NotificationMixin.queueRemoteMessage(message);
 }
