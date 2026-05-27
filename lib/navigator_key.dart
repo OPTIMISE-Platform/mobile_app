@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 InfAI (CC SES)
+ * Copyright 2026 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,5 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/app.dart';
-import 'package:mobile_app/app_initializer.dart';
-import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/services/auth.dart';
-import 'package:provider/provider.dart';
 
-Future<void> main() async {
-  await AppInitializer.run();
-
-  runApp(
-    RootRestorationScope(
-      restorationId: 'root',
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => AppState()),
-          ChangeNotifierProvider(create: (_) => Auth()),
-        ],
-        child: const MyApp(),
-      ),
-    ),
-  );
-}
+final navigatorKey = GlobalKey<NavigatorState>();

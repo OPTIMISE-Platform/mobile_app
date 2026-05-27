@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 InfAI (CC SES)
+ * Copyright 2026 InfAI (CC SES)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,25 +15,24 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/app.dart';
-import 'package:mobile_app/app_initializer.dart';
-import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/services/auth.dart';
-import 'package:provider/provider.dart';
 
-Future<void> main() async {
-  await AppInitializer.run();
+/// Allows any part of the app to trigger a full widget-tree restart
+/// without needing a reference to [MyApp]'s state.
+///
+/// Usage from anywhere:
+/// ```dart
+/// RestartController.restart();
+/// ```
+class RestartController extends ChangeNotifier {
+  static RestartController? _instance;
 
-  runApp(
-    RootRestorationScope(
-      restorationId: 'root',
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => AppState()),
-          ChangeNotifierProvider(create: (_) => Auth()),
-        ],
-        child: const MyApp(),
-      ),
-    ),
-  );
+  RestartController._();
+
+  static RestartController get instance {
+    _instance ??= RestartController._();
+    return _instance!;
+  }
+
+  /// Call this from anywhere to restart the app.
+  static void restart() => RestartController.instance.notifyListeners();
 }

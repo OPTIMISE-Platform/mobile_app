@@ -31,6 +31,8 @@ import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/main.dart';
 import 'package:mobile_app/models/device_state.dart';
 
+import 'navigator_key.dart';
+
 class NativePipe {
   static const MethodChannel controlMethodChannel =
       MethodChannel("flutter/controlMethodChannel");

@@ -23,8 +23,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:isar/isar.dart';
-import 'package:mobile_app/main.dart';
+import 'package:mobile_app/app.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
+import 'package:mobile_app/restart_controller.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -136,27 +137,21 @@ class Settings extends StatelessWidget {
                             child: PlatformText('System Default'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(null);
-                              (context.findAncestorStateOfType<State<MyApp>>()
-                                      as MyAppState)
-                                  .restartApp();
+                              RestartController.restart();
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
                             child: PlatformText('Dark'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(dark);
-                              (context.findAncestorStateOfType<State<MyApp>>()
-                                      as MyAppState)
-                                  .restartApp();
+                              RestartController.restart();
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
                             child: PlatformText('Light'),
                             onPressed: () async {
                               await MyTheme.selectThemeColor(light);
-                              (context.findAncestorStateOfType<State<MyApp>>()
-                                      as MyAppState)
-                                  .restartApp();
+                              RestartController.restart();
                               Navigator.pop(context);
                             })
                       ],
