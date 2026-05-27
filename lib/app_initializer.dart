@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -26,7 +27,6 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
-import 'package:flutter/widgets.dart';
 import 'package:mobile_app/firebase_service.dart';
 
 /// Runs all one-time app initialisation steps in sequence and prints
@@ -37,26 +37,20 @@ class AppInitializer {
   static Future<void> run() async {
     final appStart = DateTime.now();
 
+    // Must be first — plugins require the binding before any I/O.
+    WidgetsFlutterBinding.ensureInitialized();
+
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
-    await _timed('Settings', () async {
-      Settings.init();
-    });
-    await _timed('MyTheme', () async {
-      MyTheme.loadTheme();
-    });
+    await _timed('Settings', () async => await Settings.init());
+    await _timed('MyTheme', () async => await MyTheme.loadTheme());
     await _timed('findSystemLocale', findSystemLocale);
     await _timed(
       'initializeDateFormatting',
           () => initializeDateFormatting(Intl.systemLocale, null),
     );
-
-    // Must happen before any Flutter rendering.
-    await _timed('WidgetsFlutterBinding', () async {
-      WidgetsFlutterBinding.ensureInitialized();
+    await _timed('Isar', () async {
+      isar = kIsWeb ? null : await IsarService().db;
     });
-
-    isar = kIsWeb ? null : await IsarService().db;
-
     await _timed('Firebase', FirebaseService.init);
     await _timed('Auth', () => Auth().init());
     await _timed('Cache', _initCache);
@@ -79,6 +73,4 @@ class AppInitializer {
     await fn();
     debugPrint('$label init took ${DateTime.now().difference(start)}');
   }
-
-
 }

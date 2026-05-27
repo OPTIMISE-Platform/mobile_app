@@ -25,7 +25,7 @@ import '../models/location.dart';
 import '../models/exception_log_element.dart';
 
 
-late final Isar? isar;
+Isar? isar;
 
 class IsarService {
   late Future<Isar> db;

@@ -23,7 +23,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:isar/isar.dart';
-import 'package:mobile_app/app.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/restart_controller.dart';
 import 'package:mobile_app/services/app_update.dart';
