@@ -62,6 +62,14 @@ mixin DeviceMixin on ChangeNotifier {
   bool get loadingDeviceClasses => _deviceClassesMutex.isLocked;
   bool loadingDeviceGroups() => _deviceGroupsMutex.isLocked;
 
+  /// Implemented by [AppState] — called before loading devices to ensure
+  /// device classes, types, and other metadata are loaded first.
+  Future<void> ensureInitialized();
+
+  // ---------------------------------------------------------------------------
+  // Device classes
+  // ---------------------------------------------------------------------------
+
   Future<void> loadDeviceClasses() async {
     final locked = _deviceClassesMutex.isLocked;
     await _deviceClassesMutex.acquire();
@@ -82,6 +90,10 @@ mixin DeviceMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------------------
+  // Device types
+  // ---------------------------------------------------------------------------
+
   Future<void> loadDeviceTypes() async {
     final locked = _deviceTypesMutex.isLocked;
     await _deviceTypesMutex.acquire();
@@ -99,6 +111,10 @@ mixin DeviceMixin on ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ---------------------------------------------------------------------------
+  // Devices
+  // ---------------------------------------------------------------------------
 
   Future<void> searchDevices(
       DeviceSearchFilter filter,
@@ -130,6 +146,8 @@ mixin DeviceMixin on ChangeNotifier {
       return;
     }
     if (clear) devices.clear();
+
+    await ensureInitialized();
 
     const limit = 50;
     late final List<DeviceInstance> newDevices;
@@ -212,6 +230,10 @@ mixin DeviceMixin on ChangeNotifier {
     await Future.wait(futures);
   }
 
+  // ---------------------------------------------------------------------------
+  // States
+  // ---------------------------------------------------------------------------
+
   Future<void> loadStates(
       List<DeviceInstance> devices,
       List<DeviceGroup> groups, [
@@ -266,6 +288,10 @@ mixin DeviceMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------------------------------------
+  // Device groups
+  // ---------------------------------------------------------------------------
+
   Future<void> loadDeviceGroups(BuildContext context) async {
     final locked = _deviceGroupsMutex.isLocked;
     await _deviceGroupsMutex.acquire();
@@ -285,6 +311,10 @@ mixin DeviceMixin on ChangeNotifier {
     }
     notifyListeners();
   }
+
+  // ---------------------------------------------------------------------------
+  // Cleanup
+  // ---------------------------------------------------------------------------
 
   void clearDeviceData() {
     deviceClasses.clear();

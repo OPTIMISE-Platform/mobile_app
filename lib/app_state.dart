@@ -67,11 +67,24 @@ class AppState extends ChangeNotifier
     NativePipe.init();
   }
 
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
     handleQueuedMessages();
     manageNetworkDiscovery();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> ensureInitialized() async {
+    if (!_initialized) await init();
   }
 
   Future<void> init() async {
@@ -93,6 +106,10 @@ class AppState extends ChangeNotifier
     _initialized = true;
   }
 
+  // ---------------------------------------------------------------------------
+  // Logout
+  // ---------------------------------------------------------------------------
+
   Future<void> onLogout() async {
     await clearNotificationData();
     clearDeviceData();
@@ -102,11 +119,19 @@ class AppState extends ChangeNotifier
     CacheHelper.clearCache();
   }
 
+  // ---------------------------------------------------------------------------
+  // Refresh stream
+  // ---------------------------------------------------------------------------
+
   final _refreshPressedController = StreamController.broadcast();
 
   Stream get refreshPressed => _refreshPressedController.stream;
 
   void pushRefresh() => _refreshPressedController.add(null);
+
+  // ---------------------------------------------------------------------------
+  // Tab state
+  // ---------------------------------------------------------------------------
 
   List<bool> setAndGetDisabledTabs() {
     final disabledList = List.generate(navItems.length, (_) => true);
@@ -139,6 +164,10 @@ class AppState extends ChangeNotifier
     }
     return disabledList;
   }
+
+  // ---------------------------------------------------------------------------
+  // notifyListeners passthrough (required by some call sites)
+  // ---------------------------------------------------------------------------
 
   @override
   // ignore: unnecessary_overrides
