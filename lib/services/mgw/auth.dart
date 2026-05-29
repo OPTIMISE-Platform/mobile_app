@@ -4,7 +4,6 @@ import 'package:dio/dio.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/error.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 
 @JsonSerializable()

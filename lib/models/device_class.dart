@@ -23,11 +23,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
-
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
 
 part 'device_class.g.dart';
 

@@ -27,12 +27,9 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/network.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
-
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -112,7 +109,7 @@ class DeviceGroup {
     isarId = fastHash(id);
     final networkIndex = AppState()
         .networks
-        .indexWhere((n) => device_ids.every((String groupDeviceId) => (n.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57)) as bool));
+        .indexWhere((n) => device_ids.every((String groupDeviceId) => (n.device_ids ?? <String>[]).contains(groupDeviceId.substring(0, 57))));
     if (networkIndex != -1) {
       network = AppState().networks[networkIndex];
     }

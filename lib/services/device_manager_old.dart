@@ -17,7 +17,6 @@
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';

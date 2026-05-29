@@ -19,8 +19,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
-
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';

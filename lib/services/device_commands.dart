@@ -32,7 +32,6 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';

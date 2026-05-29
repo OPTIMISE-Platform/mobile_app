@@ -25,12 +25,9 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
-
-import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 class Auth extends ChangeNotifier {

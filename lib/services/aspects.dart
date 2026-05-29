@@ -22,11 +22,8 @@ import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
-
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/services/auth.dart';
 
 class AspectsService {
