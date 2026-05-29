@@ -19,7 +19,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/widgets/tabs/favorites/favorites_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
@@ -34,153 +36,183 @@ import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 import '../nav.dart';
 
 class DeviceListFavorites extends StatefulWidget {
-  const DeviceListFavorites({Key? key}) : super(key: key);
+  const DeviceListFavorites({super.key});
 
   @override
-  State<StatefulWidget> createState() => _DeviceListFavoritesState();
+  State<DeviceListFavorites> createState() => _DeviceListFavoritesState();
 }
 
-class _DeviceListFavoritesState extends State<DeviceListFavorites> with WidgetsBindingObserver {
+class _DeviceListFavoritesState extends State<DeviceListFavorites>
+    with WidgetsBindingObserver {
   final GlobalKey _keyFavButton = GlobalKey();
-  StreamSubscription? _refreshSubscription;
-  bool _init = false;
 
-  _openDeviceListView(BuildContext context) {
-    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-    parentState?.switchScreen(tabDevices, true);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _refreshSubscription?.cancel();
-    super.dispose();
-  }
+  late DeviceListFavoritesController controller;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshSubscription = AppState().refreshPressed.listen((_) {
-      AppState().refreshDevices(context);
-    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final state = context.read<AppState>();
+    controller = DeviceListFavoritesController(state);
+    controller.init(context);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    controller.dispose();
+    super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().refreshDevices(context);
+    if (state == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      controller.onResume(context);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
-      if (state.initialized && state.devices.isEmpty && !_init) {
-        state.loadDevices(context);
-        _init = true;
-      }
-      final List<DeviceGroup> matchingGroups = [];
-      for (var i = 0; i < state.deviceGroups.length; i++) {
-        if (state.deviceGroups[i].favorite) {
-          matchingGroups.add(state.deviceGroups[i]);
-        }
-      }
-      final devices = state.devices.where((element) => element.favorite).toList();
-      if (devices.isEmpty && matchingGroups.isEmpty && !state.loadingDevices) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => _showTutorial(context));
-      }
-      Widget? child;
-      if (devices.isEmpty) {
-        if (state.loadingDevices) {
-          child = const Center(child: DelayedCircularProgressIndicator());
-        } else if (matchingGroups.isEmpty) {
-          return Center(child: LayoutBuilder(
-            builder: (context, constraint) {
-              return SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                  child: IntrinsicHeight(
-                    child: Column(
-                      children: [
-                        Expanded(
-                            child: Center(
-                                child: PlatformElevatedButton(
-                          widgetKey: _keyFavButton,
-                          child: const Text("Add Favorites"),
-                          onPressed: () => _openDeviceListView(context),
-                        ))),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ));
-        }
-      }
-      child ??= ListView.builder(
-          padding: MyTheme.inset,
-          itemCount: state.totalDevices + matchingGroups.length,
-          itemBuilder: (_, i) {
-            if (i > devices.length + matchingGroups.length - 1) {
-              return const SizedBox.shrink();
-            }
-            if (i < devices.length) {
-              return Column(
-                children: [
-                  i > 0 ? const Divider() : const SizedBox.shrink(),
-                  DeviceListItem(devices[i], null)
-                ],
-              );
-            }
-            return Column(
-              children: [
-                i > 0 ? const Divider() : const SizedBox.shrink(),
-                GroupListItem(matchingGroups.elementAt(i - devices.length), (_) {
-                  final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-                  if (parentState == null) return;
-                  parentState.filter.deviceGroupIds = null;
-                  state.searchDevices(parentState.filter, context);
-                })
-              ],
-            );
-          },
-        );
-      return RefreshIndicator(
-          onRefresh: () async {
-            HapticFeedbackProxy.lightImpact();
-            state.refreshDevices(context);
-          },
-          child: Scrollbar(child: child));
-    });
+  void _openDeviceListView(BuildContext context) {
+    final parentState =
+        context.findAncestorStateOfType<State<DeviceTabs>>()
+            as DeviceTabsState?;
+
+    parentState?.switchScreen(tabDevices, true);
   }
 
   void _showTutorial(BuildContext context) {
     if (!Settings.tutorialSeen(Tutorial.addFavoriteButton)) {
       TutorialCoachMark(
         targets: [
-          TargetFocus(keyTarget: _keyFavButton, contents: [
-            TargetContent(
-              align: ContentAlign.top,
-              child: const Text(
-                "Add some devices to your favorites for quick access",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 24),
+          TargetFocus(
+            keyTarget: _keyFavButton,
+            contents: [
+              TargetContent(
+                align: ContentAlign.top,
+                padding: const EdgeInsets.only(bottom: 75, left: 20, right: 20),
+                child: const Text(
+                  "Add some devices to your favorites for quick access",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 24),
+                ),
               ),
-              padding: const EdgeInsets.only(bottom: 75, left: 20, right: 20),
-            )
-          ])
+            ],
+          ),
         ],
         colorShadow: MyTheme.appColor,
-        onClickTarget: (_) {
-          _openDeviceListView(context);
-        },
+        onClickTarget: (_) => _openDeviceListView(context),
         alignSkip: Alignment.topRight,
       ).show(context: context);
+
       Settings.markTutorialSeen(Tutorial.addFavoriteButton);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppState>(
+      builder: (context, state, child) {
+        final matchingGroups =
+        state.deviceGroups.where((g) => g.favorite).toList();
+
+        final devices =
+        state.devices.where((d) => d.favorite).toList();
+
+        if (controller.shouldShowTutorial(
+          loading: state.loadingDevices,
+          devices: devices,
+          groups: matchingGroups,
+        )) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showTutorial(context);
+          });
+        }
+
+        Widget content;
+
+        if (state.loadingDevices) {
+          content = const Center(
+            child: DelayedCircularProgressIndicator(),
+          );
+        } else if (devices.isEmpty && matchingGroups.isEmpty) {
+          content = _buildEmptyState(context);
+        } else {
+          content = _buildList(state, devices, matchingGroups);
+        }
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            HapticFeedbackProxy.lightImpact();
+            state.refreshDevices(context);
+          },
+          child: Scrollbar(child: content),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: LayoutBuilder(
+        builder: (context, constraint) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraint.maxHeight),
+              child: Center(
+                child: PlatformElevatedButton(
+                  widgetKey: _keyFavButton,
+                  child: const Text("Add Favorites"),
+                  onPressed: () => _openDeviceListView(context),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildList(AppState state,
+      List<DeviceInstance> devices,
+      List<DeviceGroup> groups,) {
+    return ListView.builder(
+      padding: MyTheme.inset,
+      itemCount: devices.length + groups.length,
+      itemBuilder: (_, i) {
+        if (i < devices.length) {
+          return Column(
+            children: [
+              if (i > 0) const Divider(),
+              DeviceListItem(devices[i], null),
+            ],
+          );
+        }
+
+        final group = groups[i - devices.length];
+
+        return Column(
+          children: [
+            const Divider(),
+            GroupListItem(group, (_) {
+              final parent = context
+                  .findAncestorStateOfType<State<DeviceTabs>>()
+              as DeviceTabsState?;
+
+              if (parent == null) return;
+
+              parent.filter.deviceGroupIds = null;
+              state.searchDevices(parent.filter, context);
+            }),
+          ],
+        );
+      },
+    );
   }
 }
