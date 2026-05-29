@@ -70,8 +70,8 @@ dependencies:
   numberpicker: ^2.1.1
   open_filex: ^4.7.0
   open_location_picker: ^1.1.0
-  openidconnect: ^1.0.28
-  openidconnect_platform_interface: ^1.0.15
+  openidconnect: ^2.0.0
+  openidconnect_platform_interface: ^2.0.0
   path_provider: ^2.0.11
   provider: ^6.0.5
   share_plus: ^7.2.2

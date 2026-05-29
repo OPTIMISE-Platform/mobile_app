@@ -14,12 +14,15 @@
  *  limitations under the License.
  */
 
+import 'dart:math';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
@@ -36,6 +39,23 @@ class Auth extends ChangeNotifier {
   factory Auth() => _instance;
 
   Auth._internal();
+
+  static const _storage = FlutterSecureStorage(
+    iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+  static const _encKeyName = 'openid_encryption_key';
+
+  Future<String> _getOrCreateEncryptionKey() async {
+    final existing = await _storage.read(key: _encKeyName);
+    if (existing != null) return existing;
+
+    const chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+    final rnd = Random.secure();
+    final newKey = List.generate(32, (_) => chars[rnd.nextInt(chars.length)]).join();
+    await _storage.write(key: _encKeyName, value: newKey);
+    return newKey;
+  }
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -68,14 +88,19 @@ class Auth extends ChangeNotifier {
       if (await _serverAvailable()) {
         try {
           final start = DateTime.now();
+          final encKey = await _getOrCreateEncryptionKey();
           _client = await OpenIdConnectClient.create(
             discoveryDocumentUrl: _discoveryUrl,
             clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
-            encryptionKey: "test123456789101",
+            encryptionKey: encKey,
             redirectUrl: kIsWeb
-                ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
+                ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base
+                .port}/callback.html"
                 : Settings.getKeycloakRedirect() ?? "https://localhost",
-            scopes: [OpenIdConnectClient.OFFLINE_ACCESS_SCOPE, ...OpenIdConnectClient.DEFAULT_SCOPES],
+            scopes: [
+              OpenIdConnectClient.OFFLINE_ACCESS_SCOPE,
+              ...OpenIdConnectClient.DEFAULT_SCOPES
+            ],
             autoRefresh: false,
           );
           _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
@@ -194,6 +219,7 @@ class Auth extends ChangeNotifier {
     } else {
       await OpenIdIdentity.clear(); // remove saved token
     }
+    await _storage.delete(key: _encKeyName);
   }
 
   Future<Map<String, String>> getHeaders() async {
