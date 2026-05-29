@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -29,40 +31,38 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/firebase_service.dart';
 
-/// Runs all one-time app initialisation steps in sequence and prints
-/// individual timing information to the debug console.
+
 class AppInitializer {
-  AppInitializer._(); // static-only class
+  AppInitializer._();
 
   static Future<void> run() async {
     final appStart = DateTime.now();
 
-    // Must be first — plugins require the binding before any I/O.
-    WidgetsFlutterBinding.ensureInitialized();
-
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
     await _timed('Settings', () async => await Settings.init());
     await _timed('MyTheme', () async => await MyTheme.loadTheme());
-    await _timed('findSystemLocale', findSystemLocale);
-    await _timed(
-      'initializeDateFormatting',
-          () => initializeDateFormatting(Intl.systemLocale, null),
-    );
+    unawaited(_initLocale());
     debugPrint('App init took ${DateTime.now().difference(appStart)}');
   }
 
   static Future<void> runDeferred() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+
     await _timed('Isar', () async {
       isar = kIsWeb ? null : await IsarService().db;
     });
     await _timed('Firebase', FirebaseService.init);
     await _timed('Auth', () => Auth().init());
-    await _timed('Cache', _initCache);
+    unawaited(_initCache());
   }
 
-  // ---------------------------------------------------------------------------
-  // Private helpers
-  // ---------------------------------------------------------------------------
+  static Future<void> _initLocale() async {
+    await compute(AppInitializer._initIntl, Intl.systemLocale);
+  }
+
+  static Future<void> _initIntl(String locale) async {
+    await initializeDateFormatting(Intl.systemLocale, null);
+  }
 
   static Future<void> _initCache() async {
     await CacheHelper.scheduleCacheUpdates()

@@ -24,20 +24,57 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
-  await AppInitializer.run();
+  WidgetsFlutterBinding.ensureInitialized();
 
   runApp(
-    RootRestorationScope(
-      restorationId: 'root',
-      child: MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => AppState()),
-          ChangeNotifierProvider(create: (_) => Auth()),
-        ],
-        child: const MyApp(),
-      ),
-    ),
+    const _Bootstrap(),
   );
+}
 
-  unawaited(AppInitializer.runDeferred());
+class _Bootstrap extends StatefulWidget {
+  const _Bootstrap();
+
+  @override
+  State<_Bootstrap> createState() => _BootstrapState();
+}
+
+class _BootstrapState extends State<_Bootstrap> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    await AppInitializer.run();
+
+    if (!mounted) return;
+
+    setState(() {
+      _ready = true;
+    });
+
+    unawaited(AppInitializer.runDeferred());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => Auth()),
+      ],
+      child: const MyApp(),
+    );
+  }
 }
