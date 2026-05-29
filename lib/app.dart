@@ -41,6 +41,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    AppUpdater.cleanup();
     RestartController.instance.addListener(_onRestartRequested);
   }
 
@@ -54,8 +55,6 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    AppUpdater.cleanup();
-
     return OpenMapSettings(
       onError: (context, error) => debugPrint(error.toString()),
       getCurrentLocation: _getCurrentLocation,
