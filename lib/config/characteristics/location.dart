@@ -22,48 +22,91 @@ import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
-class Location {
-  static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
-    FormattedLocation? initial;
-    bool init = false;
-    if (!init) {
-      init = true;
-      if (characteristic.value != null && characteristic.value != "" && characteristic.value["Latitude"] != null && characteristic.value["Longitude"] != null) {
+class Location extends StatefulWidget {
+  final Characteristic characteristic;
+  final StateSetter externalSetState;
+
+  const Location({
+    super.key,
+    required this.characteristic,
+    required this.externalSetState,
+  });
+
+  @override
+  State<Location> createState() => _LocationState();
+}
+
+class _LocationState extends State<Location> {
+  FormattedLocation? initial;
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initLocation();
+  }
+
+  Future<void> _initLocation() async {
+    if (widget.characteristic.value != null &&
+        widget.characteristic.value["Latitude"] != null &&
+        widget.characteristic.value["Longitude"] != null) {
+      initial = FormattedLocation.fromLatLng(
+        lat: widget.characteristic.value["Latitude"],
+        lon: widget.characteristic.value["Longitude"],
+        displayName: widget.characteristic.value_label ?? "",
+      );
+    } else {
+      final pos = await determinePosition();
+
+      if (pos != null) {
         initial = FormattedLocation.fromLatLng(
-            lat: characteristic.value["Latitude"], lon: characteristic.value["Longitude"], displayName: characteristic.value_label ?? "");
+          lat: pos.latitude,
+          lon: pos.longitude,
+          geojson: GeoGeometry.point(
+            LatLng(pos.latitude, pos.longitude),
+            MyTheme.appColor,
+          ),
+        );
       } else {
-        determinePosition().then((value) {
-          if (value != null) {
-            initial = FormattedLocation.fromLatLng(
-                lat: value.latitude, lon: value.longitude, geojson: GeoGeometry.point(LatLng(value.latitude, value.longitude), MyTheme.appColor));
-          } else {
-            const latitude = 51.338527718877394;
-            const longitude = 12.38074998525586;
-            initial = FormattedLocation.fromLatLng(
-                lat: latitude,
-                lon: longitude,
-                geojson: GeoGeometry.point(LatLng(latitude, longitude), MyTheme.appColor),
-                displayName: "Augustusplatz, Leipzig");
-          }
-          characteristic.value = {"Latitude": initial!.lat, "Longitude": initial!.lon};
-          characteristic.value_label = initial!.displayName;
-          setState(() {});
-        });
+        const lat = 51.338527718877394;
+        const lon = 12.38074998525586;
+        initial = FormattedLocation.fromLatLng(
+          lat: lat,
+          lon: lon,
+          displayName: "Augustusplatz, Leipzig",
+          geojson: GeoGeometry.point(LatLng(lat, lon), MyTheme.appColor),
+        );
       }
+
+      widget.characteristic.value = {
+        "Latitude": initial!.lat,
+        "Longitude": initial!.lon,
+      };
+      widget.characteristic.value_label = initial!.displayName;
     }
 
-    return initial == null
-        ? const Center(
-            child: DelayedCircularProgressIndicator(),
-          )
-        : OpenMapPicker(
-            initialValue: initial,
-            options: OpenMapOptions(center: LatLng(initial!.lat, initial!.lon)),
-            decoration: const InputDecoration(hintText: "Pick location"),
-            onChanged: (FormattedLocation? newValue) {
-              characteristic.value = {"Latitude": newValue?.lat, "Longitude": newValue?.lon};
-              characteristic.value_label = newValue?.displayName;
-            },
-          );
+    setState(() => loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(child: DelayedCircularProgressIndicator());
+    }
+
+    return OpenMapPicker(
+      initialValue: initial,
+      options: OpenMapOptions(
+        center: LatLng(initial!.lat, initial!.lon),
+      ),
+      decoration: const InputDecoration(hintText: "Pick location"),
+      onChanged: (newValue) {
+        widget.characteristic.value = {
+          "Latitude": newValue?.lat,
+          "Longitude": newValue?.lon,
+        };
+        widget.characteristic.value_label = newValue?.displayName;
+      },
+    );
   }
 }

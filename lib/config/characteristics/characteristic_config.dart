@@ -25,7 +25,8 @@ import 'package:mobile_app/config/characteristics/rgb.dart';
 
 final Map<String?, Widget Function(BuildContext context, Characteristic characteristic, StateSetter setState)> characteristicConfigs = {
   dotenv.env['CHARACTERISTIC_RGB']: RGB.build,
-  dotenv.env['CHARACTERISTIC_LOCATION_EPSG4326']: Location.build,
+  dotenv.env['CHARACTERISTIC_LOCATION_EPSG4326']: (context, c, setState) =>
+      Location(characteristic: c, externalSetState: setState),
   dotenv.env['CHARACTERISTIC_TIMEZONE']: TZ.build,
 };
 
