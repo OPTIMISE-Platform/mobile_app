@@ -14,8 +14,8 @@ class DioFactory {
         ApiAvailableInterceptor(),
         if (kDebugMode)
           PrettyDioLogger(
-            requestHeader: true,
-            requestBody: true,
+            requestHeader: false,
+            requestBody: false,
             responseBody: false,
           ),
       ])

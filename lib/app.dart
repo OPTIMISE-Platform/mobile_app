@@ -51,10 +51,14 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  void _onRestartRequested() => setState(() => _appKey = UniqueKey());
+  void _onRestartRequested() {
+    debugPrint('RESTART REQUESTED');
+    setState(() => _appKey = UniqueKey());
+  }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('MyApp rebuild');
     return OpenMapSettings(
       onError: (context, error) => debugPrint(error.toString()),
       getCurrentLocation: _getCurrentLocation,
@@ -97,6 +101,8 @@ class _MyAppState extends State<MyApp> {
   }
 
   static Stream<LatLng> _getLocationStream() =>
-      Geolocator.getPositionStream()
-          .map((pos) => LatLng(pos.latitude, pos.longitude));
+      Geolocator.getPositionStream(locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 50, // meters
+      )).map((pos) => LatLng(pos.latitude, pos.longitude));
 }
