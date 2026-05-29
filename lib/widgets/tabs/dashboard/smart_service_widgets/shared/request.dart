@@ -22,10 +22,11 @@ import 'package:mobile_app/exceptions/argument_exception.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 class Request {
-  static final _dio = Dio()..interceptors.add(ApiAvailableInterceptor());
+  static final _dio = DioFactory.create();
 
   final String method, url;
   dynamic body;
@@ -36,10 +37,11 @@ class Request {
   }
 
   factory Request.fromJson(Map<String, dynamic> json) => Request(
-      json["method"] as String,
-      json["url"] as String,
-      json["body"],
-      json["need_token"] as bool);
+    json["method"] as String,
+    json["url"] as String,
+    json["body"],
+    json["need_token"] as bool,
+  );
 
   factory Request.from(Request r) =>
       Request(r.method, r.url, json.decode(json.encode(r.body)), r.need_token);
@@ -54,19 +56,31 @@ class Request {
       case "GET":
         return await _dio.get(url, options: Options(headers: headers));
       case "POST":
-        return await _dio.post(url,
-            options: Options(headers: headers), data: body);
+        return await _dio.post(
+          url,
+          options: Options(headers: headers),
+          data: body,
+        );
       case "PUT":
-        return await _dio.put(url,
-            options: Options(headers: headers), data: body);
+        return await _dio.put(
+          url,
+          options: Options(headers: headers),
+          data: body,
+        );
       case "HEAD":
         return await _dio.head(url, options: Options(headers: headers));
       case "PATCH":
-        return await _dio.patch(url,
-            options: Options(headers: headers), data: body);
+        return await _dio.patch(
+          url,
+          options: Options(headers: headers),
+          data: body,
+        );
       case "DELETE":
-        return await _dio.delete(url,
-            options: Options(headers: headers), data: body);
+        return await _dio.delete(
+          url,
+          options: Options(headers: headers),
+          data: body,
+        );
 
       default:
         throw ArgumentException("Unsupported method $method");

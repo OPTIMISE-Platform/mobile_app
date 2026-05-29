@@ -20,6 +20,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
@@ -29,9 +30,8 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   @override
   setPreview(bool enabled) => null;
 
-  static final _dio = Dio()
-    ..interceptors.add(ApiAvailableInterceptor())
-    ..httpClientAdapter = AppHttpClientAdapter();
+  static final _dio = DioFactory.create(
+  );
 
 
 

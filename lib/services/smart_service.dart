@@ -26,21 +26,21 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
 class SmartServiceService {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
+  static final _logger = Logger(printer: SimplePrinter());
 
   static CacheOptions? _options;
 
   static late Dio _dio;
 
-  static String baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/smart-services/repository';
+  static String baseUrl =
+      '${Settings.getApiUrl() ?? 'localhost'}/smart-services/repository';
 
   static initOptions() async {
     if (_options != null && _dio != null) {
@@ -55,13 +55,14 @@ class SmartServiceService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(
+    _dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
         connectTimeout: const Duration(milliseconds: 15000),
         sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 10000),))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+        receiveTimeout: const Duration(milliseconds: 10000),
+      ),
+    );
   }
 
   static Future<SmartServiceInstance> getInstance(String id) async {
@@ -74,7 +75,10 @@ class SmartServiceService {
       resp = await _dio.get<dynamic>(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -85,7 +89,10 @@ class SmartServiceService {
     return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<List<SmartServiceInstance>> getInstances(int limit, int offset) async {
+  static Future<List<SmartServiceInstance>> getInstances(
+    int limit,
+    int offset,
+  ) async {
     final String url = "$baseUrl/instances";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
@@ -95,10 +102,17 @@ class SmartServiceService {
     await initOptions();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await _dio.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await _dio.get<List<dynamic>?>(
+        url,
+        queryParameters: queryParameters,
+        options: Options(headers: headers),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -107,7 +121,10 @@ class SmartServiceService {
     }
 
     final l = (resp.data ?? []) as List;
-    return List<SmartServiceInstance>.generate(l.length, (index) => SmartServiceInstance.fromJson(l[index]));
+    return List<SmartServiceInstance>.generate(
+      l.length,
+      (index) => SmartServiceInstance.fromJson(l[index]),
+    );
   }
 
   static Future<void> deleteInstance(String id) async {
@@ -119,7 +136,10 @@ class SmartServiceService {
       await _dio.delete(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -127,8 +147,10 @@ class SmartServiceService {
     return;
   }
 
-  static Future<SmartServiceInstance> createInstance(
-      String releaseId, List<SmartServiceParameter>? parameters, String name, String description) async {
+  static Future<SmartServiceInstance> createInstance(String releaseId,
+      List<SmartServiceParameter>? parameters,
+      String name,
+      String description,) async {
     final String url = "$baseUrl/releases/$releaseId/instances";
 
     final Map<String, dynamic> body = {
@@ -141,18 +163,28 @@ class SmartServiceService {
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.post<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
+      resp = await _dio.post<dynamic>(
+        url,
+        options: Options(headers: headers),
+        data: json.encode(body),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
     return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<SmartServiceInstance> updateInstanceParameters(String instanceId, List<SmartServiceParameter>? parameters,
-      {String? releaseId}) async {
+  static Future<SmartServiceInstance> updateInstanceParameters(
+    String instanceId,
+    List<SmartServiceParameter>? parameters, {
+    String? releaseId,
+  }) async {
     final String url = "$baseUrl/instances/$instanceId/parameters";
 
     final Map<String, String> queryParameters = {};
@@ -164,10 +196,18 @@ class SmartServiceService {
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.put<dynamic>(url, queryParameters: queryParameters, options: Options(headers: headers), data: json.encode(parameters));
+      resp = await _dio.put<dynamic>(
+        url,
+        queryParameters: queryParameters,
+        options: Options(headers: headers),
+        data: json.encode(parameters),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -175,7 +215,11 @@ class SmartServiceService {
     return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<SmartServiceInstance> updateInstanceInfo(String instanceId, String name, String description) async {
+  static Future<SmartServiceInstance> updateInstanceInfo(
+    String instanceId,
+    String name,
+    String description,
+  ) async {
     final String url = "$baseUrl/instances/$instanceId/info";
     final Map<String, dynamic> body = {
       "name": name,
@@ -186,10 +230,17 @@ class SmartServiceService {
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.put<dynamic>(url, options: Options(headers: headers), data: json.encode(body));
+      resp = await _dio.put<dynamic>(
+        url,
+        options: Options(headers: headers),
+        data: json.encode(body),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -197,17 +248,25 @@ class SmartServiceService {
     return SmartServiceInstance.fromJson(resp.data);
   }
 
-  static Future<List<SmartServiceExtendedParameter>> getReleaseParameters(String releaseId) async {
+  static Future<List<SmartServiceExtendedParameter>> getReleaseParameters(
+    String releaseId,
+  ) async {
     final String url = "$baseUrl/releases/$releaseId/parameters";
 
     final headers = await Auth().getHeaders();
     await initOptions();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await _dio.get<List<dynamic>?>(url, options: Options(headers: headers));
+      resp = await _dio.get<List<dynamic>?>(
+        url,
+        options: Options(headers: headers),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -216,10 +275,17 @@ class SmartServiceService {
     }
 
     final l = resp.data ?? [];
-    return List<SmartServiceExtendedParameter>.generate(l.length, (index) => SmartServiceExtendedParameter.fromJson(l[index]));
+    return List<SmartServiceExtendedParameter>.generate(
+      l.length,
+      (index) => SmartServiceExtendedParameter.fromJson(l[index]),
+    );
   }
 
-  static Future<List<SmartServiceRelease>> getReleases(int limit, int offset, {bool addUsableFlag = true}) async {
+  static Future<List<SmartServiceRelease>> getReleases(
+    int limit,
+    int offset, {
+    bool addUsableFlag = true,
+  }) async {
     final String url = "$baseUrl/releases";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = limit.toString();
@@ -234,10 +300,17 @@ class SmartServiceService {
     await initOptions();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await _dio.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await _dio.get<List<dynamic>?>(
+        url,
+        queryParameters: queryParameters,
+        options: Options(headers: headers),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -246,7 +319,10 @@ class SmartServiceService {
     }
 
     final l = resp.data ?? [];
-    return List<SmartServiceRelease>.generate(l.length, (index) => SmartServiceRelease.fromJson(l[index]));
+    return List<SmartServiceRelease>.generate(
+      l.length,
+      (index) => SmartServiceRelease.fromJson(l[index]),
+    );
   }
 
   static Future<SmartServiceRelease> getRelease(String id) async {
@@ -259,7 +335,10 @@ class SmartServiceService {
       resp = await _dio.get<dynamic>(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -270,7 +349,10 @@ class SmartServiceService {
     return SmartServiceRelease.fromJson(resp.data);
   }
 
-  static Future<List<SmartServiceModule>> getModules({SmartServiceModuleType? type, String? instanceId}) async {
+  static Future<List<SmartServiceModule>> getModules({
+    SmartServiceModuleType? type,
+    String? instanceId,
+  }) async {
     final String url = "$baseUrl/modules";
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "0";
@@ -285,10 +367,17 @@ class SmartServiceService {
     await initOptions();
     final Response<List<dynamic>?> resp;
     try {
-      resp = await _dio.get<List<dynamic>?>(url, queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await _dio.get<List<dynamic>?>(
+        url,
+        queryParameters: queryParameters,
+        options: Options(headers: headers),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
+        throw UnexpectedStatusCodeException(
+          e.response?.statusCode,
+          "$url ${e.message}",
+        );
       }
       rethrow;
     }
@@ -297,20 +386,27 @@ class SmartServiceService {
     }
 
     final l = resp.data ?? [];
-    return List<SmartServiceModule>.generate(l.length, (index) => SmartServiceModule.fromJson(l[index]));
+    return List<SmartServiceModule>.generate(
+      l.length,
+      (index) => SmartServiceModule.fromJson(l[index]),
+    );
   }
 
-  static Future<Pair<List<SmartServiceExtendedParameter>, bool>> prepareUpgrade(SmartServiceInstance oldInstance) async {
-    if (oldInstance.new_release_id == null) throw ArgumentError("No Update available");
+  static Future<Pair<List<SmartServiceExtendedParameter>, bool>> prepareUpgrade(
+    SmartServiceInstance oldInstance,
+  ) async {
+    if (oldInstance.new_release_id == null)
+      throw ArgumentError("No Update available");
     final params;
     try {
-       params = await getReleaseParameters(oldInstance.new_release_id!);
+      params = await getReleaseParameters(oldInstance.new_release_id!);
     } catch (e) {
       rethrow;
     }
     bool newParamsAdded = false;
     for (final param in params) {
-      final i = oldInstance.parameters?.indexWhere((e) => e.id == param.id) ?? -1;
+      final i =
+          oldInstance.parameters?.indexWhere((e) => e.id == param.id) ?? -1;
       if (i != -1) {
         param.value = oldInstance.parameters![i].value;
         param.value_label = oldInstance.parameters![i].value_label;

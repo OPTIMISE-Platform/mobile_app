@@ -25,15 +25,14 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
 class LocationService {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
+  static final _logger = Logger(printer: SimplePrinter());
 
   static CacheOptions? _options;
   static late Dio _dio;
@@ -51,18 +50,19 @@ class LocationService {
       priority: CachePriority.normal,
       keyBuilder: CacheHelper.bodyCacheIDBuilder,
     );
-    _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),
-    ))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    _dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
+        connectTimeout: const Duration(milliseconds: 1500),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),
+      ),
+    );
   }
 
-  static Future<List<Future<Location>>> getLocations(
-      {bool forceBackend = false}) async {
+  static Future<List<Future<Location>>> getLocations({
+    bool forceBackend = false,
+  }) async {
     if (!forceBackend && isar != null) {
       return (await isar!.locations.where().sortByName().findAll())
           .map((e) => e.initImage())
@@ -84,13 +84,17 @@ class LocationService {
       queryParameters["offset"] = locations.length.toString();
       final Response<List<dynamic>?> resp;
       try {
-        resp = await _dio.get<List<dynamic>?>(uri,
-            queryParameters: queryParameters,
-            options: Options(headers: headers));
+        resp = await _dio.get<List<dynamic>?>(
+          uri,
+          queryParameters: queryParameters,
+          options: Options(headers: headers),
+        );
       } on DioException catch (e) {
         if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
           throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
+            e.response?.statusCode,
+            "$uri ${e.message}",
+          );
         }
         rethrow;
       }
@@ -100,7 +104,9 @@ class LocationService {
 
       final l = resp.data ?? [];
       final add = List<Location>.generate(
-          l.length, (index) => Location.fromJson(l[index]));
+        l.length,
+        (index) => Location.fromJson(l[index]),
+      );
       locations.addAll(add);
       cont = add.length == 9999;
     }
@@ -120,12 +126,17 @@ class LocationService {
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.put<dynamic>(uri,
-          options: Options(headers: headers), data: location.toJson());
+      resp = await _dio.put<dynamic>(
+        uri,
+        options: Options(headers: headers),
+        data: location.toJson(),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
+          e.response?.statusCode,
+          "$uri ${e.message}",
+        );
       }
       rethrow;
     }
@@ -147,13 +158,17 @@ class LocationService {
     await initOptions();
     final Response<dynamic> resp;
     try {
-      resp = await _dio.post<dynamic>(uri,
-          options: Options(headers: headers),
-          data: Location("", name, "", "", [], []).toJson());
+      resp = await _dio.post<dynamic>(
+        uri,
+        options: Options(headers: headers),
+        data: Location("", name, "", "", [], []).toJson(),
+      );
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
+          e.response?.statusCode,
+          "$uri ${e.message}",
+        );
       }
       rethrow;
     }
@@ -177,7 +192,9 @@ class LocationService {
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
         throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
+          e.response?.statusCode,
+          "$uri ${e.message}",
+        );
       }
       rethrow;
     }
@@ -192,8 +209,11 @@ class LocationService {
   }
 
   static bool isListAvailable() => ApiAvailableService().isAvailable(
-      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/locations');
+    '${Settings.getApiUrl() ?? 'localhost'}/device-repository/locations',
+  );
+
   static bool isCreateEditDeleteAvailable() =>
       ApiAvailableService().isAvailable(
-          '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations');
+        '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations',
+      );
 }

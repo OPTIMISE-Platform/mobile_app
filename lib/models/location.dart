@@ -26,6 +26,7 @@ import 'package:logger/logger.dart';
 
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
@@ -74,10 +75,7 @@ class Location {
       return this;
     }
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    final dio = DioFactory.create(cacheOptions: _options!);
     final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       _logger.e("Could not load Location image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");

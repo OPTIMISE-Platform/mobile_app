@@ -30,6 +30,7 @@ import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/attribute.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -187,10 +188,7 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    final dio = DioFactory.create(cacheOptions: _options!);
     final Response<dynamic> resp;
     try {
       resp = await dio.post<dynamic>(uri,
@@ -219,10 +217,7 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    final dio = DioFactory.create(cacheOptions: _options!);
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {

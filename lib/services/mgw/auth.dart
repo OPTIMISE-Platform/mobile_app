@@ -5,6 +5,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 
 @JsonSerializable()
 class InitLoginResponse {
@@ -56,11 +57,14 @@ class MgwAuth {
     printer: SimplePrinter(),
   );
 
-  final dio = Dio(BaseOptions(
+  final dio = DioFactory.create(
+    baseOptions: BaseOptions(
       connectTimeout: const Duration(milliseconds: 1500),
       sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),))
-    ..interceptors.add(ApiAvailableInterceptor());
+      receiveTimeout: const Duration(milliseconds: 5000),
+    ),
+  );
+
 
   Future<LoginResponse> Login(String? username, String? password) async {
     var loginInitResponse = await InitLogin();

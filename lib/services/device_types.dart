@@ -21,6 +21,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
@@ -102,13 +103,15 @@ class DeviceTypesService {
 
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 5000),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    final dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
+        connectTimeout: const Duration(milliseconds: 5000),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),
+        headers: headers,
+      ),
+    );
 
     var cont = true;
     final res = <DeviceType>[];

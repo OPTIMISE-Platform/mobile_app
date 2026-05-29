@@ -24,6 +24,7 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -55,13 +56,15 @@ class FunctionsService {
   static Future<List<PlatformFunction>> getFunctions() async {
     final headers = await Auth().getHeaders();
     await initOptions();
-    final dio = Dio(BaseOptions(
+    final dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
         connectTimeout: const Duration(milliseconds: 5000),
         sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+        receiveTimeout: const Duration(milliseconds: 5000),
+        headers: headers,
+      ),
+    );
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
 

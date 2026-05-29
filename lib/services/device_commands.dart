@@ -31,6 +31,7 @@ import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -126,13 +127,13 @@ class DeviceCommandCloud {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-  static final _dio2H2 = Dio(BaseOptions(
-    connectTimeout: const Duration(milliseconds: 1500),
-    sendTimeout: const Duration(milliseconds: 5000),
-    receiveTimeout: const Duration(milliseconds: 15000),
-  ))
-    ..interceptors.add(ApiAvailableInterceptor())
-    ..httpClientAdapter = AppHttpClientAdapter();
+  static final _dio2H2 = DioFactory.create(
+    baseOptions: BaseOptions(
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 15000),
+    ),
+  );
 
   Future<List<DeviceCommandResponse>> runCommands(
       commands, preferEventValue) async {

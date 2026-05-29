@@ -21,6 +21,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/services/auth.dart';
@@ -80,10 +81,7 @@ class SmSeImage extends SmSeRequest {
 
   _loadImage() async {
     await initOptions();
-    final dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    final dio = DioFactory.create(cacheOptions: _options!);
 
     Map<String, String> headers = {};
     if (request.need_token) {

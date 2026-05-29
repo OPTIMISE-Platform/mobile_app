@@ -23,6 +23,7 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -51,10 +52,14 @@ class FcmTokenService {
       allowPostMethod: true,
     );
 
-    _dio = Dio()
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    _dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
+        connectTimeout: const Duration(milliseconds: 1500),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),
+      ),
+    );
   }
 
   static registerFcmToken(String token) async {

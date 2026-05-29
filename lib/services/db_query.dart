@@ -24,13 +24,16 @@ import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 
 class DbQueryService {
-  static final _dio = Dio(BaseOptions(
+  static final _dio = DioFactory.create(
+    baseOptions: BaseOptions(
       connectTimeout: const Duration(milliseconds: 1500),
       sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 15000),))
-    ..interceptors.add(ApiAvailableInterceptor());
+      receiveTimeout: const Duration(milliseconds: 15000),
+    ),
+  );
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {
     final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/queries';

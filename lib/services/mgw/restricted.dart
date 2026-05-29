@@ -23,6 +23,7 @@ import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 
 const LOG_PREFIX = "MGW-RESTRICTED-API-SERVICE";
 
@@ -49,12 +50,14 @@ class MgwService {
     printer: SimplePrinter(),
   );
 
-  final dio = Dio(BaseOptions(
+  final dio = DioFactory.create(
+    baseOptions: BaseOptions(
     connectTimeout: const Duration(milliseconds: 1500),
     sendTimeout: const Duration(milliseconds: 5000),
     receiveTimeout: const Duration(milliseconds: 5000),
-  ))
-    ..interceptors.add(ApiAvailableInterceptor());
+    ),
+  );
+
 
   MgwService(String host, bool authenticate) {
     baseUrl = "http://$host:8080";
