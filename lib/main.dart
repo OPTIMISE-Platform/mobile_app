@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app.dart';
 import 'package:mobile_app/app_initializer.dart';
@@ -36,4 +38,6 @@ Future<void> main() async {
       ),
     ),
   );
+
+  unawaited(AppInitializer.runDeferred());
 }

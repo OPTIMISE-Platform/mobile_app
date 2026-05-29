@@ -46,7 +46,6 @@ class _HomeState extends State<Home> {
   String _user = "";
   String _pw = "";
   bool _pwHidden = true;
-  bool _loginChecked = false;
 
   _login() async {
     if (_user.isEmpty || _pw.isEmpty) return;
@@ -90,54 +89,55 @@ class _HomeState extends State<Home> {
         icon: Icon(_pwHidden ? Icons.visibility : Icons.visibility_off), onPressed: () => setState(() => _pwHidden = !_pwHidden));
   }
 
-  _checklogin() async {
-    await Auth().refreshToken();
-    setState(() {
-      _loginChecked = true;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-    _checklogin();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    precacheImage(const AssetImage('assets/icon/icon.png'), context);
   }
 
   @override
   Widget build(BuildContext context) {
-    final appBar = MyAppBar(_loginChecked ? "Login" : "Loading");
+    const appBar = MyAppBar("Login");
     return Consumer<Auth>(
       builder: (context, auth, child) {
-        return auth.loggedIn
-            ? const DeviceTabs()
-            : PlatformScaffold(
-                appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
-                body: auth.loggingIn || !_loginChecked
-                    ? const Center(child: DelayedCircularProgressIndicator())
-                    : Container(
-                        padding: MyTheme.inset * 3,
-                        child: SingleChildScrollView(
-                            child: Column(children: [
-                          Image.asset("assets/icon/icon.png", width: MediaQuery.of(context).size.width * 0.4),
-                          PlatformTextFormField(
-                            hintText: "Username",
-                            keyboardType: TextInputType.text,
-                            onChanged: (value) => setState(() => _user = value),
-                            onFieldSubmitted: (_) => _login(),
-                            initialValue: _user,
-                            autofocus: true,
-                            autofillHints: const [AutofillHints.username],
-                          ),
-                          PlatformWidget(
-                              material: (_, __) => _passwordField(),
-                              cupertino: (context, __) =>
-                                  Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField()), _visibilityButton()])),
-                          PlatformElevatedButton(
-                            onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(),
-                            child: const Text("Login"),
-                          ),
-                        ])),
-                      ));
+        if (!auth.isInitialized || auth.loggingIn) {
+          return PlatformScaffold(
+            appBar: appBar.getAppBar(context, []),
+            body: const Center(child: DelayedCircularProgressIndicator()),
+          );
+        }
+        if (auth.loggedIn) return const DeviceTabs();
+        return PlatformScaffold(
+            appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
+            body: Container(
+              padding: MyTheme.inset * 3,
+              child: SingleChildScrollView(
+                  child: Column(children: [
+                    Image.asset("assets/icon/icon.png", width: MediaQuery.of(context).size.width * 0.4),
+                    PlatformTextFormField(
+                      hintText: "Username",
+                      keyboardType: TextInputType.text,
+                      onChanged: (value) => setState(() => _user = value),
+                      onFieldSubmitted: (_) => _login(),
+                      initialValue: _user,
+                      autofocus: true,
+                      autofillHints: const [AutofillHints.username],
+                    ),
+                    PlatformWidget(
+                        material: (_, __) => _passwordField(),
+                        cupertino: (context, __) =>
+                            Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField()), _visibilityButton()])),
+                    PlatformElevatedButton(
+                      onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(),
+                      child: const Text("Login"),
+                    ),
+                  ])),
+            ));
       },
     );
   }

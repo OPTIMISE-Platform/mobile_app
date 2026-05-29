@@ -36,6 +36,8 @@ import 'package:mobile_app/services/cache_helper.dart';
 class Auth extends ChangeNotifier {
   static final _instance = Auth._internal();
 
+  bool isInitialized = false;
+
   factory Auth() => _instance;
 
   Auth._internal();
@@ -142,6 +144,8 @@ class Auth extends ChangeNotifier {
         }
       }
     });
+    isInitialized = true;
+    notifyListeners();
   }
 
   bool get _initialized => _client != null;

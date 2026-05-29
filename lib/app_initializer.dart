@@ -48,14 +48,16 @@ class AppInitializer {
       'initializeDateFormatting',
           () => initializeDateFormatting(Intl.systemLocale, null),
     );
+    debugPrint('App init took ${DateTime.now().difference(appStart)}');
+  }
+
+  static Future<void> runDeferred() async {
     await _timed('Isar', () async {
       isar = kIsWeb ? null : await IsarService().db;
     });
     await _timed('Firebase', FirebaseService.init);
     await _timed('Auth', () => Auth().init());
     await _timed('Cache', _initCache);
-
-    debugPrint('App init took ${DateTime.now().difference(appStart)}');
   }
 
   // ---------------------------------------------------------------------------
