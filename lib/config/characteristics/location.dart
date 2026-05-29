@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:open_location_picker/open_location_picker.dart';
 
 import 'package:mobile_app/models/characteristic.dart';
@@ -94,19 +95,40 @@ class _LocationState extends State<Location> {
       return const Center(child: DelayedCircularProgressIndicator());
     }
 
-    return OpenMapPicker(
-      initialValue: initial,
-      options: OpenMapOptions(
-        center: LatLng(initial!.lat, initial!.lon),
-      ),
-      decoration: const InputDecoration(hintText: "Pick location"),
-      onChanged: (newValue) {
-        widget.characteristic.value = {
-          "Latitude": newValue?.lat,
-          "Longitude": newValue?.lon,
-        };
-        widget.characteristic.value_label = newValue?.displayName;
-      },
+    return OpenMapSettings(
+      onError: (context, error) => debugPrint(error.toString()),
+      getCurrentLocation: _getCurrentLocation,
+      getLocationStream: _getLocationStream,
+      child: OpenMapPicker(
+        initialValue: initial,
+        options: OpenMapOptions(
+          center: LatLng(initial!.lat, initial!.lon),
+        ),
+        decoration: const InputDecoration(hintText: "Pick location"),
+        onChanged: (newValue) {
+          widget.characteristic.value = {
+            "Latitude": newValue?.lat,
+            "Longitude": newValue?.lon,
+          };
+          widget.characteristic.value_label = newValue?.displayName;
+        },
+      )
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Location helpers — kept here to avoid cluttering build()
+  // ---------------------------------------------------------------------------
+
+  static Future<LatLng?> _getCurrentLocation() async {
+    final pos = await determinePosition();
+    if (pos == null) return null;
+    return LatLng(pos.latitude, pos.longitude);
+  }
+
+  static Stream<LatLng> _getLocationStream() =>
+      Geolocator.getPositionStream(locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        distanceFilter: 50, // meters
+      )).map((pos) => LatLng(pos.latitude, pos.longitude));
 }

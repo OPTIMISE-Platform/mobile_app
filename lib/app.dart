@@ -17,17 +17,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:mobile_app/home.dart';
 import 'package:mobile_app/navigator_key.dart';
 import 'package:mobile_app/restart_controller.dart';
 import 'package:mobile_app/services/app_update.dart';
-import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:open_location_picker/open_location_picker.dart';
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -59,50 +56,29 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     debugPrint('MyApp rebuild');
-    return OpenMapSettings(
-      onError: (context, error) => debugPrint(error.toString()),
-      getCurrentLocation: _getCurrentLocation,
-      getLocationStream: _getLocationStream,
-      child: Theme(
-        key: _appKey,
-        data: MyTheme.materialTheme,
-        child: PlatformProvider(
-          initialPlatform: MyTheme.initialPlatform,
-          settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
-          builder: (_) => PlatformTheme(
-            themeMode: MyTheme.themeMode,
-            materialLightTheme: MyTheme.materialTheme,
-            materialDarkTheme: MyTheme.materialDarkTheme,
-            matchCupertinoSystemChromeBrightness: true,
-            onThemeModeChanged: (mode) => MyTheme.themeMode = mode,
-            builder: (_) => PlatformApp(
-              navigatorKey: navigatorKey,
-              localizationsDelegates: const [
-                DefaultMaterialLocalizations.delegate,
-                DefaultWidgetsLocalizations.delegate,
-                DefaultCupertinoLocalizations.delegate,
-              ],
-              home: const Home(),
-            ),
+    return Theme(
+      key: _appKey,
+      data: MyTheme.materialTheme,
+      child: PlatformProvider(
+        initialPlatform: MyTheme.initialPlatform,
+        settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
+        builder: (_) => PlatformTheme(
+          themeMode: MyTheme.themeMode,
+          materialLightTheme: MyTheme.materialTheme,
+          materialDarkTheme: MyTheme.materialDarkTheme,
+          matchCupertinoSystemChromeBrightness: true,
+          onThemeModeChanged: (mode) => MyTheme.themeMode = mode,
+          builder: (_) => PlatformApp(
+            navigatorKey: navigatorKey,
+            localizationsDelegates: const [
+              DefaultMaterialLocalizations.delegate,
+              DefaultWidgetsLocalizations.delegate,
+              DefaultCupertinoLocalizations.delegate,
+            ],
+            home: const Home(),
           ),
         ),
       ),
     );
   }
-
-  // ---------------------------------------------------------------------------
-  // Location helpers — kept here to avoid cluttering build()
-  // ---------------------------------------------------------------------------
-
-  static Future<LatLng?> _getCurrentLocation() async {
-    final pos = await determinePosition();
-    if (pos == null) return null;
-    return LatLng(pos.latitude, pos.longitude);
-  }
-
-  static Stream<LatLng> _getLocationStream() =>
-      Geolocator.getPositionStream(locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.medium,
-        distanceFilter: 50, // meters
-      )).map((pos) => LatLng(pos.latitude, pos.longitude));
 }
