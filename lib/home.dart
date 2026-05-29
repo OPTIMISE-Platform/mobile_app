@@ -46,15 +46,17 @@ class _HomeState extends State<Home> {
   String _user = "";
   String _pw = "";
   bool _pwHidden = true;
+  bool _imagePrecached = false;
 
   _login() async {
     if (_user.isEmpty || _pw.isEmpty) return;
     try {
-      await Auth().login(_user, _pw);
+      final auth = context.read<Auth>();
+      await auth.login(_user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
       await CacheHelper.refreshCache();
-      AppState().pushRefresh();
+      context.read<AppState>().pushRefresh();
     } on AuthenticationException catch (e) {
       if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
         Toast.showToastNoContext("Invalid user credentials");
@@ -97,7 +99,10 @@ class _HomeState extends State<Home> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    precacheImage(const AssetImage('assets/icon/icon.png'), context);
+    if (!_imagePrecached) {
+      _imagePrecached = true;
+      precacheImage(const AssetImage('assets/icon/icon.png'), context);
+    }
   }
 
   @override

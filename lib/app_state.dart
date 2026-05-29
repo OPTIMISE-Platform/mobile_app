@@ -67,10 +67,6 @@ class AppState extends ChangeNotifier
     NativePipe.init();
   }
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
@@ -78,16 +74,14 @@ class AppState extends ChangeNotifier
     manageNetworkDiscovery();
   }
 
-  // ---------------------------------------------------------------------------
-  // Init
-  // ---------------------------------------------------------------------------
-
   @override
   Future<void> ensureInitialized() async {
     if (!_initialized) await init();
   }
 
   Future<void> init() async {
+    if (_initialized) return;
+
     try {
       await Future.wait([
         loadDeviceClasses(),
@@ -99,16 +93,11 @@ class AppState extends ChangeNotifier
         initMessaging(),
         loadStoredMGWs(),
       ]);
-    } catch (e) {
-      ExceptionLogElement.Log(e.toString());
-      Toast.showToastNoContext('Could not initialize');
+    } finally {
+      _initialized = true;
+      notifyListeners();
     }
-    _initialized = true;
   }
-
-  // ---------------------------------------------------------------------------
-  // Logout
-  // ---------------------------------------------------------------------------
 
   Future<void> onLogout() async {
     await clearNotificationData();
@@ -119,19 +108,11 @@ class AppState extends ChangeNotifier
     CacheHelper.clearCache();
   }
 
-  // ---------------------------------------------------------------------------
-  // Refresh stream
-  // ---------------------------------------------------------------------------
-
   final _refreshPressedController = StreamController.broadcast();
 
   Stream get refreshPressed => _refreshPressedController.stream;
 
   void pushRefresh() => _refreshPressedController.add(null);
-
-  // ---------------------------------------------------------------------------
-  // Tab state
-  // ---------------------------------------------------------------------------
 
   List<bool> setAndGetDisabledTabs() {
     final disabledList = List.generate(navItems.length, (_) => true);
