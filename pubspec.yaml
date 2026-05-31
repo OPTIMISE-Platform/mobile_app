@@ -77,7 +77,6 @@ dependencies:
   share_plus: ^7.2.2
   sidebarx: ^0.17.2
   stats: ^2.1.0
-  tutorial_coach_mark: 1.2.11
   url_launcher: ^6.2.5
   pretty_dio_logger: ^1.4.0
 

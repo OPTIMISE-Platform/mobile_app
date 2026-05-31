@@ -23,7 +23,6 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/favorites/favorites_controller.dart';
 import 'package:provider/provider.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -86,34 +85,6 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
     parentState?.switchScreen(tabDevices, true);
   }
 
-  void _showTutorial(BuildContext context) {
-    if (!Settings.tutorialSeen(Tutorial.addFavoriteButton)) {
-      TutorialCoachMark(
-        targets: [
-          TargetFocus(
-            keyTarget: _keyFavButton,
-            contents: [
-              TargetContent(
-                align: ContentAlign.top,
-                padding: const EdgeInsets.only(bottom: 75, left: 20, right: 20),
-                child: const Text(
-                  "Add some devices to your favorites for quick access",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24),
-                ),
-              ),
-            ],
-          ),
-        ],
-        colorShadow: MyTheme.appColor,
-        onClickTarget: (_) => _openDeviceListView(context),
-        alignSkip: Alignment.topRight,
-      ).show(context: context);
-
-      Settings.markTutorialSeen(Tutorial.addFavoriteButton);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(
@@ -123,16 +94,6 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
 
         final devices =
         state.devices.where((d) => d.favorite).toList();
-
-        if (controller.shouldShowTutorial(
-          loading: state.loadingDevices,
-          devices: devices,
-          groups: matchingGroups,
-        )) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showTutorial(context);
-          });
-        }
 
         Widget content;
 

@@ -21,7 +21,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:provider/provider.dart';
-import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
@@ -236,8 +235,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
         );
       }
 
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => _showTutorial(context));
       return AnimatedSize(
           duration: const Duration(milliseconds: 75),
           alignment: Alignment.topLeft,
@@ -246,31 +243,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
             children: columnWidgets,
           ));
     });
-  }
-
-  void _showTutorial(BuildContext context) {
-    if (!Settings.tutorialSeen(Tutorial.deviceListItem)) {
-      TutorialCoachMark(
-        targets: [
-          TargetFocus(keyTarget: widget._keyFavButton, contents: [
-            TargetContent(
-                align: ContentAlign.bottom,
-                child: const Text(
-                  "Toggle favorite",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 24),
-                ),
-                padding: const EdgeInsets.only(top: 50))
-          ]),
-        ],
-        colorShadow: MyTheme.appColor,
-        onClickTarget: (focus) {
-          _favorizeButton!.click();
-        },
-        alignSkip: Alignment.topRight,
-      ).show(context: context);
-      Settings.markTutorialSeen(Tutorial.deviceListItem);
-    }
   }
 
   _onTap(BuildContext context) {
