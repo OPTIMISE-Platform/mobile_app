@@ -14,8 +14,6 @@
  *  limitations under the License.
  */
 
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -25,7 +23,6 @@ import 'package:mobile_app/widgets/tabs/favorites/favorites_controller.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';

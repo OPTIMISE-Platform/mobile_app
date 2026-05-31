@@ -84,6 +84,7 @@ mixin NotificationMixin on ChangeNotifier {
   }
 
   Future<void> initMessaging() async {
+    _logger.d('init Messaging');
     try {
       await messaging.requestPermission();
     } catch (e) {
@@ -107,6 +108,7 @@ mixin NotificationMixin on ChangeNotifier {
     } else {
       await _handleFcmTokenRefresh(token);
     }
+    _logger.d('init Messaging done');
     _handleMessageInteraction(await messaging.getInitialMessage());
   }
 

@@ -37,6 +37,7 @@ class Auth extends ChangeNotifier {
   static final _instance = Auth._internal();
 
   bool isInitialized = false;
+  bool _listenerRegistered = false;
 
   factory Auth() => _instance;
 
@@ -108,27 +109,30 @@ class Auth extends ChangeNotifier {
           _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
           loggedIn = _client?.identity != null;
           notifyListeners();
-          _client?.changes.listen((event) async {
-            _logger.d("${event.type}: ${event.message}");
-            switch (event.type) {
-              case AuthEventTypes.Refresh:
-              case AuthEventTypes.Success:
-                loggedIn = true;
-                notifyListeners();
-                break;
-              case AuthEventTypes.NotLoggedIn: // applies if token exists but timed out on client init
-                loggedIn = _client?.identity != null;
-                notifyListeners();
-                if (!loggedIn) {
-                  _cleanup();
-                }
-                notifyListeners();
-                break;
-              case AuthEventTypes.Error:
-              case AuthEventTypes.LoggingOut:
-                await _onLogout();
-            }
-          });
+          if (!_listenerRegistered) {
+            _listenerRegistered = true;
+            _client?.changes.listen((event) async {
+              _logger.d("${event.type}: ${event.message}");
+              switch (event.type) {
+                case AuthEventTypes.Refresh:
+                case AuthEventTypes.Success:
+                  loggedIn = true;
+                  notifyListeners();
+                  break;
+                case AuthEventTypes.NotLoggedIn: // applies if token exists but timed out on client init
+                  loggedIn = _client?.identity != null;
+                  notifyListeners();
+                  if (!loggedIn) {
+                    _cleanup();
+                  }
+                  notifyListeners();
+                  break;
+                case AuthEventTypes.Error:
+                case AuthEventTypes.LoggingOut:
+                  await _onLogout();
+              }
+            });
+          }
         } catch (e) {
           _logger.e("Could not setup client: $e");
         }
@@ -177,7 +181,9 @@ class Auth extends ChangeNotifier {
 
       if (token != null) {
         _logger.i('Logged in');
-        await AppState().initMessaging();
+        loggedIn = true;
+        notifyListeners();
+        //await AppState().initMessaging();
       } else {
         _logger.w("_token null");
         throw AuthException("token null");
@@ -217,6 +223,7 @@ class Auth extends ChangeNotifier {
   Future<void> _cleanup() async {
     await CacheHelper.clearCache();
     await AppState().onLogout();
+    _listenerRegistered = false;
     if (_client != null) {
       _client!.clearIdentity();
       await Future.delayed(const Duration(seconds: 2)); // can't await clearIdentity()
