@@ -118,19 +118,21 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   }
 
   /// Apply the tab's config and trigger a device search when needed.
-  void _applyTabConfig(int index) {
+  void _applyTabConfig(int index, {bool isInitialLoad = false}) {
     final config = tabConfigs[index];
     if (config == null) return;
 
     showFab = config.showFab;
 
-    // tabFavorites needs the favorites flag set only for the search call.
-    if (config.ownsFavorites()) {
-      filter.favorites = true;
-      AppState().searchDevices(filter, context);
-      filter.favorites = false;
-    } else if (index != tabDashboard && index != tabSmartServices) {
-      AppState().searchDevices(filter, context);
+    if (!isInitialLoad && index != tabDashboard && index != tabSmartServices) {
+      // defer search on initial load — data isn't ready yet anyway
+      if (config.ownsFavorites()) {
+        filter.favorites = true;
+        AppState().searchDevices(filter, context);
+        filter.favorites = false;
+      } else {
+        AppState().searchDevices(filter, context);
+      }
     }
   }
 
@@ -191,10 +193,16 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final state = Provider.of<AppState>(context, listen: false);
-        state.loadDeviceGroups(context);
-        state.loadNetworks(context);
-        state.loadLocations(context);
-        switchScreen(_bottomBarIndex, true);
+        // parallel — don't await sequentially
+        Future.wait([
+          state.loadDeviceGroups(context),
+          state.loadNetworks(context),
+          state.loadLocations(context),
+          state.loadDevices(context), // move here from initState
+        ]).then((_) {
+          if (!mounted) return;
+          switchScreen(_bottomBarIndex, true);
+        });
       });
     }
   }
