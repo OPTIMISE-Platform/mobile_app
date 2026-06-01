@@ -14,29 +14,36 @@
  *  limitations under the License.
  */
 
-
 import 'package:mobile_app/connection_manager.dart';
-
 import "fake_browser_adapter.dart" if (dart.library.html) 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/foundation.dart';
 
 class AppHttpClientAdapter implements HttpClientAdapter {
-  late final HttpClientAdapter _adapter;
+  late final HttpClientAdapter _http2Adapter;
+  late final HttpClientAdapter _http1Adapter;
 
   AppHttpClientAdapter() {
-    _adapter =  kIsWeb ?  BrowserHttpClientAdapter() : Http2Adapter(connectionManager);
+    if (kIsWeb) {
+      _http2Adapter = BrowserHttpClientAdapter();
+      _http1Adapter = BrowserHttpClientAdapter();
+    } else {
+      _http2Adapter = Http2Adapter(connectionManager);
+      _http1Adapter = IOHttpClientAdapter();
+    }
   }
 
   @override
   void close({bool force = false}) {
-    _adapter.close(force: force);
+    _http2Adapter.close(force: force);
+    _http1Adapter.close(force: force);
   }
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future? cancelFuture) {
-    return _adapter.fetch(options, requestStream, cancelFuture);
+    final adapter = (kIsWeb || options.uri.scheme == 'http') ? _http1Adapter : _http2Adapter;
+    return adapter.fetch(options, requestStream, cancelFuture);
   }
-
 }

@@ -71,7 +71,8 @@ Failure handleDioException(DioException error) {
       failure = Failure(ErrorCode.CANCEL, error.message ?? "");
       break;
     default:
-      failure = Failure(ErrorCode.DEFAULT, error.message ?? "");
+      final detail = error.message ?? error.error?.toString() ?? "Unknown error";
+      failure = Failure(ErrorCode.DEFAULT, detail);
       break;
   }
 
