@@ -126,35 +126,28 @@ class MgwService {
     deviceCredentials = await MgwStorage.LoadCredentials();
   }
 
-  Future<Response<dynamic>> Post(
-      String path, dynamic data, Options options) async {
+  Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
     var url = baseUrl + path;
     _logger.d("$LOG_PREFIX: POST to: $url");
-    Response resp;
     try {
-      resp = await dio.post(url, data: data, options: options);
-      return resp;
+      return await dio.post(url, data: data, options: options);
     } on DioException catch (e) {
-      _logger.e("$LOG_PREFIX: Request error: $e");
-      var failure = handleDioException(e);
-      throw (failure);
+      _logger.e("$LOG_PREFIX: Request error: type=${e.type} message=${e.message} status=${e.response?.statusCode}");
+      throw handleDioException(e);
     }
   }
 
   Future<Response<dynamic>> Get(String path, Options options) async {
     var url = baseUrl + path;
     _logger.d("$LOG_PREFIX: GET from: $url");
-    Response resp;
     try {
-      resp = await dio.get(url, options: options);
-      return resp;
+      return await dio.get(url, options: options);
     } on DioException catch (e) {
-      _logger.e("$LOG_PREFIX: Get: Request error");
+      _logger.e("$LOG_PREFIX: Get error: ${e.type} - ${e.message} - status: ${e.response?.statusCode}");
       if (e.response?.statusCode == 401) {
-        ResetSessionData();
+        await ResetSessionData(); // was missing await
       }
-      var failure = handleDioException(e);
-      throw (failure);
+      throw handleDioException(e);
     }
   }
 }
