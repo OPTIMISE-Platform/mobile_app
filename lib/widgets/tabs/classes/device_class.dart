@@ -133,13 +133,13 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                       parentState?.filter.deviceClassIds = [deviceClasses[i].id];
                                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
                                       parentState?.setState(() {
-                                        parentState.hideSearch = false;
+                                        parentState.setHideSearchOverride(false);
                                         parentState.onBackCallback = () {
                                           parentState.setState(() {
                                             parentState.filter.deviceClassIds = null;
                                             parentState.customAppBarTitle = null;
                                             parentState.onBackCallback = null;
-                                            parentState.hideSearch = true;
+                                            parentState.setHideSearchOverride(null);
                                           });
                                           setState(() => _selected = null);
                                         };

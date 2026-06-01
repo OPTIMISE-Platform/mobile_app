@@ -30,7 +30,7 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 
 class Home extends StatefulWidget {
-  const Home({Key? key}) : super(key: key);
+  const Home({super.key});
 
   @override
   State<StatefulWidget> createState() => _HomeState();

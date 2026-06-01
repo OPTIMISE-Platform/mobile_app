@@ -46,6 +46,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   StreamSubscription? _refreshSubscription;
 
   _refresh() async {
+    if (!mounted) return;
     if (_selected == null) {
       AppState().loadNetworks(context);
     } else {
@@ -174,7 +175,9 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                   .then((_) => setState(
                                                       () => _loading = false));
                                               parentState?.setState(() {
-                                                parentState.hideSearch = false;
+                                                parentState
+                                                    .setHideSearchOverride(
+                                                    false);
                                                 parentState.onBackCallback =
                                                     () {
                                                   parentState.setState(() {
@@ -185,8 +188,9 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                         null;
                                                     parentState.onBackCallback =
                                                         null;
-                                                    parentState.hideSearch =
-                                                        true;
+                                                    parentState
+                                                        .setHideSearchOverride(
+                                                        null);
                                                   });
                                                   setState(
                                                       () => _selected = null);
