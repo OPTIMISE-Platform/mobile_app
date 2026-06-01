@@ -35,7 +35,8 @@ class MgwService {
 
   static const _storage = FlutterSecureStorage(
       aOptions: AndroidOptions(
-    encryptedSharedPreferences: true,
+        encryptedSharedPreferences: true,
+        resetOnError: true,
   ));
   static const sessionStorageKey = "mgw-session";
   static const sessionExpirationStorageKey = "mgw-session-expiration";

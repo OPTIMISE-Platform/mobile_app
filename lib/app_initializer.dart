@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
@@ -30,6 +31,7 @@ import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/firebase_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 
 class AppInitializer {
@@ -37,6 +39,8 @@ class AppInitializer {
 
   static Future<void> run() async {
     final appStart = DateTime.now();
+
+    await _clearCorruptedSecureStorage();
 
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
     await _timed('Settings', () async => await Settings.init());
@@ -74,5 +78,18 @@ class AppInitializer {
     final start = DateTime.now();
     await fn();
     debugPrint('$label init took ${DateTime.now().difference(start)}');
+  }
+
+  static Future<void> _clearCorruptedSecureStorage() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File('${dir.parent.path}/shared_prefs/FlutterSecureStorage.xml');
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      debugPrint('SecureStorage reset failed: $e');
+    }
   }
 }

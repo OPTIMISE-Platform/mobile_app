@@ -45,7 +45,9 @@ class Auth extends ChangeNotifier {
 
   static const _storage = FlutterSecureStorage(
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,),
   );
   static const _encKeyName = 'openid_encryption_key';
 

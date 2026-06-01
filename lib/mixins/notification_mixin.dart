@@ -45,7 +45,10 @@ mixin NotificationMixin on ChangeNotifier {
   static final _logger = Logger(printer: SimplePrinter());
 
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,
+    ),
   );
   static final _messageMutex = Mutex();
   final _fcmTokenMutex = Mutex();
