@@ -18,4 +18,4 @@ import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 
 /// Shared HTTP/2 connection manager. Import this wherever a [ConnectionManager]
 /// is needed instead of going through [AppState].
-final connectionManager = ConnectionManager();
+final connectionManager = ConnectionManager(idleTimeout: const Duration(seconds: 15));

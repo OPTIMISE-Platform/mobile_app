@@ -81,6 +81,7 @@ class AppState extends ChangeNotifier
 
   Future<void> init() async {
     if (_initialized) return;
+    final startTime = DateTime.now();
 
     try {
       await Future.wait([
@@ -94,6 +95,7 @@ class AppState extends ChangeNotifier
         loadStoredMGWs(),
       ]);
     } finally {
+      debugPrint('AppState init took ${DateTime.now().difference(startTime)}');
       _initialized = true;
       notifyListeners();
     }

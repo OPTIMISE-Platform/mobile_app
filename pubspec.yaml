@@ -15,7 +15,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 0.0.350+350
+version: 0.0.351+351
 
 
 environment:
@@ -40,8 +40,8 @@ dependencies:
   cupertino_icons: ^1.0.4
   device_info_plus: ^10.0.1
   dio: ^5.9.2
-  dio_cache_interceptor: ^3.5.0
-  dio_cache_interceptor_hive_store: ^3.2.2
+  dio_cache_interceptor: ^4.0.6
+  http_cache_hive_store: ^5.1.0
   dio_http2_adapter: ^2.5.2
   eraser: ^3.0.0
   firebase_core: ^4.9.0

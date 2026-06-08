@@ -18,8 +18,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -51,20 +50,19 @@ class DeviceGroupsService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.refreshForceCache,
-      hitCacheOnErrorExcept: [401, 403],
+      policy: CachePolicy.forceCache,
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
-      keyBuilder: CacheHelper.bodyCacheIDBuilder,
+      keyBuilder: CacheHelper.newCacheKeyBuilder,
     );
-    _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 15000),
-    ))
-      ..interceptors.add(DioCacheInterceptor(options: _options!))
-      ..interceptors.add(ApiAvailableInterceptor())
-      ..httpClientAdapter = AppHttpClientAdapter();
+    _dio = DioFactory.create(
+      cacheOptions: _options!,
+      baseOptions: BaseOptions(
+        connectTimeout: const Duration(milliseconds: 5000),
+        sendTimeout: const Duration(milliseconds: 5000),
+        receiveTimeout: const Duration(milliseconds: 5000),
+      ),
+    );
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups(

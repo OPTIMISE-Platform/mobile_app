@@ -18,8 +18,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/material.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter/material.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
@@ -69,11 +68,10 @@ class SmSeImage extends SmSeRequest {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: _cachable ? CachePolicy.forceCache : CachePolicy.request,
-      hitCacheOnErrorExcept: [401, 403],
-      maxStale: const Duration(days: 365),
+      policy: CachePolicy.forceCache,
+      maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
-      keyBuilder: CacheHelper.bodyCacheIDBuilder,
+      keyBuilder: CacheHelper.newCacheKeyBuilder,
     );
   }
 

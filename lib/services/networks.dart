@@ -16,8 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:isar_community/isar.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -44,11 +43,10 @@ class NetworksService {
 
     _options = CacheOptions(
       store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.refreshForceCache,
-      hitCacheOnErrorExcept: [401, 403],
+      policy: CachePolicy.forceCache,
       maxStale: const Duration(days: 7),
       priority: CachePriority.normal,
-      keyBuilder: CacheHelper.bodyCacheIDBuilder,
+      keyBuilder: CacheHelper.newCacheKeyBuilder,
     );
   }
 

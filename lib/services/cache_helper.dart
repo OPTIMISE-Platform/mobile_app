@@ -19,8 +19,8 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
@@ -53,6 +53,18 @@ class CacheHelper {
     List<int> bytes = utf8.encode(request.method + request.uri.toString());
     if (request.data != null) {
       bytes = [...bytes, ...utf8.encode(request.data)];
+    }
+    return sha1.convert(bytes).toString();
+  }
+
+  static String newCacheKeyBuilder({
+    required Uri url,
+    Map<String, String>? headers,
+    Object? body,
+  }) {
+    List<int> bytes = utf8.encode(url.toString());
+    if (body != null) {
+      bytes = [...bytes, ...utf8.encode(body.toString())];
     }
     return sha1.convert(bytes).toString();
   }

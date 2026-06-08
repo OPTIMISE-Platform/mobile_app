@@ -19,8 +19,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:dio_cache_interceptor_hive_store/dio_cache_interceptor_hive_store.dart';
-import 'package:flutter/foundation.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -123,10 +122,9 @@ class AppUpdater {
       final options = CacheOptions(
         store: HiveCacheStore(cacheFile),
         policy: CachePolicy.forceCache,
-        hitCacheOnErrorExcept: [401, 403],
         maxStale: cacheAge,
         priority: CachePriority.normal,
-        keyBuilder: CacheHelper.bodyCacheIDBuilder,
+        keyBuilder: CacheHelper.newCacheKeyBuilder,
       );
 
       var url =
@@ -141,7 +139,7 @@ class AppUpdater {
           receiveTimeout: const Duration(milliseconds: 5000),
           headers: {
             "User-Agent": dotenv.env["GITHUB_REPO"] ??
-                "" + "/" + (dotenv.env["VERSION"] ?? "")
+                "/${dotenv.env["VERSION"] ?? ""}"
           }))
         ..interceptors.add(DioCacheInterceptor(options: options))
         ..interceptors.add(ApiAvailableInterceptor());

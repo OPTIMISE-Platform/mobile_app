@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app.dart';
@@ -25,7 +26,7 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  HttpClient.enableTimelineLogging = true;
   runApp(
     const _Bootstrap(),
   );
