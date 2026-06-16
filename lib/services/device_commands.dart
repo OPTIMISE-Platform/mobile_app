@@ -30,7 +30,6 @@ import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/device_command_response.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -96,16 +95,16 @@ class DeviceCommandPath {
 class DeviceCommandPort {
   String host;
   DeviceCommandPort(this.host);
-  var _logger = Logger(
+  final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  final _dioH1 = Dio(BaseOptions(
+  final _dioH1 = DioFactory.create(
+      baseOptions: BaseOptions(
     connectTimeout: const Duration(milliseconds: 1500),
     sendTimeout: const Duration(milliseconds: 5000),
     receiveTimeout: const Duration(milliseconds: 15000),
-  ))
-    ..interceptors.add(ApiAvailableInterceptor());
+  ));
 
   Future<List<DeviceCommandResponse>> runCommands(
       commands, preferEventValue) async {

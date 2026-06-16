@@ -28,6 +28,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -35,14 +36,15 @@ import 'package:path_provider/path_provider.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 
 class AppUpdater {
-  static final _dio = Dio(BaseOptions(
+
+  static final _dio = DioFactory.create(
+  baseOptions: BaseOptions(
       connectTimeout: const Duration(milliseconds: 1500),
       sendTimeout: const Duration(milliseconds: 5000),
       receiveTimeout: const Duration(milliseconds:15000), headers: {
         "User-Agent": dotenv.env["GITHUB_REPO"] ??
-            "" + "/" + (dotenv.env["VERSION"] ?? "")
-      }))
-    ..interceptors.add(ApiAvailableInterceptor());
+            "/${dotenv.env["VERSION"] ?? ""}"
+      }));
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -133,16 +135,15 @@ class AppUpdater {
         url =
         "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
       }
-      final dio = Dio(BaseOptions(
+      final dio = DioFactory.create(
+          baseOptions: BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
           sendTimeout: const Duration(milliseconds: 5000),
           receiveTimeout: const Duration(milliseconds: 5000),
           headers: {
             "User-Agent": dotenv.env["GITHUB_REPO"] ??
                 "/${dotenv.env["VERSION"] ?? ""}"
-          }))
-        ..interceptors.add(DioCacheInterceptor(options: options))
-        ..interceptors.add(ApiAvailableInterceptor());
+          }), cacheOptions: options);
 
       Map decoded;
       if (Settings.getPreReleaseMode()){
