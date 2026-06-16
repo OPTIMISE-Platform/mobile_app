@@ -84,6 +84,7 @@ class AppState extends ChangeNotifier
     final startTime = DateTime.now();
 
     try {
+      unawaited(initMessaging());
       await Future.wait([
         loadDeviceClasses(),
         loadDeviceTypes(),
@@ -91,7 +92,6 @@ class AppState extends ChangeNotifier
         loadAspects(),
         loadConcepts(),
         loadCharacteristics(),
-        initMessaging(),
         loadStoredMGWs(),
       ]);
     } finally {
