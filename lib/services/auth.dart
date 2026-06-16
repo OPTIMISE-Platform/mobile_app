@@ -87,59 +87,51 @@ class Auth extends ChangeNotifier {
 
   Future<void> init() async {
     await _clientSetupMutex.protect(() async {
-      if (_initialized) {
-        return;
-      }
-      if (await _serverAvailable()) {
-        try {
-          final start = DateTime.now();
-          final encKey = await _getOrCreateEncryptionKey();
-          _client = await OpenIdConnectClient.create(
-            discoveryDocumentUrl: _discoveryUrl,
-            clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
-            encryptionKey: encKey,
-            redirectUrl: kIsWeb
-                ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base
-                .port}/callback.html"
-                : Settings.getKeycloakRedirect() ?? "https://localhost",
-            scopes: [
-              OpenIdConnectClient.OFFLINE_ACCESS_SCOPE,
-              ...OpenIdConnectClient.DEFAULT_SCOPES
-            ],
-            autoRefresh: false,
-          );
-          _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
-          loggedIn = _client?.identity != null;
-          notifyListeners();
-          if (!_listenerRegistered) {
-            _listenerRegistered = true;
-            _client?.changes.listen((event) async {
-              _logger.d("${event.type}: ${event.message}");
-              switch (event.type) {
-                case AuthEventTypes.Refresh:
-                case AuthEventTypes.Success:
-                  loggedIn = true;
-                  notifyListeners();
-                  break;
-                case AuthEventTypes.NotLoggedIn: // applies if token exists but timed out on client init
-                  loggedIn = _client?.identity != null;
-                  notifyListeners();
-                  if (!loggedIn) {
-                    _cleanup();
-                  }
-                  notifyListeners();
-                  break;
-                case AuthEventTypes.Error:
-                case AuthEventTypes.LoggingOut:
-                  await _onLogout();
-              }
-            });
-          }
-        } catch (e) {
-          _logger.e("Could not setup client: $e");
+      if (_initialized) return;
+      try {
+        final start = DateTime.now();
+        final encKey = await _getOrCreateEncryptionKey();
+        _client = await OpenIdConnectClient.create(
+          discoveryDocumentUrl: _discoveryUrl,
+          clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
+          encryptionKey: encKey,
+          redirectUrl: kIsWeb
+              ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
+              : Settings.getKeycloakRedirect() ?? "https://localhost",
+          scopes: [
+            OpenIdConnectClient.OFFLINE_ACCESS_SCOPE,
+            ...OpenIdConnectClient.DEFAULT_SCOPES
+          ],
+          autoRefresh: false,
+        );
+        _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
+        loggedIn = _client?.identity != null;
+        notifyListeners();
+        if (!_listenerRegistered) {
+          _listenerRegistered = true;
+          _client?.changes.listen((event) async {
+            _logger.d("${event.type}: ${event.message}");
+            switch (event.type) {
+              case AuthEventTypes.Refresh:
+              case AuthEventTypes.Success:
+                loggedIn = true;
+                notifyListeners();
+                break;
+              case AuthEventTypes.NotLoggedIn:
+                loggedIn = _client?.identity != null;
+                notifyListeners();
+                if (!loggedIn) await _cleanup();
+                notifyListeners();
+                break;
+              case AuthEventTypes.Error:
+              case AuthEventTypes.LoggingOut:
+                await _onLogout();
+            }
+          });
         }
-      } else {
-        _logger.d("Postponing real init(): Currently offline");
+      } catch (e) {
+        // Offline or server unreachable — fall back to cached token
+        _logger.d("Client setup failed (offline?): $e");
         if (!loggedIn) {
           final token = await OpenIdIdentity.load();
           if (token != null) {
@@ -285,23 +277,22 @@ class Auth extends ChangeNotifier {
   }
 
   Future<bool> _serverAvailable() async {
-    final start = DateTime.now();
-    if (await (Connectivity().checkConnectivity()) == ConnectivityResult.none) {
-      return false;
-    }
     if (_lastOnlineCheck != null && DateTime.now().difference(_lastOnlineCheck!) < _checkCacheDuration) {
       return _checkCache;
+    }
+    if (await Connectivity().checkConnectivity() == ConnectivityResult.none) {
+      _checkCache = false;
+      _lastOnlineCheck = DateTime.now();
+      return false;
     }
     try {
       final resp = await _dio.get(_discoveryUrl);
       _checkCache = resp.statusCode == 200;
-      return _checkCache;
     } catch (e) {
       _checkCache = false;
-      return _checkCache;
     } finally {
       _lastOnlineCheck = DateTime.now();
-      _logger.d("_serverAvailable ${DateTime.now().difference(start)}");
     }
+    return _checkCache;
   }
 }
