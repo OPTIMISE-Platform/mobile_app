@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -177,20 +179,31 @@ mixin DeviceMixin on ChangeNotifier {
           d.prepareStates(deviceTypes[d.device_type_id]!);
         }
       }
-      await _refreshConnectionStatuses(newDevices);
-      try {
-        await loadStates(newDevices, [], [
-          dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
-        ]);
-        devices.addAll(newDevices);
-      } catch (e) {
-        final err = 'Could not get devices: $e';
-        _logger.e(err);
-        Toast.showToastNoContext(err);
-      }
+      devices.addAll(newDevices);
+      notifyListeners(); // <-- show devices immediately, before states load
+      _devicesMutex.release();
+
+      // load connection statuses and states in the background
+      unawaited(_loadStatesInBackground(newDevices));
+      return;
     }
+
     notifyListeners();
     _devicesMutex.release();
+  }
+
+  Future<void> _loadStatesInBackground(List<DeviceInstance> newDevices) async {
+    await _refreshConnectionStatuses(newDevices);
+    try {
+      await loadStates(newDevices, [], [
+        dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
+      ]);
+    } catch (e) {
+      final err = 'Could not load device states: $e';
+      _logger.e(err);
+      Toast.showToastNoContext(err);
+    }
+    // notifyListeners() is already called inside loadStates
   }
 
   Future<void> _refreshConnectionStatuses(List<DeviceInstance> newDevices) async {
