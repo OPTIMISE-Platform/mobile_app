@@ -99,7 +99,7 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
 
 Future<void> PairWithGateway(MGW mgw) async {
   var host = mgw.ip;
-  MgwAuthService authService = MgwAuthService(host);
+  MgwAuthService authService = await MgwAuthService.create(host);
 
   _logger.d("Pair with gateway: $host");
   DeviceUserCredentials credentials = await authService.RegisterDevice();

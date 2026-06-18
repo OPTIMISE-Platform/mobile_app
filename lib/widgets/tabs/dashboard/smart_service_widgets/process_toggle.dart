@@ -28,9 +28,9 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
   @override
   setPreview(bool enabled) => null;
 
-  static final _dio = DioFactory.create(
-  );
+  Dio? _dio;
 
+  Future<Dio> get _client async => _dio ??= await DioFactory.create(DioConfig.standard);
 
 
   String _deploymentId = "";
@@ -65,7 +65,8 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
     final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/deployments/$_deploymentId/instances";
 
     final headers = await Auth().getHeaders();
-    final resp = await _dio.get<List<dynamic>>(url, options: Options(headers: headers));
+    final dio = await _client;
+    final resp = await dio.get<List<dynamic>>(url, options: Options(headers: headers));
     if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
       return;
     }
@@ -88,17 +89,19 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
     }
 
     final headers = await Auth().getHeaders();
-    await _dio.get(url, options: Options(headers: headers));
+    final dio = await _client;
+    await dio.get(url, options: Options(headers: headers));
     await refresh();
     redrawDashboard(_context);
   }
 
   Future<void> _stop() async {
+    final dio = await _client;
     final List<Future> futures = _instanceIds.map((e) {
       final url = "${Settings.getApiUrl() ?? 'localhost'}/process/engine/v2/process-instances/$e";
 
 
-      return Auth().getHeaders().then((headers) => _dio.delete(url, options: Options(headers: headers)));
+      return Auth().getHeaders().then((headers) => dio.delete(url, options: Options(headers: headers)));
     }).toList(growable: false);
 
     await Future.wait(futures);

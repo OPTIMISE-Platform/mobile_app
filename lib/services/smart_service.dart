@@ -31,7 +31,6 @@ import 'package:mobile_app/services/auth.dart';
 class SmartServiceService {
   static final _logger = Logger(printer: SimplePrinter());
 
-  static CacheOptions? _options;
 
   static late Dio _dio;
 
@@ -39,25 +38,7 @@ class SmartServiceService {
       '${Settings.getApiUrl() ?? 'localhost'}/smart-services/repository';
 
   static initOptions() async {
-    if (_options != null && _dio != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-    _dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 15000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 10000),
-      ),
-    );
+    _dio = await DioFactory.create(DioConfig.cached7);
   }
 
   static Future<SmartServiceInstance> getInstance(String id) async {

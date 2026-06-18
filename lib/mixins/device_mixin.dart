@@ -139,6 +139,7 @@ mixin DeviceMixin on ChangeNotifier {
         int? offset,
         bool clear = false,
       ]) async {
+    debugPrint("loadDevices");
     if (_allDevicesLoaded) return;
     await _devicesMutex.acquire();
 

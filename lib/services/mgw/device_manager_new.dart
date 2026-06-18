@@ -26,66 +26,64 @@ import '../../shared/isar.dart';
 const LOG_PREFIX = "MGW-DEVICE-MANAGER-SERVICE";
 
 class DeviceManagerNew {
-  MgwCoreService? mgwCoreService;
-  MgwEndpointService? mgwEndpointService;
+  DeviceManagerNew._(this.mgwCoreService, this.mgwEndpointService);
 
-  DeviceManagerNew(String host) {
-    mgwCoreService = MgwCoreService(host);
-    mgwEndpointService = MgwEndpointService(host);
+  final MgwCoreService mgwCoreService;
+  final MgwEndpointService mgwEndpointService;
+
+  final _logger = Logger(printer: SimplePrinter());
+
+  static Future<DeviceManagerNew> create(String host) async {
+    final mgwCoreService = await MgwCoreService.create(host);
+    final mgwEndpointService = await MgwEndpointService.create(host);
+    return DeviceManagerNew._(mgwCoreService, mgwEndpointService);
   }
 
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
   Future<List<Endpoint>> getDeviceManagerEndpoints() async {
-    List<Endpoint> endpoints;
     const deviceManagerModuleName =
         "github.com/SENERGY-Platform/device-management-service/mgw-module";
+
     if (isar != null) {
-      endpoints = await isar!.endpoints
+      final cached = await isar!.endpoints
           .where()
           .moduleNameEqualTo(deviceManagerModuleName)
           .findAll();
-      if (endpoints.isNotEmpty) {
-        return endpoints;
-      }
+      if (cached.isNotEmpty) return cached;
     }
-    endpoints =
-        await mgwCoreService!.getEndpointsOfModule(deviceManagerModuleName);
+
+    final endpoints = await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
+
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.endpoints.putAll(endpoints);
       });
     }
+
     return endpoints;
   }
 
   Future<Response<dynamic>> getDevices() async {
-    _logger
-        .d("$LOG_PREFIX - getDevices: Try to retrieve device manager endpoint");
-    var deviceManagerEndpoints = await getDeviceManagerEndpoints();
-    if (deviceManagerEndpoints.isEmpty) {
-      throw ("$LOG_PREFIX: No endpoints found for device manager");
+    _logger.d("$LOG_PREFIX - getDevices: Try to retrieve device manager endpoint");
+
+    Future<List<Endpoint>> getEndpoints() async {
+      final endpoints = await getDeviceManagerEndpoints();
+      if (endpoints.isEmpty) throw "$LOG_PREFIX: No endpoints found for device manager";
+      return endpoints;
     }
-    _logger.d(
-        "$LOG_PREFIX: Load devices from device manager location: ${deviceManagerEndpoints.first.location}/devices");
+
+    var endpoints = await getEndpoints();
+    _logger.d("$LOG_PREFIX: Load devices from ${endpoints.first.location}/devices");
+
     try {
-      return await mgwEndpointService!.GetFromExposedPath(
-          "${deviceManagerEndpoints.first.location}/devices");
+      return await mgwEndpointService.GetFromExposedPath("${endpoints.first.location}/devices");
     } catch (e) {
-      //clear isar endpoints cache and try again
+      _logger.d("$LOG_PREFIX - getDevices: Clearing cache and retrying");
       await isar!.writeTxn(() async {
         await isar!.endpoints.clear();
       });
-      _logger.d(
-          "$LOG_PREFIX - getDevices: Try to retrieve device manager endpoint");
-      var deviceManagerEndpoints = await getDeviceManagerEndpoints();
-      if (deviceManagerEndpoints.isEmpty) {
-        throw ("$LOG_PREFIX: No endpoints found for device manager");
-      }
+
+      endpoints = await getEndpoints();
+      return await mgwEndpointService.GetFromExposedPath("${endpoints.first.location}/devices");
     }
-    return await mgwEndpointService!
-        .GetFromExposedPath("${deviceManagerEndpoints.first.location}/devices");
   }
 }

@@ -30,39 +30,15 @@ class DeviceClassesService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? _options;
-
   static String uri =
       '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/device-class-uses';
-
-  static initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-  }
 
   static Future<List<DeviceClass>> getDeviceClasses() async {
     final Map<String, String> queryParameters = {};
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-        headers: headers,
-      ),
-    );
+    final dio = await DioFactory.create(DioConfig.cached7);
+    DioFactory.setHeaders(DioConfig.cached7, headers);
     final Response<Map<String, dynamic>?> resp;
     try {
       resp = await dio.get<Map<String, dynamic>?>(uri,

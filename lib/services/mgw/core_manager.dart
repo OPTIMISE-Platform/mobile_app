@@ -22,33 +22,32 @@ import 'package:mobile_app/services/mgw/api.dart';
 const LOG_PREFIX = "MGW-CORE-MANAGER-SERVICE";
 
 class MgwCoreService {
-  // Use this service to access the MGW core-manager to manage exposed endpoints
+  MgwCoreService._(this.mgwApiService);
 
-  final basePath = "/core-manager";
-  MgwApiService mgwApiService = MgwApiService("", true);
+  static const basePath = "/core-manager";
+  final MgwApiService mgwApiService;
 
-  MgwCoreService(String host) {
-    mgwApiService = MgwApiService(host, true);
+  final _logger = Logger(printer: SimplePrinter());
+
+  static Future<MgwCoreService> create(String host) async {
+    final mgwApiService = await MgwApiService.create(host, true);
+    return MgwCoreService._(mgwApiService);
   }
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
 
   Future<List<Endpoint>> getEndpointsOfModule(String moduleID) async {
-    var path = "$basePath/endpoints?labels=mod_id=$moduleID";
+    final path = "$basePath/endpoints?labels=mod_id=$moduleID";
     _logger.d("$LOG_PREFIX: Load endpoints from MGW at $path");
-    var resp = await mgwApiService.Get(path, Options());
-    List<Endpoint> endpoints = [];
-    if(resp.data == null) {
+    final resp = await mgwApiService.Get(path, Options());
+
+    if (resp.data == null) {
       _logger.e("$LOG_PREFIX: Endpoint response is null");
-      throw("Endpoint response is null");
+      throw Exception("Endpoint response is null");
     }
 
-    for (final value in resp.data!.values) {
-      var endpoint = Endpoint.fromJson(value);
+    return resp.data!.values.map((value) {
+      final endpoint = Endpoint.fromJson(value);
       endpoint.moduleName = moduleID;
-      endpoints.add(endpoint);
-    }
-    return endpoints;
+      return endpoint;
+    }).toList();
   }
 }

@@ -10,127 +10,112 @@ import 'package:provider/provider.dart';
 const double TOP_PADDING = 100;
 const textStyle = TextStyle(color: Colors.white, fontSize: 35);
 
-class MGWDetail extends StatelessWidget {
+class MGWDetail extends StatefulWidget {
   const MGWDetail({super.key, required this.mgw});
   final MGW mgw;
 
-  handleDeployments(deployments) {
-    if (deployments.length == 0) {
-      return Column(
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 40,
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: TOP_PADDING),
-              child: Text('No deployments!'),
-            ),
-          ]);
+  @override
+  State<MGWDetail> createState() => _MGWDetailState();
+}
+
+class _MGWDetailState extends State<MGWDetail> {
+  late final Future<List<Deployment>> _deploymentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _deploymentsFuture = MgwModuleService.create(widget.mgw.ip)
+        .then((service) => service.getDeployments(null));
+  }
+
+  Widget handleDeployments(List<Deployment> deployments) {
+    if (deployments.isEmpty) {
+      return const Column(children: [
+        Icon(Icons.error_outline, color: Colors.red, size: 40),
+        Padding(
+          padding: EdgeInsets.only(top: TOP_PADDING),
+          child: Text('No deployments!'),
+        ),
+      ]);
     }
 
     return Material(
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(mgw.mDNSServiceName),
-        ),
-        //passing in the ListView.builder
+        appBar: AppBar(title: Text(widget.mgw.mDNSServiceName)),
         body: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: MyTheme.inset,
-                itemCount: deployments.length,
-                itemBuilder: (BuildContext context, int index) {
-                  var deployment = deployments.elementAt(index);
-                  var stateColor = Colors.grey;
-                  switch(deployment.state) {
-                    case "healthy":
-                      stateColor = Colors.green;
-                      break;
-                    case "unhealthy":
-                      stateColor = Colors.red;
-                      break;
-                    case "transitioning":
-                      stateColor = Colors.lime;
-                      break;
-                    default:
-                      stateColor = Colors.grey;
-                  }
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: MyTheme.inset,
+          itemCount: deployments.length,
+          itemBuilder: (BuildContext context, int index) {
+            final deployment = deployments[index];
+            final stateColor = switch (deployment.state) {
+              "healthy" => Colors.green,
+              "unhealthy" => Colors.red,
+              "transitioning" => Colors.lime,
+              _ => Colors.grey,
+            };
 
-                  return Padding(
-                      padding: const EdgeInsets.only(top: 30),
-                      child: ListTile(
-                        title: Text(deployment.name),
-                          subtitle: Text(deployment.module.version),
-                        leading: Icon(
-                          Icons.fiber_manual_record,
-                          color: stateColor,
-                          size: 18,
-                        ),
-                      ));
-                })
-        )
+            return Padding(
+              padding: const EdgeInsets.only(top: 30),
+              child: ListTile(
+                title: Text(deployment.name),
+                subtitle: Text(deployment.module.version),
+                leading: Icon(Icons.fiber_manual_record, color: stateColor, size: 18),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 
-  handlError(error) {
-    return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: const Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 40,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Error: ${error}', style: textStyle),
-          ),
-        ]);
+  Widget handleError(Object? error) {
+    return Column(children: [
+      const Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: Icon(Icons.error_outline, color: Colors.red, size: 40),
+      ),
+      Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: Text('Error: $error', style: textStyle),
+      ),
+    ]);
   }
 
-  handleLoading() {
-    return Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Load...', style: textStyle),
-          )
-        ]);
+  Widget handleLoading() {
+    return const Column(children: [
+      Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: Text('Load...', style: textStyle),
+      ),
+    ]);
   }
 
-  handleDeploymentsResponse(AsyncSnapshot<List<Deployment>> deploymentsWrapper) {
-    if (deploymentsWrapper.hasData) {
-      return handleDeployments(deploymentsWrapper.data);
-    }
-
-    if (deploymentsWrapper.hasError) {
-      return handlError(deploymentsWrapper.error);
-    }
-
+  Widget handleDeploymentsResponse(AsyncSnapshot<List<Deployment>> snapshot) {
+    if (snapshot.hasData) return handleDeployments(snapshot.data!);
+    if (snapshot.hasError) return handleError(snapshot.error);
     return handleLoading();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
-      var moduleManager = MgwModuleService(mgw.ip);
-      return FutureBuilder(
-          future: moduleManager.getDeployments(null),
-          builder: (BuildContext context, AsyncSnapshot<List<Deployment>> deploymentsWrapper) {
-            return handleDeploymentsResponse(deploymentsWrapper);
-          }
-      );
-    });
+    return Consumer<AppState>(
+      builder: (context, state, child) {
+        return FutureBuilder(
+          future: _deploymentsFuture,
+          builder: (context, AsyncSnapshot<List<Deployment>> snapshot) {
+            return handleDeploymentsResponse(snapshot);
+          },
+        );
+      },
+    );
   }
 }

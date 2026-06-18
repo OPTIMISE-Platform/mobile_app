@@ -44,25 +44,7 @@ class DeviceGroupsService {
   static late final Dio? _dio;
 
   static initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-    _dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-      ),
-    );
+    _dio = await DioFactory.create(DioConfig.cached7);
   }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups(
@@ -185,8 +167,8 @@ class DeviceGroupsService {
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/';
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final dio = DioFactory.create(cacheOptions: _options!);
+    final dio = await DioFactory.create(DioConfig.cached7);
+    DioFactory.setHeaders(DioConfig.cached7, headers);
     final Response<dynamic> resp;
     try {
       resp = await dio.post<dynamic>(uri,
@@ -214,8 +196,8 @@ class DeviceGroupsService {
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/$id';
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final dio = DioFactory.create(cacheOptions: _options!);
+    final dio = await DioFactory.create(DioConfig.cached7);
+    DioFactory.setHeaders(DioConfig.cached7, headers);
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {

@@ -34,18 +34,12 @@ class DeviceManagerOld {
     printer: SimplePrinter(),
   );
 
-  final dio = DioFactory.create(
-    baseOptions: BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),
-    ),
-  );
 
   Future<Response<Map<String, dynamic>>> getDevices() async {
     final devicesUrl = "$basePath/devices";
     final Response<Map<String, dynamic>> resp;
     try {
+      final dio = await DioFactory.create(DioConfig.standard);
       _logger.d("$LOG_PREFIX: Try to load devices from: $devicesUrl");
       resp = await dio.get<Map<String, dynamic>>(devicesUrl);
       return resp;

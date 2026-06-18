@@ -27,62 +27,61 @@ import 'package:mobile_app/shared/dio_factory.dart';
 const LOG_PREFIX = "MGW-RESTRICTED-API-SERVICE";
 
 class MgwService {
-  // Use this service to perform request with automatically added session tokens
+  MgwService._(this.baseUrl, this.mgwAuthService, this._dio);
 
-  String baseUrl = "";
-  MgwAuth mgwAuthService = MgwAuth("");
+  final String baseUrl;
+  final MgwAuth mgwAuthService;
+  final Dio _dio;
+
   DeviceUserCredentials deviceCredentials = DeviceUserCredentials("", "", "");
 
   static const _storage = FlutterSecureStorage(
-      aOptions: AndroidOptions(
-        encryptedSharedPreferences: true,
-        resetOnError: true,
-  ));
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+      resetOnError: true,
+    ),
+  );
   static const sessionStorageKey = "mgw-session";
   static const sessionExpirationStorageKey = "mgw-session-expiration";
+
+  final _logger = Logger(printer: SimplePrinter());
+
+  static Future<MgwService> create(String host, bool authenticate) async {
+    final dio = await DioFactory.create(DioConfig.standard);
+    final service = MgwService._(
+      "http://$host:8080",
+      MgwAuth(host),
+      dio,
+    );
+
+    if (authenticate) {
+      dio.interceptors.add(InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          service._logger.d("$LOG_PREFIX: Set auth headers");
+          options.headers['X-No-Auth-Redirect'] = 'true';
+          try {
+            service._logger.d("Try to get session token");
+            options.headers['X-Session-Token'] = await service.GetSessionToken();
+          } catch (e) {
+            try {
+              service._logger.d("Try to get basic auth");
+              options.headers['Authorization'] = await service.GetBasicAuthValue();
+            } catch (e) {
+              service._logger.d(e);
+            }
+          }
+          service._logger.d("$LOG_PREFIX: End interceptor");
+          return handler.next(options);
+        },
+      ));
+    }
+
+    return service;
+  }
 
   static ResetSessionData() async {
     await _storage.delete(key: sessionStorageKey);
     await _storage.delete(key: sessionExpirationStorageKey);
-  }
-
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
-  final dio = DioFactory.create(
-    baseOptions: BaseOptions(
-    connectTimeout: const Duration(milliseconds: 1500),
-    sendTimeout: const Duration(milliseconds: 5000),
-    receiveTimeout: const Duration(milliseconds: 5000),
-    ),
-  );
-
-
-  MgwService(String host, bool authenticate) {
-    baseUrl = "http://$host:8080";
-    mgwAuthService = MgwAuth(host);
-
-    if (authenticate) {
-      dio.interceptors
-          .add(InterceptorsWrapper(onRequest: (options, handler) async {
-        _logger.d("$LOG_PREFIX: Set auth headers");
-        options.headers['X-No-Auth-Redirect'] = 'true';
-        try {
-          _logger.d("Try to get session token");
-          options.headers['X-Session-Token'] = await GetSessionToken();
-        } catch (e) {
-          try {
-            _logger.d("Try to get basic auth");
-            options.headers['Authorization'] = await GetBasicAuthValue();
-          } catch (e) {
-            _logger.d(e);
-          }
-        }
-        _logger.d("$LOG_PREFIX: End interceptor");
-        return handler.next(options);
-      }));
-    }
   }
 
   Future<String> GetSessionToken() async {
@@ -90,22 +89,18 @@ class MgwService {
     await LoadCredentialsFromStorage();
     final now = DateTime.now();
     String? session = await _storage.read(key: sessionStorageKey);
-    String? sessionExpiration =
-        await _storage.read(key: sessionExpirationStorageKey);
+    String? sessionExpiration = await _storage.read(key: sessionExpirationStorageKey);
     if (sessionExpiration != null) {
       final sessionExpirationDate = DateTime.parse(sessionExpiration);
-      if (sessionExpirationDate.isAfter(now.add(const Duration(hours: 3))) &&
-          session != null) {
+      if (sessionExpirationDate.isAfter(now.add(const Duration(hours: 3))) && session != null) {
         _logger.d("$LOG_PREFIX: Use stored session");
         return session;
       }
     }
     _logger.d("$LOG_PREFIX: Get new Session");
-    var loginResponse = await mgwAuthService.Login(
-        deviceCredentials.login, deviceCredentials.secret);
+    var loginResponse = await mgwAuthService.Login(deviceCredentials.login, deviceCredentials.secret);
     await _storage.write(key: sessionStorageKey, value: loginResponse.token);
-    await _storage.write(
-        key: sessionExpirationStorageKey, value: loginResponse.expires_at);
+    await _storage.write(key: sessionExpirationStorageKey, value: loginResponse.expires_at);
     return loginResponse.token;
   }
 
@@ -113,9 +108,7 @@ class MgwService {
     _logger.d("$LOG_PREFIX: Load basic auth credentials from storage");
     try {
       var password = await MgwStorage.LoadBasicAuthCredentials();
-      String basicAuth =
-          'Basic ${base64.encode(utf8.encode('admin:$password'))}';
-      return basicAuth;
+      return 'Basic ${base64.encode(utf8.encode('admin:$password'))}';
     } catch (e) {
       rethrow;
     }
@@ -127,10 +120,10 @@ class MgwService {
   }
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
-    var url = baseUrl + path;
+    final url = baseUrl + path;
     _logger.d("$LOG_PREFIX: POST to: $url");
     try {
-      return await dio.post(url, data: data, options: options);
+      return await _dio.post(url, data: data, options: options);
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Request error: type=${e.type} message=${e.message} status=${e.response?.statusCode}");
       throw handleDioException(e);
@@ -138,14 +131,14 @@ class MgwService {
   }
 
   Future<Response<dynamic>> Get(String path, Options options) async {
-    var url = baseUrl + path;
+    final url = baseUrl + path;
     _logger.d("$LOG_PREFIX: GET from: $url");
     try {
-      return await dio.get(url, options: options);
+      return await _dio.get(url, options: options);
     } on DioException catch (e) {
       _logger.e("$LOG_PREFIX: Get error: ${e.type} - ${e.message} - status: ${e.response?.statusCode}");
       if (e.response?.statusCode == 401) {
-        await ResetSessionData(); // was missing await
+        await ResetSessionData();
       }
       throw handleDioException(e);
     }

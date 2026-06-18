@@ -19,10 +19,8 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 
@@ -43,28 +41,12 @@ class DeviceClass {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-  static CacheOptions? _options;
-
-  static initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 365),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-  }
 
   _initImage() async {
     if (image.isEmpty) {
       return;
     }
-    await initOptions();
-    final dio = DioFactory.create(cacheOptions: _options!);
+    final dio = await DioFactory.create(DioConfig.cached365);
     final resp = await dio.get<String?>(image,
         options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {

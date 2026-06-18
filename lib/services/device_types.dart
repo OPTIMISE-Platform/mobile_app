@@ -21,14 +21,11 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
@@ -46,33 +43,9 @@ class DeviceTypesService {
 
   static initOptions() async {
     return await m.protect(() async {
-      if (_options != null && _dio != null) {
-        return;
-      }
-
-      _options = CacheOptions(
-        store: HiveCacheStore(await CacheHelper.getCacheFile()),
-        policy: CachePolicy.forceCache,
-        maxStale: const Duration(days: 7),
-        priority: CachePriority.normal,
-        keyBuilder: CacheHelper.newCacheKeyBuilder,
-      );
-
-
-      _dio = DioFactory.create(
-        cacheOptions: _options!,
-        baseOptions: BaseOptions(
-          connectTimeout: const Duration(milliseconds: 5000),
-          sendTimeout: const Duration(milliseconds: 5000),
-          receiveTimeout: const Duration(milliseconds: 5000),
-        ),
-      );
+      _dio  = await DioFactory.create(DioConfig.cached7);
     });
   }
-
-
-  static final _client = HttpClient()
-    ..connectionTimeout = const Duration(seconds: 5);
 
   static Future<DeviceType?> getDeviceType(String id) async {
     String url = '$uri/$id';
@@ -110,16 +83,8 @@ class DeviceTypesService {
     }
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-        headers: headers,
-      ),
-    );
+    final dio = await DioFactory.create(DioConfig.cached7);
+    DioFactory.setHeaders(DioConfig.cached7, headers);
 
     var cont = true;
     final res = <DeviceType>[];

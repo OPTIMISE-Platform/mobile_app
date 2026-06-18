@@ -31,9 +31,7 @@ import 'package:mobile_app/services/mgw/device_manager_new.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 
 class MgwDeviceManager {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
+  static final _logger = Logger(printer: SimplePrinter());
 
   static var useNewDeviceManager = false;
 
@@ -41,21 +39,21 @@ class MgwDeviceManager {
       Iterable<DeviceInstance> devices) async {
     final KeyedList<Network?, DeviceInstance> devicesByNetwork = KeyedList();
     devices.forEach((d) => devicesByNetwork.insert(d.network, d));
+
     final List<Future> futures = [];
     devicesByNetwork.m.forEach((network, devices) async {
       if (network?.localService != null) {
-        futures.add(_updateFromMgw(network!, devices)
-            .onError((error, stackTrace) async {
+        futures.add(_updateFromMgw(network!, devices).onError((error, stackTrace) async {
           ExceptionLogElement.Log(error.toString());
           if (!Settings.getLocalMode()) {
             final deviceIds = devices.map((e) => e.id).toList();
             try {
-              await DevicesService.getDevices(devices.length, 0,
-                      DeviceSearchFilter("", null, deviceIds), null,
-                      forceBackend: true)
+              await DevicesService.getDevices(
+                  devices.length, 0, DeviceSearchFilter("", null, deviceIds), null,
+                  forceBackend: true)
                   .then((ds) => ds.devices.forEach((d) => devices
-                      .firstWhere((d2) => d2.id == d.id)
-                      .connection_state = d.connection_state));
+                  .firstWhere((d2) => d2.id == d.id)
+                  .connection_state = d.connection_state));
             } on DioException catch (e) {
               if (e.error! is ApiUnavailableException) {
                 Toast.showToastNoContext(
@@ -69,10 +67,10 @@ class MgwDeviceManager {
         }));
       }
     });
+
     final start = DateTime.now();
     await Future.wait(futures);
-    _logger.d(
-        "updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
+    _logger.d("updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
   }
 
   static Future<void> _setupDeviceManager(String host) async {
@@ -80,57 +78,46 @@ class MgwDeviceManager {
       useNewDeviceManager = true;
       return;
     }
-    // TODO: remove this check when the old port based deployment of device manager is not running anymore
-    _logger.d(
-        "MGW-DEVICE-MANAGER: Find out which device manager to use by checking endpoints");
-    var deviceManagerEndpoints = [];
+
+    _logger.d("MGW-DEVICE-MANAGER: Find out which device manager to use by checking endpoints");
     try {
-      deviceManagerEndpoints =
-          await DeviceManagerNew(host).getDeviceManagerEndpoints();
+      final deviceManager = await DeviceManagerNew.create(host);
+      final deviceManagerEndpoints = await deviceManager.getDeviceManagerEndpoints();
+
+      if (deviceManagerEndpoints.isEmpty) {
+        useNewDeviceManager = false;
+        _logger.d("No endpoints found for device manager -> use port based device manager");
+        return;
+      }
+
+      _logger.d("Endpoints found for device manager -> use new path based device manager");
+      useNewDeviceManager = true;
     } on Failure catch (e) {
       _logger.e("Cant check device manager endpoints: ${e.detailedMessage}");
-      return;
     } catch (e) {
       _logger.e("Cant check device manager endpoints: $e");
-      return;
     }
-
-    if (deviceManagerEndpoints.isEmpty) {
-      useNewDeviceManager = false;
-      _logger.d(
-          "No endpoints found for device manager -> use port based device manager");
-      return;
-    }
-    _logger.d(
-        "Endpoints found for device manager -> use new path based device manager");
-    useNewDeviceManager = true;
   }
 
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
-    final service = network.localService?.first;
-    var ip = service?.host;
+    final ip = network.localService?.first.host;
     if (ip == null) {
       _logger.d("ip not set");
       return;
     }
 
     await _setupDeviceManager(ip);
-    Response<dynamic> devicesFromMgw;
-    _logger.d(
-        "MGW-DEVICE-MANAGER: Load devices from new device manager: $useNewDeviceManager");
-    // TODO remove this part when port based device manager are not used anymore in the future
+    _logger.d("MGW-DEVICE-MANAGER: Load devices from new device manager: $useNewDeviceManager");
+
+    final Response<dynamic> devicesFromMgw;
     if (useNewDeviceManager) {
-      devicesFromMgw = await DeviceManagerNew(ip).getDevices();
+      devicesFromMgw = await (await DeviceManagerNew.create(ip)).getDevices();
     } else {
-      try {
-        devicesFromMgw = await DeviceManagerOld(ip).getDevices();
-      } catch (e) {
-        rethrow;
-      }
+      devicesFromMgw = await DeviceManagerOld(ip).getDevices();
     }
-    _logger
-        .d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
+
+    _logger.d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
     for (final device in devices) {
       if (devicesFromMgw.data?.containsKey(device.local_id) != true) {
         device.connection_state = DeviceConnectionStatus.unknown;

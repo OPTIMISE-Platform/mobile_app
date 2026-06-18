@@ -29,33 +29,7 @@ class FcmTokenService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? _options;
-  static late final Dio? _dio;
   static final baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens';
-
-  static initOptions() async {
-    if (_options != null && _dio != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-      allowPostMethod: true
-    );
-
-    _dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 1500),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-      ),
-    );
-  }
 
   static registerFcmToken(String token) async {
     final url = '$baseUrl/$token';
@@ -65,10 +39,10 @@ class FcmTokenService {
       uri = uri.replace(scheme: "https");
     }
     final headers = await Auth().getHeaders();
-    await initOptions();
     final Response resp;
     try {
-      resp = await _dio!.post(url, options: Options(headers: headers));
+      final dio = await DioFactory.create(DioConfig.cached7withPost);
+      resp = await dio.post(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
@@ -85,13 +59,12 @@ class FcmTokenService {
     final url = '$baseUrl/$token';
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final resp = await _dio!.delete(url, options: Options(headers: headers));
+    final dio = await DioFactory.create(DioConfig.cached7withPost);
+    final resp = await dio.delete(url, options: Options(headers: headers));
     if (resp.statusCode == null || (resp.statusCode! > 204 && resp.statusCode != 404)) {
       // dont have to delete what cant be found
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
-    await initOptions();
     //TODO: Fix deletion of fcm token
     //final key = _options!.keyBuilder(RequestOptions(path: url, method: 'POST'));
     //await _options?.store?.delete(key); // ensure token is resubmitted when registered again

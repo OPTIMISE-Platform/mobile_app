@@ -18,21 +18,21 @@ import 'package:dio/dio.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
 
 class MgwApiService {
-  // Use this service to access the MGW auth-secured core API
-  // Session Tokens are handles automatically
+  MgwApiService._(this.mgwService);
 
-  String baseUrl = "/core/api";
-  MgwService mgwService = MgwService("", true);
+  static const baseUrl = "/core/api";
+  final MgwService mgwService;
 
-  MgwApiService(String host, bool authenticate) {
-    mgwService = MgwService(host, authenticate);
+  static Future<MgwApiService> create(String host, bool authenticate) async {
+    final mgwService = await MgwService.create(host, authenticate);
+    return MgwApiService._(mgwService);
   }
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
-    return await mgwService.Post(baseUrl+path, data, options);
+    return await mgwService.Post(baseUrl + path, data, options);
   }
 
   Future<Response<dynamic>> Get(String path, Options options) async {
-    return await mgwService.Get(baseUrl+path, options);
+    return await mgwService.Get(baseUrl + path, options);
   }
 }

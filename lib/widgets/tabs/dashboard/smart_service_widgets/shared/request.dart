@@ -24,7 +24,6 @@ import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 
 class Request {
-  static final _dio = DioFactory.create();
 
   final String method, url;
   dynamic body;
@@ -49,32 +48,33 @@ class Request {
     if (need_token) {
       headers = await Auth().getHeaders();
     }
+    final dio = await DioFactory.create(DioConfig.standard);
 
     switch (method.toUpperCase()) {
       case "GET":
-        return await _dio.get(url, options: Options(headers: headers));
+        return await dio.get(url, options: Options(headers: headers));
       case "POST":
-        return await _dio.post(
+        return await dio.post(
           url,
           options: Options(headers: headers),
           data: body,
         );
       case "PUT":
-        return await _dio.put(
+        return await dio.put(
           url,
           options: Options(headers: headers),
           data: body,
         );
       case "HEAD":
-        return await _dio.head(url, options: Options(headers: headers));
+        return await dio.head(url, options: Options(headers: headers));
       case "PATCH":
-        return await _dio.patch(
+        return await dio.patch(
           url,
           options: Options(headers: headers),
           data: body,
         );
       case "DELETE":
-        return await _dio.delete(
+        return await dio.delete(
           url,
           options: Options(headers: headers),
           data: body,

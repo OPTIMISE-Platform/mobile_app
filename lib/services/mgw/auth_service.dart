@@ -78,30 +78,28 @@ Future<String> getManufacturer() async {
 const LOG_PREFIX = "MGW-USER-SERVICE";
 
 class MgwAuthService {
-  // Use this service to access the auth-service to manage users/devices
+  MgwAuthService._(this.mgwApiService);
 
-  final basePath = "/auth-service";
-  MgwApiService mgwApiService = MgwApiService("", false);
+  static const basePath = "/auth-service";
+  final MgwApiService mgwApiService;
 
-  MgwAuthService(String host) {
-    this.mgwApiService = MgwApiService(host, false);
+  final _logger = Logger(printer: SimplePrinter());
+
+  static Future<MgwAuthService> create(String host) async {
+    final mgwApiService = await MgwApiService.create(host, false);
+    return MgwAuthService._(mgwApiService);
   }
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
 
   Future<DeviceUserCredentials> RegisterDevice() async {
-    _logger.d(LOG_PREFIX + ": Register device");
-    var path = basePath + "/pairing/request";
-    var pairRequest = {
+    _logger.d("$LOG_PREFIX: Register device");
+    const path = "$basePath/pairing/request";
+    final payload = jsonEncode({
       "manufacturer": await getManufacturer(),
-      "model": await getDeviceName()
-    };
-    final payload = jsonEncode(pairRequest);
-    var resp = await mgwApiService.Post(path, payload, Options());
-    // DeviceUserCredentials a = json.decode(resp.data);
-    var user = DeviceUserCredentials.fromJson(resp.data);
-    _logger.d(LOG_PREFIX + ": Registration was successfull - Device username: " + user.login);
+      "model": await getDeviceName(),
+    });
+    final resp = await mgwApiService.Post(path, payload, Options());
+    final user = DeviceUserCredentials.fromJson(resp.data);
+    _logger.d("$LOG_PREFIX: Registration successful - Device username: ${user.login}");
     return user;
   }
 }

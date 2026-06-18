@@ -49,21 +49,16 @@ class MgwAuth {
   String baseUrl = "";
 
   MgwAuth(String host) {
-    baseUrl = "http://" + host + ":8080" + authPath;
+    baseUrl = "http://$host:8080$authPath";
   }
 
   final _logger = Logger(
     printer: SimplePrinter(),
   );
 
-  final dio = DioFactory.create(
-    baseOptions: BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),
-    ),
-  );
+  Dio? _dio;
 
+  Future<Dio> get _client async => _dio ??= await DioFactory.create(DioConfig.standard);
 
   Future<LoginResponse> Login(String? username, String? password) async {
     var loginInitResponse = await InitLogin();
@@ -77,9 +72,10 @@ class MgwAuth {
     final payload = jsonEncode(data);
     Response<Map<String, dynamic>> resp;
     try {
-      resp = await dio.post<Map<String, dynamic>>(baseUrl + loginPath + "?refresh=true&flow=" + flowId, data: payload, options: Options(contentType: Headers.jsonContentType));
+      final dio = await _client;
+      resp = await dio.post<Map<String, dynamic>>("$baseUrl$loginPath?refresh=true&flow=$flowId", data: payload, options: Options(contentType: Headers.jsonContentType));
     } on DioException catch (e) {
-      _logger.e(LOG_PREFIX + ": Could not login");
+      _logger.e("$LOG_PREFIX: Could not login");
       var failure = handleDioException(e);
       throw(failure);
     };
@@ -95,9 +91,10 @@ class MgwAuth {
     Response<Map<String, dynamic>> resp;
 
     try {
-      resp = await dio.get<Map<String, dynamic>>(baseUrl + loginPath + "/api");
+      final dio = await _client;
+      resp = await dio.get<Map<String, dynamic>>("$baseUrl$loginPath/api");
     } on DioException catch (e) {
-      _logger.e(LOG_PREFIX + ": Could not init login");
+      _logger.e("$LOG_PREFIX: Could not init login");
       var failure = handleDioException(e);
       throw(failure);
     };

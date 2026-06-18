@@ -61,23 +61,9 @@ class SmSeImage extends SmSeRequest {
     await _loadImage();
   }
 
-  initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-  }
 
   _loadImage() async {
-    await initOptions();
-    final dio = DioFactory.create(cacheOptions: _options!);
+    final dio = await DioFactory.create(DioConfig.cached7);
 
     Map<String, String> headers = {};
     if (request.need_token) {

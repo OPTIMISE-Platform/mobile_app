@@ -43,26 +43,9 @@ class DevicesService {
   static final _logger = Logger(printer: SimplePrinter());
 
   static Dio? _dio;
-  static CacheOptions? _options;
-  static String? _cacheFile;
 
   static initOptions() async {
-    _cacheFile ??= await CacheHelper.getCacheFile();
-    _options ??= CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-    _dio ??= DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-      ),
-    );
+    _dio ??= await DioFactory.create(DioConfig.cached7);
   }
 
   static Future<DeviceInstanceWithTotal> getDevices(

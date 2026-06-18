@@ -68,13 +68,6 @@ class Auth extends ChangeNotifier {
   final _m = Mutex();
   final _clientSetupMutex = Mutex();
 
-  static final _dio = DioFactory.create(
-    baseOptions: BaseOptions(
-      connectTimeout: const Duration(milliseconds: 5000),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 5000),
-    ),
-  );
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);
   static bool _checkCache = false;
@@ -286,7 +279,8 @@ class Auth extends ChangeNotifier {
       return false;
     }
     try {
-      final resp = await _dio.get(_discoveryUrl);
+      final dio = await DioFactory.create(DioConfig.standard);
+      final resp = await dio.get(_discoveryUrl);
       _checkCache = resp.statusCode == 200;
     } catch (e) {
       _checkCache = false;

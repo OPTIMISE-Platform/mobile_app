@@ -27,7 +27,6 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_filex/open_filex.dart';
@@ -35,16 +34,15 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:mobile_app/services/cache_helper.dart';
 
+import '../shared/api_available_interceptor.dart';
+
 class AppUpdater {
 
-  static final _dio = DioFactory.create(
-  baseOptions: BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds:15000), headers: {
-        "User-Agent": dotenv.env["GITHUB_REPO"] ??
-            "/${dotenv.env["VERSION"] ?? ""}"
-      }));
+  static final githubHeaders = {
+    "User-Agent": dotenv.env["GITHUB_REPO"] ??
+        "/${dotenv.env["VERSION"] ?? ""}"
+  };
+
 
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -99,8 +97,7 @@ class AppUpdater {
     return null;
   }
 
-  static Future<bool?> updateAvailable(
-      {Duration cacheAge = Duration.zero}) async {
+  static Future<bool?> updateAvailable({Duration cacheAge = Duration.zero}) async {
     if (Settings.getLocalMode() || !updateSupported) return false;
 
     if (updateCheckMutex.isLocked) {
@@ -135,15 +132,15 @@ class AppUpdater {
         url =
         "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
       }
-      final dio = DioFactory.create(
-          baseOptions: BaseOptions(
+
+      //TODO: switch to factory
+      final dio = Dio(BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
           sendTimeout: const Duration(milliseconds: 5000),
           receiveTimeout: const Duration(milliseconds: 5000),
-          headers: {
-            "User-Agent": dotenv.env["GITHUB_REPO"] ??
-                "/${dotenv.env["VERSION"] ?? ""}"
-          }), cacheOptions: options);
+          headers: githubHeaders))
+        ..interceptors.add(DioCacheInterceptor(options: options))
+        ..interceptors.add(ApiAvailableInterceptor());
 
       Map decoded;
       if (Settings.getPreReleaseMode()){
@@ -189,12 +186,14 @@ class AppUpdater {
   }
 
   static Future<Stream<double>> downloadUpdate() async {
-    final head = await _dio.head(updateUrl);
+    final dio = await DioFactory.create(DioConfig.standard);
+    DioFactory.setHeaders(DioConfig.standard, githubHeaders);
+    final head = await dio.head(updateUrl);
     final redirectedUpdateUrl = head.redirects.last.location;
     final controller = StreamController<double>();
 
     localFile = '${(await getApplicationSupportDirectory()).path}/update.apk';
-    _dio.download(redirectedUpdateUrl.toString(), localFile, onReceiveProgress: (received, total) {
+    dio.download(redirectedUpdateUrl.toString(), localFile, onReceiveProgress: (received, total) {
       if (total != -1) {
         controller.add(received / total * 100);
       }

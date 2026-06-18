@@ -35,20 +35,6 @@ class CharacteristicsService {
   static String uri =
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/characteristics';
 
-  static initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 7),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-  }
-
   static Future<List<Characteristic>> getCharacteristics() async {
     final List<Characteristic> result = [];
 
@@ -56,16 +42,8 @@ class CharacteristicsService {
     queryParameters["leafsOnly"] = "false";
 
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final dio = DioFactory.create(
-      cacheOptions: _options!,
-      baseOptions: BaseOptions(
-        connectTimeout: const Duration(milliseconds: 5000),
-        sendTimeout: const Duration(milliseconds: 5000),
-        receiveTimeout: const Duration(milliseconds: 5000),
-        headers: headers,
-      ),
-    );
+    final dio = await DioFactory.create(DioConfig.standard);
+    DioFactory.setHeaders(DioConfig.standard, headers);
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri,

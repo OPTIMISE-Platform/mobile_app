@@ -51,28 +51,12 @@ class Location {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-  static CacheOptions? _options;
-
-  static initOptions() async {
-    if (_options != null) {
-      return;
-    }
-
-    _options = CacheOptions(
-      store: HiveCacheStore(await CacheHelper.getCacheFile()),
-      policy: CachePolicy.forceCache,
-      maxStale: const Duration(days: 365),
-      priority: CachePriority.normal,
-      keyBuilder: CacheHelper.newCacheKeyBuilder,
-    );
-  }
 
   Future<Location> initImage() async {
     if (image.isEmpty) {
       return this;
     }
-    await initOptions();
-    final dio = DioFactory.create(cacheOptions: _options!);
+    final dio = await DioFactory.create(DioConfig.cached365);
     final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
     if (resp.statusCode == null || resp.statusCode! > 304) {
       _logger.e("Could not load Location image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");

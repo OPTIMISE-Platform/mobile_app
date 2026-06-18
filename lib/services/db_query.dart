@@ -25,19 +25,13 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 
 class DbQueryService {
-  static final _dio = DioFactory.create(
-    baseOptions: BaseOptions(
-      connectTimeout: const Duration(milliseconds: 1500),
-      sendTimeout: const Duration(milliseconds: 5000),
-      receiveTimeout: const Duration(milliseconds: 15000),
-    ),
-  );
 
   static Future<List<List<dynamic>>> query(DbQuery query) async {
     final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/queries';
     final headers = await Auth().getHeaders();
 
-    final resp = await _dio.post<List<dynamic>>(url, options: Options(headers: headers), data: json.encode([query]));
+    final dio = await DioFactory.create(DioConfig.standard);
+    final resp = await dio.post<List<dynamic>>(url, options: Options(headers: headers), data: json.encode([query]));
     if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
