@@ -125,6 +125,7 @@ class DioFactory {
             requestHeader: false,
             requestBody: false,
             responseBody: false,
+            request: false,
           ),
         ],
       ])
