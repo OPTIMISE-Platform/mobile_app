@@ -64,6 +64,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   @override
   void initState() {
     super.initState();
+    AppState().loadNetworks(context);
     WidgetsBinding.instance.addObserver(this);
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();

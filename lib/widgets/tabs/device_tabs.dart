@@ -193,9 +193,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         // parallel — don't await sequentially
         Future.wait([
           state.loadDeviceGroups(context),
-          state.loadNetworks(context),
-          state.loadLocations(context),
-          state.loadDevices(context),
         ]).then((_) {
           if (!mounted) return;
           switchScreen(_bottomBarIndex, true);

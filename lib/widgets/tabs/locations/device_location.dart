@@ -53,6 +53,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   @override
   void initState() {
     super.initState();
+    AppState().loadLocations(context);
     WidgetsBinding.instance.addObserver(this);
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
         as DeviceTabsState?;

@@ -56,7 +56,10 @@ mixin NetworkMixin on ChangeNotifier {
   Future<void> loadNetworks(BuildContext context) async {
     final locked = _networksMutex.isLocked;
     await _networksMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _networksMutex.release();
+      return;
+    }
     networks.clear();
     notifyListeners();
     try {
