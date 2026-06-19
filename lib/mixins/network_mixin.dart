@@ -121,11 +121,19 @@ mixin NetworkMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  bool _discoveryStarting = false;
+
   Future<void> manageNetworkDiscovery() async {
     if (kIsWeb) return;
-    if (_discovery != null) return;
-    _discovery = await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
-    _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
+    if (_discovery != null || _discoveryStarting) return;
+    _discoveryStarting = true;
+
+    try {
+      _discovery = await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
+      _discovery!.addListener(_mergeDiscoveredServicesWithNetworks);
+    } finally {
+      _discoveryStarting = false;
+    }
   }
 
   Future<void> _mergeDiscoveredServicesWithNetworks() async {
