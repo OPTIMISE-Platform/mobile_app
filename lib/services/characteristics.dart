@@ -42,7 +42,7 @@ class CharacteristicsService {
     queryParameters["leafsOnly"] = "false";
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.standard);
+    final dio = await DioFactory.create(DioConfig.cached7);
     DioFactory.setHeaders(DioConfig.standard, headers);
     final Response<List<dynamic>?> resp;
     try {
