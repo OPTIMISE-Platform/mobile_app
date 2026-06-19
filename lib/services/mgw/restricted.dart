@@ -53,7 +53,7 @@ class MgwService {
   //TODO: switch to dio
   final dio = Dio(
     BaseOptions(
-    connectTimeout: const Duration(milliseconds: 1500),
+    connectTimeout: const Duration(milliseconds: 5000),
     sendTimeout: const Duration(milliseconds: 5000),
     receiveTimeout: const Duration(milliseconds: 5000),
     ),
