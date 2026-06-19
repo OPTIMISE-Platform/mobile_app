@@ -42,7 +42,7 @@ dependencies:
   dio: ^5.9.2
   dio_cache_interceptor: ^4.0.6
   http_cache_hive_store: ^5.1.0
-  dio_http2_adapter: ^2.5.2
+  dio_http2_adapter: ^2.7.1
   eraser: ^3.0.0
   firebase_core: ^4.9.0
   firebase_messaging: ^16.2.0
