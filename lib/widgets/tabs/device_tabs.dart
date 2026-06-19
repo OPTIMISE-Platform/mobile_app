@@ -180,9 +180,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   @override
   void initState() {
     super.initState();
-    if (AppState().devices.isEmpty) {
-      AppState().loadDevices(context);
-    }
   }
 
   @override
@@ -198,7 +195,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           state.loadDeviceGroups(context),
           state.loadNetworks(context),
           state.loadLocations(context),
-          state.loadDevices(context), // move here from initState
+          state.loadDevices(context),
         ]).then((_) {
           if (!mounted) return;
           switchScreen(_bottomBarIndex, true);

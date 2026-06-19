@@ -141,7 +141,13 @@ mixin DeviceMixin on ChangeNotifier {
       ]) async {
     debugPrint("loadDevices");
     if (_allDevicesLoaded) return;
+
+    final locked = _devicesMutex.isLocked;
     await _devicesMutex.acquire();
+    if (locked) {
+      _devicesMutex.release();
+      return;
+    }
 
     if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
       _devicesMutex.release();

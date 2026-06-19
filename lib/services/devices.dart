@@ -78,7 +78,7 @@ class DevicesService {
     final queryParameters = filter.toQueryParams(limit, offset, lastDevice);
     final uri =
         '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-devices';
-    _logger.d("Devices: $queryParameters");
+    //_logger.d("Devices: $queryParameters");
     final Response<List<dynamic>?> resp;
     try {
       final DateTime start = DateTime.now();
