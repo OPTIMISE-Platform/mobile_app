@@ -107,7 +107,7 @@ class DioFactory {
       DioConfig.mgwAuth => _buildDio(
         config,
         baseOptions: BaseOptions(
-          connectTimeout: const Duration(milliseconds: 5000),
+          connectTimeout: const Duration(milliseconds: 15000),
           sendTimeout: const Duration(milliseconds: 5000),
           receiveTimeout: const Duration(milliseconds: 5000),
         ),

@@ -23,14 +23,16 @@ import 'error.dart';
 const LOG_PREFIX = "MGW-ENDPOINT-SERVICE";
 
 class MgwEndpointService {
-  MgwEndpointService._(this.mgwService);
+  // Use this service to access exposed deployment endpoints
+  // Session tokens are added automatically
 
-  final MgwService mgwService;
-  final _logger = Logger(printer: SimplePrinter());
+  final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+  MgwService mgwService = MgwService("", true);
 
-  static Future<MgwEndpointService> create(String host) async {
-    final mgwService = await MgwService.create(host, true);
-    return MgwEndpointService._(mgwService);
+  MgwEndpointService(String host) {
+    mgwService = MgwService(host, true);
   }
 
   Future<Response<dynamic>> GetFromExposedPath(String path) async {
@@ -42,7 +44,7 @@ class MgwEndpointService {
     }
   }
 
-  Future<Response<dynamic>> PostToExposedPath(String path, dynamic commands) async {
+  Future<Response<dynamic>> PostToExposedPath(String path, commands) async {
     _logger.d("$LOG_PREFIX: Post to exposed deployment path: $path");
     return await mgwService.Post(path, commands, Options(contentType: Headers.jsonContentType));
   }

@@ -41,50 +41,54 @@ const commandUrlPrefix = "/commands/batch?timeout=10s&prefer_event_value=";
 const LOG_PREFIX = "DEVICE-COMMAND";
 
 class DeviceCommandPath {
-  DeviceCommandPath._(this.mgwCoreService, this.mgwEndpointService);
+  late MgwCoreService mgwCoreService;
+  late MgwEndpointService mgwEndpointService;
+  final _logger = Logger(
+    printer: SimplePrinter(),
+  );
 
-  final MgwCoreService mgwCoreService;
-  final MgwEndpointService mgwEndpointService;
-  final _logger = Logger(printer: SimplePrinter());
-
-  static Future<DeviceCommandPath> create(String host) async {
-    final mgwCoreService = await MgwCoreService.create(host);
-    final mgwEndpointService = await MgwEndpointService.create(host);
-    return DeviceCommandPath._(mgwCoreService, mgwEndpointService);
+  DeviceCommandPath(String host) {
+    mgwCoreService = MgwCoreService(host);
+    mgwEndpointService = MgwEndpointService(host);
   }
 
   Future<List<Endpoint>> getEndpoints() async {
+    // TODO change module
     _logger.d("$LOG_PREFIX: Get deployment endpoint");
-    const deviceManagerModuleName = "github.com/SENERGY-Platform/mgw-device-command";
-
+    List<Endpoint> endpoints;
+    const deviceManagerModuleName =
+        "github.com/SENERGY-Platform/mgw-device-command";
     if (isar != null) {
-      final cached = await isar!.endpoints
+      endpoints = await isar!.endpoints
           .where()
           .moduleNameEqualTo(deviceManagerModuleName)
           .findAll();
-      if (cached.isNotEmpty) return cached;
+      if (endpoints.isNotEmpty) {
+        return endpoints;
+      }
     }
-
-    final endpoints = await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
-
+    endpoints =
+        await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
     if (isar != null) {
       await isar!.writeTxn(() async {
         await isar!.endpoints.putAll(endpoints);
       });
     }
-
     return endpoints;
   }
 
-  Future<List<DeviceCommandResponse>> runCommands(dynamic commands, dynamic preferEventValue) async {
+  Future<List<DeviceCommandResponse>> runCommands(
+      commands, preferEventValue) async {
     _logger.d("$LOG_PREFIX: Run commands via exposed path");
-    final endpoints = await getEndpoints();
-    final path = "${endpoints.first.location}$commandUrlPrefix${preferEventValue.toString()}";
-    final resp = await mgwEndpointService.PostToExposedPath(path, commands);
-
-    return (resp.data as List)
-        .map((response) => DeviceCommandResponse.fromJson(response))
-        .toList();
+    var endpoints = await getEndpoints();
+    var endpoint = endpoints.first.location;
+    var path = endpoint + commandUrlPrefix + preferEventValue.toString();
+    var resp = await mgwEndpointService.PostToExposedPath(path, commands);
+    List<DeviceCommandResponse> commandResponses = [];
+    for (final response in resp.data) {
+      commandResponses.add(DeviceCommandResponse.fromJson(response));
+    }
+    return commandResponses;
   }
 }
 
@@ -96,7 +100,6 @@ class DeviceCommandPort {
   );
 
 
-
   Future<List<DeviceCommandResponse>> runCommands(
       commands, preferEventValue) async {
     // TODO service.port was used  but shoud be device command port ?????
@@ -104,9 +107,7 @@ class DeviceCommandPort {
     _logger.d("$LOG_PREFIX: Run commands via exposed port at: $url");
 
     final Response<List<dynamic>> resp;
-
     final dioH1 = await DioFactory.create(DioConfig.standard);
-
     resp = await dioH1.post<List<dynamic>>(url, data: json.encode(commands));
 
     return List<DeviceCommandResponse>.generate(resp.data!.length,
@@ -126,9 +127,7 @@ class DeviceCommandCloud {
     final headers = await Auth().getHeaders();
 
     final Response<dynamic> resp;
-
     final dio2H2 = await DioFactory.create(DioConfig.standard);
-
     resp = await dio2H2.post(url,
         options: Options(headers: headers), data: json.encode(commands));
 
@@ -141,7 +140,9 @@ class DeviceCommandCloud {
 }
 
 class DeviceCommandsService {
-  static final _logger = Logger(printer: SimplePrinter());
+  static final _logger = Logger(
+    printer: SimplePrinter(),
+  );
 
   static Future<List<DeviceCommandResponse>> runCommands(
       List<DeviceCommand> commands,
@@ -157,18 +158,21 @@ class DeviceCommandsService {
 
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp =
-    List.generate(commands.length, (index) => null);
+        List.generate(commands.length, (index) => null);
+
     final List<DeviceCommand> cloudRetries = [];
 
     map.entries.forEach((network) {
       final service = network.key?.localService?.first;
       futures.add(_runCommands(network.value, service == null,
-          service?.host ?? "", preferEventValue)
+              service?.host ?? "", preferEventValue)
           .onError((_, __) {
         cloudRetries.addAll(network.value);
         return [];
       }).then((value) {
-        if (value.isEmpty) return;
+        if (value.isEmpty) {
+          return;
+        }
         for (int i = 0; i < network.value.length; i++) {
           if (value[i].status_code != 513) {
             resp[commands.indexOf(network.value[i])] = value[i];
@@ -178,24 +182,21 @@ class DeviceCommandsService {
         }
       }));
     });
-
-    final start = DateTime.now();
+    final DateTime start = DateTime.now();
     await Future.wait(futures);
-
     if (cloudRetries.isNotEmpty) {
       List<DeviceCommandResponse> retryRes;
       try {
         retryRes = await _runCommands(cloudRetries, true, "", preferEventValue);
       } on DioException catch (e) {
-        _logger.e("Cant run cloud commands: ${e.message}");
-        retryRes = List.generate(cloudRetries.length,
-                (index) => DeviceCommandResponse(502, e.toString()));
+        _logger.e("Cant run cloud commands :${e.message}");
+        retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length,
+            (index) => DeviceCommandResponse(502, e.toString()));
       }
       for (int i = 0; i < retryRes.length; i++) {
         resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
       }
     }
-
     _logger.d("runCommands ${DateTime.now().difference(start)}");
     return resp
         .map((e) => e ?? DeviceCommandResponse(502, "upstream reply null"))
@@ -203,25 +204,27 @@ class DeviceCommandsService {
   }
 
   static Future<bool> checkPathBasedCommandServiceAvailable(String host) async {
-    _logger.d("Find out which device command service to use by checking endpoints");
+    _logger.d(
+        "Find out which device command service to use by checking endpoints");
+    var endpoints = [];
     try {
-      final service = await DeviceCommandPath.create(host);
-      final endpoints = await service.getEndpoints();
-
-      if (endpoints.isEmpty) {
-        _logger.d("No endpoints found for device command -> use port based device command");
-        return false;
-      }
-
-      _logger.d("Endpoints found for device command -> use new path based device command");
-      return true;
+      endpoints = await DeviceCommandPath(host).getEndpoints();
     } on Failure catch (e) {
-      _logger.e("Cant check device command endpoints: ${e.detailedMessage}");
+      _logger.e("Cant check device command endpoints: " + e.detailedMessage);
       return false;
     } catch (e) {
-      _logger.e("Cant check device command endpoints: $e");
+      _logger.e("Cant check device command endpoints: " + e.toString());
       return false;
     }
+
+    if (endpoints.isEmpty) {
+      _logger.d(
+          "No endpoints found for device command -> use port based device command");
+      return false;
+    }
+    _logger.d(
+        "Endpoints found for device command -> use new path based device command");
+    return true;
   }
 
   static Future<List<DeviceCommandResponse>> _runCommands(
@@ -233,18 +236,18 @@ class DeviceCommandsService {
       return DeviceCommandCloud().runCommands(commands, preferEventValue);
     }
 
-    final usePathBasedCommandService =
-    await checkPathBasedCommandServiceAvailable(host);
-    _logger.d("Load devices from new path based device command: $usePathBasedCommandService");
-
+    var usePathBasedCommandService =
+        await checkPathBasedCommandServiceAvailable(host);
+    _logger.d("Load devices from new path based device command: " +
+        usePathBasedCommandService.toString());
     if (usePathBasedCommandService) {
-      final service = await DeviceCommandPath.create(host);
-      return service.runCommands(commands, preferEventValue);
+      return DeviceCommandPath(host).runCommands(commands, preferEventValue);
     } else {
       return DeviceCommandPort(host).runCommands(commands, preferEventValue);
     }
   }
 
+  /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
   static Future<bool> runCommandsSecurely(BuildContext context,
       List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
       [bool preferEventValue = true]) async {

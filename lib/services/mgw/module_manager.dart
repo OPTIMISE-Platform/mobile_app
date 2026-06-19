@@ -24,51 +24,63 @@ import 'package:mobile_app/services/mgw/api.dart';
 const LOG_PREFIX = "MGW-MODULE-MANAGER-SERVICE";
 
 class MgwModuleService {
-  MgwModuleService._(this.mgwApiService);
+  // Use this service to access the MGW module-manager to manage deployments and modules
 
-  static const basePath = "/module-manager";
-  final MgwApiService mgwApiService;
-  final _logger = Logger(printer: SimplePrinter());
+  final basePath = "/module-manager";
+  MgwApiService mgwApiService = MgwApiService("", true);
 
-  static Future<MgwModuleService> create(String host) async {
-    final mgwApiService = await MgwApiService.create(host, true);
-    return MgwModuleService._(mgwApiService);
+  MgwModuleService(String host) {
+    this.mgwApiService = MgwApiService(host, true);
   }
+  final _logger = Logger(
+    printer: SimplePrinter(),
+  );
 
   Future<List<Module>> getModules() async {
-    const path = "$basePath/modules";
+    var path = "$basePath/modules";
     _logger.d("$LOG_PREFIX: Load modules from MGW at $path");
-    final resp = await mgwApiService.Get(path, Options());
-
-    if (resp.data == null) {
+    var resp = await mgwApiService.Get(path, Options());
+    List<Module> modules = [];
+    if(resp.data == null) {
       _logger.e("$LOG_PREFIX: Modules response is null");
-      throw Exception("Modules response is null");
+      throw("Modules response is null");
     }
 
-    return resp.data!.values.map((value) => Module.fromJson(value)).toList();
+    for (final value in resp.data!.values) {
+      var module = Module.fromJson(value);
+      modules.add(module);
+    }
+    return modules;
   }
 
   Future<List<Deployment>> getDeployments(String? modID) async {
-    final query = modID != null
-        ? "?module_id=$modID&container_info=true"
-        : "?container_info=true";
-    final path = "$basePath/deployments$query";
+    var path = basePath + "/deployments";
 
-    _logger.d("$LOG_PREFIX: Load deployments from MGW at $path");
-    final resp = await mgwApiService.Get(path, Options());
-
-    if (resp.data == null) {
-      _logger.e("$LOG_PREFIX: Deployments response is null");
-      throw Exception("Deployments response is null");
+    if(modID != null) {
+      path += "?module_id=" + modID + "&container_info=true";
+    } else {
+      path += "?container_info=true";
     }
 
-    _logger.d("$LOG_PREFIX: Got deployments: ${resp.data}");
-    return resp.data!.values.map((value) => Deployment.fromJson(value)).toList();
+    _logger.d(LOG_PREFIX + ": MGW-Module-Manager: Load deployments from MGW at " + path);
+    var resp = await mgwApiService.Get(path, Options());
+    List<Deployment> deployments = [];
+    if(resp.data == null) {
+      _logger.e(LOG_PREFIX + ": MGW-Module-Manager: Deployments response is null");
+      throw("Deployments response is null");
+    }
+    _logger.d(LOG_PREFIX + ": MGW-Module-Manager: Got deployments: " + resp.data.toString());
+
+    for (final value in resp.data!.values) {
+      var deployment = Deployment.fromJson(value);
+      deployments.add(deployment);
+    }
+    return deployments;
   }
 
   Future<bool> ModuleIsDeployed(String modID) async {
-    _logger.d("$LOG_PREFIX: Check if module $modID is deployed");
-    final deployments = await getDeployments(modID);
-    return deployments.isNotEmpty; // fixed: was returning isEmpty which was inverted
+    _logger.d(LOG_PREFIX + ": MGW-Module-Manager: Check if module " + modID + " is deployed");
+    var moduleMap = await getDeployments(modID);
+    return moduleMap.isEmpty;
   }
 }

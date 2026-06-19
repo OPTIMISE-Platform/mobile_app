@@ -42,54 +42,70 @@ Failure handleKratosClientError(Failure failure) {
 const LOG_PREFIX = "MGW-AUTH-SERVICE";
 
 class MgwAuth {
-  MgwAuth._(this._dio, this.baseUrl);
+  // Use this service to access the exposed identity provider for login/logout
 
-  final Dio _dio;
-  final String baseUrl;
+  final authPath = "/core/auth";
+  final loginPath = "/login";
+  String baseUrl = "";
 
-  static const authPath = "/core/auth";
-  static const loginPath = "/login";
-
-  final _logger = Logger(printer: SimplePrinter());
-
-  static Future<MgwAuth> create(String host) async {
-    final dio = await DioFactory.create(DioConfig.mgwAuth);
-    return MgwAuth._(dio, "http://$host:8080$authPath");
+  MgwAuth(String host) {
+    baseUrl = "http://" + host + ":8080" + authPath;
   }
 
+  final _logger = Logger(
+    printer: SimplePrinter(),
+  );
+
+  final dio = Dio(
+     BaseOptions(
+      connectTimeout: const Duration(milliseconds: 1500),
+      sendTimeout: const Duration(milliseconds: 5000),
+      receiveTimeout: const Duration(milliseconds: 5000),
+    ),
+  );
+
+
   Future<LoginResponse> Login(String? username, String? password) async {
-    final loginInitResponse = await InitLogin();
-    return await CompleteLogin(loginInitResponse.flowId, username, password);
+    var loginInitResponse = await InitLogin();
+    var loginResponse = await CompleteLogin(loginInitResponse.flowId, username, password);
+    return loginResponse;
   }
 
   Future<LoginResponse> CompleteLogin(String flowId, String? username, String? password) async {
-    final payload = jsonEncode({'identifier': username, 'password': password, 'method': "password"});
+    // Also automatically refreshes token
+    var data = {'identifier': username, 'password': password, 'method': "password"};
+    final payload = jsonEncode(data);
     Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio.post<Map<String, dynamic>>(
-        "$baseUrl$loginPath?refresh=true&flow=$flowId",
-        data: payload,
-        options: Options(contentType: Headers.jsonContentType),
-      );
+      resp = await dio.post<Map<String, dynamic>>(baseUrl + loginPath + "?refresh=true&flow=" + flowId, data: payload, options: Options(contentType: Headers.jsonContentType));
     } on DioException catch (e) {
-      _logger.e("$LOG_PREFIX: Could not login");
-      throw handleDioException(e);
-    }
+      _logger.e(LOG_PREFIX + ": Could not login");
+      var failure = handleDioException(e);
+      throw(failure);
+    };
 
-    if (resp.data == null) throw Exception("Login response empty");
-    return LoginResponse.fromJson(resp.data!);
+    if(resp.data == null) {
+      throw("Login response empty");
+    } else {
+      return LoginResponse.fromJson(resp.data!);
+    }
   }
 
   Future<InitLoginResponse> InitLogin() async {
     Response<Map<String, dynamic>> resp;
-    try {
-      resp = await _dio.get<Map<String, dynamic>>("$baseUrl$loginPath/api");
-    } on DioException catch (e) {
-      _logger.e("$LOG_PREFIX: Could not init login");
-      throw handleDioException(e);
-    }
 
-    if (resp.data == null) throw Exception("Login response empty");
-    return InitLoginResponse.fromJson(resp.data!);
+    try {
+      resp = await dio.get<Map<String, dynamic>>(baseUrl + loginPath + "/api");
+    } on DioException catch (e) {
+      _logger.e(LOG_PREFIX + ": Could not init login");
+      var failure = handleDioException(e);
+      throw(failure);
+    };
+
+    if(resp.data == null) {
+      throw("Login response empty");
+    } else {
+      return InitLoginResponse.fromJson(resp.data!);
+    }
   }
 }
