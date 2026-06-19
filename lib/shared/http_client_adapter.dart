@@ -44,6 +44,6 @@ class AppHttpClientAdapter implements HttpClientAdapter {
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future? cancelFuture) {
     final adapter = (kIsWeb || options.uri.scheme == 'http') ? _http1Adapter : _http2Adapter;
-    return adapter.fetch(options, requestStream, cancelFuture);
+    return _http1Adapter.fetch(options, requestStream, cancelFuture);
   }
 }
