@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:io';
+
 import "fake_browser_adapter.dart" if (dart.library.html) 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
@@ -30,7 +32,16 @@ class AppHttpClientAdapter implements HttpClientAdapter {
       _http1Adapter = BrowserHttpClientAdapter();
     } else {
       _http2Adapter = Http2Adapter(ConnectionManager(idleTimeout: const Duration(seconds: 15)));
-      _http1Adapter = IOHttpClientAdapter();
+      _http1Adapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient();
+          client.maxConnectionsPerHost = 8;
+          client.idleTimeout = const Duration(seconds: 30);
+          client.connectionTimeout = const Duration(seconds: 10);
+          client.autoUncompress = true;
+          return client;
+        },
+      );
     }
   }
 
