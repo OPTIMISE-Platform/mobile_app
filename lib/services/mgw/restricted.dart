@@ -47,10 +47,11 @@ class MgwService {
   final _logger = Logger(printer: SimplePrinter());
 
   static Future<MgwService> create(String host, bool authenticate) async {
-    final dio = await DioFactory.create(DioConfig.standard);
+    final dio = await DioFactory.create(DioConfig.mgwApi);
+    final mgwAuthService = await MgwAuth.create(host);
     final service = MgwService._(
       "http://$host:8080",
-      MgwAuth(host),
+      mgwAuthService,
       dio,
     );
 

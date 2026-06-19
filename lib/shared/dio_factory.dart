@@ -25,7 +25,7 @@ import '../services/cache_helper.dart';
 import 'api_available_interceptor.dart';
 import 'http_client_adapter.dart';
 
-enum DioConfig { cached7,cached7withPost, cached365,standard}
+enum DioConfig { cached7,cached7withPost, cached365,standard, mgwApi, mgwAuth}
 
 class DioFactory {
   DioFactory._();
@@ -89,6 +89,22 @@ class DioFactory {
         ),
       ),
       DioConfig.standard => _buildDio(
+        config,
+        baseOptions: BaseOptions(
+          connectTimeout: const Duration(milliseconds: 5000),
+          sendTimeout: const Duration(milliseconds: 5000),
+          receiveTimeout: const Duration(milliseconds: 5000),
+        ),
+      ),
+      DioConfig.mgwApi => _buildDio(
+        config,
+        baseOptions: BaseOptions(
+          connectTimeout: const Duration(milliseconds: 15000),
+          sendTimeout: const Duration(milliseconds: 5000),
+          receiveTimeout: const Duration(milliseconds: 5000),
+        ),
+      ),
+      DioConfig.mgwAuth => _buildDio(
         config,
         baseOptions: BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
