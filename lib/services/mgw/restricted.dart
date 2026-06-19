@@ -50,6 +50,7 @@ class MgwService {
     printer: SimplePrinter(),
   );
 
+  //TODO: switch to dio
   final dio = Dio(
     BaseOptions(
     connectTimeout: const Duration(milliseconds: 1500),
