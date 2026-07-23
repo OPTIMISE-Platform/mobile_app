@@ -28,6 +28,7 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/semaphore.dart';
 
 part 'location.g.dart';
 
@@ -56,18 +57,27 @@ class Location {
     if (image.isEmpty) {
       return this;
     }
-    final dio = await DioFactory.create(DioConfig.cached365);
-    final resp = await dio.get<String?>(image, options: Options(responseDecoder: DecodeIntoBase64()));
-    if (resp.statusCode == null || resp.statusCode! > 304) {
-      _logger.e("Could not load Location image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
-      return this;
+    try {
+      final dio = await DioFactory.create(DioConfig.cached365);
+      // Throttled so a batch of locations doesn't hammer the image host (429).
+      final resp = await imageDownloadLimiter.withResource(
+        () => dio.get<String?>(image,
+            options: Options(responseDecoder: DecodeIntoBase64())),
+      );
+      if (resp.statusCode == null || resp.statusCode! > 304) {
+        _logger.e("Could not load Location image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
+        return this;
+      }
+      if (resp.data == null) {
+        _logger.e("Could not load Location image: response was null. ID: $id, URL: $image");
+        return this;
+      }
+      final b64 = const Base64Decoder().convert(resp.data!);
+      imageWidget = Image.memory(b64);
+    } catch (e) {
+      // Isolate the failure so one bad image doesn't fail the whole batch.
+      _logger.e("Could not load Location image. ID: $id, URL: $image. Error: $e");
     }
-    if (resp.data == null) {
-      _logger.e("Could not load Location image: response was null. ID: $id, URL: $image");
-      return this;
-    }
-    final b64 = const Base64Decoder().convert(resp.data!);
-    imageWidget = Image.memory(b64);
     return this;
   }
 
