@@ -61,7 +61,14 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(
+    // Only rebuild the list *scaffolding* (spinner ↔ empty ↔ list, item count)
+    // when those structural inputs change. Individual device *state* updates
+    // (value, transitioning, connection) don't change this signature — each
+    // DeviceListItem has its own Consumer<AppState> and refreshes itself, so we
+    // avoid rebuilding the whole ListView/RefreshIndicator on every notify.
+    return Selector<AppState, String>(
+        selector: (_, state) =>
+            '${state.loadingDevices}|${state.devices.length}|${state.totalDevices}',
         builder: (_, __, ___) => RefreshIndicator(
               onRefresh: () async {
                 HapticFeedbackProxy.lightImpact();

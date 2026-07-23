@@ -80,6 +80,12 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   final _tabKeys = List.generate(8, (_) => GlobalKey());
 
+  // Cached drawer: rebuilding SidebarX on every AppState notify is what makes
+  // opening the drawer janky. The drawer only depends on the per-tab disabled
+  // flags and the theme brightness, so we memoize it on exactly those inputs.
+  Widget? _cachedDrawer;
+  String? _cachedDrawerKey;
+
   TabConfig get _currentConfig =>
       tabConfigs[_navigationIndex] ??
           TabConfig(
@@ -138,9 +144,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   void _reloadCurrentTab() => _applyTabConfig(_navigationIndex);
 
-  PlatformNavBar _buildBottomNavBar(BuildContext context) {
-    final disabled = AppState().setAndGetDisabledTabs();
-
+  PlatformNavBar _buildBottomNavBar(BuildContext context, List<bool> disabled) {
     final disabledColor = isCupertino(context)
         ? Theme.of(context).disabledColor.withAlpha(32)
         : Theme.of(context).disabledColor;
@@ -211,10 +215,56 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     super.dispose();
   }
 
+  /// A cheap signature of everything the app shell (app bar actions, drawer,
+  /// bottom nav, splash factory) actually depends on: per-tab availability and
+  /// the sizes of the filterable collections. Frequent device *state* updates
+  /// (on/off, temperature, ...) don't change any of these, so the [Selector]
+  /// in [build] skips the rebuild for them — this is what stops the shell from
+  /// thrashing during the startup notify-storm and while the drawer animates.
+  String _shellSignature(AppState state) {
+    final disabled = state.setAndGetDisabledTabs();
+    final sb = StringBuffer();
+    for (final d in disabled) {
+      sb.write(d ? '1' : '0');
+    }
+    sb
+      ..write('|')
+      ..write(state.deviceClasses.length)
+      ..write(',')
+      ..write(state.locations.length)
+      ..write(',')
+      ..write(state.deviceGroups.length)
+      ..write(',')
+      ..write(state.networks.length);
+    return sb.toString();
+  }
+
+  /// Returns the drawer, rebuilding [_buildSidebar] only when the disabled
+  /// flags or the theme brightness change. Keeps the SidebarX subtree stable
+  /// across the many rebuilds triggered by tab switches, search and filtering.
+  Widget _getSidebar(BuildContext context) {
+    final key = StringBuffer();
+    for (final n in navItems) {
+      key.write(n.disabled ? '1' : '0');
+    }
+    key.write(MyTheme.isDarkMode ? 'D' : 'L');
+    final k = key.toString();
+    if (_cachedDrawer == null || _cachedDrawerKey != k) {
+      _cachedDrawerKey = k;
+      _cachedDrawer = _buildSidebar(context);
+    }
+    return _cachedDrawer!;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(
-      builder: (context, state, child) {
+    return Selector<AppState, String>(
+      selector: (_, state) => _shellSignature(state),
+      builder: (context, _, __) {
+        final state = AppState();
+        // Kept in sync by _shellSignature above; also sets navItem.disabled,
+        // which _getSidebar reads.
+        final disabled = state.setAndGetDisabledTabs();
         final actions = _buildActions(context, state);
         final appBar = MyAppBar(customAppBarTitle ?? "");
         final leadingAction = onBackCallback != null
@@ -224,7 +274,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         )
             : null;
 
-        final drawer = _buildSidebar(context);
+        final drawer = _getSidebar(context);
 
         return PopScope(
           // canPop: false when there is a back callback so we can intercept.
@@ -239,7 +289,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
               data: Theme.of(context).copyWith(
                 splashFactory: _CustomInkSplashFactory(
                   keys: _tabKeys,
-                  keysDisabled: AppState().setAndGetDisabledTabs(),
+                  keysDisabled: disabled,
                 ),
                 highlightColor: Colors.transparent,
               ),
@@ -254,7 +304,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                 ),
                 cupertino: (context, _) =>
                     CupertinoPageScaffoldData(controller: controller),
-                bottomNavBar: _buildBottomNavBar(context),
+                bottomNavBar: _buildBottomNavBar(context, disabled),
               ),
             ),
           ),

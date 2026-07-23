@@ -31,6 +31,7 @@ import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/networks.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
@@ -116,7 +117,39 @@ class AppState extends ChangeNotifier
 
   void pushRefresh() => _refreshPressedController.add(null);
 
+  // Memoized result of setAndGetDisabledTabs(). Recomputing walks every nav
+  // item and calls the services' isAvailable()/isListAvailable() checks, each
+  // of which parses a URI and scans the networks (~2ms a piece). This used to
+  // run on every notifyListeners(); now we only redo it when one of the inputs
+  // the result depends on actually changes.
+  List<bool>? _disabledTabsCache;
+  String? _disabledTabsInputSig;
+
+  /// Cheap signature of the inputs [setAndGetDisabledTabs] depends on, without
+  /// running the expensive availability checks.
+  String _disabledTabsInput() {
+    final sb = StringBuffer()
+      ..write(locations.length)
+      ..write(',')
+      ..write(deviceGroups.length)
+      ..write(',')
+      ..write(networks.length)
+      ..write(',')
+      ..write(deviceClasses.length)
+      ..write(',')
+      ..write(Settings.getLocalMode() ? '1' : '0')
+      ..write(',')
+      ..write(Settings.getApiUrl() ?? '');
+    return sb.toString();
+  }
+
   List<bool> setAndGetDisabledTabs() {
+    final input = _disabledTabsInput();
+    final cached = _disabledTabsCache;
+    if (cached != null && _disabledTabsInputSig == input) {
+      return cached;
+    }
+
     final disabledList = List.generate(navItems.length, (_) => true);
     for (final navItem in navItems) {
       switch (navItem.index) {
@@ -145,6 +178,9 @@ class AppState extends ChangeNotifier
       }
       disabledList[navItem.index] = navItem.disabled;
     }
+
+    _disabledTabsInputSig = input;
+    _disabledTabsCache = disabledList;
     return disabledList;
   }
 
