@@ -18,6 +18,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/cache_helper.dart';
@@ -66,7 +67,13 @@ class NotificationsService {
       return null;
     }
 
-    return app.NotificationResponse.fromJson(resp.data!);
+    final data = resp.data!;
+    // Parse a large notification page (up to limit=10000) off the UI thread;
+    // small pages inline to avoid the isolate spawn costing more than the work.
+    final count = (data['notifications'] as List?)?.length ?? 0;
+    return count > _isolateParseThreshold
+        ? await compute(_parseNotificationResponse, data)
+        : app.NotificationResponse.fromJson(data);
   }
 
   static Future setNotification(app.Notification notification) async {
@@ -96,3 +103,9 @@ class NotificationsService {
 
   static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);
 }
+
+/// Above this many notifications in one response, parse in a background isolate.
+const _isolateParseThreshold = 500;
+
+app.NotificationResponse _parseNotificationResponse(Map<String, dynamic> json) =>
+    app.NotificationResponse.fromJson(json);
