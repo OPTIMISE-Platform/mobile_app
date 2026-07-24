@@ -117,9 +117,20 @@ class DeviceGroupsService {
       }));
     }
     await Future.wait(futures);
-    groupsRepo.forEach((element) async {
-      element.favorite = await element.isFavorite();
-    });
+    // Batch the favorite lookup into a single query. The previous
+    // `forEach((e) async { ... })` was also a bug: the async callbacks were
+    // never awaited, so putAll() below ran before `favorite` was set.
+    if (isar != null) {
+      final favoriteIds = (await isar!.deviceGroups
+              .where()
+              .favoriteEqualTo(true)
+              .idProperty()
+              .findAll())
+          .toSet();
+      for (final element in groupsRepo) {
+        element.favorite = favoriteIds.contains(element.id);
+      }
+    }
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
         await collection.putAll(groupsRepo);

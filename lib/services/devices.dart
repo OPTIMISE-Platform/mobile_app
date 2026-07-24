@@ -113,13 +113,20 @@ class DevicesService {
       "Getting devices from remote DB took ${DateTime.now().difference(start)}",
     );
 
-    List<Future> futures = [];
-    devices.forEach((element) {
-      futures.add(
-        element.isFavorite().then((value) => element.favorite = value),
-      );
-    });
-    await Future.wait(futures);
+    // Fetch all favorite ids in a single query instead of one isFavorite()
+    // lookup per device. With limit=5000 (cache refresh) that was up to 5000
+    // separate Isar queries on the UI thread, freezing the loading spinner.
+    if (isar != null) {
+      final favoriteIds = (await isar!.deviceInstances
+              .where()
+              .favoriteEqualTo(true)
+              .idProperty()
+              .findAll())
+          .toSet();
+      for (final element in devices) {
+        element.favorite = favoriteIds.contains(element.id);
+      }
+    }
 
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
