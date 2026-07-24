@@ -19,9 +19,9 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
@@ -108,9 +108,9 @@ class DeviceTypesService {
       }
 
       final l = resp.data ?? [];
-      // Parse off the UI thread — device types are deeply nested and there can
+      // Parse in yielding chunks — device types are deeply nested and there can
       // be thousands, which otherwise freezes the loading spinner on startup.
-      final add = await compute(_parseDeviceTypes, l);
+      final add = await parseListChunked(l, DeviceType.fromJson);
       res.addAll(add);
       cont = add.length == 9999 && (ids == null || ids.isNotEmpty);
     }
@@ -119,6 +119,3 @@ class DeviceTypesService {
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }
-
-List<DeviceType> _parseDeviceTypes(List<dynamic> l) => List<DeviceType>.generate(
-    l.length, (index) => DeviceType.fromJson(l[index]));

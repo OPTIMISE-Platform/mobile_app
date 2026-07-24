@@ -16,9 +16,9 @@
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/concept.dart';
@@ -65,13 +65,10 @@ class ConceptsService {
 
       final l = resp.data ?? [];
       cont = l.length == 9999;
-      result.addAll(await compute(_parseConcepts, l));
+      result.addAll(await parseListChunked(l, Concept.fromJson));
     }
     return result;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }
-
-List<Concept> _parseConcepts(List<dynamic> l) =>
-    List<Concept>.generate(l.length, (index) => Concept.fromJson(l[index]));

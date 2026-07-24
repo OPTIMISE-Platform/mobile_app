@@ -18,8 +18,8 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:isar_community/isar.dart';
+import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -106,13 +106,11 @@ class DevicesService {
     final total = int.parse(resp.headers.value('X-Total-Count') ?? "0");
 
     final l = resp.data ?? [];
-    // Large pages (e.g. the 5000-device cache refresh) are parsed off the UI
-    // thread; DeviceInstance.fromJson is pure now (network is resolved lazily
-    // via a getter) so it is isolate-safe. Small interactive pages are parsed
-    // inline — the isolate spawn would cost more than the work itself.
-    final devices = l.length > _isolateParseThreshold
-        ? await compute(_parseDeviceInstances, l)
-        : _parseDeviceInstances(l);
+    // Parse in chunks that yield to the event loop. A 5000-device cache refresh
+    // otherwise blocks the UI isolate in one stretch (right after login), and
+    // compute() only trades that block for an equally-blocking copy-in/out of
+    // thousands of objects across the isolate boundary.
+    final devices = await parseListChunked(l, DeviceInstance.fromJson);
     _logger.d(
       "Getting devices from remote DB took ${DateTime.now().difference(start)}",
     );
@@ -185,10 +183,3 @@ class DevicesService {
     return ApiAvailableService().isAvailable(uri);
   }
 }
-
-/// Above this many devices in one response, parsing is moved to an isolate.
-const _isolateParseThreshold = 500;
-
-List<DeviceInstance> _parseDeviceInstances(List<dynamic> l) =>
-    List<DeviceInstance>.generate(
-        l.length, (index) => DeviceInstance.fromJson(l[index]));
