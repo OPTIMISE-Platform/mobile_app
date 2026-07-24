@@ -135,7 +135,6 @@ class CacheHelper {
     var deviceOffset = 0;
     DeviceInstance? last;
     final List<DeviceInstance> newDevices = [];
-    final Map<String, int> deviceTypeIds = {};
 
     while (!allDevicesLoaded) {
       try {
@@ -151,19 +150,25 @@ class CacheHelper {
       allDevicesLoaded = newDevices.length < limit;
       deviceOffset = newDevices.length;
       last = newDevices.isNotEmpty ? newDevices.last : null;
-
-      newDevices.forEach((element) => deviceTypeIds[element.device_type_id] = 0);
     }
 
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.deviceInstances.clear();
-        await isar!.deviceInstances.putAll(newDevices);
-      });
+      // Write in chunks: serializing thousands of devices for Isar happens on
+      // the calling (UI) isolate, so doing it in one putAll blocks frames right
+      // after login. Awaiting between chunks lets the UI render in between. The
+      // cache is briefly partial during the refresh, which only causes a cache
+      // miss (backend fetch), never wrong data.
+      const chunkSize = 500;
+      await isar!.writeTxn(() => isar!.deviceInstances.clear());
+      for (var i = 0; i < newDevices.length; i += chunkSize) {
+        final end = i + chunkSize < newDevices.length
+            ? i + chunkSize
+            : newDevices.length;
+        final chunk = newDevices.sublist(i, end);
+        await isar!.writeTxn(() => isar!.deviceInstances.putAll(chunk));
+      }
     }
 
-    final List<Future> futures = [];
-    await Future.wait(futures);
     await Settings.setCacheUpdated("devices");
     if (reschedule) {
       _refreshDevices(const Duration(days: 1));
