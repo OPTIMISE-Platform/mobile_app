@@ -22,6 +22,7 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
@@ -75,23 +76,30 @@ class DeviceTypesService {
   }
 
 
-  static Future<List<DeviceType>> getDeviceTypes(
-      [List<String>? ids]) async {
-    final Map<String, String> queryParameters = {};
-    queryParameters["limit"] = "9999";
+  static Future<List<DeviceType>> getDeviceTypes([List<String>? ids]) async {
+    if (ids != null && ids.isNotEmpty) {
+      // Specific ids are fetched fresh and never stored as the full-list cache.
+      return parseListChunked(await _fetchRaw(ids), DeviceType.fromJson);
+    }
+    return loadMetadataCached(
+        'device-types', () => _fetchRaw(null), DeviceType.fromJson);
+  }
+
+  static Future<List<dynamic>> _fetchRaw(List<String>? ids) async {
+    final Map<String, String> queryParameters = {"limit": "9999"};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
     }
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
+    // Plain (uncached) dio — metadata is persisted via MetadataCache instead of
+    // the Hive HTTP cache, whose per-read CRC32 blocked the UI isolate.
+    final dio = await DioFactory.create(DioConfig.standard);
 
+    final raw = <dynamic>[];
     var cont = true;
-    final res = <DeviceType>[];
-
     while (cont) {
-      queryParameters["offset"] = res.length.toString();
+      queryParameters["offset"] = raw.length.toString();
       final Response<List<dynamic>?> resp;
       try {
         resp = await dio.get<List<dynamic>?>(uri,
@@ -103,18 +111,11 @@ class DeviceTypesService {
         }
         rethrow;
       }
-      if (resp.statusCode == 304) {
-        _logger.d("Using cached device types");
-      }
-
       final l = resp.data ?? [];
-      // Parse in yielding chunks — device types are deeply nested and there can
-      // be thousands, which otherwise freezes the loading spinner on startup.
-      final add = await parseListChunked(l, DeviceType.fromJson);
-      res.addAll(add);
-      cont = add.length == 9999 && (ids == null || ids.isNotEmpty);
+      raw.addAll(l);
+      cont = l.length == 9999 && (ids == null || ids.isNotEmpty);
     }
-    return res;
+    return raw;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

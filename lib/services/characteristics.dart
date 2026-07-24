@@ -18,7 +18,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
-import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/characteristic.dart';
@@ -37,14 +37,15 @@ class CharacteristicsService {
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/characteristics';
 
   static Future<List<Characteristic>> getCharacteristics() async {
-    final List<Characteristic> result = [];
+    return loadMetadataCached(
+        'characteristics', _fetchRaw, Characteristic.fromJson);
+  }
 
-    final Map<String, String> queryParameters = {};
-    queryParameters["leafsOnly"] = "false";
-
+  static Future<List<dynamic>> _fetchRaw() async {
+    final Map<String, String> queryParameters = {"leafsOnly": "false"};
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.standard, headers);
+    // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<List<dynamic>?> resp;
     try {
       resp = await dio.get<List<dynamic>?>(uri,
@@ -56,14 +57,7 @@ class CharacteristicsService {
       }
       rethrow;
     }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached characteristics");
-    }
-
-    final l = resp.data ?? [];
-    result.addAll(await parseListChunked(l, Characteristic.fromJson));
-
-    return result;
+    return resp.data ?? [];
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

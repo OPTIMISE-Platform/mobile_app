@@ -18,7 +18,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
-import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/concept.dart';
@@ -35,17 +35,21 @@ class ConceptsService {
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/v2/concepts-with-characteristics';
 
   static Future<List<Concept>> getConcepts() async {
-    final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
+    return loadMetadataCached('concepts', _fetchRaw, Concept.fromJson);
+  }
 
-    final List<Concept> result = [];
+  static Future<List<dynamic>> _fetchRaw() async {
+    final headers = await Auth().getHeaders();
+    // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
+    final dio = await DioFactory.create(DioConfig.standard);
+
+    final raw = <dynamic>[];
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     queryParameters["sub-class"] = "true";
     bool cont = true;
     while (cont) {
-      queryParameters["offset"] = result.length.toString();
+      queryParameters["offset"] = raw.length.toString();
       queryParameters["sort"] = "name.desc";
       final Response<List<dynamic>?> resp;
       try {
@@ -59,15 +63,11 @@ class ConceptsService {
         }
         rethrow;
       }
-      if (resp.statusCode == 304) {
-        _logger.d("Using cached Concept");
-      }
-
       final l = resp.data ?? [];
+      raw.addAll(l);
       cont = l.length == 9999;
-      result.addAll(await parseListChunked(l, Concept.fromJson));
     }
-    return result;
+    return raw;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

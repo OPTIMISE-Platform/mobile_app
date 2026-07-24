@@ -18,7 +18,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
-import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -33,12 +33,16 @@ class AspectsService {
   static final _logger = Logger(printer: SimplePrinter());
 
   static Future<List<Aspect>> getAspects() async {
+    return loadMetadataCached('aspects', _fetchRaw, Aspect.fromJson);
+  }
+
+  static Future<List<dynamic>> _fetchRaw() async {
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
+    // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri);
+      resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(
@@ -48,12 +52,7 @@ class AspectsService {
       }
       rethrow;
     }
-    if (resp.statusCode == 304) {
-      _logger.d("Using cached aspects");
-    }
-
-    final l = resp.data ?? [];
-    return parseListChunked(l, Aspect.fromJson);
+    return resp.data ?? [];
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

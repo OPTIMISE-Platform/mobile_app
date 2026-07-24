@@ -19,6 +19,7 @@ import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../models/cached_metadata.dart';
 import '../models/device_instance.dart';
 import '../models/device_group.dart';
 import '../models/network.dart';
@@ -39,7 +40,7 @@ class IsarService {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       final isar = await Isar.open(
-        [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema, EndpointSchema], // Here we will add a schema's
+        [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema, EndpointSchema, CachedMetadataSchema], // Here we will add a schema's
         directory: dir.path,
         // Inspector spins up a debug service; keep it out of release builds.
         inspector: kDebugMode,

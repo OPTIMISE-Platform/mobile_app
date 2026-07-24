@@ -46,7 +46,11 @@ class DevicesService {
   static Dio? _dio;
 
   static initOptions() async {
-    _dio ??= await DioFactory.create(DioConfig.cached7);
+    // Uncached dio: device responses are persisted in Isar, so the Hive HTTP
+    // cache was redundant — and reading the (up to 5000) cached device response
+    // back through Hive ran a CRC32 over it on the UI isolate, blocking input
+    // right after login (the background cache refresh).
+    _dio ??= await DioFactory.create(DioConfig.standard);
   }
 
   static Future<DeviceInstanceWithTotal> getDevices(

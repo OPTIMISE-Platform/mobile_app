@@ -18,7 +18,7 @@ import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/function.dart';
-import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
@@ -36,19 +36,19 @@ class FunctionsService {
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/functions';
 
   static Future<List<PlatformFunction>> getFunctions() async {
+    return loadMetadataCached('functions', _fetchRaw, PlatformFunction.fromJson);
+  }
+
+  static Future<List<dynamic>> _fetchRaw() async {
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
+    // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
+    final dio = await DioFactory.create(DioConfig.standard);
 
-    final Map<String, String> queryParameters = {};
-    queryParameters["limit"] = "9999";
-
-    final functions = <PlatformFunction>[];
+    final Map<String, String> queryParameters = {"limit": "9999"};
+    final raw = <dynamic>[];
     var cont = true;
-
     while (cont) {
-      queryParameters["offset"] = functions.length.toString();
-
+      queryParameters["offset"] = raw.length.toString();
       final Response<List<dynamic>?> resp;
       try {
         resp = await dio.get<List<dynamic>?>(uri,
@@ -60,15 +60,11 @@ class FunctionsService {
         }
         rethrow;
       }
-      if (resp.statusCode == 304) {
-        _logger.d("Using cached functions");
-      }
-
       final l = resp.data ?? [];
+      raw.addAll(l);
       cont = l.length == 9999;
-      functions.addAll(await parseListChunked(l, PlatformFunction.fromJson));
     }
-    return functions;
+    return raw;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
