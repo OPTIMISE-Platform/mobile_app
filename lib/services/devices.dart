@@ -61,18 +61,18 @@ class DevicesService {
 
     final collection = isar?.collection<DeviceInstance>();
 
-    if (!forceBackend &&
-        isar != null &&
-        collection != null &&
-        await collection.count() >= AppState().totalDevices) {
-      final devices = await filter
-          .isarQuery(limit, offset, collection)
-          .build()
-          .findAll();
-      _logger.d(
-        "Getting devices from local DB took ${DateTime.now().difference(start)}",
-      );
-      return DeviceInstanceWithTotal(devices, await collection.count());
+    if (!forceBackend && isar != null && collection != null) {
+      final cachedCount = await collection.count();
+      if (cachedCount >= AppState().totalDevices) {
+        final devices = await filter
+            .isarQuery(limit, offset, collection)
+            .build()
+            .findAll();
+        _logger.d(
+          "Getting devices from local DB took ${DateTime.now().difference(start)}",
+        );
+        return DeviceInstanceWithTotal(devices, cachedCount);
+      }
     }
     final headers = await Auth().getHeaders();
 

@@ -180,9 +180,7 @@ class MyTheme {
   static ThemeMode? themeMode = ThemeMode.light;
 
   static loadTheme() async {
-    var val = Settings.getTheme();
-
-    val = Settings.getThemeColor();
+    final val = Settings.getThemeColor();
     if (val == dark) {
       themeMode = ThemeMode.dark;
       currentColor = dark;
