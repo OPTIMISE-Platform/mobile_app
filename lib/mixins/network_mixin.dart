@@ -39,6 +39,11 @@ mixin NetworkMixin on ChangeNotifier {
   final List<Network> networks = [];
   final _networksMutex = Mutex();
 
+  /// Memoized local_id -> Network lookup, rebuilt lazily after [networks]
+  /// change. Avoids an O(networks) scan per device in the DeviceInstance
+  /// constructor — which also runs on every Isar cache read.
+  Map<String, Network>? _networkByLocalId;
+
   final List<Location> locations = [];
   final _locationsMutex = Mutex();
 
@@ -69,6 +74,7 @@ mixin NetworkMixin on ChangeNotifier {
       _logger.e(err);
       Toast.showToastNoContext(err);
     }
+    _networkByLocalId = null; // networks changed — drop the cached lookup
     _mergeDiscoveredServicesWithNetworks();
     _assignNetworksToDevicesAndGroups();
     await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
@@ -76,14 +82,30 @@ mixin NetworkMixin on ChangeNotifier {
     _networksMutex.release();
   }
 
-  void _assignNetworksToDevicesAndGroups() {
+  /// O(1) local_id -> Network lookup backed by [_networkByLocalId].
+  Network? networkForLocalId(String localId) =>
+      (_networkByLocalId ??= _buildNetworkByLocalId())[localId];
+
+  Map<String, Network> _buildNetworkByLocalId() {
+    final map = <String, Network>{};
     for (final network in networks) {
-      final networkDevices = devices.where(
-            (d) => network.device_local_ids?.contains(d.local_id) ?? false,
-      );
-      for (final d in networkDevices) {
-        d.network = network;
+      final ids = network.device_local_ids;
+      if (ids == null) continue;
+      for (final localId in ids) {
+        // putIfAbsent preserves the first-match semantics of the previous
+        // indexWhere-based lookup.
+        map.putIfAbsent(localId, () => network);
       }
+    }
+    return map;
+  }
+
+  void _assignNetworksToDevicesAndGroups() {
+    for (final d in devices) {
+      final network = networkForLocalId(d.local_id);
+      if (network != null) d.network = network;
+    }
+    for (final network in networks) {
       for (final group in deviceGroups) {
         if (group.device_ids.every((id) =>
             (network.device_ids ?? <String>[]).contains(id.substring(0, 57)))) {
@@ -160,6 +182,7 @@ mixin NetworkMixin on ChangeNotifier {
 
   void clearNetworkData() {
     networks.clear();
+    _networkByLocalId = null;
     locations.clear();
     gateways.clear();
   }

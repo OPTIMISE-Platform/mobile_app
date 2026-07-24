@@ -68,8 +68,7 @@ class DeviceInstance {
   DeviceInstance(
       this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.shared, this.owner_id, this.display_name, this.connection_state) {
     isarId = fastHash(id);
-    final networkIndex = AppState().networks.indexWhere((n) => n.device_local_ids?.contains(local_id) ?? false);
-    if (networkIndex != -1) network = AppState().networks[networkIndex];
+    network = AppState().networkForLocalId(local_id);
   }
 
   factory DeviceInstance.fromJson(Map<String, dynamic> json) => _$DeviceInstanceFromJson(json);
