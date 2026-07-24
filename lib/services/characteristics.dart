@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -60,11 +61,14 @@ class CharacteristicsService {
     }
 
     final l = resp.data ?? [];
-    result.addAll(List<Characteristic>.generate(
-        l.length, (index) => Characteristic.fromJson(l[index])));
+    result.addAll(await compute(_parseCharacteristics, l));
 
     return result;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }
+
+List<Characteristic> _parseCharacteristics(List<dynamic> l) =>
+    List<Characteristic>.generate(
+        l.length, (index) => Characteristic.fromJson(l[index]));

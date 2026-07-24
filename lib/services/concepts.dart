@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -64,11 +65,13 @@ class ConceptsService {
 
       final l = resp.data ?? [];
       cont = l.length == 9999;
-      result.addAll(List<Concept>.generate(
-          l.length, (index) => Concept.fromJson(l[index])));
+      result.addAll(await compute(_parseConcepts, l));
     }
     return result;
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }
+
+List<Concept> _parseConcepts(List<dynamic> l) =>
+    List<Concept>.generate(l.length, (index) => Concept.fromJson(l[index]));

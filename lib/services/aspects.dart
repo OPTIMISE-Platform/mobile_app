@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -52,11 +53,11 @@ class AspectsService {
     }
 
     final l = resp.data ?? [];
-    return List<Aspect>.generate(
-      l.length,
-      (index) => Aspect.fromJson(l[index]),
-    );
+    return compute(_parseAspects, l);
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }
+
+List<Aspect> _parseAspects(List<dynamic> l) =>
+    List<Aspect>.generate(l.length, (index) => Aspect.fromJson(l[index]));
