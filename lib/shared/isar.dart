@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/foundation.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:path_provider/path_provider.dart';
@@ -40,7 +41,8 @@ class IsarService {
       final isar = await Isar.open(
         [DeviceInstanceSchema, DeviceGroupSchema, NetworkSchema, LocationSchema, ExceptionLogElementSchema, EndpointSchema], // Here we will add a schema's
         directory: dir.path,
-        inspector: true,
+        // Inspector spins up a debug service; keep it out of release builds.
+        inspector: kDebugMode,
       );
 
       return isar;

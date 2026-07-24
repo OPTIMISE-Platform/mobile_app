@@ -50,13 +50,17 @@ class AppInitializer {
   }
 
   static Future<void> runDeferred() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    await _timed('Isar', () async {
-      isar = kIsWeb ? null : await IsarService().db;
-    });
-    await _timed('Firebase', FirebaseService.init);
-    await _timed('Auth', () => Auth().init());
+    // Isar (local DB), Firebase and Auth (network OIDC discovery) are mutually
+    // independent — run them in parallel so the login gate isn't blocked behind
+    // the sum of their latencies. _initCache needs both isar and Auth, so it
+    // runs afterwards.
+    await Future.wait([
+      _timed('Isar', () async {
+        isar = kIsWeb ? null : await IsarService().db;
+      }),
+      _timed('Firebase', FirebaseService.init),
+      _timed('Auth', () => Auth().init()),
+    ]);
     unawaited(_initCache());
   }
 

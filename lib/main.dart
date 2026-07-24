@@ -17,6 +17,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app.dart';
 import 'package:mobile_app/app_initializer.dart';
@@ -26,7 +27,9 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  HttpClient.enableTimelineLogging = true;
+  // Timeline logging writes an event per HTTP request; only useful while
+  // profiling, so keep it out of release builds.
+  if (kDebugMode) HttpClient.enableTimelineLogging = true;
   runApp(
     const _Bootstrap(),
   );
