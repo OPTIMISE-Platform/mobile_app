@@ -101,10 +101,8 @@ mixin NetworkMixin on ChangeNotifier {
   }
 
   void _assignNetworksToDevicesAndGroups() {
-    for (final d in devices) {
-      final network = networkForLocalId(d.local_id);
-      if (network != null) d.network = network;
-    }
+    // DeviceInstance.network is computed on demand now, so only device groups
+    // still need an explicit assignment here.
     for (final network in networks) {
       for (final group in deviceGroups) {
         if (group.device_ids.every((id) =>

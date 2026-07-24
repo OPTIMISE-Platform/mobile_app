@@ -58,9 +58,12 @@ class DeviceInstance {
   @ignore
   final List<DeviceState> states = [];
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  // Computed on demand from AppState so the constructor stays free of any
+  // AppState access. That keeps DeviceInstance.fromJson pure and therefore
+  // safe to run in a background isolate (see DevicesService.getDevices).
+  @JsonKey(includeToJson: false)
   @ignore
-  Network? network;
+  Network? get network => AppState().networkForLocalId(local_id);
 
   @enumerated
   DeviceConnectionStatus connection_state;
@@ -68,7 +71,6 @@ class DeviceInstance {
   DeviceInstance(
       this.id, this.local_id, this.name, this.attributes, this.device_type_id, this.shared, this.owner_id, this.display_name, this.connection_state) {
     isarId = fastHash(id);
-    network = AppState().networkForLocalId(local_id);
   }
 
   factory DeviceInstance.fromJson(Map<String, dynamic> json) => _$DeviceInstanceFromJson(json);
