@@ -31,15 +31,14 @@ class MyAppBar {
   const MyAppBar(this._title);
 
   static Widget _notifications(BuildContext context) {
-    return Consumer<AppState>(
-      builder: (_, __, ___) {
-        AppState().initNotifications(context);
-        AppState().checkMessageDisplay(context);
-        final unread = AppState()
-            .notifications
-            .where((element) => !element.isRead)
-            .toList(growable: false)
-            .length;
+    return Selector<AppState, int>(
+      selector: (_, state) {
+        state.initNotifications(context);
+        state.checkMessageDisplay(context);
+        // Count without allocating an intermediate list.
+        return state.notifications.where((element) => !element.isRead).length;
+      },
+      builder: (_, unread, __) {
         return PlatformIconButton(
           icon: Badge(
             isLabelVisible: unread > 0,
