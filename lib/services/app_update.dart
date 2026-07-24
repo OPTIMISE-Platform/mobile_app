@@ -25,7 +25,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mutex/mutex.dart';
@@ -148,11 +147,9 @@ class AppUpdater {
         try {
           resp = await dio.get<List<dynamic>>(url);
         } on DioException catch (e) {
-          if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-            UnexpectedStatusCodeException(
-                e.response?.statusCode, "$url ${e.message}"); // for logging
-          }
-          return _foundUpdate = false;
+          _logger.e(
+              "Update check failed: $url ${e.message} (status ${e.response?.statusCode})");
+          return null; // couldn't determine — surface as "check again later"
         }
         decoded = (resp.data?[0] ?? {}) as Map<String, dynamic>;
       } else {
@@ -160,11 +157,9 @@ class AppUpdater {
         try {
           resp = await dio.get<dynamic>(url);
         } on DioException catch (e) {
-          if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-            UnexpectedStatusCodeException(
-                e.response?.statusCode, "$url ${e.message}"); // for logging
-          }
-          return _foundUpdate = false;
+          _logger.e(
+              "Update check failed: $url ${e.message} (status ${e.response?.statusCode})");
+          return null; // couldn't determine — surface as "check again later"
         }
         decoded = (resp.data ?? {}) as Map<dynamic, dynamic>;
       }
