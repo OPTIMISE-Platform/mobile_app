@@ -23,6 +23,7 @@ import 'package:mobile_app/models/device_type.dart';
 
 import 'package:mobile_app/exceptions/argument_exception.dart';
 import 'package:mobile_app/native_pipe.dart';
+import 'package:mobile_app/shared/entity_notifier.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/network.dart';
@@ -57,6 +58,15 @@ class DeviceInstance {
   @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   final List<DeviceState> states = [];
+
+  // Per-device change signal: bound widgets (DeviceListItem, FavorizeButton,
+  // DetailPage) listen to this so a state/connection/favorite change rebuilds
+  // only that device's widgets, not every AppState consumer.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @ignore
+  final EntityNotifier stateNotifier = EntityNotifier();
+
+  void notifyStateChanged() => stateNotifier.notifyChanged();
 
   // Computed on demand from AppState so the constructor stays free of any
   // AppState access. That keeps DeviceInstance.fromJson pure and therefore

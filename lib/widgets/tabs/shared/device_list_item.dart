@@ -20,7 +20,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
-import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
@@ -62,7 +61,9 @@ class _DeviceListItemState extends State<DeviceListItem> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
+    return ListenableBuilder(
+        listenable: widget._device.stateNotifier,
+        builder: (context, child) {
       final device = widget._device;
       final List<Widget> trailingWidgets = [];
       final filteredStates = device.states.where((element) =>
@@ -88,7 +89,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                           CupertinoIconButtonData(padding: EdgeInsets.zero),
                       material: (_, __) => MaterialIconButtonData(
                           splashRadius: 25,
-                          tooltip: state
+                          tooltip: AppState()
                               .platformFunctions[functionConfigs[
                                       dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                                   ?.getRelatedControllingFunction(
@@ -143,7 +144,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                 return;
                               }
                               element.transitioning = true;
-                              state.notifyListeners();
+                              widget._device.notifyStateChanged();
                               final List<DeviceCommandResponse> responses = [];
                               if (!await DeviceCommandsService
                                   .runCommandsSecurely(
@@ -151,7 +152,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                       [controllingStates.first.toCommand()],
                                       responses)) {
                                 element.transitioning = false;
-                                state.notifyListeners();
+                                widget._device.notifyStateChanged();
                                 return;
                               }
                               assert(responses.length == 1);
@@ -170,7 +171,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                       responses,
                                       false)) {
                                 element.transitioning = false;
-                                state.notifyListeners();
+                                widget._device.notifyStateChanged();
                                 return;
                               }
                               assert(responses.length == 1);
@@ -179,13 +180,13 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                     "Error running command: ${responses[0].message}";
                                 Toast.showToastNoContext(err);
                                 element.transitioning = false;
-                                state.notifyListeners();
+                                widget._device.notifyStateChanged();
                                 _logger.e(err);
                                 return;
                               }
                               element.value = responses[0].message[0];
                               element.transitioning = false;
-                              state.notifyListeners();
+                              widget._device.notifyStateChanged();
                             },
                     ),
         ));

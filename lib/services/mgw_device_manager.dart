@@ -71,6 +71,9 @@ class MgwDeviceManager {
     });
     final start = DateTime.now();
     await Future.wait(futures);
+    for (final d in devices) {
+      d.notifyStateChanged();
+    }
     _logger.d(
         "updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
   }

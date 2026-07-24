@@ -20,7 +20,6 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
@@ -55,12 +54,21 @@ class FavorizeButton extends StatelessWidget {
         await isar!.deviceGroups.put(_group!);
       });
     }
+    if (_device != null) {
+      _device!.notifyStateChanged();
+    } else {
+      _group!.notifyStateChanged();
+    }
+    // Favorite membership is structural for the favorites screen, so also
+    // signal AppState. Favorite toggles are rare (a user tap), not a hot path.
     AppState().notifyListeners();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, widget) {
+    return ListenableBuilder(
+        listenable: _device?.stateNotifier ?? _group!.stateNotifier,
+        builder: (context, child) {
       final disabled = _device != null
           ? !DevicesService.isSaveAvailable()
           : !DeviceGroupsService.isCreateEditDeleteAvailable();

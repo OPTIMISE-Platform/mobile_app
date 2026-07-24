@@ -32,7 +32,6 @@ import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
-import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/aspect.dart';
@@ -79,8 +78,15 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
         element.transitioning = true;
       }
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) => AppState().notifyListeners());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _notifyEntity());
     AppState().loadStates(widget._device == null ? [] : [widget._device!], widget._group == null ? [] : [widget._group!]);
+  }
+
+  /// Signals only this page's device/group so its widgets rebuild without
+  /// waking every other AppState consumer.
+  void _notifyEntity() {
+    widget._device?.notifyStateChanged();
+    widget._group?.notifyStateChanged();
   }
 
   _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) async {
@@ -201,14 +207,14 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     for (var i in transitioningStates) {
       states[i].transitioning = true;
     }
-    AppState().notifyListeners();
+    _notifyEntity();
     final List<DeviceCommandResponse> responses = [];
     if (!await DeviceCommandsService.runCommandsSecurely(context, [element.toCommand(input)], responses)) {
       element.transitioning = false;
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      AppState().notifyListeners();
+      _notifyEntity();
       return;
     }
     assert(responses.length == 1);
@@ -217,30 +223,30 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      AppState().notifyListeners();
+      _notifyEntity();
       const err = "Error running command";
       Toast.showToastNoContext(err);
       _logger.e("$err: ${responses[0].message}");
       return;
     }
     element.transitioning = false;
-    AppState().notifyListeners();
+    _notifyEntity();
 
     // refresh changed measurements
-    AppState().notifyListeners();
+    _notifyEntity();
     responses.clear();
     if (!await DeviceCommandsService.runCommandsSecurely(context, commandCallbacks.map((e) => e.command).toList(growable: false), responses, false)) {
       for (var i in transitioningStates) {
         states[i].transitioning = false;
       }
-      AppState().notifyListeners();
+      _notifyEntity();
       return;
     }
     assert(responses.length == commandCallbacks.length);
     for (var i = 0; i < responses.length; i++) {
       commandCallbacks[i].callback(responses[i]);
     }
-    AppState().notifyListeners();
+    _notifyEntity();
   }
 
   _displayTimestamp(DeviceState element, List<DeviceState> states, BuildContext context) {
@@ -300,7 +306,15 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
+    // Rebuild on this entity's own changes (frequent) OR structural AppState
+    // changes like the device list finishing loading (rare) — but not on other
+    // devices' per-entity updates.
+    final entityNotifier =
+        widget._device?.stateNotifier ?? widget._group!.stateNotifier;
+    return ListenableBuilder(
+        listenable: Listenable.merge([AppState(), entityNotifier]),
+        builder: (context, child) {
+      final state = AppState();
       if ((state.loadingDevices || (widget._group != null && (state.devices.length != widget._group!.device_ids.length))) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
@@ -349,7 +363,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             device.setNickname(newName);
             try {
               await DevicesService.saveDevice(device);
-              state.notifyListeners();
+              _notifyEntity();
             } catch (e) {
               Toast.showToastNoContext("Could not update device name");
               device.setNickname(oldName);
@@ -382,7 +396,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
             deviceGroup.name = newName;
             try {
               await DeviceGroupsService.saveDeviceGroup(deviceGroup);
-              state.notifyListeners();
+              _notifyEntity();
             } catch (e) {
               Toast.showToastNoContext("Could not update device name");
               deviceGroup.name = oldName;

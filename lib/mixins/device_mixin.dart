@@ -275,7 +275,7 @@ mixin DeviceMixin on ChangeNotifier {
     }
 
     if (commandCallbacks.isEmpty) {
-      notifyListeners();
+      _notifyEntities(devices, groups);
       return;
     }
 
@@ -305,7 +305,18 @@ mixin DeviceMixin on ChangeNotifier {
         commandCallbacks[i].callback(null);
       }
     }
-    notifyListeners();
+    _notifyEntities(devices, groups);
+  }
+
+  /// Signals only the affected devices/groups (not the whole AppState) so their
+  /// list items / detail pages rebuild without waking every other consumer.
+  void _notifyEntities(List<DeviceInstance> devices, List<DeviceGroup> groups) {
+    for (final d in devices) {
+      d.notifyStateChanged();
+    }
+    for (final g in groups) {
+      g.notifyStateChanged();
+    }
   }
 
   // ---------------------------------------------------------------------------

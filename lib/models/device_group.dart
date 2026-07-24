@@ -30,6 +30,7 @@ import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
+import 'package:mobile_app/shared/entity_notifier.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/shared/semaphore.dart';
 import 'package:mobile_app/models/attribute.dart';
@@ -58,6 +59,13 @@ class DeviceGroup {
   @JsonKey(ignore: true)
   @ignore
   final List<DeviceState> states = [];
+
+  // Per-group change signal — see DeviceInstance.stateNotifier.
+  @JsonKey(ignore: true)
+  @ignore
+  final EntityNotifier stateNotifier = EntityNotifier();
+
+  void notifyStateChanged() => stateNotifier.notifyChanged();
 
   @JsonKey(ignore: true)
   @ignore

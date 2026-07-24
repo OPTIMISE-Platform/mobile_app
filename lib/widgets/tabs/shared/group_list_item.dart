@@ -21,7 +21,6 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
-import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
@@ -34,7 +33,9 @@ class GroupListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
+    return ListenableBuilder(
+        listenable: _group.stateNotifier,
+        builder: (context, child) {
       return ListTile(
           title: SizedBox(
               width: MediaQuery.of(context).size.width - 192,
@@ -53,7 +54,7 @@ class GroupListItem extends StatelessWidget {
            */
           leading: FavorizeButton(null, _group),
           onTap: () {
-            state.searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]), context);
+            AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]), context);
             final future = Navigator.push(
                 context,
                 platformPageRoute(
