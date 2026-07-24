@@ -128,9 +128,10 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                     itemCount: items.length,
                     itemBuilder: (context, idx) {
                       final item = items[idx];
-                      return Stack(children: [Card(
-                        child: item.build(context, false),
-                      )]);
+                      return RepaintBoundary(
+                          child: Stack(children: [
+                        Card(child: item.build(context, false)),
+                      ]));
                     })))));
 
     // Add button for new dashboard
@@ -343,8 +344,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                       Settings.setSmartServiceDashboards(_dashboards);
                       if (mounted) setState(() {});
                     },
-                    child: Card(
-                        child: Stack(children: [
+                    child: RepaintBoundary(
+                        child: Card(
+                            child: Stack(children: [
                       item.build(context, false),
                       Positioned(
                           right: 8,
@@ -355,7 +357,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
                                 ? const Icon(Icons.reorder, color: Colors.grey)
                                 : const SizedBox.shrink(),
                           ))
-                    ])));
+                    ]))));
               },
               onReorder: (int oldIndex, int newIndex) async {
                 final tmp = items[oldIndex];
@@ -399,8 +401,11 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     }
     final List<Future> futures = [];
     items.forEach((e) => futures.add(__refreshWidget(e)));
-    if (mounted) setState(() {});
+    if (mounted) setState(() {}); // show spinners while refreshing
     await Future.wait(futures);
+    // Coalesce into a single rebuild instead of one full-dashboard rebuild per
+    // widget completing (which re-rendered every chart N times).
+    if (mounted) setState(() {});
   }
 
   Future<void> __refreshWidget(SmartServiceModuleWidget? w) async {
@@ -408,7 +413,6 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       return;
     }
     await w.refresh();
-    if (mounted) setState(() {});
   }
 
   List<SmartServiceModuleWidget?> _getTabWidgets(int idx) {
