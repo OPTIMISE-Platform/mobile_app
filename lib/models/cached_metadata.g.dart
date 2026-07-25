@@ -17,7 +17,7 @@ const CachedMetadataSchema = CollectionSchema(
   name: r'CachedMetadata',
   id: 8577931195188195036,
   properties: {
-    r'json': PropertySchema(id: 0, name: r'json', type: IsarType.string),
+    r'bytes': PropertySchema(id: 0, name: r'bytes', type: IsarType.byteList),
     r'key': PropertySchema(id: 1, name: r'key', type: IsarType.string),
     r'updatedAt': PropertySchema(
       id: 2,
@@ -61,7 +61,7 @@ int _cachedMetadataEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
-  bytesCount += 3 + object.json.length * 3;
+  bytesCount += 3 + object.bytes.length;
   bytesCount += 3 + object.key.length * 3;
   return bytesCount;
 }
@@ -72,7 +72,7 @@ void _cachedMetadataSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.json);
+  writer.writeByteList(offsets[0], object.bytes);
   writer.writeString(offsets[1], object.key);
   writer.writeDateTime(offsets[2], object.updatedAt);
 }
@@ -84,8 +84,8 @@ CachedMetadata _cachedMetadataDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = CachedMetadata();
+  object.bytes = reader.readByteList(offsets[0]) ?? [];
   object.id = id;
-  object.json = reader.readString(offsets[0]);
   object.key = reader.readString(offsets[1]);
   object.updatedAt = reader.readDateTime(offsets[2]);
   return object;
@@ -99,7 +99,7 @@ P _cachedMetadataDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readString(offset)) as P;
+      return (reader.readByteList(offset) ?? []) as P;
     case 1:
       return (reader.readString(offset)) as P;
     case 2:
@@ -322,6 +322,114 @@ extension CachedMetadataQueryWhere
 
 extension CachedMetadataQueryFilter
     on QueryBuilder<CachedMetadata, CachedMetadata, QFilterCondition> {
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesElementEqualTo(int value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'bytes', value: value),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesElementGreaterThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'bytes',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesElementLessThan(int value, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'bytes',
+          value: value,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesElementBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'bytes',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'bytes', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'bytes', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'bytes', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'bytes', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'bytes', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  bytesLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'bytes',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition> idEqualTo(
     Id value,
   ) {
@@ -373,147 +481,6 @@ extension CachedMetadataQueryFilter
           upper: upper,
           includeUpper: includeUpper,
         ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonEqualTo(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonGreaterThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(
-          include: include,
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonLessThan(
-    String value, {
-    bool include = false,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.lessThan(
-          include: include,
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonBetween(
-    String lower,
-    String upper, {
-    bool includeLower = true,
-    bool includeUpper = true,
-    bool caseSensitive = true,
-  }) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.between(
-          property: r'json',
-          lower: lower,
-          includeLower: includeLower,
-          upper: upper,
-          includeUpper: includeUpper,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonStartsWith(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.startsWith(
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonEndsWith(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.endsWith(
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonContains(String value, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.contains(
-          property: r'json',
-          value: value,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonMatches(String pattern, {bool caseSensitive = true}) {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.matches(
-          property: r'json',
-          wildcard: pattern,
-          caseSensitive: caseSensitive,
-        ),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonIsEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.equalTo(property: r'json', value: ''),
-      );
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
-  jsonIsNotEmpty() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addFilterCondition(
-        FilterCondition.greaterThan(property: r'json', value: ''),
       );
     });
   }
@@ -719,18 +686,6 @@ extension CachedMetadataQueryLinks
 
 extension CachedMetadataQuerySortBy
     on QueryBuilder<CachedMetadata, CachedMetadata, QSortBy> {
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'json', Sort.asc);
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'json', Sort.desc);
-    });
-  }
-
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'key', Sort.asc);
@@ -771,18 +726,6 @@ extension CachedMetadataQuerySortThenBy
     });
   }
 
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByJson() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'json', Sort.asc);
-    });
-  }
-
-  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByJsonDesc() {
-    return QueryBuilder.apply(this, (query) {
-      return query.addSortBy(r'json', Sort.desc);
-    });
-  }
-
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'key', Sort.asc);
@@ -811,11 +754,9 @@ extension CachedMetadataQuerySortThenBy
 
 extension CachedMetadataQueryWhereDistinct
     on QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> {
-  QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> distinctByJson({
-    bool caseSensitive = true,
-  }) {
+  QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> distinctByBytes() {
     return QueryBuilder.apply(this, (query) {
-      return query.addDistinctBy(r'json', caseSensitive: caseSensitive);
+      return query.addDistinctBy(r'bytes');
     });
   }
 
@@ -843,9 +784,9 @@ extension CachedMetadataQueryProperty
     });
   }
 
-  QueryBuilder<CachedMetadata, String, QQueryOperations> jsonProperty() {
+  QueryBuilder<CachedMetadata, List<int>, QQueryOperations> bytesProperty() {
     return QueryBuilder.apply(this, (query) {
-      return query.addPropertyName(r'json');
+      return query.addPropertyName(r'bytes');
     });
   }
 

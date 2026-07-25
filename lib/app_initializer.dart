@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import "package:intl/intl_standalone.dart"
@@ -40,8 +41,6 @@ class AppInitializer {
   static Future<void> run() async {
     final appStart = DateTime.now();
 
-    await _clearCorruptedSecureStorage();
-
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
     await _timed('Settings', () async => await Settings.init());
     await _timed('MyTheme', () async => await MyTheme.loadTheme());
@@ -50,6 +49,12 @@ class AppInitializer {
   }
 
   static Future<void> runDeferred() async {
+    // The secure-storage corruption check triggers the one-time (~700ms) Android
+    // EncryptedSharedPreferences crypto init, so it lives here (deferred, behind
+    // the first frame) rather than in run(). Start it now but only Auth waits on
+    // it — Isar/Firebase don't touch secure storage, so they overlap it freely.
+    final secureStorageReady = _clearCorruptedSecureStorage();
+
     // Isar (local DB), Firebase and Auth (network OIDC discovery) are mutually
     // independent — run them in parallel so the login gate isn't blocked behind
     // the sum of their latencies. _initCache needs both isar and Auth, so it
@@ -59,7 +64,10 @@ class AppInitializer {
         isar = kIsWeb ? null : await IsarService().db;
       }),
       _timed('Firebase', FirebaseService.init),
-      _timed('Auth', () => Auth().init()),
+      _timed('Auth', () async {
+        await secureStorageReady; // corruption check must precede Auth's reads
+        await Auth().init();
+      }),
     ]);
     unawaited(_initCache());
   }
@@ -86,6 +94,20 @@ class AppInitializer {
 
   static Future<void> _clearCorruptedSecureStorage() async {
     if (!Platform.isAndroid) return;
+    // Canary read: only reset the encrypted store when it is actually corrupted
+    // (a known Android EncryptedSharedPreferences bug), instead of wiping it on
+    // every launch. The unconditional wipe regenerated the encryption key and
+    // logged the user out each start — ~900ms of Keystore work. A healthy read
+    // here keeps the key + saved login and warms the crypto for Auth's reads.
+    const canary = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    );
+    try {
+      await canary.read(key: Auth.encKeyName);
+      return; // readable → not corrupted → keep it
+    } catch (e) {
+      debugPrint('SecureStorage corrupted, resetting: $e');
+    }
     try {
       final dir = await getApplicationSupportDirectory();
       final file = File('${dir.parent.path}/shared_prefs/FlutterSecureStorage.xml');

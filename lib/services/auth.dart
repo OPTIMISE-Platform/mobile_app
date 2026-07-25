@@ -49,16 +49,16 @@ class Auth extends ChangeNotifier {
       encryptedSharedPreferences: true,
       resetOnError: true,),
   );
-  static const _encKeyName = 'openid_encryption_key';
+  static const encKeyName = 'openid_encryption_key';
 
   Future<String> _getOrCreateEncryptionKey() async {
-    final existing = await _storage.read(key: _encKeyName);
+    final existing = await _storage.read(key: encKeyName);
     if (existing != null) return existing;
 
     const chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
     final rnd = Random.secure();
     final newKey = List.generate(32, (_) => chars[rnd.nextInt(chars.length)]).join();
-    await _storage.write(key: _encKeyName, value: newKey);
+    await _storage.write(key: encKeyName, value: newKey);
     return newKey;
   }
 
@@ -217,7 +217,7 @@ class Auth extends ChangeNotifier {
     } else {
       await OpenIdIdentity.clear(); // remove saved token
     }
-    await _storage.delete(key: _encKeyName);
+    await _storage.delete(key: encKeyName);
   }
 
   Future<Map<String, String>> getHeaders() async {

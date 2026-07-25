@@ -18,13 +18,21 @@ import 'package:isar_community/isar.dart';
 
 part 'cached_metadata.g.dart';
 
-/// A raw JSON blob of a large, stable reference-metadata response (device
-/// types, functions, aspects, concepts, characteristics), persisted in Isar.
+/// A UTF-8 encoded JSON body of a large, stable reference-metadata response
+/// (device types, functions, aspects, concepts, characteristics), persisted in
+/// Isar.
 ///
 /// Isar reads values via a memory-mapped store without the per-value CRC32 that
 /// Hive (the dio HTTP cache backend) computes — that CRC was dominating the UI
-/// isolate for seconds on startup. Reading the blob here is cheap; the only
-/// remaining cost is a normal jsonDecode plus the (chunked) object build.
+/// isolate for seconds on startup.
+///
+/// The body is stored as raw bytes, not a `String`: a login-moment CPU profile
+/// showed that reading it back as a `String` made Isar UTF-8-decode the whole
+/// multi-MB blob into a Dart String (~844ms for device-types) on the UI isolate
+/// *before* jsonDecode even ran (another ~811ms) — two full passes over the
+/// same data. Storing bytes makes the Isar read a plain memcpy, and decoding
+/// straight from these bytes with the fused UTF-8+JSON decoder builds the
+/// objects in a single pass without ever materialising the intermediate String.
 @collection
 class CachedMetadata {
   Id id = Isar.autoIncrement;
@@ -32,7 +40,7 @@ class CachedMetadata {
   @Index(unique: true, replace: true)
   late String key;
 
-  late String json;
+  late List<byte> bytes;
 
   late DateTime updatedAt;
 }
