@@ -49,10 +49,12 @@ mixin DeviceMixin on ChangeNotifier {
   final List<DeviceInstance> devices = [];
   final _devicesMutex = Mutex();
   bool _allDevicesLoaded = false;
+  bool _devicesLoadedOnce = false;
   int _deviceOffset = 0;
 
   final List<DeviceGroup> deviceGroups = [];
   final _deviceGroupsMutex = Mutex();
+  bool _deviceGroupsLoadedOnce = false;
 
   DeviceSearchFilter _deviceSearchFilter = DeviceSearchFilter.empty();
 
@@ -61,6 +63,12 @@ mixin DeviceMixin on ChangeNotifier {
 
   bool get loadingDevices => _totalDevicesMutex.isLocked || _devicesMutex.isLocked;
   bool get allDevicesLoaded => _allDevicesLoaded;
+
+  /// True once devices *and* device groups have each completed an initial load.
+  /// Before that, "no favorites yet" is indistinguishable from "not loaded
+  /// yet" — the favorites screen uses this to show a spinner instead of briefly
+  /// flashing the empty "Add Favorites" state during startup.
+  bool get favoritesDataLoaded => _devicesLoadedOnce && _deviceGroupsLoadedOnce;
   bool get loadingDeviceClasses => _deviceClassesMutex.isLocked;
   bool loadingDeviceGroups() => _deviceGroupsMutex.isLocked;
 
@@ -177,6 +185,7 @@ mixin DeviceMixin on ChangeNotifier {
       return;
     }
 
+    _devicesLoadedOnce = true;
     _allDevicesLoaded = newDevices.length < limit;
     _deviceOffset += newDevices.length;
 
@@ -340,6 +349,7 @@ mixin DeviceMixin on ChangeNotifier {
     } finally {
       _deviceGroupsMutex.release();
     }
+    _deviceGroupsLoadedOnce = true;
     notifyListeners();
   }
 
@@ -354,7 +364,9 @@ mixin DeviceMixin on ChangeNotifier {
     totalDevices = 0;
     devices.clear();
     _allDevicesLoaded = false;
+    _devicesLoadedOnce = false;
     _deviceOffset = 0;
     deviceGroups.clear();
+    _deviceGroupsLoadedOnce = false;
   }
 }

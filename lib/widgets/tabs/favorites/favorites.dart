@@ -94,7 +94,10 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
 
         Widget content;
 
-        if (state.loadingDevices) {
+        if (state.loadingDevices || !state.favoritesDataLoaded) {
+          // Until the first devices *and* groups load completes, an empty
+          // favorites list just means "not loaded yet" — show the spinner
+          // instead of flashing the "Add Favorites" empty state.
           content = const Center(
             child: DelayedCircularProgressIndicator(),
           );
