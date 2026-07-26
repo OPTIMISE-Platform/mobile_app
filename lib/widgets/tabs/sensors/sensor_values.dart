@@ -570,7 +570,14 @@ class _SensorValuesState extends State<SensorValues>
     return Column(
       children: [
         _buildTabStrip(),
-        const Divider(height: 1),
+        // Reloads keep the current values on screen (on resume, for instance),
+        // so without this the page would refresh with no sign of it. Same
+        // height as the divider it replaces, to avoid shifting the grid.
+        // When nothing is loaded yet the body shows a full spinner instead.
+        if (_loading && (_devices.isNotEmpty || _groups.isNotEmpty))
+          const _RefreshingBar()
+        else
+          const Divider(height: 2),
         Expanded(
           child: RefreshIndicator(
             onRefresh: () async {
@@ -986,3 +993,42 @@ class _SensorValuesState extends State<SensorValues>
 
 /// Placeholder listenable for cards whose device hasn't loaded yet.
 final ChangeNotifier _neverNotifies = ChangeNotifier();
+
+/// A slim progress bar signalling a refresh that keeps the current values on
+/// screen.
+///
+/// Appears only once loading has lasted long enough to be worth showing, so a
+/// reload served from the cache doesn't flash it. Occupies its height either
+/// way, so nothing below it moves.
+class _RefreshingBar extends StatefulWidget {
+  const _RefreshingBar();
+
+  @override
+  State<_RefreshingBar> createState() => _RefreshingBarState();
+}
+
+class _RefreshingBarState extends State<_RefreshingBar> {
+  static const _height = 2.0;
+
+  bool _show = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _show = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _show
+      ? const LinearProgressIndicator(minHeight: _height)
+      : const SizedBox(height: _height);
+}
