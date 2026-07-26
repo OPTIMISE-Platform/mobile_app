@@ -236,6 +236,19 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       ..write(state.deviceGroups.length)
       ..write(',')
       ..write(state.networks.length);
+    // Shell-local state has to be part of the signature too: Selector returns
+    // its cached subtree whenever the signature is unchanged, so a setState()
+    // on this State alone would not reach the shell. Leaving showFab out is why
+    // switching to a tab with a FAB showed none until some unrelated AppState
+    // change happened to alter the signature.
+    sb
+      ..write('|')
+      ..write(_navigationIndex)
+      ..write(showFab ? '1' : '0')
+      ..write(_hideSearch ? '1' : '0')
+      ..write(onBackCallback == null ? '0' : '1')
+      ..write(',')
+      ..write(customAppBarTitle ?? '');
     return sb.toString();
   }
 
