@@ -661,10 +661,15 @@ class _SensorValuesState extends State<SensorValues>
 
   Widget _buildTabBody() {
     if (_pins.isEmpty) return _buildEmptyTabState();
-    if (_error != null && _devices.isEmpty) {
+    // A tab holding only group values never fills _devices, so both checks have
+    // to look at either kind — otherwise such a tab would keep showing the
+    // full-page spinner while the refresh bar was already up, and would swallow
+    // load errors.
+    final loadedAnything = _devices.isNotEmpty || _groups.isNotEmpty;
+    if (_error != null && !loadedAnything) {
       return _buildFullHeightMessage(Text(_error!));
     }
-    if (_loading && _devices.isEmpty) {
+    if (_loading && !loadedAnything) {
       return _buildFullHeightMessage(const DelayedCircularProgressIndicator());
     }
     return GridView.builder(
