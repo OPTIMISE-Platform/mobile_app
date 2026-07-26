@@ -20,6 +20,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile_app/exceptions/settings_exception.dart';
+import 'package:mobile_app/models/sensor_pin.dart';
+import 'package:mobile_app/models/sensor_tab.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -42,6 +44,11 @@ class Settings {
   static int _currentDisplayedFractionDigits = 0;
 
   static const _smartServiceDashboardsKey = "smart_service_dashboards";
+
+  // Superseded by _sensorTabsKey; still read once to migrate existing values.
+  static const _pinnedSensorsKey = "pinned_sensors";
+
+  static const _sensorTabsKey = "sensor_tabs";
 
   static const _hapticFeedBackEnabledKey = "haptic_feedback_enabled";
 
@@ -206,6 +213,45 @@ class Settings {
   static setSmartServiceDashboards(List<SmartServiceDashboard> dashboards) async {
     checkInit();
     await _box?.put(_smartServiceDashboardsKey, json.encode(dashboards)).then((value) => _box?.flush());
+  }
+
+  /// The user-defined tabs of the sensors page, each with its own pinned values,
+  /// in display order.
+  ///
+  /// Migrates the earlier flat `pinned_sensors` list into a single default tab.
+  static List<SensorTab> getSensorTabs() {
+    checkInit();
+    final str = _box!.get(_sensorTabsKey);
+    if (str == null) return _migratePinnedSensors();
+    try {
+      final List<dynamic> l = json.decode(str);
+      return List<SensorTab>.generate(
+          l.length, (i) => SensorTab.fromJson(l[i] as Map<String, dynamic>));
+    } catch (_) {
+      return []; // ignore an unreadable/outdated entry rather than breaking the page
+    }
+  }
+
+  static Future<void> setSensorTabs(List<SensorTab> tabs) async {
+    checkInit();
+    await _box?.put(_sensorTabsKey, json.encode(tabs)).then((value) => _box?.flush());
+  }
+
+  /// Reads the pre-tabs `pinned_sensors` list, if any, as one "Sensors" tab.
+  static List<SensorTab> _migratePinnedSensors() {
+    final str = _box!.get(_pinnedSensorsKey);
+    if (str == null) return [];
+    try {
+      final List<dynamic> l = json.decode(str);
+      if (l.isEmpty) return [];
+      final pins = List<SensorPin>.generate(
+          l.length, (i) => SensorPin.fromJson(l[i] as Map<String, dynamic>));
+      return [
+        SensorTab(id: 'migrated', name: 'Sensors', pins: pins),
+      ];
+    } catch (_) {
+      return [];
+    }
   }
 
   static bool getHapticFeedBackEnabled() {

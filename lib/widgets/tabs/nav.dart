@@ -24,10 +24,12 @@ const tabGroups = 4;
 const tabNetworks = 5;
 const tabClasses = 6;
 const tabSmartServices = 7;
+const tabSensors = 8;
 
 List<NavigationItem> navItems = [
   NavigationItem("Favorites",tabFavorites, Icons.star_border),
   NavigationItem("Dashboard",tabDashboard, Icons.dashboard),
+  NavigationItem("Sensors",tabSensors, Icons.sensors),
   NavigationItem("Devices",tabDevices, Icons.devices),
   NavigationItem("Locations",tabLocations, Icons.location_on),
   NavigationItem("Groups",tabGroups, Icons.devices_other),

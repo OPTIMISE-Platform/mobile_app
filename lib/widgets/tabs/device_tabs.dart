@@ -29,6 +29,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:mobile_app/widgets/tabs/gateways/gateways.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
+import 'package:mobile_app/widgets/tabs/sensors/sensor_values.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
 
@@ -78,7 +79,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   final _sidebarController =
   SidebarXController(selectedIndex: 0, extended: true);
 
-  final _tabKeys = List.generate(8, (_) => GlobalKey());
+  // Indexed by tab index, so it has to cover every registered nav item.
+  final _tabKeys = List.generate(navItems.length, (_) => GlobalKey());
 
   // Cached drawer: rebuilding SidebarX on every AppState notify is what makes
   // opening the drawer janky. The drawer only depends on the per-tab disabled
@@ -421,6 +423,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         return const SmartServicesInstances();
       case tabDashboard:
         return const Dashboard();
+      case tabSensors:
+        return const SensorValues();
       default:
         return Center(
           child: Row(

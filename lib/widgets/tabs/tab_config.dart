@@ -121,4 +121,11 @@ final Map<int, TabConfig> tabConfigs = {
     hideSearch: true,
     showFabResolver: () => true,
   ),
+  // FAB adds a sensor value; the page has its own device picker, so the
+  // cross-tab device search doesn't apply.
+  tabSensors: TabConfig(
+    index: tabSensors,
+    hideSearch: true,
+    showFabResolver: () => true,
+  ),
 };
