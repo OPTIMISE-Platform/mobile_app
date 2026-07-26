@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -67,6 +68,9 @@ class _SensorValuesState extends State<SensorValues>
   /// Devices of the selected tab by id, carrying the prepared states whose
   /// values we show.
   final Map<String, DeviceInstance> _devices = {};
+
+  /// Device groups of the selected tab by id, for pins that target a group.
+  final Map<String, DeviceGroup> _groups = {};
   bool _loading = false;
   String? _error;
 
@@ -123,6 +127,7 @@ class _SensorValuesState extends State<SensorValues>
     if (pins.isEmpty) {
       setState(() {
         _devices.clear();
+        _groups.clear();
         _error = null;
         _loading = false;
       });
@@ -134,27 +139,54 @@ class _SensorValuesState extends State<SensorValues>
     });
     try {
       await AppState().ensureInitialized();
-      final ids = pins.map((p) => p.deviceId).toSet().toList();
-      final filter = DeviceSearchFilter('')..deviceIds = ids;
-      final result = await DevicesService.getDevices(
-        ids.length,
-        0,
-        filter,
-        null,
-      );
-      final devices = result.devices;
-      for (final device in devices) {
-        final deviceType = AppState().deviceTypes[device.device_type_id];
-        if (deviceType != null) device.prepareStates(deviceType);
+
+      // Groups are already held by AppState (the tab shell loads them), while
+      // pinned devices have to be fetched by id.
+      final groupIds = pins.map((p) => p.groupId).whereType<String>().toSet();
+      if (groupIds.isNotEmpty && AppState().deviceGroups.isEmpty) {
+        // The tab shell normally loads them, but this page can be the start
+        // page and run before that finishes.
+        await AppState().loadDeviceGroups(context);
       }
+      final groups = AppState().deviceGroups
+          .where((g) => groupIds.contains(g.id))
+          .toList();
+      for (final group in groups) {
+        group.prepareStates();
+      }
+
+      final deviceIds = pins
+          .map((p) => p.deviceId)
+          .whereType<String>()
+          .toSet()
+          .toList();
+      var devices = <DeviceInstance>[];
+      if (deviceIds.isNotEmpty) {
+        final filter = DeviceSearchFilter('')..deviceIds = deviceIds;
+        final result = await DevicesService.getDevices(
+          deviceIds.length,
+          0,
+          filter,
+          null,
+        );
+        devices = result.devices;
+        for (final device in devices) {
+          final deviceType = AppState().deviceTypes[device.device_type_id];
+          if (deviceType != null) device.prepareStates(deviceType);
+        }
+      }
+
       // Only request the functions actually pinned, not every state.
       final functionIds = pins.map((p) => p.functionId).toSet().toList();
-      await AppState().loadStates(devices, [], functionIds);
+      await AppState().loadStates(devices, groups, functionIds);
       if (!mounted) return;
       setState(() {
         _devices
           ..clear()
           ..addEntries(devices.map((d) => MapEntry(d.id, d)));
+        _groups
+          ..clear()
+          ..addEntries(groups.map((g) => MapEntry(g.id, g)));
         _loading = false;
       });
       unawaited(_loadSparklines(pins));
@@ -184,15 +216,32 @@ class _SensorValuesState extends State<SensorValues>
   }
 
   /// The live state a pin refers to, or null while it hasn't loaded (or the
-  /// device/value no longer exists).
+  /// device/group/value no longer exists).
   DeviceState? _stateFor(SensorPin pin) {
-    final device = _devices[pin.deviceId];
-    if (device == null) return null;
-    for (final state in device.states) {
+    final states = pin.isGroup
+        ? _groups[pin.groupId]?.states
+        : _devices[pin.deviceId]?.states;
+    if (states == null) return null;
+    for (final state in states) {
       if (pin.matches(state)) return state;
     }
     return null;
   }
+
+  /// The name shown above a card's value.
+  String _ownerName(SensorPin pin) {
+    if (pin.isGroup) {
+      return _groups[pin.groupId]?.name ?? 'Unknown group';
+    }
+    return _devices[pin.deviceId]?.displayName ?? 'Unknown device';
+  }
+
+  /// What a card listens to for value changes.
+  Listenable _notifierFor(SensorPin pin) =>
+      (pin.isGroup
+          ? _groups[pin.groupId]?.stateNotifier
+          : _devices[pin.deviceId]?.stateNotifier) ??
+      _neverNotifies;
 
   // ---------------------------------------------------------------------------
   // Persistence helpers
@@ -381,7 +430,7 @@ class _SensorValuesState extends State<SensorValues>
         return p.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
       },
       icon: (p) => sensorIcon(p.iconName),
-      subtitle: (p) => _devices[p.deviceId]?.displayName ?? '',
+      subtitle: _ownerName,
     );
     if (reordered == null || !mounted) return;
     await _updateCurrentPins(reordered);
@@ -699,13 +748,14 @@ class _SensorValuesState extends State<SensorValues>
   }
 
   Widget _buildCard(SensorPin pin) {
-    final device = _devices[pin.deviceId];
+    final device = pin.isGroup ? null : _devices[pin.deviceId];
+    final group = pin.isGroup ? _groups[pin.groupId] : null;
     final state = _stateFor(pin);
 
-    // Rebuild just this card when its device's values change, so values that
-    // arrive progressively show up without rebuilding the whole grid.
+    // Rebuild just this card when its device's or group's values change, so
+    // values that arrive progressively show up without rebuilding the grid.
     return ListenableBuilder(
-      listenable: device?.stateNotifier ?? _neverNotifies,
+      listenable: _notifierFor(pin),
       builder: (context, _) {
         final title =
             pin.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
@@ -713,6 +763,8 @@ class _SensorValuesState extends State<SensorValues>
 
         return Card(
           child: InkWell(
+            // The chart queries by device and service, which a group value has
+            // neither of — the detail page disables it for groups too.
             onTap: state != null && state.value is num && device != null
                 ? () => Navigator.push(
                     context,
@@ -733,14 +785,32 @@ class _SensorValuesState extends State<SensorValues>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        device?.displayName ?? 'Unknown device',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
+                      Row(
+                        children: [
+                          if (pin.isGroup) ...[
+                            Icon(
+                              Icons.devices_other,
+                              size: 12,
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodySmall?.color,
+                            ),
+                            const SizedBox(width: 3),
+                          ],
+                          Expanded(
+                            child: Text(
+                              _ownerName(pin),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.color,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Row(
@@ -764,7 +834,7 @@ class _SensorValuesState extends State<SensorValues>
                       const Spacer(),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: _buildValue(state, device),
+                        child: _buildValue(state, device, group),
                       ),
                     ],
                   ),
@@ -814,11 +884,22 @@ class _SensorValuesState extends State<SensorValues>
 
   static const _placeholder = Text('—', style: TextStyle(fontSize: 24));
 
-  Widget _buildValue(DeviceState? state, DeviceInstance? device) {
+  Widget _buildValue(
+    DeviceState? state,
+    DeviceInstance? device,
+    DeviceGroup? group,
+  ) {
     if (state == null) return _placeholder;
     if (state.transitioning) return const DelayedCircularProgressIndicator();
 
-    if (device != null && _hasControls(state, device.states)) {
+    // A group has no connection state of its own, so it never shows the
+    // unavailability icons — its members' reachability isn't known here.
+    final states = device?.states ?? group?.states;
+    if (states == null || !_hasControls(state, states)) {
+      return _buildValueDisplay(state) ?? _placeholder;
+    }
+
+    if (device != null) {
       // Unreachable device: show why it can't be controlled, using the same
       // icons the device list uses. Checked before the value, which is null for
       // an offline device and would otherwise fall through to the placeholder.
@@ -827,28 +908,26 @@ class _SensorValuesState extends State<SensorValues>
           connectionStatus == DeviceConnectionStatus.offline ||
           device.network?.localService == null && Settings.getLocalMode();
       if (unavailable) return _buildUnavailableValue(state, connectionStatus);
-
-      final display = _buildValueDisplay(state);
-      if (display == null) return _placeholder;
-      if (!_isControllable(state, device.states)) return display;
-
-      return PlatformIconButton(
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-        material: (_, __) => MaterialIconButtonData(splashRadius: 25),
-        icon: display,
-        onPressed: () => performDeviceStateAction(
-          context: context,
-          connectionStatus: connectionStatus,
-          element: state,
-          states: device.states,
-          isGroup: false,
-          setState: setState,
-          notifyEntity: device.notifyStateChanged,
-        ),
-      );
     }
 
-    return _buildValueDisplay(state) ?? _placeholder;
+    final display = _buildValueDisplay(state);
+    if (display == null) return _placeholder;
+    if (!_isControllable(state, states)) return display;
+
+    return PlatformIconButton(
+      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+      material: (_, __) => MaterialIconButtonData(splashRadius: 25),
+      icon: display,
+      onPressed: () => performDeviceStateAction(
+        context: context,
+        connectionStatus: device?.connection_state,
+        element: state,
+        states: states,
+        isGroup: group != null,
+        setState: setState,
+        notifyEntity: device?.notifyStateChanged ?? group!.notifyStateChanged,
+      ),
+    );
   }
 
   /// The device list's unavailability icons, keeping the last reading visible

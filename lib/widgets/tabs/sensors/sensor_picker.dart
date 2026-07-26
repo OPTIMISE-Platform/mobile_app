@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -28,7 +29,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 
-/// Lets the user pick a device and then one of its readable sensor values.
+/// Lets the user pick a device or device group and then one of its values.
 ///
 /// Returns the chosen value as a [SensorPin], or null if cancelled.
 Future<SensorPin?> pickSensor(BuildContext context) =>
@@ -36,26 +37,26 @@ Future<SensorPin?> pickSensor(BuildContext context) =>
       context,
       platformPageRoute(
         context: context,
-        builder: (_) => const _DevicePicker(),
+        builder: (_) => const _TargetPicker(),
       ),
     );
 
-/// Device list with a search field. Searches the backend/cache directly instead
-/// of reusing AppState's device list, which only holds the currently filtered
-/// page of results.
-class _DevicePicker extends StatefulWidget {
-  const _DevicePicker();
+/// Device list (searchable, paged) and group list to choose from.
+class _TargetPicker extends StatefulWidget {
+  const _TargetPicker();
 
   @override
-  State<_DevicePicker> createState() => _DevicePickerState();
+  State<_TargetPicker> createState() => _TargetPickerState();
 }
 
-class _DevicePickerState extends State<_DevicePicker> {
+class _TargetPickerState extends State<_TargetPicker> {
   static const _pageSize = 50;
 
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _debounce;
+
+  bool _showGroups = false;
 
   final List<DeviceInstance> _devices = [];
   String _query = '';
@@ -140,24 +141,36 @@ class _DevicePickerState extends State<_DevicePicker> {
   @override
   Widget build(BuildContext context) {
     return PlatformScaffold(
-      appBar: const PlatformAppBar(title: Text('Choose Device')),
+      appBar: const PlatformAppBar(title: Text('Choose Device or Group')),
       body: Column(
         children: [
           Padding(
             padding: MyTheme.inset,
-            child: PlatformTextFormField(
-              controller: _searchController,
-              hintText: 'Search devices',
-              onChanged: _onQueryChanged,
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(value: false, label: Text('Devices')),
+                ButtonSegment(value: true, label: Text('Groups')),
+              ],
+              selected: {_showGroups},
+              onSelectionChanged: (s) => setState(() => _showGroups = s.first),
             ),
           ),
-          Expanded(child: _buildBody()),
+          if (!_showGroups)
+            Padding(
+              padding: MyTheme.inset,
+              child: PlatformTextFormField(
+                controller: _searchController,
+                hintText: 'Search devices',
+                onChanged: _onQueryChanged,
+              ),
+            ),
+          Expanded(child: _showGroups ? _buildGroups() : _buildDevices()),
         ],
       ),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildDevices() {
     if (_error != null && _devices.isEmpty) {
       return Center(child: Text(_error!));
     }
@@ -185,36 +198,101 @@ class _DevicePickerState extends State<_DevicePicker> {
           return ListTile(
             title: Text(device.displayName),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () async {
-              final pin = await Navigator.push<SensorPin>(
-                context,
-                platformPageRoute(
-                  context: context,
-                  builder: (_) => _StatePicker(device),
-                ),
-              );
-              if (pin != null && context.mounted) Navigator.pop(context, pin);
-            },
+            onTap: () => _openStatePicker(_DeviceTarget(device)),
           );
         },
       ),
     );
   }
+
+  Widget _buildGroups() {
+    final groups = AppState().deviceGroups;
+    if (groups.isEmpty) {
+      return const Center(child: Text('No device groups'));
+    }
+    return Scrollbar(
+      child: ListView.separated(
+        itemCount: groups.length,
+        separatorBuilder: (_, __) => const Divider(),
+        itemBuilder: (_, i) {
+          final group = groups[i];
+          return ListTile(
+            leading: const Icon(Icons.devices_other),
+            title: Text(group.name),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _openStatePicker(_GroupTarget(group)),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _openStatePicker(_PickTarget target) async {
+    final pin = await Navigator.push<SensorPin>(
+      context,
+      platformPageRoute(context: context, builder: (_) => _StatePicker(target)),
+    );
+    if (pin != null && mounted) Navigator.pop(context, pin);
+  }
 }
 
-/// Lists the readable (non-controlling) states of one device.
-class _StatePicker extends StatelessWidget {
-  final DeviceInstance device;
+/// What a [_StatePicker] lists values for — a device or a device group. Both
+/// expose prepared [DeviceState]s, but build them differently.
+abstract class _PickTarget {
+  String get title;
 
-  const _StatePicker(this.device);
+  List<DeviceState> prepareStates();
+
+  /// Only a device can disambiguate a value by service group.
+  DeviceInstance? get device;
+}
+
+class _DeviceTarget implements _PickTarget {
+  final DeviceInstance _device;
+
+  _DeviceTarget(this._device);
+
+  @override
+  String get title => _device.displayName;
+
+  @override
+  DeviceInstance? get device => _device;
+
+  @override
+  List<DeviceState> prepareStates() {
+    final deviceType = AppState().deviceTypes[_device.device_type_id];
+    if (deviceType != null) _device.prepareStates(deviceType);
+    return _device.states;
+  }
+}
+
+class _GroupTarget implements _PickTarget {
+  final DeviceGroup _group;
+
+  _GroupTarget(this._group);
+
+  @override
+  String get title => _group.name;
+
+  @override
+  DeviceInstance? get device => null;
+
+  @override
+  List<DeviceState> prepareStates() {
+    _group.prepareStates();
+    return _group.states;
+  }
+}
+
+/// Lists the values of one device or group.
+class _StatePicker extends StatelessWidget {
+  final _PickTarget target;
+
+  const _StatePicker(this.target);
 
   @override
   Widget build(BuildContext context) {
-    final deviceType = AppState().deviceTypes[device.device_type_id];
-    if (deviceType != null) {
-      device.prepareStates(deviceType);
-    }
-    final all = device.states;
+    final all = target.prepareStates();
     // Readable measurements first, then controls (switches and other inputs).
     final selectable = all.toList()
       ..sort((a, b) {
@@ -225,16 +303,16 @@ class _StatePicker extends StatelessWidget {
       });
 
     return PlatformScaffold(
-      appBar: PlatformAppBar(title: Text(device.displayName)),
+      appBar: PlatformAppBar(title: Text(target.title)),
       body: selectable.isEmpty
-          ? const Center(child: Text('This device has no values'))
+          ? const Center(child: Text('No values available'))
           : Scrollbar(
               child: ListView.separated(
                 itemCount: selectable.length,
                 separatorBuilder: (_, __) => const Divider(),
                 itemBuilder: (_, i) {
                   final DeviceState state = selectable[i];
-                  final subtitle = sensorSubtitle(state, all, device);
+                  final subtitle = sensorSubtitle(state, all, target.device);
                   final unit = sensorUnit(state);
                   return ListTile(
                     leading: state.isControlling

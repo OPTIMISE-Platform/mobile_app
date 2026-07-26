@@ -25,7 +25,16 @@ import 'package:mobile_app/models/device_state.dart';
 ///
 /// Persisted as part of a [SensorTab] via `Settings.getSensorTabs`.
 class SensorPin {
-  final String deviceId;
+  /// Set for a device value; null for a device group value.
+  final String? deviceId;
+
+  /// Set for a device group value; null for a device value.
+  final String? groupId;
+
+  /// Distinguishes a group's criteria, which is what a group state carries
+  /// instead of a service and path.
+  final String? deviceClassId;
+
   final String functionId;
   final String? aspectId;
   final String? serviceGroupKey;
@@ -42,7 +51,9 @@ class SensorPin {
   final String? iconName;
 
   const SensorPin({
-    required this.deviceId,
+    this.deviceId,
+    this.groupId,
+    this.deviceClassId,
     required this.functionId,
     this.aspectId,
     this.serviceGroupKey,
@@ -51,9 +62,14 @@ class SensorPin {
     this.iconName,
   });
 
+  /// Whether this refers to a device group rather than a single device.
+  bool get isGroup => groupId != null;
+
   /// Describes [state] so it can be found again after a reload.
   factory SensorPin.of(DeviceState state) => SensorPin(
-    deviceId: state.deviceId ?? '',
+    deviceId: state.deviceId,
+    groupId: state.groupId,
+    deviceClassId: state.deviceClassId,
     functionId: state.functionId,
     aspectId: state.aspectId,
     serviceGroupKey: state.serviceGroupKey,
@@ -61,7 +77,10 @@ class SensorPin {
   );
 
   factory SensorPin.fromJson(Map<String, dynamic> json) => SensorPin(
-    deviceId: json['deviceId'] as String,
+    deviceId: json['deviceId'] as String?,
+    // Both absent in entries written before groups could be pinned.
+    groupId: json['groupId'] as String?,
+    deviceClassId: json['deviceClassId'] as String?,
     functionId: json['functionId'] as String,
     aspectId: json['aspectId'] as String?,
     serviceGroupKey: json['serviceGroupKey'] as String?,
@@ -73,6 +92,8 @@ class SensorPin {
 
   Map<String, dynamic> toJson() => {
     'deviceId': deviceId,
+    'groupId': groupId,
+    'deviceClassId': deviceClassId,
     'functionId': functionId,
     'aspectId': aspectId,
     'serviceGroupKey': serviceGroupKey,
@@ -88,6 +109,8 @@ class SensorPin {
     final newIconName = iconName ?? this.iconName;
     return SensorPin(
       deviceId: deviceId,
+      groupId: groupId,
+      deviceClassId: deviceClassId,
       functionId: functionId,
       aspectId: aspectId,
       serviceGroupKey: serviceGroupKey,
@@ -103,6 +126,8 @@ class SensorPin {
   bool matches(DeviceState state) =>
       state.isControlling == isControlling &&
       state.deviceId == deviceId &&
+      state.groupId == groupId &&
+      state.deviceClassId == deviceClassId &&
       state.functionId == functionId &&
       state.aspectId == aspectId &&
       state.serviceGroupKey == serviceGroupKey;
@@ -114,6 +139,8 @@ class SensorPin {
   bool operator ==(Object other) =>
       other is SensorPin &&
       other.deviceId == deviceId &&
+      other.groupId == groupId &&
+      other.deviceClassId == deviceClassId &&
       other.functionId == functionId &&
       other.aspectId == aspectId &&
       other.serviceGroupKey == serviceGroupKey &&
@@ -122,6 +149,8 @@ class SensorPin {
   @override
   int get hashCode => Object.hash(
     deviceId,
+    groupId,
+    deviceClassId,
     functionId,
     aspectId,
     serviceGroupKey,
