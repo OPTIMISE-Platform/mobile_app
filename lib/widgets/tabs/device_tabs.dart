@@ -56,6 +56,8 @@ class DeviceTabs extends StatefulWidget {
 
 class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   Timer? _searchDebounce;
+  /// Position within the bottom bar's items — not a tab index. The bar's first
+  /// entry is the configurable start page, so the two no longer coincide.
   int _bottomBarIndex = 0;
   int _navigationIndex = 0;
   bool _initialized = false;
@@ -132,27 +134,49 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
     showFab = config.showFab;
 
-    if (!isInitialLoad && index != tabDashboard && index != tabSmartServices) {
+    // The sensors tab loads the devices it needs by id itself.
+    if (!isInitialLoad &&
+        index != tabDashboard &&
+        index != tabSmartServices &&
+        index != tabSensors) {
       // defer search on initial load — data isn't ready yet anyway
+
+      // searchDevices() skips an unchanged filter. On a fresh start that filter
+      // still equals the initial empty one for every tab without an owned
+      // filter, so without forcing, the very first load would never happen and
+      // the device list would stay empty.
+      final force = !AppState().devicesLoadedOnce;
       if (config.ownsFavorites()) {
         filter.favorites = true;
-        AppState().searchDevices(filter, context);
+        AppState().searchDevices(filter, context, force);
         filter.favorites = false;
       } else {
-        AppState().searchDevices(filter, context);
+        AppState().searchDevices(filter, context, force);
       }
     }
   }
 
   void _reloadCurrentTab() => _applyTabConfig(_navigationIndex);
 
+  /// Entries of the bottom bar: the page the user picked as their start page,
+  /// followed by Dashboard (or Favorites, when the start page *is* Dashboard).
+  List<NavigationItem> get _bottomBarNavItems {
+    NavigationItem itemFor(int index) =>
+        navItems.firstWhere((n) => n.index == index, orElse: () => navItems.first);
+
+    final first = itemFor(Settings.getInitialTab());
+    final second =
+        itemFor(first.index == tabDashboard ? tabFavorites : tabDashboard);
+    return first.index == second.index ? [first] : [first, second];
+  }
+
   PlatformNavBar _buildBottomNavBar(BuildContext context, List<bool> disabled) {
     final disabledColor = isCupertino(context)
         ? Theme.of(context).disabledColor.withAlpha(32)
         : Theme.of(context).disabledColor;
 
-    final items = navItems
-        .where((item) => ['Favorites', 'Dashboard'].contains(item.name))
+    final barNavItems = _bottomBarNavItems;
+    final items = barNavItems
         .map((navItem) => BottomNavigationBarItem(
       tooltip: navItem.disabled ? "Currently unavailable" : null,
       icon: Icon(
@@ -164,21 +188,31 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     ))
         .toList();
 
+    // Highlight the current tab when it is in the bar, otherwise keep the last
+    // bar selection (the drawer can navigate to tabs the bar doesn't show).
+    final currentInBar =
+        barNavItems.indexWhere((n) => n.index == _navigationIndex);
+
     return PlatformNavBar(
       items: items,
-      currentIndex: _bottomBarIndex,
-      itemChanged: (i) {
-        if (disabled[i]) {
+      currentIndex: currentInBar >= 0
+          ? currentInBar
+          : _bottomBarIndex.clamp(0, items.length - 1),
+      // The callback reports the position in the bar, which is not the tab
+      // index — the start page can be any tab.
+      itemChanged: (position) {
+        final navItem = barNavItems[position];
+        if (disabled[navItem.index]) {
           controller.index = _bottomBarIndex;
           return;
         }
         setState(() {
-          _bottomBarIndex = i;
-          _navigationIndex = i;
-          _sidebarController.selectIndex(i);
+          _bottomBarIndex = position;
+          _navigationIndex = navItem.index;
+          _sidebarController.selectIndex(navItem.index);
         });
         HapticFeedbackProxy.lightImpact();
-        switchScreen(i, false);
+        switchScreen(navItem.index, false);
       },
     );
   }
@@ -186,6 +220,12 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   @override
   void initState() {
     super.initState();
+    // Start on the page the user picked in the settings, ignoring a stored
+    // index that no longer maps to a tab.
+    final stored = Settings.getInitialTab();
+    _navigationIndex =
+        navItems.any((n) => n.index == stored) ? stored : tabFavorites;
+    _sidebarController.selectIndex(_navigationIndex);
   }
 
   @override
@@ -202,7 +242,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
           state.loadNetworks(context)
         ]).then((_) {
           if (!mounted) return;
-          switchScreen(_bottomBarIndex, true);
+          switchScreen(_navigationIndex, true);
         });
       });
     }

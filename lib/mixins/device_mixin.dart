@@ -64,6 +64,12 @@ mixin DeviceMixin on ChangeNotifier {
   bool get loadingDevices => _totalDevicesMutex.isLocked || _devicesMutex.isLocked;
   bool get allDevicesLoaded => _allDevicesLoaded;
 
+  /// True once an initial device load has completed. Callers that rely on the
+  /// device list being populated must force their search until then, since
+  /// [searchDevices] skips an unchanged filter — which on a fresh start matches
+  /// the initial empty filter.
+  bool get devicesLoadedOnce => _devicesLoadedOnce;
+
   /// True once devices *and* device groups have each completed an initial load.
   /// Before that, "no favorites yet" is indistinguishable from "not loaded
   /// yet" — the favorites screen uses this to show a spinner instead of briefly

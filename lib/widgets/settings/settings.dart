@@ -41,7 +41,16 @@ import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/page_spinner.dart';
+import 'package:mobile_app/widgets/tabs/nav.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+
+/// Name of the tab currently configured as the start page.
+String _initialTabName() {
+  final index = settings_service.Settings.getInitialTab();
+  return navItems
+      .firstWhere((n) => n.index == index, orElse: () => navItems.first)
+      .name;
+}
 
 class Settings extends StatelessWidget {
   Settings({super.key});
@@ -54,6 +63,50 @@ class Settings extends StatelessWidget {
 
     return Consumer<AppState>(builder: (context, state, _) {
       final List<Widget> children = [
+        ListTile(
+          title: const Text("Start Page"),
+          subtitle: Text(_initialTabName()),
+          onTap: () => showPlatformDialog(
+            context: context,
+            builder: (dialogContext) => PlatformAlertDialog(
+              title: const Text("Start Page"),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: StatefulBuilder(
+                  builder: (_, setDialogState) => ListView(
+                    shrinkWrap: true,
+                    children: navItems
+                        .map((item) => ListTile(
+                              leading: Icon(item.icon),
+                              title: Text(item.name),
+                              trailing: settings_service.Settings
+                                          .getInitialTab() ==
+                                      item.index
+                                  ? const Icon(Icons.check)
+                                  : null,
+                              onTap: () async {
+                                await settings_service.Settings
+                                    .setInitialTab(item.index);
+                                setDialogState(() {});
+                                AppState().notifyListeners();
+                                if (dialogContext.mounted) {
+                                  Navigator.pop(dialogContext);
+                                }
+                              },
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ),
+              actions: [
+                PlatformDialogAction(
+                    child: const Text("Cancel"),
+                    onPressed: () => Navigator.pop(dialogContext)),
+              ],
+            ),
+          ),
+        ),
+        const Divider(),
         ListTile(
             title: const Text("Set Displayed Fraction Digits"),
             onTap: () => showPlatformDialog(

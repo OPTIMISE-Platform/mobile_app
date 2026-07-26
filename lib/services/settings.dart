@@ -50,6 +50,8 @@ class Settings {
 
   static const _sensorTabsKey = "sensor_tabs";
 
+  static const _initialTabKey = "initial_tab";
+
   static const _hapticFeedBackEnabledKey = "haptic_feedback_enabled";
 
   static const _functionPreferredCharacteristicKeyPrefix = "functionPreferredCharacteristic_";
@@ -252,6 +254,18 @@ class Settings {
     } catch (_) {
       return [];
     }
+  }
+
+  /// The tab shown when the app starts, which also replaces Favorites as the
+  /// first entry of the bottom navigation bar. Defaults to Favorites (tab 0).
+  static int getInitialTab() {
+    checkInit();
+    return int.tryParse(_box!.get(_initialTabKey) ?? '') ?? 0;
+  }
+
+  static Future<void> setInitialTab(int index) async {
+    checkInit();
+    await _box?.put(_initialTabKey, index.toString()).then((v) => _box?.flush());
   }
 
   static bool getHapticFeedBackEnabled() {
