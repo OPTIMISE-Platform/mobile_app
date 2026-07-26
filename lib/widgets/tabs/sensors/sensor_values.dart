@@ -768,19 +768,25 @@ class _SensorValuesState extends State<SensorValues>
             pin.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
         final icon = sensorIcon(pin.iconName);
 
+        // The chart queries by device and service, which a group value has
+        // neither of — the detail page disables it for groups too.
+        final openChart = state != null && state.value is num && device != null
+            ? () => Navigator.push(
+                context,
+                platformPageRoute(
+                  context: context,
+                  builder: (_) => Chart(state),
+                ),
+              )
+            : null;
+
         return Card(
           child: InkWell(
-            // The chart queries by device and service, which a group value has
-            // neither of — the detail page disables it for groups too.
-            onTap: state != null && state.value is num && device != null
-                ? () => Navigator.push(
-                    context,
-                    platformPageRoute(
-                      context: context,
-                      builder: (_) => Chart(state),
-                    ),
-                  )
-                : null,
+            // Without a chart the card had no tap action of its own, so a tap
+            // that missed the small value button rippled the whole card and did
+            // nothing — which is every switch, and every group value. Let the
+            // card trigger the action in that case.
+            onTap: openChart ?? _actionFor(state, device, group),
             onLongPress: () => _showPinMenu(pin, title),
             child: Stack(
               fit: StackFit.expand,
@@ -854,14 +860,18 @@ class _SensorValuesState extends State<SensorValues>
     );
   }
 
-  /// Whether the device offers a control for this value at all — either it is
-  /// itself a control, or it is a measurement with a matching controlling state
-  /// (the pairing the device detail page uses to make a reading tappable).
+  /// Whether a control for this value exists at all — either it is itself a
+  /// control, or it is a measurement with a matching controlling state (the
+  /// pairing the device detail page uses to make a reading tappable).
   ///
   /// Deliberately independent of the current value: [loadStates] nulls every
   /// value of an offline device, and the card still has to explain *why* it
   /// can't be controlled.
-  bool _hasControls(DeviceState state, List<DeviceState> allStates) {
+  bool _hasControls(
+    DeviceState state,
+    List<DeviceState> allStates,
+    bool isGroup,
+  ) {
     if (state.isControlling) return true;
     final config =
         functionConfigs[state.functionId] ??
@@ -874,19 +884,101 @@ class _SensorValuesState extends State<SensorValues>
       (s) =>
           s.isControlling &&
           controllingFunctions.contains(s.functionId) &&
-          s.serviceGroupKey == state.serviceGroupKey &&
-          s.aspectId == state.aspectId,
+          (isGroup || _pairsWithinDevice(s, state)),
     );
   }
 
+  /// A device's measurement and its control belong together when they sit in the
+  /// same service group and describe the same aspect.
+  ///
+  /// A group's criteria share neither: they pair by device class, and a
+  /// controlling criterion typically carries no aspect at all, so requiring this
+  /// would leave every group value unswitchable.
+  bool _pairsWithinDevice(DeviceState control, DeviceState measurement) =>
+      control.serviceGroupKey == measurement.serviceGroupKey &&
+      control.aspectId == measurement.aspectId;
+
   /// Whether the control can actually be triggered for the current value.
-  bool _isControllable(DeviceState state, List<DeviceState> allStates) {
-    if (!_hasControls(state, allStates)) return false;
+  bool _isControllable(
+    DeviceState state,
+    List<DeviceState> allStates,
+    bool isGroup,
+  ) {
+    if (!_hasControls(state, allStates, isGroup)) return false;
     if (state.isControlling) return true;
     final config =
         functionConfigs[state.functionId] ??
         FunctionConfigDefault(state.functionId);
     return config.getRelatedControllingFunction(state.value) != null;
+  }
+
+  /// The controlling state a group's measured value switches to, or null when it
+  /// can't be determined.
+  ///
+  /// Needed because [performDeviceStateAction] resolves a measurement's control
+  /// by aspect, which no group criterion satisfies. Handing it the control
+  /// directly puts it on its `isControlling` branch and skips that lookup.
+  DeviceState? _groupControlFor(
+    DeviceState state,
+    List<DeviceState> allStates,
+  ) {
+    final config =
+        functionConfigs[state.functionId] ??
+        FunctionConfigDefault(state.functionId);
+    final target = config.getRelatedControllingFunction(state.value);
+    if (target == null) return null;
+    final candidates = allStates
+        .where((s) => s.isControlling && s.functionId == target)
+        .toList(growable: false);
+    // More than one means the group spans device classes that each bring their
+    // own control; there is no single command to send, so leave it alone rather
+    // than switch an arbitrary subset.
+    if (candidates.length != 1) return null;
+    return candidates.first;
+  }
+
+  /// Whether the device can't be reached right now — the same two cases the
+  /// device list distinguishes.
+  bool _isUnavailable(DeviceInstance device) =>
+      device.connection_state == DeviceConnectionStatus.offline ||
+      device.network?.localService == null && Settings.getLocalMode();
+
+  /// What triggering this value does, or null when there is nothing to trigger.
+  ///
+  /// Shared by the value button and the card itself, so both stay in step.
+  VoidCallback? _actionFor(
+    DeviceState? state,
+    DeviceInstance? device,
+    DeviceGroup? group,
+  ) {
+    if (state == null || state.transitioning) return null;
+    final states = device?.states ?? group?.states;
+    if (states == null) return null;
+    if (device != null && _isUnavailable(device)) return null;
+
+    // Act on the control itself. A device's measurement is handed over as it is,
+    // because the shared action pairs it up the same way the detail page does; a
+    // group's measurement has to be resolved here (see [_groupControlFor]).
+    final DeviceState element;
+    if (group != null && !state.isControlling) {
+      final control = _groupControlFor(state, states);
+      if (control == null) return null;
+      element = control;
+    } else {
+      if (!_isControllable(state, states, group != null)) return null;
+      element = state;
+    }
+    if (element.transitioning) return null;
+
+    return () => performDeviceStateAction(
+      context: context,
+      connectionStatus: device?.connection_state,
+      element: element,
+      states: states,
+      isGroup: group != null,
+      setState: setState,
+      notifyEntity: device?.notifyStateChanged ?? group!.notifyStateChanged,
+    );
   }
 
   static const _placeholder = Text('—', style: TextStyle(fontSize: 24));
@@ -902,38 +994,27 @@ class _SensorValuesState extends State<SensorValues>
     // A group has no connection state of its own, so it never shows the
     // unavailability icons — its members' reachability isn't known here.
     final states = device?.states ?? group?.states;
-    if (states == null || !_hasControls(state, states)) {
+    if (states == null || !_hasControls(state, states, group != null)) {
       return _buildValueDisplay(state) ?? _placeholder;
     }
 
-    if (device != null) {
-      // Unreachable device: show why it can't be controlled, using the same
-      // icons the device list uses. Checked before the value, which is null for
-      // an offline device and would otherwise fall through to the placeholder.
-      final connectionStatus = device.connection_state;
-      final unavailable =
-          connectionStatus == DeviceConnectionStatus.offline ||
-          device.network?.localService == null && Settings.getLocalMode();
-      if (unavailable) return _buildUnavailableValue(state, connectionStatus);
+    // Unreachable device: show why it can't be controlled, using the same icons
+    // the device list uses. Checked before the value, which is null for an
+    // offline device and would otherwise fall through to the placeholder.
+    if (device != null && _isUnavailable(device)) {
+      return _buildUnavailableValue(state, device.connection_state);
     }
 
     final display = _buildValueDisplay(state);
     if (display == null) return _placeholder;
-    if (!_isControllable(state, states)) return display;
+    final action = _actionFor(state, device, group);
+    if (action == null) return display;
 
     return PlatformIconButton(
       cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       material: (_, __) => MaterialIconButtonData(splashRadius: 25),
       icon: display,
-      onPressed: () => performDeviceStateAction(
-        context: context,
-        connectionStatus: device?.connection_state,
-        element: state,
-        states: states,
-        isGroup: group != null,
-        setState: setState,
-        notifyEntity: device?.notifyStateChanged ?? group!.notifyStateChanged,
-      ),
+      onPressed: action,
     );
   }
 
