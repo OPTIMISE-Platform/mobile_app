@@ -51,49 +51,89 @@ class _DevicePicker extends StatefulWidget {
 }
 
 class _DevicePickerState extends State<_DevicePicker> {
-  static const _limit = 50;
+  static const _pageSize = 50;
 
   final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
   Timer? _debounce;
-  List<DeviceInstance>? _devices;
+
+  final List<DeviceInstance> _devices = [];
+  String _query = '';
+  bool _initialLoadDone = false;
+  bool _loadingPage = false;
+  bool _allLoaded = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    _search('');
+    _scrollController.addListener(_onScroll);
+    _reload();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  void _onQueryChanged(String query) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () => _search(query));
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 400) {
+      _loadNextPage();
+    }
   }
 
-  Future<void> _search(String query) async {
+  void _onQueryChanged(String query) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _query = query;
+      _reload();
+    });
+  }
+
+  Future<void> _reload() async {
     setState(() {
-      _devices = null;
+      _devices.clear();
+      _initialLoadDone = false;
+      _allLoaded = false;
       _error = null;
     });
+    await _loadNextPage();
+  }
+
+  /// Loads the next page of devices.
+  ///
+  /// The list is paged rather than capped: a single 50-device request left
+  /// everything beyond it unreachable by scrolling, even though searching found
+  /// it.
+  Future<void> _loadNextPage() async {
+    if (_loadingPage || _allLoaded) return;
+    _loadingPage = true;
     try {
       await AppState().ensureInitialized();
       final result = await DevicesService.getDevices(
-        _limit,
-        0,
-        DeviceSearchFilter(query),
-        null,
+        _pageSize,
+        _devices.length,
+        DeviceSearchFilter(_query),
+        _devices.isEmpty ? null : _devices.last,
       );
       if (!mounted) return;
-      setState(() => _devices = result.devices);
+      setState(() {
+        _devices.addAll(result.devices);
+        _allLoaded = result.devices.length < _pageSize;
+        _initialLoadDone = true;
+      });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not load devices');
+      setState(() {
+        _error = 'Could not load devices';
+        _initialLoadDone = true;
+      });
+    } finally {
+      _loadingPage = false;
     }
   }
 
@@ -118,20 +158,30 @@ class _DevicePickerState extends State<_DevicePicker> {
   }
 
   Widget _buildBody() {
-    if (_error != null) return Center(child: Text(_error!));
-    final devices = _devices;
-    if (devices == null) {
+    if (_error != null && _devices.isEmpty) {
+      return Center(child: Text(_error!));
+    }
+    if (!_initialLoadDone) {
       return const Center(child: DelayedCircularProgressIndicator());
     }
-    if (devices.isEmpty) {
+    if (_devices.isEmpty) {
       return const Center(child: Text('No devices found'));
     }
     return Scrollbar(
+      controller: _scrollController,
       child: ListView.separated(
-        itemCount: devices.length,
+        controller: _scrollController,
+        // One extra row carries the "loading more" indicator.
+        itemCount: _devices.length + (_allLoaded ? 0 : 1),
         separatorBuilder: (_, __) => const Divider(),
         itemBuilder: (_, i) {
-          final device = devices[i];
+          if (i >= _devices.length) {
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: DelayedCircularProgressIndicator()),
+            );
+          }
+          final device = _devices[i];
           return ListTile(
             title: Text(device.displayName),
             trailing: const Icon(Icons.chevron_right),
