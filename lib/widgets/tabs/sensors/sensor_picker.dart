@@ -29,21 +29,64 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 
-/// Lets the user pick a device or device group and then one of its values.
+/// Lets the user pick devices or device groups and check off as many of their
+/// values as wanted.
 ///
-/// Returns the chosen value as a [SensorPin], or null if cancelled.
-Future<SensorPin?> pickSensor(BuildContext context) =>
-    Navigator.push<SensorPin>(
-      context,
-      platformPageRoute(
-        context: context,
-        builder: (_) => const _TargetPicker(),
-      ),
-    );
+/// The selection is kept while browsing from device to device, so composing a
+/// tab takes one trip through the picker instead of one per value. Returns the
+/// checked values as [SensorPin]s, or null if cancelled.
+///
+/// [existing] are the values already on the page; they show up checked and
+/// can't be picked again.
+Future<List<SensorPin>?> pickSensors(
+  BuildContext context, {
+  Iterable<SensorPin> existing = const [],
+}) => Navigator.push<List<SensorPin>>(
+  context,
+  platformPageRoute(
+    context: context,
+    builder: (_) => _TargetPicker(existing: existing.toSet()),
+  ),
+);
+
+/// The values checked so far, shared by the target list and the value lists so
+/// the selection survives navigating between devices and groups.
+class _Selection extends ChangeNotifier {
+  /// Values already on the page — checked, but not part of the result.
+  final Set<SensorPin> _existing;
+
+  /// Insertion-ordered, so values arrive on the page in the order they were
+  /// checked.
+  final Set<SensorPin> _picked = {};
+
+  _Selection(this._existing);
+
+  int get count => _picked.length;
+
+  List<SensorPin> get picked => _picked.toList();
+
+  bool isPicked(SensorPin pin) => _picked.contains(pin);
+
+  /// Whether this value is already on the page, making it unpickable.
+  bool isExisting(SensorPin pin) => _existing.contains(pin);
+
+  void toggle(SensorPin pin) {
+    if (!_picked.remove(pin)) _picked.add(pin);
+    notifyListeners();
+  }
+
+  int countForDevice(String deviceId) =>
+      _picked.where((p) => p.deviceId == deviceId).length;
+
+  int countForGroup(String groupId) =>
+      _picked.where((p) => p.groupId == groupId).length;
+}
 
 /// Device list (searchable, paged) and group list to choose from.
 class _TargetPicker extends StatefulWidget {
-  const _TargetPicker();
+  final Set<SensorPin> existing;
+
+  const _TargetPicker({required this.existing});
 
   @override
   State<_TargetPicker> createState() => _TargetPickerState();
@@ -55,6 +98,8 @@ class _TargetPickerState extends State<_TargetPicker> {
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
   Timer? _debounce;
+
+  late final _Selection _selection = _Selection(widget.existing);
 
   bool _showGroups = false;
 
@@ -69,15 +114,24 @@ class _TargetPickerState extends State<_TargetPicker> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Keeps the per-target counts and the Done button in step with what was
+    // checked on the value pages.
+    _selection.addListener(_onSelectionChanged);
     _reload();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _selection.removeListener(_onSelectionChanged);
+    _selection.dispose();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSelectionChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onScroll() {
@@ -140,34 +194,73 @@ class _TargetPickerState extends State<_TargetPicker> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformScaffold(
-      appBar: const PlatformAppBar(title: Text('Choose Device or Group')),
-      body: Column(
-        children: [
-          Padding(
-            padding: MyTheme.inset,
-            child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Devices')),
-                ButtonSegment(value: true, label: Text('Groups')),
-              ],
-              selected: {_showGroups},
-              onSelectionChanged: (s) => setState(() => _showGroups = s.first),
+    return PopScope(
+      // Going back would throw the selection away, which is a lot to lose after
+      // checking off a dozen values.
+      canPop: _selection.count == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmDiscard();
+      },
+      child: PlatformScaffold(
+        appBar: PlatformAppBar(
+          title: const Text('Choose Device or Group'),
+          trailingActions: [
+            _buildDoneAction(
+              context,
+              _selection,
+              () => Navigator.pop(context, _selection.picked),
             ),
-          ),
-          if (!_showGroups)
+          ],
+        ),
+        body: Column(
+          children: [
             Padding(
               padding: MyTheme.inset,
-              child: PlatformTextFormField(
-                controller: _searchController,
-                hintText: 'Search devices',
-                onChanged: _onQueryChanged,
+              child: SegmentedButton<bool>(
+                segments: const [
+                  ButtonSegment(value: false, label: Text('Devices')),
+                  ButtonSegment(value: true, label: Text('Groups')),
+                ],
+                selected: {_showGroups},
+                onSelectionChanged: (s) =>
+                    setState(() => _showGroups = s.first),
               ),
             ),
-          Expanded(child: _showGroups ? _buildGroups() : _buildDevices()),
+            if (!_showGroups)
+              Padding(
+                padding: MyTheme.inset,
+                child: PlatformTextFormField(
+                  controller: _searchController,
+                  hintText: 'Search devices',
+                  onChanged: _onQueryChanged,
+                ),
+              ),
+            Expanded(child: _showGroups ? _buildGroups() : _buildDevices()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDiscard() async {
+    final discard = await showPlatformDialog<bool>(
+      context: context,
+      builder: (_) => PlatformAlertDialog(
+        title: const Text('Discard selection'),
+        content: Text('Discard the ${_selection.count} value(s) you selected?'),
+        actions: [
+          PlatformDialogAction(
+            child: PlatformText('Keep choosing'),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+          PlatformDialogAction(
+            child: PlatformText('Discard'),
+            onPressed: () => Navigator.pop(context, true),
+          ),
         ],
       ),
     );
+    if (discard == true && mounted) Navigator.pop(context);
   }
 
   Widget _buildDevices() {
@@ -195,10 +288,12 @@ class _TargetPickerState extends State<_TargetPicker> {
             );
           }
           final device = _devices[i];
+          final picked = _selection.countForDevice(device.id);
           return ListTile(
             title: Text(device.displayName),
+            subtitle: picked == 0 ? null : Text('$picked selected'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openStatePicker(_DeviceTarget(device)),
+            onTap: () => _openValuePicker(_DeviceTarget(device)),
           );
         },
       ),
@@ -216,27 +311,64 @@ class _TargetPickerState extends State<_TargetPicker> {
         separatorBuilder: (_, __) => const Divider(),
         itemBuilder: (_, i) {
           final group = groups[i];
+          final picked = _selection.countForGroup(group.id);
           return ListTile(
             leading: const Icon(Icons.devices_other),
             title: Text(group.name),
+            subtitle: picked == 0 ? null : Text('$picked selected'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openStatePicker(_GroupTarget(group)),
+            onTap: () => _openValuePicker(_GroupTarget(group)),
           );
         },
       ),
     );
   }
 
-  Future<void> _openStatePicker(_PickTarget target) async {
-    final pin = await Navigator.push<SensorPin>(
+  /// Opens one target's values. Coming back keeps whatever was checked there;
+  /// only its Done button ends the whole picker.
+  Future<void> _openValuePicker(_PickTarget target) async {
+    final done = await Navigator.push<bool>(
       context,
-      platformPageRoute(context: context, builder: (_) => _StatePicker(target)),
+      platformPageRoute(
+        context: context,
+        builder: (_) => _ValuePicker(target, _selection),
+      ),
     );
-    if (pin != null && mounted) Navigator.pop(context, pin);
+    if (done == true && mounted) Navigator.pop(context, _selection.picked);
   }
 }
 
-/// What a [_StatePicker] lists values for — a device or a device group. Both
+/// Confirms the selection, showing how much has piled up so far.
+///
+/// A plain text action was lost in the app bar, so this is a filled pill in a
+/// colour the bar doesn't use — the way out of the picker has to be obvious
+/// while the user is busy ticking values off.
+Widget _buildDoneAction(
+  BuildContext context,
+  _Selection selection,
+  VoidCallback onDone,
+) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: dark ? MyTheme.appColor : Colors.white,
+        foregroundColor: Colors.black,
+        disabledBackgroundColor: dark ? Colors.white24 : Colors.black12,
+        disabledForegroundColor: dark ? Colors.white54 : Colors.black45,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+      ),
+      onPressed: selection.count == 0 ? null : onDone,
+      child: Text(selection.count == 0 ? 'Done' : 'Done (${selection.count})'),
+    ),
+  );
+}
+
+/// What a [_ValuePicker] lists values for — a device or a device group. Both
 /// expose prepared [DeviceState]s, but build them differently.
 abstract class _PickTarget {
   String get title;
@@ -284,48 +416,94 @@ class _GroupTarget implements _PickTarget {
   }
 }
 
-/// Lists the values of one device or group.
-class _StatePicker extends StatelessWidget {
+/// Lists the values of one device or group, each one checkable.
+///
+/// Tapping a value only ticks it off — the page stays open so the rest of the
+/// device's values can be picked in the same visit. Pops `true` when the user
+/// is done choosing altogether, and nothing when they just go back to the
+/// target list.
+class _ValuePicker extends StatefulWidget {
   final _PickTarget target;
+  final _Selection selection;
 
-  const _StatePicker(this.target);
+  const _ValuePicker(this.target, this.selection);
+
+  @override
+  State<_ValuePicker> createState() => _ValuePickerState();
+}
+
+class _ValuePickerState extends State<_ValuePicker> {
+  late final List<DeviceState> _all = widget.target.prepareStates();
+
+  /// Readable measurements first, then controls (switches and other inputs).
+  late final List<DeviceState> _selectable = _all.toList()
+    ..sort((a, b) {
+      if (a.isControlling != b.isControlling) {
+        return a.isControlling ? 1 : -1;
+      }
+      return sensorTitle(a).compareTo(sensorTitle(b));
+    });
 
   @override
   Widget build(BuildContext context) {
-    final all = target.prepareStates();
-    // Readable measurements first, then controls (switches and other inputs).
-    final selectable = all.toList()
-      ..sort((a, b) {
-        if (a.isControlling != b.isControlling) {
-          return a.isControlling ? 1 : -1;
-        }
-        return sensorTitle(a).compareTo(sensorTitle(b));
-      });
-
     return PlatformScaffold(
-      appBar: PlatformAppBar(title: Text(target.title)),
-      body: selectable.isEmpty
+      appBar: PlatformAppBar(
+        title: Text(widget.target.title),
+        trailingActions: [
+          _buildDoneAction(
+            context,
+            widget.selection,
+            () => Navigator.pop(context, true),
+          ),
+        ],
+      ),
+      body: _selectable.isEmpty
           ? const Center(child: Text('No values available'))
           : Scrollbar(
               child: ListView.separated(
-                itemCount: selectable.length,
+                itemCount: _selectable.length,
                 separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (_, i) {
-                  final DeviceState state = selectable[i];
-                  final subtitle = sensorSubtitle(state, all, target.device);
-                  final unit = sensorUnit(state);
-                  return ListTile(
-                    leading: state.isControlling
-                        ? const Icon(Icons.input)
-                        : const Icon(Icons.show_chart),
-                    title: Text(sensorTitle(state)),
-                    subtitle: subtitle.isEmpty ? null : Text(subtitle),
-                    trailing: unit.isEmpty ? null : Text(unit),
-                    onTap: () => Navigator.pop(context, SensorPin.of(state)),
-                  );
-                },
+                itemBuilder: (_, i) => _buildTile(_selectable[i]),
               ),
             ),
+    );
+  }
+
+  Widget _buildTile(DeviceState state) {
+    final pin = SensorPin.of(state);
+    final existing = widget.selection.isExisting(pin);
+    final picked = existing || widget.selection.isPicked(pin);
+
+    var subtitle = sensorSubtitle(state, _all, widget.target.device);
+    if (existing) {
+      subtitle = subtitle.isEmpty
+          ? 'Already added'
+          : '$subtitle · Already added';
+    }
+    final unit = sensorUnit(state);
+
+    return ListTile(
+      leading: state.isControlling
+          ? const Icon(Icons.input)
+          : const Icon(Icons.show_chart),
+      title: Text(sensorTitle(state)),
+      subtitle: subtitle.isEmpty ? null : Text(subtitle),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (unit.isNotEmpty) ...[Text(unit), const SizedBox(width: 8)],
+          Icon(
+            picked ? Icons.check_box : Icons.check_box_outline_blank,
+            // A value already on the page stays ticked but greyed out, so it
+            // reads as "there already" rather than "just picked".
+            color: existing
+                ? Theme.of(context).disabledColor
+                : (picked ? MyTheme.appColor : null),
+          ),
+        ],
+      ),
+      enabled: !existing,
+      onTap: () => setState(() => widget.selection.toggle(pin)),
     );
   }
 }

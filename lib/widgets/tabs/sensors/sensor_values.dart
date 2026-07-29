@@ -228,13 +228,16 @@ class _SensorValuesState extends State<SensorValues>
     return null;
   }
 
-  /// The name shown above a card's value.
+  /// The device or group a pin belongs to, the card's subtitle by default.
   String _ownerName(SensorPin pin) {
     if (pin.isGroup) {
       return _groups[pin.groupId]?.name ?? 'Unknown group';
     }
     return _devices[pin.deviceId]?.displayName ?? 'Unknown device';
   }
+
+  /// The card's small top line: what the user typed, or the owner's name.
+  String _subtitleOf(SensorPin pin) => pin.subtitle ?? _ownerName(pin);
 
   /// What a card listens to for value changes.
   Listenable _notifierFor(SensorPin pin) =>
@@ -430,7 +433,9 @@ class _SensorValuesState extends State<SensorValues>
         return p.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
       },
       icon: (p) => sensorIcon(p.iconName),
-      subtitle: _ownerName,
+      // The card's own subtitle even when hidden there — this list needs
+      // something to tell two values of one device apart.
+      subtitle: _subtitleOf,
     );
     if (reordered == null || !mounted) return;
     await _updateCurrentPins(reordered);
@@ -440,35 +445,26 @@ class _SensorValuesState extends State<SensorValues>
   // Value actions
   // ---------------------------------------------------------------------------
 
-  /// The FAB creates the first tab when there is none, otherwise adds a value.
+  /// The FAB creates the first tab when there is none, otherwise adds values.
   Future<void> _onFabPressed() async {
     if (_tabs.isEmpty) {
       await _addTab();
       return;
     }
-    await _addSensor();
+    await _addSensors();
   }
 
-  Future<void> _addSensor() async {
+  /// Adds every value the user checked in one trip through the picker.
+  Future<void> _addSensors() async {
     if (_currentTab == null) return;
-    final pin = await pickSensor(context);
-    if (pin == null || !mounted) return;
-    if (_pins.contains(pin)) {
-      await showPlatformDialog(
-        context: context,
-        builder: (_) => PlatformAlertDialog(
-          content: const Text('That value is already on this tab.'),
-          actions: [
-            PlatformDialogAction(
-              child: PlatformText('OK'),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-    await _updateCurrentPins([..._pins, pin]);
+    // The picker shows the values already here as taken, so nothing it returns
+    // should be a duplicate — filtered anyway, since a duplicate would make two
+    // cards that can't be told apart.
+    final picked = await pickSensors(context, existing: _pins);
+    if (picked == null || !mounted) return;
+    final added = picked.where((p) => !_pins.contains(p)).toList();
+    if (added.isEmpty) return;
+    await _updateCurrentPins([..._pins, ...added]);
     await _loadValues();
   }
 
@@ -479,8 +475,14 @@ class _SensorValuesState extends State<SensorValues>
       title: 'Edit value',
       initialName: pin.alias ?? '',
       initialIconName: pin.iconName,
-      nameHint: state != null ? sensorTitle(state) : 'Alias',
+      // Both fields fall back to what the card would show on its own, so the
+      // hints double as a preview of leaving them empty.
+      nameHint: state != null ? sensorTitle(state) : 'Title',
       nameRequired: false,
+      withSubtitle: true,
+      initialSubtitle: pin.subtitle ?? '',
+      subtitleHint: _ownerName(pin),
+      initialSubtitleHidden: pin.hideSubtitle,
     );
     if (result == null || !mounted) return;
     final index = _pins.indexOf(pin);
@@ -489,6 +491,8 @@ class _SensorValuesState extends State<SensorValues>
     pins[index] = pin.copyWith(
       alias: result.name, // empty clears
       iconName: result.iconName ?? '',
+      subtitle: result.subtitle, // empty falls back to the device/group name
+      hideSubtitle: result.subtitleHidden,
     );
     await _updateCurrentPins(pins);
   }
@@ -525,7 +529,7 @@ class _SensorValuesState extends State<SensorValues>
             children: [
               ListTile(
                 leading: const Icon(Icons.edit),
-                title: const Text('Set alias / icon'),
+                title: const Text('Edit title / subtitle / icon'),
                 onTap: () => Navigator.pop(context, 'edit'),
               ),
               ListTile(
@@ -540,7 +544,7 @@ class _SensorValuesState extends State<SensorValues>
           actions: [
             CupertinoActionSheetAction(
               onPressed: () => Navigator.pop(context, 'edit'),
-              child: const Text('Set alias / icon'),
+              child: const Text('Edit title / subtitle / icon'),
             ),
             CupertinoActionSheetAction(
               isDestructiveAction: true,
@@ -730,13 +734,13 @@ class _SensorValuesState extends State<SensorValues>
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Add a sensor value with the + button to show it here.',
+                    'Add sensor values with the + button to show them here.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
                   PlatformElevatedButton(
-                    onPressed: _addSensor,
-                    child: const Text('Add value'),
+                    onPressed: _addSensors,
+                    child: const Text('Add values'),
                   ),
                 ],
               ),
@@ -803,34 +807,36 @@ class _SensorValuesState extends State<SensorValues>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          if (pin.isGroup) ...[
-                            Icon(
-                              Icons.devices_other,
-                              size: 12,
-                              color: Theme.of(
-                                context,
-                              ).textTheme.bodySmall?.color,
-                            ),
-                            const SizedBox(width: 3),
-                          ],
-                          Expanded(
-                            child: Text(
-                              _ownerName(pin),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
+                      if (!pin.hideSubtitle) ...[
+                        Row(
+                          children: [
+                            if (pin.isGroup) ...[
+                              Icon(
+                                Icons.devices_other,
+                                size: 12,
                                 color: Theme.of(
                                   context,
                                 ).textTheme.bodySmall?.color,
                               ),
+                              const SizedBox(width: 3),
+                            ],
+                            Expanded(
+                              child: Text(
+                                _subtitleOf(pin),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.color,
+                                ),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                      ],
                       Row(
                         children: [
                           if (icon != null) ...[

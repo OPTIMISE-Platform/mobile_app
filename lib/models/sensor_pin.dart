@@ -50,6 +50,14 @@ class SensorPin {
   /// Material icon name (a key of `iconNameToCodePoints`), shown on the card.
   final String? iconName;
 
+  /// User-chosen text for the card's small top line, which otherwise names the
+  /// device or group. Null means that default.
+  final String? subtitle;
+
+  /// Whether that top line is left off the card altogether — the device name is
+  /// noise once the title already says what the card is.
+  final bool hideSubtitle;
+
   const SensorPin({
     this.deviceId,
     this.groupId,
@@ -60,6 +68,8 @@ class SensorPin {
     this.isControlling = false,
     this.alias,
     this.iconName,
+    this.subtitle,
+    this.hideSubtitle = false,
   });
 
   /// Whether this refers to a device group rather than a single device.
@@ -88,6 +98,9 @@ class SensorPin {
     isControlling: json['isControlling'] as bool? ?? false,
     alias: json['alias'] as String?,
     iconName: json['iconName'] as String?,
+    // Both absent in entries written before the subtitle could be changed.
+    subtitle: json['subtitle'] as String?,
+    hideSubtitle: json['hideSubtitle'] as bool? ?? false,
   );
 
   Map<String, dynamic> toJson() => {
@@ -100,13 +113,21 @@ class SensorPin {
     'isControlling': isControlling,
     'alias': alias,
     'iconName': iconName,
+    'subtitle': subtitle,
+    'hideSubtitle': hideSubtitle,
   };
 
   /// Returns a copy with the presentation fields replaced. Pass an empty string
-  /// to clear [alias] / [iconName].
-  SensorPin copyWith({String? alias, String? iconName}) {
+  /// to clear [alias] / [iconName] / [subtitle], falling back to the default.
+  SensorPin copyWith({
+    String? alias,
+    String? iconName,
+    String? subtitle,
+    bool? hideSubtitle,
+  }) {
     final newAlias = alias ?? this.alias;
     final newIconName = iconName ?? this.iconName;
+    final newSubtitle = subtitle ?? this.subtitle;
     return SensorPin(
       deviceId: deviceId,
       groupId: groupId,
@@ -119,6 +140,10 @@ class SensorPin {
       iconName: (newIconName == null || newIconName.isEmpty)
           ? null
           : newIconName,
+      subtitle: (newSubtitle == null || newSubtitle.isEmpty)
+          ? null
+          : newSubtitle,
+      hideSubtitle: hideSubtitle ?? this.hideSubtitle,
     );
   }
 
@@ -133,7 +158,8 @@ class SensorPin {
       state.serviceGroupKey == serviceGroupKey;
 
   /// Equality covers only which sensor is referenced, deliberately excluding
-  /// [alias] and [iconName]: it backs "is this value already on the page?" and
+  /// the presentation fields ([alias], [iconName], [subtitle],
+  /// [hideSubtitle]): it backs "is this value already on the page?" and
   /// removal, both of which must not be affected by relabelling.
   @override
   bool operator ==(Object other) =>
