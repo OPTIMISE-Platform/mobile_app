@@ -143,6 +143,9 @@ class Auth extends ChangeNotifier {
 
   Future<void> login(String user, String pw) async {
     await _m.protect(() async {
+      // loggingIn (== mutex held) just became true; without this notify the
+      // login form stays frozen with no feedback until the grant completes.
+      notifyListeners();
       if (!_initialized) {
         await init();
         if (_client == null) {

@@ -67,7 +67,11 @@ class DevicesService {
 
     if (!forceBackend && isar != null && collection != null) {
       final cachedCount = await collection.count();
-      if (cachedCount >= AppState().totalDevices) {
+      // An empty cache is never "complete": right after a fresh login both
+      // cachedCount and totalDevices are 0, which this shortcut used to read as
+      // cache-complete — answering every query with an empty list until the
+      // first full cache refresh finished.
+      if (cachedCount > 0 && cachedCount >= AppState().totalDevices) {
         final devices = await filter
             .isarQuery(limit, offset, collection)
             .build()

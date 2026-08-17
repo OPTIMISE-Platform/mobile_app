@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
@@ -55,8 +57,14 @@ class _HomeState extends State<Home> {
       await auth.login(_user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
-      await CacheHelper.refreshCache();
-      context.read<AppState>().pushRefresh();
+      // Refresh in the background: awaiting it here held the login spinner for
+      // the whole multi-endpoint refresh, whose JSON parsing runs on the UI
+      // isolate and stutters the spinner. The tabs fetch their first page
+      // themselves right after the login transition; pushRefresh reloads them
+      // once the complete cache has landed.
+      unawaited(CacheHelper.refreshCache()
+          .then((_) => AppState().pushRefresh())
+          .catchError((_) => Toast.showToastNoContext("Could not refresh cache")));
     } on AuthenticationException catch (e) {
       if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
         Toast.showToastNoContext("Invalid user credentials");
