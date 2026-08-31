@@ -17,6 +17,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:mobile_app/models/cached_metadata.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -85,10 +86,16 @@ class MetadataCache {
 /// building the (multi-MB) intermediate Dart String.
 final _jsonFromUtf8 = const Utf8Decoder().fuse(const JsonDecoder());
 
+/// Decodes UTF-8 JSON bytes into a list. Top-level so [compute] can run it in
+/// a background isolate.
+List<dynamic> _decodeJsonListFromUtf8(Uint8List bytes) =>
+    _jsonFromUtf8.convert(bytes) as List<dynamic>;
+
 /// Returns metadata for [key]: decoded from the Isar byte cache when it is
 /// younger than [maxAge], otherwise fetched fresh via [fetchRaw], persisted,
-/// and parsed. The `fromJson` build is chunked so it never blocks the UI
-/// isolate in one go.
+/// and parsed. The JSON decode of the cached bytes runs in a background
+/// isolate, the `fromJson` build is chunked — neither blocks the UI isolate
+/// in one go.
 Future<List<T>> loadMetadataCached<T>(
   String key,
   Future<List<dynamic>> Function() fetchRaw,
@@ -98,7 +105,14 @@ Future<List<T>> loadMetadataCached<T>(
   final bytes = await MetadataCache.read(key, maxAge);
   if (bytes != null) {
     try {
-      final decoded = _jsonFromUtf8.convert(bytes) as List<dynamic>;
+      // convert() is one synchronous multi-MB parse and froze the UI for its
+      // whole duration when it ran here (~800ms per blob, six blobs at every
+      // app start). compute() sends the bytes as typed data (a memcpy) and
+      // returns the decoded tree via Isolate.exit, i.e. without copying it
+      // back — the copy-out concern in parseListChunked's doc applies to
+      // constructed model objects, not to this plain JSON tree.
+      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
+      final decoded = await compute(_decodeJsonListFromUtf8, data);
       return await parseListChunked(decoded, fromJson);
     } catch (_) {
       // corrupt/incompatible cache — fall through to a fresh fetch
