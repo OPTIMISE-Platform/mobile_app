@@ -22,7 +22,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
-import 'package:multiselect/multiselect.dart';
+import 'package:mobile_app/widgets/shared/multi_select_field.dart';
 
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
@@ -70,18 +70,19 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
 
     if (p.multiple && p.options != null) {
       return ConstrainedBox(
-          constraints: BoxConstraints.tight(const Size(double.infinity, 48)),
-          child: DropDownMultiSelect(
+          // minHeight, not tight: the field must be able to grow when the user
+          // scales up the system font, otherwise its text is clipped.
+          constraints: const BoxConstraints(minHeight: 48),
+          child: MultiSelectField(
             key: ValueKey(i.toString()),
-            decoration: const InputDecoration(),
-            onChanged: (List x) {
+            options: _filterOptions(p).map((e) => e.label).toList(growable: false),
+            selected: p.options!.where((element) => (p.value ?? []).contains(element.value)).map((e) => e.label).toList(),
+            emptyLabel: p.label,
+            onChanged: (x) {
               setState(() {
                 p.value = p.options!.where((element) => x.contains(element.label)).map((e) => e.value).toList();
               });
             },
-            options: _filterOptions(p).map((e) => e.label).toList(growable: false),
-            selectedValues: p.options!.where((element) => (p.value ?? []).contains(element.value)).map((e) => e.label).toList(),
-            whenEmpty: p.label,
           ));
     } else if (p.options != null) {
       final List<DropdownMenuItem> items = _filterOptions(p)
@@ -382,3 +383,4 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                     : Form(key: _formKey, child: ListView.builder(itemCount: configs.length, itemBuilder: (_, i) => configs[i])))));
   }
 }
+
