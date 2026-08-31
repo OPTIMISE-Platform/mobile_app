@@ -79,6 +79,24 @@ class Auth extends ChangeNotifier {
   bool loggedIn = false;
 
   Future<void> init() async {
+    // Trust a stored identity before the client setup: the OIDC discovery in
+    // OpenIdConnectClient.create is a network round trip that held the login
+    // spinner on every app start. The offline fallback below has always
+    // trusted the stored token when the setup fails; trusting it while the
+    // setup is still running is the same assumption, just earlier. Backend
+    // calls still wait for the real client via getHeaders() -> refreshToken()
+    // -> init(), which blocks on the setup mutex.
+    if (!isInitialized && !loggedIn) {
+      try {
+        if (await OpenIdIdentity.load() != null) {
+          loggedIn = true;
+          isInitialized = true;
+          notifyListeners();
+        }
+      } catch (_) {
+        // unreadable storage — leave the decision to the regular setup
+      }
+    }
     await _clientSetupMutex.protect(() async {
       if (_initialized) return;
       try {

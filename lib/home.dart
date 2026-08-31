@@ -118,13 +118,17 @@ class _HomeState extends State<Home> {
     const appBar = MyAppBar("Login");
     return Consumer<Auth>(
       builder: (context, auth, child) {
+        // loggedIn wins over loggingIn: after the early trust in Auth.init a
+        // backend call can lock the login mutex while the client setup is
+        // still running — gating on loggingIn first would unmount DeviceTabs
+        // and bring the login spinner back for the whole token refresh.
+        if (auth.loggedIn) return const DeviceTabs();
         if (!auth.isInitialized || auth.loggingIn) {
           return PlatformScaffold(
             appBar: appBar.getAppBar(context, []),
             body: const Center(child: DelayedCircularProgressIndicator()),
           );
         }
-        if (auth.loggedIn) return const DeviceTabs();
         return PlatformScaffold(
             appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
             body: Container(

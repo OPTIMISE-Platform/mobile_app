@@ -55,14 +55,15 @@ class AppInitializer {
     // it — Isar/Firebase don't touch secure storage, so they overlap it freely.
     final secureStorageReady = _clearCorruptedSecureStorage();
 
-    // Isar (local DB), Firebase and Auth (network OIDC discovery) are mutually
-    // independent — run them in parallel so the login gate isn't blocked behind
-    // the sum of their latencies. _initCache needs both isar and Auth, so it
-    // runs afterwards.
+    // Isar first: Auth.init's early trust of a stored identity mounts the
+    // tabs, and their first loads must find the Isar cache open — otherwise
+    // an offline start races past the cache and toasts backend errors. The
+    // open is local and cheap; Firebase and Auth (network OIDC discovery)
+    // stay parallel. _initCache needs both isar and Auth, so it runs last.
+    await _timed('Isar', () async {
+      isar = kIsWeb ? null : await IsarService().db;
+    });
     await Future.wait([
-      _timed('Isar', () async {
-        isar = kIsWeb ? null : await IsarService().db;
-      }),
       _timed('Firebase', FirebaseService.init),
       _timed('Auth', () async {
         await secureStorageReady; // corruption check must precede Auth's reads
