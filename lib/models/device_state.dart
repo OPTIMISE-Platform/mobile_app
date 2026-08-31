@@ -80,30 +80,33 @@ class StateHelper {
   static final Map<String, List<DeviceState>> _states = {};
 
   static List<DeviceState> getStates(DeviceType deviceType, DeviceInstance device) {
-    if (_states.containsKey(deviceType.id)) {
-      // only once
-      final states = _states[deviceType.id];
-      return List<DeviceState>.generate(states!.length, (i) {
-        final state = DeviceState(states[i].value, states[i].serviceId, states[i].serviceGroupKey, states[i].functionId, states[i].aspectId,
-            states[i].isControlling, null, null, device.id, states[i].path, states[i].serviceGroupName);
-        state.deviceInstance = device;
-        return state;
-      });
-    }
-    final List<DeviceState> states = [];
-    for (final service in deviceType.services) {
-      final serviceGroupName =
-          deviceType.service_groups?.firstWhere((e) => e.key == service.service_group_key, orElse: () => ServiceGroup("", "", "")).name;
-      for (final output in service.outputs ?? []) {
-        _addStateFromContentVariable(service, output.content_variable, false, "", states, device, serviceGroupName);
-      }
+    var template = _states[deviceType.id];
+    if (template == null) {
+      final List<DeviceState> states = [];
+      for (final service in deviceType.services) {
+        final serviceGroupName =
+            deviceType.service_groups?.firstWhere((e) => e.key == service.service_group_key, orElse: () => ServiceGroup("", "", "")).name;
+        for (final output in service.outputs ?? []) {
+          _addStateFromContentVariable(service, output.content_variable, false, "", states, device, serviceGroupName);
+        }
 
-      for (final input in service.inputs ?? []) {
-        _addStateFromContentVariable(service, input.content_variable, true, "", states, device, serviceGroupName);
+        for (final input in service.inputs ?? []) {
+          _addStateFromContentVariable(service, input.content_variable, true, "", states, device, serviceGroupName);
+        }
       }
+      _states[deviceType.id] = states;
+      template = states;
     }
-    _states[deviceType.id] = states;
-    return states;
+    // Always return copies, also on the miss path that just built the
+    // template: returning the cached objects themselves let the first device's
+    // live values and binding leak into every later device of the same type.
+    final states = template;
+    return List<DeviceState>.generate(states.length, (i) {
+      final state = DeviceState(null, states[i].serviceId, states[i].serviceGroupKey, states[i].functionId, states[i].aspectId,
+          states[i].isControlling, null, null, device.id, states[i].path, states[i].serviceGroupName);
+      state.deviceInstance = device;
+      return state;
+    });
   }
 
   static _addStateFromContentVariable(Service service, ContentVariable contentVariable, bool isInput, String parentPath, List<DeviceState> states,

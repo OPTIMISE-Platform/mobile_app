@@ -75,8 +75,11 @@ class _BootstrapState extends State<_Bootstrap> {
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AppState()),
-        ChangeNotifierProvider(create: (_) => Auth()),
+        // .value: both are process-wide singletons. create: hands the
+        // provider ownership, and a disposed provider would permanently
+        // dispose the singleton — every later notifyListeners() then throws.
+        ChangeNotifierProvider.value(value: AppState()),
+        ChangeNotifierProvider.value(value: Auth()),
       ],
       child: const MyApp(),
     );

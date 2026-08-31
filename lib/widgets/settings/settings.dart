@@ -304,8 +304,8 @@ class Settings extends StatelessWidget {
               var txt = "Version: ${dotenv.env["VERSION"]}\n"
                   "Username: ${Auth().getUsername()}\n"
                   "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
-                  "Local Mode:  ${settings_service.Settings.getLocalMode()}\n\n";
-              "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
+                  "Local Mode:  ${settings_service.Settings.getLocalMode()}\n\n"
+                  "Keycloak Url: ${settings_service.Settings.getKeycloakUrl()}\n"
                   "Keycloak Redirect: ${settings_service.Settings.getKeycloakRedirect()}\n"
                   "Api Url: ${settings_service.Settings.getApiUrl()}\n";
               if (isar != null) {
