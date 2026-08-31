@@ -42,7 +42,9 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
     with WidgetsBindingObserver {
   final GlobalKey _keyFavButton = GlobalKey();
 
-  late DeviceListFavoritesController controller;
+  // Nullable: created once in didChangeDependencies. A late field here made
+  // dispose/lifecycle throw LateInitializationError when creation failed.
+  DeviceListFavoritesController? controller;
 
   @override
   void initState() {
@@ -54,15 +56,17 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
+    // Once: didChangeDependencies re-fires on theme/MediaQuery changes, and a
+    // fresh controller each time leaked the previous one's refresh listener.
+    if (controller != null) return;
     final state = context.read<AppState>();
-    controller = DeviceListFavoritesController(state);
-    controller.init(context);
+    controller = DeviceListFavoritesController(state)..init(context);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    controller.dispose();
+    controller?.dispose();
     super.dispose();
   }
 
@@ -70,7 +74,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed &&
         ModalRoute.of(context)?.isCurrent == true) {
-      controller.onResume(context);
+      controller?.onResume(context);
     }
   }
 

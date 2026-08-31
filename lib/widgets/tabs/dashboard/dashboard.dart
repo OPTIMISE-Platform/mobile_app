@@ -92,6 +92,13 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    // Only on resume: without the guard every backgrounding (inactive/paused)
+    // reloaded all smart-service widgets.
+    if (state != AppLifecycleState.resumed ||
+        !mounted ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
     _refresh();
   }
 

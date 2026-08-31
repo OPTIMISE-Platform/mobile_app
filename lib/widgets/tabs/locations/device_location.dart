@@ -38,7 +38,10 @@ class DeviceListByLocation extends StatefulWidget {
 
 class _DeviceListByLocationState extends State<DeviceListByLocation>
     with WidgetsBindingObserver {
-  static StreamSubscription? _fabSubscription;
+  // Not static: a static field let a second instance overwrite the first
+  // instance's subscription (leak) and the first's dispose cancel the
+  // second's — the FAB silently died after leaving and re-entering the tab.
+  StreamSubscription? _fabSubscription;
   StreamSubscription? _refreshSubscription;
   DeviceTabsState? parentState;
 

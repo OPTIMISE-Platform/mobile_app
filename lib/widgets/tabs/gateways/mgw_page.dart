@@ -152,6 +152,28 @@ class AddLocalNetwork extends StatefulWidget {
 }
 
 class _AddLocalNetworkState extends State<AddLocalNetwork> {
+  // Held in state: constructing the future inside build restarted the 5s mDNS
+  // discovery on every AppState notify, racing the previous run's stop. The
+  // _searching flag keeps the refresh button from starting an overlapping run.
+  late Future<List<MGW>> _discovery;
+  bool _searching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _discovery = _runDiscovery();
+  }
+
+  Future<List<MGW>> _runDiscovery() async {
+    _searching = true;
+    try {
+      return await DiscoverLocalGatewayHosts();
+    } finally {
+      _searching = false;
+      if (mounted) setState(() {});
+    }
+  }
+
   handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
     if (mgws.length == 0) {
       return const Column(
@@ -245,9 +267,18 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
       return Scaffold(
           appBar: AppBar(
             title: const Text("Gateways"),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: "Search again",
+                onPressed: _searching
+                    ? null
+                    : () => setState(() => _discovery = _runDiscovery()),
+              ),
+            ],
           ),
           body: FutureBuilder(
-              future: DiscoverLocalGatewayHosts(),
+              future: _discovery,
               builder: (BuildContext context,
                   AsyncSnapshot<List<MGW>> servicesWrapper) {
                 return handleResponse(servicesWrapper, state, context);
