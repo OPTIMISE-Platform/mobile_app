@@ -75,11 +75,19 @@ class _BootstrapState extends State<_Bootstrap> {
 
     return MultiProvider(
       providers: [
-        // .value: both are process-wide singletons. create: hands the
-        // provider ownership, and a disposed provider would permanently
-        // dispose the singleton — every later notifyListeners() then throws.
-        ChangeNotifierProvider.value(value: AppState()),
-        ChangeNotifierProvider.value(value: Auth()),
+        // create:, not .value — the lazy construction is load-bearing.
+        // AppState's constructor reads FirebaseMessaging.instance, starts mDNS
+        // discovery and initializes the native pipe, none of which exist until
+        // AppInitializer.runDeferred() has run, and that runs after this build.
+        // create: defers construction to the first read by a descendant, by
+        // which time the setup is done; .value constructs it here and throws
+        // "No Firebase App '[DEFAULT]' has been created", leaving a grey screen.
+        //
+        // The cost is that the provider owns these singletons and would dispose
+        // them if it were ever removed from the tree. It never is: _Bootstrap
+        // does not remount and RestartController re-keys only the Theme below.
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => Auth()),
       ],
       child: const MyApp(),
     );
