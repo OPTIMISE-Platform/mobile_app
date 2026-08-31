@@ -20,7 +20,6 @@ import 'package:arrow_path/arrow_path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter_material_symbols/flutter_material_symbols.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
@@ -272,7 +271,7 @@ class _FlowPaintBase extends CustomPainter {
   double? _value = 0;
   bool _shouldRepaint = false;
 
-  IconData icon = MaterialSymbols.abc;
+  IconData icon = Icons.abc;
   Color color = Colors.white;
   String unit = "W";
 
@@ -331,28 +330,28 @@ class _FlowPaintBase extends CustomPainter {
 class _FlowPaintSolar extends _FlowPaintBase {
   _FlowPaintSolar() {
     color = Colors.amber;
-    icon = MaterialSymbols.solar_power;
+    icon = Icons.solar_power;
   }
 }
 
 class _FlowPaintHousehold extends _FlowPaintBase {
   _FlowPaintHousehold() {
     color = Colors.teal;
-    icon = MaterialSymbols.house;
+    icon = Icons.house;
   }
 }
 
 class _FlowPaintGrid extends _FlowPaintBase {
   _FlowPaintGrid() {
     color = Colors.redAccent;
-    icon = MaterialSymbols.electrical_services;
+    icon = Icons.electrical_services;
   }
 }
 
 class _FlowPaintBattery extends _FlowPaintBase {
   _FlowPaintBattery() {
     color = Colors.lightGreen;
-    icon = MaterialSymbols.battery_full;
+    icon = Icons.battery_full;
     unit = "%";
   }
 
@@ -360,21 +359,21 @@ class _FlowPaintBattery extends _FlowPaintBase {
   set value(double? v) {
     super.value = v;
     if (_value == 100 || _value == null) {
-      icon = MaterialSymbols.battery_full;
+      icon = Icons.battery_full;
     } else if ((_value ?? 0) > 85) {
-      icon = MaterialSymbols.battery_6_bar;
+      icon = Icons.battery_6_bar;
     } else if ((_value ?? 0) > 70) {
-      icon = MaterialSymbols.battery_5_bar;
+      icon = Icons.battery_5_bar;
     } else if ((_value ?? 0) > 55) {
-      icon = MaterialSymbols.battery_4_bar;
+      icon = Icons.battery_4_bar;
     } else if ((_value ?? 0) > 40) {
-      icon = MaterialSymbols.battery_3_bar;
+      icon = Icons.battery_3_bar;
     } else if ((_value ?? 0) > 25) {
-      icon = MaterialSymbols.battery_2_bar;
+      icon = Icons.battery_2_bar;
     } else if ((_value ?? 0) > 10) {
-      icon = MaterialSymbols.battery_1_bar;
+      icon = Icons.battery_1_bar;
     } else {
-      icon = MaterialSymbols.battery_0_bar;
+      icon = Icons.battery_0_bar;
     }
   }
 }

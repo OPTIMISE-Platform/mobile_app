@@ -210,7 +210,7 @@ packages:
     source: hosted
     version: "1.0.2"
   cupertino_icons:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: cupertino_icons
       sha256: "41e005c33bd814be4d3096aff55b1908d419fde52ca656c8c47719ec745873cd"
@@ -422,11 +422,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.2"
-  flutter_localizations:
-    dependency: transitive
-    description: flutter
-    source: sdk
-    version: "0.0.0"
   flutter_map:
     dependency: transitive
     description:
@@ -435,16 +430,8 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "5.0.0"
-  flutter_material_symbols:
-    dependency: "direct main"
-    description:
-      name: flutter_material_symbols
-      sha256: "14845fb68cfb4ec264de5a49e0f3e7bc7c8f1b61898605162a378b17a06a80a0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.4"
   flutter_native_splash:
-    dependency: "direct main"
+    dependency: "direct dev"
     description:
       name: flutter_native_splash
       sha256: "4fb9f4113350d3a80841ce05ebf1976a36de622af7d19aca0ca9a9911c7ff002"
@@ -662,7 +649,7 @@ packages:
     source: hosted
     version: "0.15.6"
   http:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -909,14 +896,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-  multiselect:
-    dependency: "direct main"
-    description:
-      name: multiselect
-      sha256: "21f60b3979adc4b769058b7aba2a124b2d14f769ede948efb61f116e3c3ff435"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.1.1"
   mutex:
     dependency: "direct main"
     description:
@@ -925,14 +904,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.0"
-  navigation_builder:
-    dependency: transitive
-    description:
-      name: navigation_builder
-      sha256: d1b145dde5869849613d9b93ecd8f5a3ae929471ef81d1ba017f476b70bd7c39
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.0.4"
   nested:
     dependency: transitive
     description:
@@ -1338,22 +1309,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.12.1"
-  states_rebuilder:
-    dependency: transitive
-    description:
-      name: states_rebuilder
-      sha256: f760498bb7adbe12d0d6da67f23c07e6c41de6261052ba8794356222fe27ddf3
-      url: "https://pub.dev"
-    source: hosted
-    version: "6.4.0"
-  stats:
-    dependency: "direct main"
-    description:
-      name: stats
-      sha256: "35dba13a465ac4f788d2f21211bb4736902f49ef02471ba39337d56c4644290c"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.0"
   stream_channel:
     dependency: transitive
     description:
@@ -1427,7 +1382,7 @@ packages:
     source: hosted
     version: "2.3.1"
   url_launcher:
-    dependency: "direct main"
+    dependency: transitive
     description:
       name: url_launcher
       sha256: f6a7e5c4835bb4e3026a04793a4199ca2d14c739ec378fdfe23fc8075d0439f8
