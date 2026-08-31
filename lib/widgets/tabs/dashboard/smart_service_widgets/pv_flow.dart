@@ -609,8 +609,6 @@ class _ArrowPainter extends CustomPainter {
         path.relativeLineTo(-length * (1-_pos) + animationLength * length, 0);
         offset = Offset(fromX - length / 2 + textPainter.width / 2, fromY - 6);
         break;
-      default:
-        throw UnimplementedError();
     }
     path = ArrowPath.addTip(path);
     canvas.drawPath(path, p);

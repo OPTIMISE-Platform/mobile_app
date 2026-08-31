@@ -15,7 +15,6 @@
  */
 
 import 'package:json_annotation/json_annotation.dart';
-import 'package:mobile_app/models/concept.dart';
 
 part 'function.g.dart';
 

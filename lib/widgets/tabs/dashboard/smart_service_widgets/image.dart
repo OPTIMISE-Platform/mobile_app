@@ -17,13 +17,11 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/services/auth.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 
 class SmSeImage extends SmSeRequest {
@@ -32,7 +30,6 @@ class SmSeImage extends SmSeRequest {
 
   bool _cachable = false;
   Widget imageWidget = const SizedBox.shrink();
-  CacheOptions? _options;
 
   @override
   double height = 1;

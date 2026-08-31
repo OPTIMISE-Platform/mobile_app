@@ -18,7 +18,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-import 'package:logger/logger.dart';
 import 'package:mobile_app/mixins/data_mixin.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/mixins/network_mixin.dart';
@@ -44,8 +43,6 @@ class AppState extends ChangeNotifier
   static final _instance = AppState._internal();
 
   factory AppState() => _instance;
-
-  static final _logger = Logger(printer: SimplePrinter());
 
   bool _initialized = false;
 

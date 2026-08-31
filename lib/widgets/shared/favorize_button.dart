@@ -44,18 +44,18 @@ class FavorizeButton extends StatelessWidget {
 
   click() async {
     if (_device != null) {
-        _device!.favorite = !_device!.favorite ;
+        _device.favorite = !_device.favorite ;
         await isar?.writeTxn(() async {
-          await isar!.deviceInstances.put(_device!);
+          await isar!.deviceInstances.put(_device);
         });
     } else {
-      _group!.favorite = !_group!.favorite ;
+      _group!.favorite = !_group.favorite ;
       await isar?.writeTxn(() async {
-        await isar!.deviceGroups.put(_group!);
+        await isar!.deviceGroups.put(_group);
       });
     }
     if (_device != null) {
-      _device!.notifyStateChanged();
+      _device.notifyStateChanged();
     } else {
       _group!.notifyStateChanged();
     }
@@ -73,7 +73,7 @@ class FavorizeButton extends StatelessWidget {
           ? !DevicesService.isSaveAvailable()
           : !DeviceGroupsService.isCreateEditDeleteAvailable();
       final List<Widget> children = [];
-      if (_device != null ? _device!.favorite : _group!.favorite) {
+      if (_device != null ? _device.favorite : _group!.favorite) {
         children.add(Icon(
           Icons.star,
           color: disabled ? Theme.of(context).disabledColor : Colors.yellow,
@@ -82,7 +82,7 @@ class FavorizeButton extends StatelessWidget {
               : null,
         ));
       }
-      if ((_device != null ? !_device!.favorite : !_group!.favorite) ||
+      if ((_device != null ? !_device.favorite : !_group!.favorite) ||
           (_border && !disabled)) {
         children.add(Icon(Icons.star_border,
             color: disabled ? Theme.of(context).disabledColor : Colors.grey));

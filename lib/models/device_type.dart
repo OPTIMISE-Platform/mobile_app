@@ -15,7 +15,6 @@
  */
 
 import 'package:json_annotation/json_annotation.dart';
-import 'package:logger/logger.dart';
 import 'package:mobile_app/models/service_group.dart';
 
 import 'package:mobile_app/models/service.dart';

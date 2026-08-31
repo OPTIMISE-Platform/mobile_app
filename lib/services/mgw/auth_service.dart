@@ -55,7 +55,7 @@ Future<String> getDeviceName() async {
 
   if(Platform.isIOS) {
     IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-    return iosInfo.utsname.machine ?? "unknown";
+    return iosInfo.utsname.machine;
   }
 
   return "unknown";

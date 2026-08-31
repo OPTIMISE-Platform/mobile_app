@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-import 'dart:async';
 
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart';
 

@@ -22,7 +22,6 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
 
 import 'tab_config.dart';
 

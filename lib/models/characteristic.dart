@@ -139,6 +139,7 @@ class Characteristic {
             if (characteristic.max_value != null && doubleValue > characteristic.max_value!) {
               return "value bigger than ${characteristic.max_value}";
             }
+            return null;
           }, (v) => double.parse(v ?? ""), setState, const TextInputType.numberWithOptions(signed: true, decimal: true)));
         }
         _insertValueIntoResult(value, path, setState, ignoreExisting: true);
@@ -205,6 +206,7 @@ class Characteristic {
             if (characteristic.max_value != null && intValue > characteristic.max_value!) {
               return "value bigger than ${characteristic.max_value!.toInt()}";
             }
+            return null;
           }, (v) => int.parse(v ?? ""), setState, const TextInputType.numberWithOptions(signed: true)));
         }
         _insertValueIntoResult(value, path, setState, ignoreExisting: true);
