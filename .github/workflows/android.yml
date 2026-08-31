@@ -17,7 +17,9 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.3'
+          # Keep in sync with .fvmrc. This was missed when the project moved to
+          # 3.35.7, so the release build would have failed in `pub get`.
+          flutter-version: '3.35.7'
       - run: git config --global url."https://".insteadOf git:// # allows dependency downloads without gpg
       - run: flutter pub get
       - name: "Prepare environment"
