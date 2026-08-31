@@ -55,9 +55,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                       as DeviceTabsState?)
                   ?.filter ??
               DeviceSearchFilter(
-                  "", null, null, [AppState().networks[_selected!].id]),
-          context,
-          true);
+                  "", null, null, [AppState().networks[_selected!].id]), true);
     }
   }
 
@@ -169,9 +167,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                           DeviceSearchFilter(
                                                               "", null, null, [
                                                             state.networks[i].id
-                                                          ]),
-                                                      context,
-                                                      true)
+                                                          ]), true)
                                                   .then((_) => setState(
                                                       () => _loading = false));
                                               parentState?.setState(() {
@@ -233,6 +229,9 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                             state.networks[i]
                                                                 .id);
                                                     final mgw = storedMGWs[mgwIndex];
+                                                    if (!context.mounted) {
+                                                      return;
+                                                    }
                                                     showDialog(
                                                         context: context,
                                                         builder:

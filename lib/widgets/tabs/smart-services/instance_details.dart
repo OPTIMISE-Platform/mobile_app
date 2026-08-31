@@ -67,11 +67,13 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                           f.catchError(
                               (_) => Toast.showToastNoContext("Could not delete Smart Service ${widget.instance.name}"));
                           await Future.any([f, Future.delayed(const Duration(milliseconds: 500))]);
+                          if (!mounted) return;
                           Navigator.pop(this.context, true);
                         })
                   ],
                 ));
         if (deleted == true) {
+          if (!mounted) return;
           Navigator.pop(this.context);
         }
       },
@@ -90,6 +92,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                 p.value = existing.value;
                 p.value_label = existing.value_label;
               }
+              if (!mounted) return;
               await Navigator.push(
                   this.context,
                   platformPageRoute(
@@ -100,6 +103,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                       parameters: parameters,
                     ),
                   ));
+              if (!mounted) return;
               Navigator.pop(this.context);
             } catch (e) {
               Toast.showToastNoContext(e.toString());

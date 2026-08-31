@@ -229,6 +229,7 @@ class AppUpdater {
     }
     final stream = (await downloadUpdate()).asBroadcastStream();
     stream.listen(null, onDone: () => OpenFilex.open(localFile));
+    if (!context.mounted) return;
     await showPlatformDialog(
       context: context,
       builder: (context) => PlatformAlertDialog(

@@ -63,7 +63,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
     filter.query = search;
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      AppState().searchDevices(filter, context);
+      AppState().searchDevices(filter);
     });
   }
 
@@ -74,7 +74,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
         itemCount: AppState().totalDevices,
         itemBuilder: (_, i) {
           if (i >= AppState().devices.length) {
-            AppState().loadDevices(context);
+            AppState().loadDevices();
           }
           if (i > AppState().devices.length - 1) {
             return const SizedBox.shrink();
@@ -113,6 +113,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
         AppState().locations[widget._stateLocationIndex].device_ids = _selected.toList();
         await LocationService.saveLocation(AppState().locations[widget._stateLocationIndex]);
         AppState().notifyListeners();
+        if (!mounted) return;
         if (_delegateOpen) Navigator.pop(context, true);
         Navigator.pop(context);
       },
@@ -140,7 +141,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
       if (!_initialized) {
         _selected.addAll(location.device_ids);
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          state.searchDevices(filter, context);
+          state.searchDevices(filter);
         });
         _initialized = true;
       }

@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -66,6 +65,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
         as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
+      if (!mounted) return;
       await Navigator.push(
           context,
           platformPageRoute(
@@ -238,19 +238,21 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                                           .getRelease(instances[
                                                       i]
                                                           .new_release_id!);
-                                                      await Navigator.push(
-                                                          context,
-                                                          platformPageRoute(
-                                                              context: context,
-                                                              builder: (context) =>
-                                                                  SmartServicesReleaseLaunch(
-                                                                    release,
-                                                                    instance:
-                                                                    instances[
-                                                                    i],
-                                                                    parameters:
-                                                                    p.k,
-                                                                  )));
+                                                      if (context.mounted) {
+                                                        await Navigator.push(
+                                                            context,
+                                                            platformPageRoute(
+                                                                context: context,
+                                                                builder: (context) =>
+                                                                    SmartServicesReleaseLaunch(
+                                                                      release,
+                                                                      instance:
+                                                                      instances[
+                                                                      i],
+                                                                      parameters:
+                                                                      p.k,
+                                                                    )));
+                                                      }
                                                     }
                                                   } catch (e) {
                                                     setState(() {

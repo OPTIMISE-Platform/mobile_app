@@ -61,6 +61,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
               state.locations[widget._stateLocationIndex].device_group_ids = _selected.toList();
               await LocationService.saveLocation(state.locations[widget._stateLocationIndex]);
               state.notifyListeners();
+              if (!context.mounted) return;
               Navigator.pop(context);
             },
             backgroundColor: MyTheme.appColor,

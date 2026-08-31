@@ -56,13 +56,14 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   @override
   void initState() {
     super.initState();
-    AppState().loadLocations(context);
+    AppState().loadLocations();
     WidgetsBinding.instance.addObserver(this);
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
         as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       final titleController = TextEditingController(text: "");
       String? newName;
+      if (!mounted) return;
       await showPlatformDialog(
           context: context,
           builder: (_) => PlatformAlertDialog(
@@ -91,7 +92,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
       AppState().notifyListeners();
     });
     _refreshSubscription = AppState().refreshPressed.listen((_) {
-      AppState().loadLocations(context);
+      AppState().loadLocations();
     });
   }
 
@@ -100,7 +101,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed &&
         ModalRoute.of(context)?.isCurrent == true) {
-      AppState().loadLocations(context);
+      AppState().loadLocations();
       setState(() {});
     }
   }
@@ -110,8 +111,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
     AppState().searchDevices(
         parentState?.filter ??
             DeviceSearchFilter(
-                "", null, null, null, [AppState().locations[i].id]),
-        context);
+                "", null, null, null, [AppState().locations[i].id]));
     await Navigator.push(
         context,
         platformPageRoute(
@@ -129,7 +129,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
               : RefreshIndicator(
                   onRefresh: () async {
                     HapticFeedbackProxy.lightImpact();
-                    state.loadLocations(context);
+                    state.loadLocations();
                   },
                   child: state.locations.isEmpty
                       ? LayoutBuilder(

@@ -207,6 +207,6 @@ abstract class SmartServiceModuleWidget {
 
   redrawDashboard(BuildContext context) {
     final state = (context.findAncestorStateOfType<State<Dashboard>>() as DashboardState?);
-    if (state?.mounted == true) state!.setState(() {});
+    state?.redraw();
   }
 }

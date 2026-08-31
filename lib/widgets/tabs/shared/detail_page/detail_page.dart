@@ -168,7 +168,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       if ((state.loadingDevices || (widget._group != null && (state.devices.length != widget._group!.device_ids.length))) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
-          state.loadDevices(context); //ensure all devices get loaded
+          state.loadDevices(); //ensure all devices get loaded
         }
         return Center(child: DelayedCircularProgressIndicator());
       }
@@ -185,7 +185,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
       final connectionStatus = device?.connection_state;
       final appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
       if (state.devices.isEmpty) {
-        state.loadDevices(context);
+        state.loadDevices();
       }
       List<Widget> appBarActions = [];
 
@@ -272,12 +272,15 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
                             onPressed: () async {
                               await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
                               state.deviceGroups.remove(deviceGroup);
+                              if (!context.mounted) return;
                               Navigator.pop(context, true);
                             })
                       ],
                     ));
             if (deleted == true) {
-              Navigator.pop(context);
+              // Only the pop needs a live context; the notify has to happen
+              // either way, otherwise the list keeps showing the deleted group.
+              if (context.mounted) Navigator.pop(context);
               state.notifyListeners();
             }
           },
@@ -487,8 +490,9 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
               : FloatingActionButton(
                   onPressed: () async {
                     await Navigator.push(context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._group!)));
-                    await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), context, true);
+                    await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), true);
                     deviceGroup.prepareStates(true);
+                    if (!context.mounted) return;
                     _refresh(context);
                   },
                   backgroundColor: MyTheme.appColor,
@@ -551,6 +555,7 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));
     _refreshSubscription = AppState().refreshPressed.listen((_) {
+      if (!mounted) return;
       _refresh(context);
     });
   }

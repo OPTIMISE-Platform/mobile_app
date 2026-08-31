@@ -18,8 +18,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
-import 'package:mobile_app/models/mgw.dart';
-import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/details.dart';
@@ -27,12 +25,8 @@ import 'package:mobile_app/widgets/tabs/gateways/details.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
-import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
 class Gateways extends StatefulWidget {
   const Gateways({Key? key}) : super(key: key);
@@ -42,7 +36,6 @@ class Gateways extends StatefulWidget {
 }
 
 class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
-  int? _selected;
   StreamSubscription? _refreshSubscription;
   StreamSubscription? _fabSubscription;
   late final DeviceTabsState? parentState;
@@ -61,6 +54,7 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
         as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
+      if (!mounted) return;
       await Navigator.push(
           context,
           platformPageRoute(

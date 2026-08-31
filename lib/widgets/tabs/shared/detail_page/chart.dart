@@ -108,7 +108,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       } catch (e) {
         Toast.showToastNoContext("Could not load data");
         _logger.e(e);
-        if (_spots == null) Navigator.pop(context);
+        if (_spots == null && context.mounted) Navigator.pop(context);
 
         setState(() {
           _refreshing = false;

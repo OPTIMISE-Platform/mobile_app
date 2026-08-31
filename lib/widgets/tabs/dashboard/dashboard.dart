@@ -61,6 +61,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     _toggleStreamController.close();
+    _tabController?.dispose();
     super.dispose();
   }
 
@@ -69,7 +70,9 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
-      final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)).where((element) => element != null));
+      // The where() used to sit here, filtering the futures rather than their
+      // results — always true. The null results are dropped below.
+      final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)));
       _smartServiceWidgets = {};
       items.forEach((element) {
         if (element == null) return;
@@ -87,6 +90,12 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();
     });
+  }
+
+  /// Rebuilds the dashboard. Public so the widget implementations can ask for
+  /// a redraw without reaching into the protected setState from outside.
+  void redraw() {
+    if (mounted) setState(() {});
   }
 
   @override

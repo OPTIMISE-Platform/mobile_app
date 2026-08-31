@@ -17,12 +17,12 @@ class DeviceListFavoritesController {
       _initialized = true;
 
       if (state.initialized && state.devices.isEmpty) {
-        state.loadDevices(context);
+        state.loadDevices();
       }
     }
 
     refreshSub ??= state.refreshPressed.listen((_) {
-      state.refreshDevices(context);
+      state.refreshDevices();
     });
   }
 
@@ -31,6 +31,6 @@ class DeviceListFavoritesController {
   }
 
   void onResume(BuildContext context) {
-    state.refreshDevices(context);
+    state.refreshDevices();
   }
 }

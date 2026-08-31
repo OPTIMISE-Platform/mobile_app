@@ -114,7 +114,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
         return RefreshIndicator(
           onRefresh: () async {
             HapticFeedbackProxy.lightImpact();
-            state.refreshDevices(context);
+            state.refreshDevices();
           },
           child: Scrollbar(child: content),
         );
@@ -173,7 +173,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
               if (parent == null) return;
 
               parent.filter.deviceGroupIds = null;
-              state.searchDevices(parent.filter, context);
+              state.searchDevices(parent.filter);
             }),
           ],
         );

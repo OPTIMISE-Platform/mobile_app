@@ -31,16 +31,19 @@ class Notification {
 
   show(BuildContext context) {
     Future.delayed(const Duration(milliseconds: 100),
-      () => showPlatformDialog(
-      context: context,
-      builder: (_) => PlatformAlertDialog(
-        title: Text(title, overflow: TextOverflow.ellipsis,),
-        content: Text(message),
-        actions: <Widget>[
-          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context)),
-        ],
-      ),
-    ));
+      () {
+        if (!context.mounted) return;
+        showPlatformDialog(
+          context: context,
+          builder: (_) => PlatformAlertDialog(
+            title: Text(title, overflow: TextOverflow.ellipsis,),
+            content: Text(message),
+            actions: <Widget>[
+              PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+        );
+      });
   }
 
   Notification(this.created_at, this.message, this.userId, this.id, this.isRead, this.title);

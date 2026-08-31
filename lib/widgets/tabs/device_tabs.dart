@@ -27,7 +27,6 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
-import 'package:mobile_app/widgets/tabs/gateways/gateways.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_values.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
@@ -148,10 +147,10 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       final force = !AppState().devicesLoadedOnce;
       if (config.ownsFavorites()) {
         filter.favorites = true;
-        AppState().searchDevices(filter, context, force);
+        AppState().searchDevices(filter, force);
         filter.favorites = false;
       } else {
-        AppState().searchDevices(filter, context, force);
+        AppState().searchDevices(filter, force);
       }
     }
   }
@@ -238,7 +237,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         final state = Provider.of<AppState>(context, listen: false);
         // parallel — don't await sequentially
         Future.wait([
-          state.loadDeviceGroups(context),
+          state.loadDeviceGroups(),
           state.loadNetworks(context)
         ]).then((_) {
           if (!mounted) return;
@@ -254,6 +253,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     _fabPressedController.close();
     _cupertinoSearchController.dispose();
     _sidebarController.dispose();
+    controller.dispose();
     super.dispose();
   }
 

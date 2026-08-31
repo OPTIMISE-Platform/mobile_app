@@ -62,6 +62,7 @@ Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
             onPressed: () async {
               var password = _textFieldController.text;
               await MgwStorage.StoreBasicAuthCredentials(password);
+              if (!context.mounted) return;
               Navigator.pop(context);
             },
           ),
@@ -129,8 +130,10 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
       // MGW is still using basic auth protection -> ask user for password
       try {
         _logger.d("Try to pair basic auth based");
-        await pairWithBasicAuth(widgetBuildContext, mgw);
-        await StoreGateway(mgw, appState);
+        if (widgetBuildContext.mounted) {
+          await pairWithBasicAuth(widgetBuildContext, mgw);
+          await StoreGateway(mgw, appState);
+        }
       } catch (e) {
         _logger.e("Pairing is not possible: $e");
         Toast.showToastNoContext(
@@ -141,6 +144,7 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
           "Pairing was not possible. Check if pairing mode is enabled!");
     }
   }
+  if (!context.mounted) return;
   Navigator.pop(context);
 }
 
@@ -200,7 +204,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
               return Padding(
                   padding: const EdgeInsets.only(top: 30),
                   child: ListTile(
-                    title: Text(mgw.mDNSServiceName ?? "No name provided"),
+                    title: Text(mgw.mDNSServiceName),
                     trailing: MaterialButton(
                         child: const Icon(
                             Icons.add

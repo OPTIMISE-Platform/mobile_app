@@ -146,7 +146,7 @@ class _SensorValuesState extends State<SensorValues>
       if (groupIds.isNotEmpty && AppState().deviceGroups.isEmpty) {
         // The tab shell normally loads them, but this page can be the start
         // page and run before that finishes.
-        await AppState().loadDeviceGroups(context);
+        await AppState().loadDeviceGroups();
       }
       final groups = AppState().deviceGroups
           .where((g) => groupIds.contains(g.id))

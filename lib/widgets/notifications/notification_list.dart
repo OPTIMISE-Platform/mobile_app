@@ -149,7 +149,7 @@ class _NotificationListState extends State<NotificationList> {
                       ),
                     );
                     if (confirmed is bool && confirmed) {
-                      await state.deleteNotifications(this.context,
+                      await state.deleteNotifications(
                           _selected.map((e) => e.id).toList(growable: false));
                       setState(() {
                         _selected.clear();
@@ -204,7 +204,7 @@ class _NotificationListState extends State<NotificationList> {
                                     },
                                     direction: DismissDirection.endToStart,
                                     onDismissed: (_) => state
-                                        .deleteNotifications(context,
+                                        .deleteNotifications(
                                             [state.notifications[i].id]),
                                     key: ValueKey<String>(
                                         state.notifications[i].id),

@@ -134,6 +134,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             } catch (e) {
               return "Invalid number";
             }
+            return null;
           },
           onChanged: (value) {
             final old = p.value;
@@ -170,6 +171,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             } catch (e) {
               return "No decimal value";
             }
+            return null;
           },
           onChanged: (value) {
             final old = p.value;
@@ -236,7 +238,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           await SmartServiceService.getReleaseParameters(widget.release.id);
         } catch (e) {
           _logger.e("Could not load release parameters: $e");
-          Navigator.pop(context);
+          if (mounted) Navigator.pop(context);
           Toast.showToastNoContext("Could not load smart service release");
         }
       } else {
@@ -356,6 +358,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                       _logger.e("Could not create smart service instance: $e");
                       Toast.showToastNoContext("Could not start smart service");
                     }
+                    if (!context.mounted) return;
                     Navigator.pop(context);
                   } else {
                     try {
@@ -369,6 +372,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                       Toast.showToastNoContext("Could not update smart service");
                     }
                   }
+                  if (!mounted) return;
                   Navigator.pop(this.context);
                 },
           backgroundColor: valid ? MyTheme.appColor : Colors.grey,

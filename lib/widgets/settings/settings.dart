@@ -53,9 +53,7 @@ String _initialTabName() {
 }
 
 class Settings extends StatelessWidget {
-  Settings({super.key});
-
-  String _functionSearch = "";
+  const Settings({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -134,10 +132,7 @@ class Settings extends StatelessWidget {
                         },
                         child: const Text("Reset All"))
                   ]),
-                  content: StatefulBuilder(
-                      builder: (context, setState) =>
-                          _getFunctionPreferredCharacteristicsList(
-                              context, setState)),
+                  content: const _FunctionCharacteristicsList(),
                   actions: [
                     PlatformDialogAction(
                         child: const Text("Close"),
@@ -169,6 +164,7 @@ class Settings extends StatelessWidget {
                             onPressed: () async {
                               await MyTheme.selectThemeColor(null);
                               RestartController.restart();
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
@@ -176,6 +172,7 @@ class Settings extends StatelessWidget {
                             onPressed: () async {
                               await MyTheme.selectThemeColor(dark);
                               RestartController.restart();
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                             }),
                         PlatformDialogAction(
@@ -183,6 +180,7 @@ class Settings extends StatelessWidget {
                             onPressed: () async {
                               await MyTheme.selectThemeColor(light);
                               RestartController.restart();
+                              if (!context.mounted) return;
                               Navigator.pop(context);
                             })
                       ],
@@ -219,6 +217,7 @@ class Settings extends StatelessWidget {
                       Toast.showToastNoContext("Please check again later");
                       return;
                     } else {
+                      if (!context.mounted) return;
                       AppUpdater.showUpdateDialog(context);
                     }
                   },
@@ -315,6 +314,7 @@ class Settings extends StatelessWidget {
                   ex.forEach((e) => txt += "$e\n\n");
                 }
               }
+              if (!context.mounted) return;
               showPlatformDialog(
                 context: context,
                 builder: (context) => PlatformAlertDialog(
@@ -343,6 +343,7 @@ class Settings extends StatelessWidget {
                                 .where()
                                 .deleteAll());
                           }
+                          if (!context.mounted) return;
                           Navigator.pop(context);
                         }),
                     PlatformDialogAction(
@@ -421,6 +422,7 @@ class Settings extends StatelessWidget {
                             null);
                         await settings_service.Settings.setApiUrl(null);
                         Toast.showToastNoContext("Reset done, consider logging out");
+                        if (!context.mounted) return;
                         Navigator.pop(context);
                       }),
                   PlatformDialogAction(
@@ -434,6 +436,7 @@ class Settings extends StatelessWidget {
                         await settings_service.Settings.setKeycloakRedirect(
                             keycloakRedirect);
                         await settings_service.Settings.setApiUrl(apiUrl);
+                        if (!context.mounted) return;
                         Navigator.pop(context);
                       }),
                 ],
@@ -476,8 +479,26 @@ class Settings extends StatelessWidget {
     });
   }
 
-  Widget _getFunctionPreferredCharacteristicsList(
-      BuildContext context, StateSetter setState) {
+}
+
+/// The unit picker: every function whose concept offers more than one
+/// characteristic, filtered by a search box. Its own widget because the search
+/// string is state — on the enclosing StatelessWidget it was reset by any
+/// parent rebuild.
+class _FunctionCharacteristicsList extends StatefulWidget {
+  const _FunctionCharacteristicsList();
+
+  @override
+  State<_FunctionCharacteristicsList> createState() =>
+      _FunctionCharacteristicsListState();
+}
+
+class _FunctionCharacteristicsListState
+    extends State<_FunctionCharacteristicsList> {
+  String _functionSearch = "";
+
+  @override
+  Widget build(BuildContext context) {
     final functions = AppState()
         .platformFunctions
         .values
@@ -573,10 +594,7 @@ class Settings extends StatelessWidget {
                   prefixIcon: Icon(Icons.search),
                   labelText: 'Search',
                 ),
-                onChanged: (filter) {
-                  _functionSearch = filter;
-                  setState(() {});
-                },
+                onChanged: (filter) => setState(() => _functionSearch = filter),
                 initialValue: _functionSearch,
               )),
           Expanded(child: Scrollbar(child: list))

@@ -61,10 +61,10 @@ class LocationPageState extends State<LocationPage>
     printer: SimplePrinter(),
   );
 
-  _refresh(Location location, BuildContext context) async {
+  _refresh(Location location) async {
     widget.parentState.filter.locationIds = [location.id];
-    await AppState().loadDeviceGroups(context);
-    await AppState().searchDevices(widget.parentState.filter, context, true);
+    await AppState().loadDeviceGroups();
+    await AppState().searchDevices(widget.parentState.filter, true);
   }
 
   @override
@@ -84,7 +84,7 @@ class LocationPageState extends State<LocationPage>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed &&
         ModalRoute.of(context)?.isCurrent == true)
-      _refresh(AppState().locations[widget._stateLocationIndex], context);
+      _refresh(AppState().locations[widget._stateLocationIndex]);
   }
 
   @override
@@ -102,7 +102,7 @@ class LocationPageState extends State<LocationPage>
                       .length) &&
           !state.allDevicesLoaded) {
         if (!state.loadingDevices) {
-          state.loadDevices(context); //ensure all devices get loaded
+          state.loadDevices(); //ensure all devices get loaded
         }
       }
 
@@ -170,12 +170,13 @@ class LocationPageState extends State<LocationPage>
                               await LocationService.deleteLocation(location.id);
                               state.locations
                                   .removeAt(widget._stateLocationIndex);
+                              if (!context.mounted) return;
                               Navigator.pop(context, true);
                             })
                       ],
                     ));
             if (deleted == true) {
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
               state.notifyListeners();
             }
           },
@@ -186,7 +187,7 @@ class LocationPageState extends State<LocationPage>
       }
       if (kIsWeb) {
         appBarActions.add(PlatformIconButton(
-          onPressed: () => _refresh(location, context),
+          onPressed: () => _refresh(location),
           icon: const Icon(Icons.refresh),
           cupertino: (_, __) =>
               CupertinoIconButtonData(padding: EdgeInsets.zero),
@@ -219,7 +220,7 @@ class LocationPageState extends State<LocationPage>
                           context: context,
                           builder: (context) =>
                               LocationEditDevices(widget._stateLocationIndex)));
-                  state.searchDevices(widget.parentState.filter, context);
+                  state.searchDevices(widget.parentState.filter);
                 },
                 icon: Icon(Icons.sensors, color: MyTheme.textColor),
               ),
@@ -246,7 +247,7 @@ class LocationPageState extends State<LocationPage>
                 : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();
-                      await _refresh(location, context);
+                      await _refresh(location);
                     },
                     child: location.device_ids.isEmpty &&
                             location.device_group_ids.isEmpty
@@ -281,7 +282,7 @@ class LocationPageState extends State<LocationPage>
                                   state.devices.length +
                                       matchingGroups.length -
                                       1) {
-                                state.loadDevices(context);
+                                state.loadDevices();
                                 return Column(
                                   children: const [Divider(), ListTile()],
                                 );
@@ -308,7 +309,7 @@ class LocationPageState extends State<LocationPage>
                                       location.id
                                     ];
                                     state.searchDevices(
-                                        widget.parentState.filter, context);
+                                        widget.parentState.filter);
                                   })
                                 ],
                               );

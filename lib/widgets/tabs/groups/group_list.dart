@@ -58,6 +58,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       final titleController = TextEditingController(text: "");
       String? newName;
+      if (!mounted) return;
       await showPlatformDialog(
           context: context,
           builder: (_) => PlatformAlertDialog(
@@ -85,7 +86,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
       AppState().notifyListeners();
     });
     _refreshSubscription = AppState().refreshPressed.listen((_) {
-      AppState().loadDeviceGroups(context);
+      AppState().loadDeviceGroups();
     });
   }
 
@@ -93,13 +94,13 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().loadDeviceGroups(context);
+      AppState().loadDeviceGroups();
     }
   }
 
   void _openGroupPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
-    AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null), context);
+    AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null));
     await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DetailPage(null, AppState().deviceGroups[i])));
     parentState?.filter.locationIds = null;
   }
@@ -112,7 +113,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
           : RefreshIndicator(
               onRefresh: () async {
                 HapticFeedbackProxy.lightImpact();
-                state.loadDeviceGroups(context);
+                state.loadDeviceGroups();
               },
               child: state.deviceGroups.isEmpty
                   ? LayoutBuilder(

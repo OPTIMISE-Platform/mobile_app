@@ -215,6 +215,7 @@ class Auth extends ChangeNotifier {
     await _client!.logout();
     _logger.d("logout");
     await _onLogout();
+    if (!context.mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 

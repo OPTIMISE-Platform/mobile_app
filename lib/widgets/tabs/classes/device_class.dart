@@ -55,7 +55,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
         AppState().loadDeviceClasses();
       } else if (parentState != null) {
         AppState().searchDevices(
-            parentState.filter, context, true);
+            parentState.filter, true);
       }
     });
   }
@@ -69,7 +69,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
       } else {
         final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
         final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-        AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true);
+        AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
       }
     }
   }
@@ -131,7 +131,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                     ),
                                     onTap: () {
                                       parentState?.filter.deviceClassIds = [deviceClasses[i].id];
-                                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), context, true);
+                                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), true);
                                       parentState?.setState(() {
                                         parentState.setHideSearchOverride(false);
                                         parentState.onBackCallback = () {
@@ -156,14 +156,14 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                 : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();
-                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), context, true);
+                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
                     child: ListView.builder(
                       padding: MyTheme.inset,
                       itemCount: state.totalDevices,
                       itemBuilder: (_, i) {
                         if (i >= state.devices.length) {
-                          state.loadDevices(context);
+                          state.loadDevices();
                           return const SizedBox.shrink();
                         }
                         final List<Widget> children = [];

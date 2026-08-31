@@ -37,7 +37,6 @@ class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
-  bool _expanded = false;
 
   DeviceListItem(this._device, this._poppedCallback, {Key? key})
       : super(key: key);
@@ -51,13 +50,10 @@ class _DeviceListItemState extends State<DeviceListItem> {
     printer: SimplePrinter(),
   );
 
-  FavorizeButton? _favorizeButton;
-
-  @override
-  void didUpdateWidget(DeviceListItem old) {
-    super.didUpdateWidget(old);
-    widget._expanded = old._expanded;
-  }
+  // Lives on the State, where it survives widget rebuilds by itself. On the
+  // widget it needed a didUpdateWidget copy to carry it across, and made the
+  // widget mutable.
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +144,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               final List<DeviceCommandResponse> responses = [];
                               if (!await DeviceCommandsService
                                   .runCommandsSecurely(
-                                      context,
                                       [controllingStates.first.toCommand()],
                                       responses)) {
                                 element.transitioning = false;
@@ -166,7 +161,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
                               responses.clear();
                               if (!await DeviceCommandsService
                                   .runCommandsSecurely(
-                                      context,
                                       [element.toCommand()],
                                       responses,
                                       false)) {
@@ -198,8 +192,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
         title: Text(device.displayName),
-        leading: _favorizeButton =
-            FavorizeButton(device, null, key: widget._keyFavButton),
+        leading: FavorizeButton(device, null, key: widget._keyFavButton),
         trailing: unavailable
             ? IconButton(
                 onPressed: null,
@@ -216,17 +209,13 @@ class _DeviceListItemState extends State<DeviceListItem> {
                         material: (_, __) => MaterialIconButtonData(
                               splashRadius: 25,
                             ),
-                        icon: Icon(widget._expanded
-                            ? Icons.expand_less
-                            : Icons.expand_more),
-                        onPressed: () {
-                          widget._expanded = !widget._expanded;
-                          setState(() {});
-                        }),
+                        icon: Icon(
+                            _expanded ? Icons.expand_less : Icons.expand_more),
+                        onPressed: () => setState(() => _expanded = !_expanded)),
         onTap: () => _onTap(context),
       ));
 
-      if (widget._expanded) {
+      if (_expanded) {
         columnWidgets.add(
           ListTile(
               title: Wrap(

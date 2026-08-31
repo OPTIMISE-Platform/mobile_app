@@ -92,6 +92,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
     final dio = await _client;
     await dio.get(url, options: Options(headers: headers));
     await refresh();
+    if (!_context.mounted) return;
     redrawDashboard(_context);
   }
 
@@ -106,6 +107,7 @@ class SmSeProcessToggle extends SmartServiceModuleWidget {
 
     await Future.wait(futures);
     await refresh();
+    if (!_context.mounted) return;
     redrawDashboard(_context);
   }
 }

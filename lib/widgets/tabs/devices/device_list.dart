@@ -47,7 +47,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refreshSubscription = AppState().refreshPressed.listen((_) {
-      AppState().refreshDevices(context);
+      AppState().refreshDevices();
     });
   }
 
@@ -55,7 +55,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().refreshDevices(context);
+      AppState().refreshDevices();
     }
   }
 
@@ -72,7 +72,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
         builder: (_, __, ___) => RefreshIndicator(
               onRefresh: () async {
                 HapticFeedbackProxy.lightImpact();
-                AppState().refreshDevices(context);
+                AppState().refreshDevices();
               },
               child: Scrollbar(
                 child: AppState().loadingDevices
@@ -103,7 +103,7 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
                             itemCount: AppState().totalDevices,
                             itemBuilder: (context, i) {
                               if (i >= AppState().devices.length) {
-                                AppState().loadDevices(context);
+                                AppState().loadDevices();
                               }
                               if (i > AppState().devices.length - 1) {
                                 return const SizedBox.shrink();

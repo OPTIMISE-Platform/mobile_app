@@ -49,6 +49,7 @@ class SmSeFlip extends SmartServiceModuleWidget {
                 _showFront = !_showFront;
                 redrawDashboard(context);
                 await refresh();
+                if (!context.mounted) return;
                 redrawDashboard(context);
               });
   }

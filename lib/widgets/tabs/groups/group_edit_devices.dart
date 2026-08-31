@@ -175,6 +175,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
         await DeviceGroupsService.saveDeviceGroup(widget._group);
         AppState().notifyListeners();
         if (_delegateOpen && mounted) Navigator.pop(context, true);
+        if (!mounted) return;
         Navigator.pop(context);
       },
       backgroundColor: MyTheme.appColor,

@@ -392,6 +392,10 @@ class SmSeLineChart extends SmSeRequest {
             : (details) async {
                 if (loadMoreData.isLocked) return;
                 await loadMoreData.acquire();
+                if (!context.mounted) {
+                  loadMoreData.release();
+                  return;
+                }
                 final swipeWidth = max(
                         ((initialTimestampDifference ?? Duration.zero)
                                 .inMilliseconds *
@@ -413,6 +417,10 @@ class SmSeLineChart extends SmSeRequest {
                   if (left < rawTimestamps.first) {
                     await addData(false);
                   }
+                }
+                if (!context.mounted) {
+                  loadMoreData.release();
+                  return;
                 }
                 redrawDashboard(context);
                 loadMoreData.release();
