@@ -189,21 +189,6 @@ class Settings {
     await _box?.put(_displayedFractionDigitsKey, value.toString()).then((v) => _box?.flush());
   }
 
-  static bool tutorialSeen(Tutorial tutorial) {
-    checkInit();
-    return _box!.containsKey(tutorial.toString());
-  }
-
-  static Future<void> markTutorialSeen(Tutorial tutorial) {
-    checkInit();
-    return _box!.put(tutorial.toString(), true.toString());
-  }
-
-  static Future<void> resetTutorials() async {
-    checkInit();
-    await Future.wait(Tutorial.values.map((e) => _box!.delete(e.toString())));
-  }
-
   static List<SmartServiceDashboard> getSmartServiceDashboards() {
     checkInit();
     final str = _box!.get(_smartServiceDashboardsKey);
@@ -395,5 +380,3 @@ class Settings {
     return _box!.put(_preReleaseModeKey, value.toString());
   }
 }
-
-enum Tutorial { addFavoriteButton, deviceListItem }

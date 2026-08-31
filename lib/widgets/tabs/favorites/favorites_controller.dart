@@ -7,7 +7,6 @@ class DeviceListFavoritesController {
   final AppState state;
 
   bool _initialized = false;
-  bool _tutorialShown = false;
 
   StreamSubscription? refreshSub;
 
@@ -33,20 +32,5 @@ class DeviceListFavoritesController {
 
   void onResume(BuildContext context) {
     state.refreshDevices(context);
-  }
-
-  bool shouldShowTutorial({
-    required List devices,
-    required List groups,
-    required bool loading,
-  }) {
-    if (!loading &&
-        devices.isEmpty &&
-        groups.isEmpty &&
-        !_tutorialShown) {
-      _tutorialShown = true;
-      return true;
-    }
-    return false;
   }
 }

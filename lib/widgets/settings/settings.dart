@@ -148,14 +148,6 @@ class Settings extends StatelessWidget {
             }),
         const Divider(),
         const RefreshCacheTile(),
-        const Divider(),
-        ListTile(
-          title: const Text("Reset Tutorials"),
-          onTap: () async {
-            await settings_service.Settings.resetTutorials();
-            Toast.showToastNoContext("Tutorials reset");
-          },
-        ),
       ];
 
       if (MyTheme.canChangeColorTheme) {
