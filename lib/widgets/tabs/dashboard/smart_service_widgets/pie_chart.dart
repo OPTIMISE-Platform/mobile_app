@@ -18,8 +18,8 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/shared/math_list.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
-import 'package:stats/stats.dart';
 
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/indicator.dart';
@@ -229,27 +229,16 @@ class SmSePieChart extends SmSeRequest {
   }
 
   int calcPrecision(List<double> nums) {
-    final stats = Stats.fromData(nums);
-    int precision = 0;
-    if (stats.standardDeviation == 0) {
-      if (sum == 0) {
-        precision = 1;
-      } else {
-        double tmp = sum;
-        while (tmp < 1) {
-          tmp *= 10;
-          precision++;
-        }
-      }
-    } else if (stats.standardDeviation >= 1 || stats.standardDeviation == 0) {
-      precision = 1;
-    } else {
-      num std = stats.standardDeviation;
-      while (std < 1) {
-        std *= 10;
-        precision++;
-      }
+    // The removed stats package threw on an empty input, aborting the update;
+    // keep that distinction explicit instead of formatting "no data" as 1.
+    if (nums.isEmpty) return 0;
+    final standardDeviation = populationStandardDeviation(nums);
+    if (standardDeviation == 0) {
+      // All sections equal: fall back to the sum's magnitude. Previously this
+      // looped forever on a negative sum.
+      return sum == 0 ? 1 : fractionDigitsBelowOne(sum);
     }
-    return precision;
+    if (standardDeviation >= 1) return 1;
+    return fractionDigitsBelowOne(standardDeviation);
   }
 }

@@ -23,10 +23,9 @@ import 'package:intl/intl.dart';
 import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
+import 'package:mobile_app/shared/math_list.dart';
 import 'package:mutex/mutex.dart';
-import 'package:stats/stats.dart';
 
-import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
@@ -316,18 +315,12 @@ class SmSeLineChart extends SmSeRequest {
           .skip(1)
           .map((e) => e is int ? e.toDouble() : e ?? 0));
     }
-    final stats = Stats.fromData(nums);
-    int precision = 0;
-    if (stats.standardDeviation > 1) {
-      precision = 1;
-    } else {
-      num std = stats.standardDeviation;
-      while (std < 1 && std != 0) {
-        std *= 10;
-        precision++;
-      }
-    }
-    return precision;
+    // The removed stats package threw on an empty input, aborting the update;
+    // keep that distinction explicit instead of formatting "no data" as 0.
+    if (nums.isEmpty) return 0;
+    final standardDeviation = populationStandardDeviation(nums);
+    if (standardDeviation > 1) return 1;
+    return fractionDigitsBelowOne(standardDeviation);
   }
 
   Future<void> addData(bool toRight) async {

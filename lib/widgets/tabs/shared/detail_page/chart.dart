@@ -20,8 +20,8 @@ import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
+import 'package:mobile_app/shared/math_list.dart';
 import 'package:mutex/mutex.dart';
-import 'package:stats/stats.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/db_query.dart';
@@ -371,17 +371,8 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
       }
     }
     if (nums.isEmpty) return 0;
-    final stats = Stats.fromData(nums);
-    int precision = 0;
-    if (stats.standardDeviation > 1) {
-      precision = 1;
-    } else {
-      num std = stats.standardDeviation;
-      while (std > 0 && std < 1) {
-        std *= 10;
-        precision++;
-      }
-    }
-    return precision;
+    final standardDeviation = populationStandardDeviation(nums);
+    if (standardDeviation > 1) return 1;
+    return fractionDigitsBelowOne(standardDeviation);
   }
 }
