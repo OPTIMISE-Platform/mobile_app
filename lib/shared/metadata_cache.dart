@@ -53,6 +53,18 @@ class MetadataCache {
     }
   }
 
+  /// Drops every cached entry so the next [read] misses and the caller
+  /// fetches fresh from the backend.
+  static Future<void> clear() async {
+    final db = isar;
+    if (db == null) return;
+    try {
+      await db.writeTxn(() => db.cachedMetadatas.clear());
+    } catch (_) {
+      // best-effort cache; ignore clear failures
+    }
+  }
+
   static Future<void> write(String key, List<int> bytes) async {
     final db = isar;
     if (db == null) return;

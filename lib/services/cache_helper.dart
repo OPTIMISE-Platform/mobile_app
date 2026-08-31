@@ -40,6 +40,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/locations.dart';
@@ -94,25 +95,46 @@ class CacheHelper {
   static clearCache() async {
     final cacheFile = (await getCacheFile());
     await HiveCacheStore(cacheFile).clean();
+    // The metadata byte cache lives in Isar, not Hive — without this the
+    // metadata services keep serving their cached bytes for up to maxAge.
+    await MetadataCache.clear();
     return await Future.delayed(const Duration(seconds: 1));
   }
 
-  static refreshCache() async {
+  /// [onProgress] reports the fraction of completed refresh tasks (0..1),
+  /// one step per finished endpoint.
+  ///
+  /// [includeMetadata] warms the metadata caches alongside the Isar
+  /// collections. A caller that reloads the in-memory metadata right after
+  /// (settings refresh via [AppState.reloadMetadata]) passes false — the
+  /// reload fetches against the cleared cache itself, and including the
+  /// getters here would fetch and parse everything twice.
+  static refreshCache({
+    bool includeMetadata = true,
+    void Function(double progress)? onProgress,
+  }) async {
     if (isar == null) {
       return;
     }
-    await Future.wait([
+    final tasks = <Future>[
       _refreshDevices(Duration.zero, reschedule: false),
       _refreshDeviceGroups(Duration.zero, reschedule: false),
       _refreshNetworks(Duration.zero, reschedule: false),
       _refreshLocations(Duration.zero, reschedule: false),
-      FunctionsService.getFunctions(),
-      AspectsService.getAspects(),
-      ConceptsService.getConcepts(),
-      CharacteristicsService.getCharacteristics(),
-      DeviceTypesService.getDeviceTypes(),
-      DeviceClassesService.getDeviceClasses(),
-    ]);
+      if (includeMetadata) ...[
+        FunctionsService.getFunctions(),
+        AspectsService.getAspects(),
+        ConceptsService.getConcepts(),
+        CharacteristicsService.getCharacteristics(),
+        DeviceTypesService.getDeviceTypes(),
+        DeviceClassesService.getDeviceClasses(),
+      ],
+    ];
+    var done = 0;
+    await Future.wait(tasks.map((t) => t.whenComplete(() {
+          done++;
+          onProgress?.call(done / tasks.length);
+        })));
   }
 
   static Future scheduleCacheUpdates() async {

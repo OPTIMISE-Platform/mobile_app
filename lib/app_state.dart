@@ -117,6 +117,38 @@ class AppState extends ChangeNotifier
 
   void pushRefresh() => _refreshPressedController.add(null);
 
+  /// Reloads the in-memory metadata maps and notifies the open tabs to reload
+  /// their data. Devices, groups, networks and locations are covered by the
+  /// tabs' [refreshPressed] listeners; the metadata maps are loaded only once
+  /// at [init] and would otherwise keep their stale entries until an app
+  /// restart. The loaders swap their maps only after a successful fetch, so
+  /// readers never see them empty mid-reload.
+  ///
+  /// [onProgress] reports the fraction of completed reload tasks (0..1).
+  /// Throws when any loader failed, after all of them have finished.
+  Future<void> reloadMetadata({void Function(double progress)? onProgress}) async {
+    final tasks = <Future<bool>>[
+      loadDeviceClasses(),
+      loadDeviceTypes(),
+      loadNestedFunctions(),
+      loadAspects(),
+      loadConcepts(),
+      loadCharacteristics(),
+    ];
+    var done = 0;
+    final results = await Future.wait(tasks.map((t) => t.whenComplete(() {
+          done++;
+          onProgress?.call(done / tasks.length);
+        })));
+    notifyListeners();
+    pushRefresh();
+    // The loaders toast and swallow their own errors; without this the caller
+    // would report success over stale maps.
+    if (results.contains(false)) {
+      throw Exception("not all metadata could be reloaded");
+    }
+  }
+
   // Memoized result of setAndGetDisabledTabs(). Recomputing walks every nav
   // item and calls the services' isAvailable()/isListAvailable() checks, each
   // of which parses a URI and scans the networks (~2ms a piece). This used to

@@ -147,20 +147,7 @@ class Settings extends StatelessWidget {
               );
             }),
         const Divider(),
-        ListTile(
-          title: Text("Refresh Cache",
-              style: settings_service.Settings.getLocalMode()
-                  ? TextStyle(color: Theme.of(context).disabledColor)
-                  : null),
-          onTap: settings_service.Settings.getLocalMode()
-              ? null
-              : () async {
-                  await CacheHelper.clearCache();
-                  await CacheHelper.refreshCache();
-                  Toast.showToastNoContext(
-                      "Cache refreshed, please restart App");
-                },
-        ),
+        const RefreshCacheTile(),
         const Divider(),
         ListTile(
           title: const Text("Reset Tutorials"),
@@ -637,4 +624,70 @@ StatefulBuilder Function(BuildContext context)
                   }))),
     );
   };
+}
+
+/// Settings entry that refreshes all caches and shows the progress inline.
+/// While running, the tile is disabled and a determinate bar advances one
+/// step per completed refresh task.
+class RefreshCacheTile extends StatefulWidget {
+  const RefreshCacheTile({super.key});
+
+  @override
+  State<RefreshCacheTile> createState() => _RefreshCacheTileState();
+}
+
+class _RefreshCacheTileState extends State<RefreshCacheTile> {
+  /// null while idle, otherwise overall progress in 0..1.
+  double? _progress;
+
+  // Phase boundaries: clearing is quick, then the Isar-collection refresh,
+  // then the metadata reload (which fetches against the cleared cache).
+  static const _afterClear = 0.05;
+  static const _afterRefresh = 0.60;
+
+  Future<void> _refresh() async {
+    setState(() => _progress = 0);
+    try {
+      await CacheHelper.clearCache();
+      _setProgress(_afterClear);
+      await CacheHelper.refreshCache(
+          includeMetadata: false,
+          onProgress: (p) =>
+              _setProgress(_afterClear + (_afterRefresh - _afterClear) * p));
+      await AppState().reloadMetadata(
+          onProgress: (p) =>
+              _setProgress(_afterRefresh + (1 - _afterRefresh) * p));
+      Toast.showToastNoContext("Cache refreshed");
+    } catch (e) {
+      Toast.showToastNoContext("Could not refresh cache: $e");
+    } finally {
+      if (mounted) setState(() => _progress = null);
+    }
+  }
+
+  void _setProgress(double value) {
+    // _progress == null means no refresh is running: Future.wait fails fast,
+    // so a task surviving a failed refresh still reports progress afterwards
+    // and must not re-disable the tile.
+    if (mounted && _progress != null) setState(() => _progress = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled =
+        settings_service.Settings.getLocalMode() || _progress != null;
+    return ListTile(
+      title: Text("Refresh Cache",
+          style: disabled
+              ? TextStyle(color: Theme.of(context).disabledColor)
+              : null),
+      subtitle: _progress == null
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: LinearProgressIndicator(value: _progress),
+            ),
+      onTap: disabled ? null : _refresh,
+    );
+  }
 }
