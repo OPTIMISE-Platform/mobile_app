@@ -86,46 +86,63 @@ mixin DeviceMixin on ChangeNotifier {
   // Device classes
   // ---------------------------------------------------------------------------
 
-  Future<void> loadDeviceClasses() async {
+  Future<bool> loadDeviceClasses() async {
     final locked = _deviceClassesMutex.isLocked;
     await _deviceClassesMutex.acquire();
-    if (locked) return;
-    deviceClasses.clear();
-    notifyListeners();
+    if (locked) {
+      // Deduplicated onto the load that was already running; releasing here is
+      // what lets that dedup happen more than once per process.
+      _deviceClassesMutex.release();
+      return true;
+    }
     try {
-      for (final e in await DeviceClassesService.getDeviceClasses()) {
+      final fetched = await DeviceClassesService.getDeviceClasses();
+      // Swap after the fetch: clearing first would leave the map visibly
+      // empty for the whole request, clearing at all is what drops entries
+      // deleted on the backend.
+      deviceClasses.clear();
+      for (final e in fetched) {
         deviceClasses[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not get device classes: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _deviceClassesMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
   // ---------------------------------------------------------------------------
   // Device types
   // ---------------------------------------------------------------------------
 
-  Future<void> loadDeviceTypes() async {
+  Future<bool> loadDeviceTypes() async {
     final locked = _deviceTypesMutex.isLocked;
     await _deviceTypesMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _deviceTypesMutex.release();
+      return true;
+    }
     try {
-      for (final e in await DeviceTypesService.getDeviceTypes()) {
+      final fetched = await DeviceTypesService.getDeviceTypes();
+      deviceTypes.clear();
+      for (final e in fetched) {
         deviceTypes[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not get device types: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _deviceTypesMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -341,7 +358,10 @@ mixin DeviceMixin on ChangeNotifier {
   Future<void> loadDeviceGroups(BuildContext context) async {
     final locked = _deviceGroupsMutex.isLocked;
     await _deviceGroupsMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _deviceGroupsMutex.release();
+      return;
+    }
     deviceGroups.clear();
     notifyListeners();
     try {

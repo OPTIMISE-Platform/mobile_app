@@ -42,76 +42,109 @@ mixin DataMixin on ChangeNotifier {
   final Map<String, PlatformFunction> platformFunctions = {};
   final _platformFunctionsMutex = Mutex();
 
-  Future<void> loadAspects() async {
+  Future<bool> loadAspects() async {
     final locked = _aspectsMutex.isLocked;
     await _aspectsMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      // Deduplicated onto the load that was already running; releasing here is
+      // what lets that dedup happen more than once per process.
+      _aspectsMutex.release();
+      return true;
+    }
     try {
-      for (final e in await AspectsService.getAspects()) {
+      // Swap after the fetch: clearing first would leave the map visibly
+      // empty for the whole request, clearing at all is what drops entries
+      // deleted on the backend.
+      final fetched = await AspectsService.getAspects();
+      aspects.clear();
+      for (final e in fetched) {
         aspects[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not load aspects: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _aspectsMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
-  Future<void> loadConcepts() async {
+  Future<bool> loadConcepts() async {
     final locked = _conceptsMutex.isLocked;
     await _conceptsMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _conceptsMutex.release();
+      return true;
+    }
     try {
-      for (final e in await ConceptsService.getConcepts()) {
+      final fetched = await ConceptsService.getConcepts();
+      concepts.clear();
+      for (final e in fetched) {
         concepts[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not get concepts: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _conceptsMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
-  Future<void> loadCharacteristics() async {
+  Future<bool> loadCharacteristics() async {
     final locked = _characteristicsMutex.isLocked;
     await _characteristicsMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _characteristicsMutex.release();
+      return true;
+    }
     try {
-      for (final e in await CharacteristicsService.getCharacteristics()) {
+      final fetched = await CharacteristicsService.getCharacteristics();
+      characteristics.clear();
+      for (final e in fetched) {
         characteristics[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not get characteristics: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _characteristicsMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
-  Future<void> loadNestedFunctions() async {
+  Future<bool> loadNestedFunctions() async {
     final locked = _platformFunctionsMutex.isLocked;
     await _platformFunctionsMutex.acquire();
-    if (locked) return;
+    if (locked) {
+      _platformFunctionsMutex.release();
+      return true;
+    }
     try {
-      for (final e in await FunctionsService.getFunctions()) {
+      final fetched = await FunctionsService.getFunctions();
+      platformFunctions.clear();
+      for (final e in fetched) {
         platformFunctions[e.id] = e;
       }
     } catch (e) {
       final err = 'Could not get nested functions: $e';
       _logger.e(err);
       Toast.showToastNoContext(err);
+      return false;
     } finally {
       _platformFunctionsMutex.release();
     }
     notifyListeners();
+    return true;
   }
 
   void clearData() {
