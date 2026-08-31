@@ -17,8 +17,12 @@
 import "package:flutter_test/flutter_test.dart";
 import "package:mobile_app/services/settings.dart";
 
+import "test_helper.dart";
 
 void main() {
+  setUpAll(() {
+    setUpTestEnvironment();
+  });
   setUp(() async {
     await Settings.init();
   });
