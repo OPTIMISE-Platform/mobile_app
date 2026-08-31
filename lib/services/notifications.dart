@@ -17,11 +17,9 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/shared/chunked_parse.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
@@ -33,13 +31,8 @@ class NotificationsService {
     printer: SimplePrinter(),
   );
 
-  static late final Dio? _dio;
   static final baseUrl =
       '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/notifications';
-
-  static initOptions() async {
-    _dio = await DioFactory.create(DioConfig.cached7);
-  }
 
   static Future<app.NotificationResponse?> getNotifications(
       int limit, int offset) async {
@@ -47,10 +40,10 @@ class NotificationsService {
         "$baseUrl?limit=${limit.toString()}&offset=${offset.toString()}&channel=push";
 
     final headers = await Auth().getHeaders();
-    await initOptions();
+    final dio = await DioFactory.create(DioConfig.cached7);
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!
+      resp = await dio
           .get<Map<String, dynamic>>(uri, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
@@ -85,9 +78,9 @@ class NotificationsService {
     final url = '$baseUrl/${notification.id}';
 
     final headers = await Auth().getHeaders();
-    await initOptions();
+    final dio = await DioFactory.create(DioConfig.cached7);
 
-    final resp = await _dio!.put(url,
+    final resp = await dio.put(url,
         options: Options(headers: headers), data: json.encode(notification));
 
     if (resp.statusCode == null || resp.statusCode! > 201) {
@@ -97,8 +90,8 @@ class NotificationsService {
 
   static Future deleteNotifications(List<String> ids) async {
     final headers = await Auth().getHeaders();
-    await initOptions();
-    final resp = await _dio!.delete(baseUrl,
+    final dio = await DioFactory.create(DioConfig.cached7);
+    final resp = await dio.delete(baseUrl,
         options: Options(headers: headers), data: json.encode(ids));
 
     if (resp.statusCode == null || resp.statusCode! > 204) {

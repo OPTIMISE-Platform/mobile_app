@@ -15,10 +15,8 @@
  */
 
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:isar_community/isar.dart';
+import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/network.dart';
@@ -32,7 +30,6 @@ class NetworksService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? _options;
   static     String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-hubs';
 
   static Future<List<Network>> getNetworks([List<String>? ids, bool forceBackend = false]) async {
@@ -49,7 +46,6 @@ class NetworksService {
 
     final headers = await Auth().getHeaders();
     final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
 
     var cont = true;
     final networks = <Network>[];

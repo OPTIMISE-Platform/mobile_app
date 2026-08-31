@@ -42,7 +42,6 @@ dependencies:
   dio: ^5.9.2
   dio_cache_interceptor: ^4.0.6
   http_cache_hive_store: ^5.1.0
-  dio_http2_adapter: ^2.7.1
   eraser: ^3.0.0
   firebase_core: ^4.9.0
   firebase_messaging: ^16.2.0
@@ -78,11 +77,15 @@ dependencies:
   sidebarx: ^0.17.2
   stats: ^2.1.0
   url_launcher: ^6.2.5
+  uuid: ^4.5.3
   pretty_dio_logger: ^1.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Test-side fake for the path_provider platform channel (test/test_helper.dart).
+  path_provider_platform_interface: ^2.1.2
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

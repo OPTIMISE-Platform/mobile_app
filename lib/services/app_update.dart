@@ -182,13 +182,14 @@ class AppUpdater {
 
   static Future<Stream<double>> downloadUpdate() async {
     final dio = await DioFactory.create(DioConfig.standard);
-    DioFactory.setHeaders(DioConfig.standard, githubHeaders);
-    final head = await dio.head(updateUrl);
+    // Per-request headers: setHeaders wrote them permanently into the shared
+    // standard instance, so every later platform request carried them too.
+    final head = await dio.head(updateUrl, options: Options(headers: githubHeaders));
     final redirectedUpdateUrl = head.redirects.last.location;
     final controller = StreamController<double>();
 
     localFile = '${(await getApplicationSupportDirectory()).path}/update.apk';
-    dio.download(redirectedUpdateUrl.toString(), localFile, onReceiveProgress: (received, total) {
+    dio.download(redirectedUpdateUrl.toString(), localFile, options: Options(headers: githubHeaders), onReceiveProgress: (received, total) {
       if (total != -1) {
         controller.add(received / total * 100);
       }

@@ -38,7 +38,6 @@ class DeviceClassesService {
 
     final headers = await Auth().getHeaders();
     final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
     final Response<Map<String, dynamic>?> resp;
     try {
       resp = await dio.get<Map<String, dynamic>?>(uri,

@@ -14,18 +14,14 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:logger/logger.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mutex/mutex.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -36,28 +32,17 @@ class DeviceTypesService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? _options;
-  static late final Dio? _dio;
-
-  static Mutex m = Mutex();
-
   static String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-types';
-
-  static initOptions() async {
-    return await m.protect(() async {
-      _dio  = await DioFactory.create(DioConfig.cached7);
-    });
-  }
 
   static Future<DeviceType?> getDeviceType(String id) async {
     String url = '$uri/$id';
 
 
     final headers = await Auth().getHeaders();
-    await initOptions();
+    final dio = await DioFactory.create(DioConfig.cached7);
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!.get<Map<String, dynamic>>(url, options: Options(headers: headers));
+      resp = await dio.get<Map<String, dynamic>>(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
         throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");

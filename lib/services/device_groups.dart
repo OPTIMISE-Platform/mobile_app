@@ -17,20 +17,16 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -40,12 +36,6 @@ class DeviceGroupsService {
     printer: SimplePrinter(),
   );
 
-  static CacheOptions? _options;
-  static late final Dio? _dio;
-
-  static initOptions() async {
-    _dio = await DioFactory.create(DioConfig.cached7);
-  }
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups(
       {bool forceBackend = false}) async {
@@ -64,12 +54,12 @@ class DeviceGroupsService {
     var cont = true;
     final rawGroups = <DeviceGroup>[];
     final headers = await Auth().getHeaders();
+    final dio = await DioFactory.create(DioConfig.cached7);
     while (cont) {
       queryParameters["offset"] = rawGroups.length.toString();
-      await initOptions();
       final Response<List<dynamic>?> resp;
       try {
-        resp = await _dio!.get<List<dynamic>?>(uri,
+        resp = await dio.get<List<dynamic>?>(uri,
             queryParameters: queryParameters,
             options: Options(headers: headers));
       } on DioException catch (e) {
@@ -101,7 +91,7 @@ class DeviceGroupsService {
       }
       final uri =
           '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${rawGroups[i].id}';
-      futures.add(_dio!
+      futures.add(dio
           .get<dynamic>(uri,
               queryParameters: queryParameters,
               options: Options(headers: headers))
@@ -149,10 +139,10 @@ class DeviceGroupsService {
     final encoded = json.encode(group.toJson());
 
     final headers = await Auth().getHeaders();
-    await initOptions();
+    final dio = await DioFactory.create(DioConfig.cached7);
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!.put<Map<String, dynamic>>(uri,
+      resp = await dio.put<Map<String, dynamic>>(uri,
           options: Options(headers: headers), data: encoded);
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
@@ -179,7 +169,6 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
     final Response<dynamic> resp;
     try {
       resp = await dio.post<dynamic>(uri,
@@ -208,7 +197,6 @@ class DeviceGroupsService {
 
     final headers = await Auth().getHeaders();
     final dio = await DioFactory.create(DioConfig.cached7);
-    DioFactory.setHeaders(DioConfig.cached7, headers);
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {
@@ -241,10 +229,10 @@ class DeviceGroupsService {
         (dotenv.env["FUNCTION_GET_TIMESTAMP"] ?? "");
 
     final headers = await Auth().getHeaders();
-    await initOptions();
+    final dio = await DioFactory.create(DioConfig.cached7);
     final Response<Map<String, dynamic>> resp;
     try {
-      resp = await _dio!.post<Map<String, dynamic>>(uri,
+      resp = await dio.post<Map<String, dynamic>>(uri,
           queryParameters: queryParameters,
           options: Options(headers: headers),
           data: json.encode(deviceIds));

@@ -91,7 +91,7 @@ class MgwStorage {
   // TODO: remove loading and saving of basic auth credentials later
   static Future<void> StoreBasicAuthCredentials(String password) async {
     await init();
-    _logger.d(LOG_PREFIX + ": Store mgw device basic auth credentials: " + password);
+    _logger.d(LOG_PREFIX + ": Store mgw device basic auth credentials");
     return await _box?.put(_mgwBasicAuthCredentialsKeyPrefix, password).then((
         value) => _box?.flush());
   }

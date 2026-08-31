@@ -30,15 +30,13 @@ enum DioConfig { cached7,cached7withPost, cached365,standard, mgwApi, mgwAuth}
 class DioFactory {
   DioFactory._();
 
-  static final Map<DioConfig, Dio> _instances = {};
+  // Memoizes the FUTURE, not the instance: with the instance-map two
+  // concurrent first callers both built a Dio (each with its own HiveCacheStore
+  // and HttpClient) and the loser was silently orphaned.
+  static final Map<DioConfig, Future<Dio>> _instances = {};
 
-  static Future<Dio> create(DioConfig config) async {
-    if (_instances.containsKey(config)) return _instances[config]!;
-
-    final dio = await _buildForConfig(config);
-    _instances[config] = dio;
-    return dio;
-  }
+  static Future<Dio> create(DioConfig config) =>
+      _instances.putIfAbsent(config, () => _buildForConfig(config));
 
   static Future<Dio> _buildForConfig(DioConfig config) async {
     return switch (config) {
@@ -115,24 +113,9 @@ class DioFactory {
     };
   }
 
-  static void setHeaders(DioConfig config, Map<String, String> headers) {
-    final dio = _instances[config];
-    if (dio == null) return;
-    dio.options.headers.addAll(headers);
-  }
-
-  static void clearHeaders(DioConfig config, List<String> keys) {
-    final dio = _instances[config];
-    if (dio == null) return;
-    for (final key in keys) {
-      dio.options.headers.remove(key);
-    }
-  }
-
-  static Dio _buildDio(DioConfig config, {CacheOptions? cacheOptions, BaseOptions? baseOptions,Map<String, String> Function()? getHeaders,}) {
+  static Dio _buildDio(DioConfig config, {CacheOptions? cacheOptions, BaseOptions? baseOptions,}) {
     return Dio(baseOptions ?? BaseOptions())
       ..interceptors.addAll([
-        if (getHeaders != null) DynamicHeadersInterceptor(getHeaders),
         if (cacheOptions != null) DioCacheInterceptor(options: cacheOptions),
         ApiAvailableInterceptor(),
         if (kDebugMode) ...[
@@ -160,14 +143,3 @@ class _InstanceLogInterceptor extends Interceptor {
   }
 }
 
-class DynamicHeadersInterceptor extends Interceptor {
-  const DynamicHeadersInterceptor(this._getHeaders);
-
-  final Map<String, String> Function() _getHeaders;
-
-  @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    options.headers.addAll(_getHeaders());
-    handler.next(options);
-  }
-}

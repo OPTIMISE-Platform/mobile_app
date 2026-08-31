@@ -19,20 +19,16 @@ import 'dart:io';
 import "fake_browser_adapter.dart" if (dart.library.html) 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:dio_http2_adapter/dio_http2_adapter.dart';
 import 'package:flutter/foundation.dart';
 
 class AppHttpClientAdapter implements HttpClientAdapter {
-  late final HttpClientAdapter _http2Adapter;
-  late final HttpClientAdapter _http1Adapter;
+  late final HttpClientAdapter _adapter;
 
   AppHttpClientAdapter() {
     if (kIsWeb) {
-      _http2Adapter = BrowserHttpClientAdapter();
-      _http1Adapter = BrowserHttpClientAdapter();
+      _adapter = BrowserHttpClientAdapter();
     } else {
-      _http2Adapter = Http2Adapter(ConnectionManager(idleTimeout: const Duration(seconds: 15)));
-      _http1Adapter = IOHttpClientAdapter(
+      _adapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
           client.maxConnectionsPerHost = 8;
@@ -47,13 +43,11 @@ class AppHttpClientAdapter implements HttpClientAdapter {
 
   @override
   void close({bool force = false}) {
-    _http2Adapter.close(force: force);
-    _http1Adapter.close(force: force);
+    _adapter.close(force: force);
   }
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future? cancelFuture) {
-    final adapter = (kIsWeb || options.uri.scheme == 'http') ? _http1Adapter : _http2Adapter;
-    return _http1Adapter.fetch(options, requestStream, cancelFuture);
+    return _adapter.fetch(options, requestStream, cancelFuture);
   }
 }
