@@ -17,7 +17,6 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
@@ -248,7 +247,7 @@ class DeviceCommandsService {
   }
 
   /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
-  static Future<bool> runCommandsSecurely(BuildContext context,
+  static Future<bool> runCommandsSecurely(
       List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
       [bool preferEventValue = true]) async {
     try {

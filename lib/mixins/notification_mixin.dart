@@ -26,7 +26,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/fcm_token.dart';
@@ -169,7 +168,7 @@ mixin NotificationMixin on ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> deleteNotifications(BuildContext context, List<String> ids) async {
+  Future<void> deleteNotifications(List<String> ids) async {
     try {
       await NotificationsService.deleteNotifications(ids);
     } catch (e) {
@@ -178,9 +177,8 @@ mixin NotificationMixin on ChangeNotifier {
     }
   }
 
-  Future<void> deleteAllNotifications(BuildContext context) async {
+  Future<void> deleteAllNotifications() async {
     await deleteNotifications(
-      context,
       notifications.map((e) => e.id).toList(growable: false),
     );
   }

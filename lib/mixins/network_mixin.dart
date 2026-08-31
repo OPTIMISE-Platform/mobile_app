@@ -115,7 +115,7 @@ mixin NetworkMixin on ChangeNotifier {
 
   bool loadingLocations() => _locationsMutex.isLocked;
 
-  Future<void> loadLocations(BuildContext context) async {
+  Future<void> loadLocations() async {
     final locked = _locationsMutex.isLocked;
     await _locationsMutex.acquire();
     if (locked) {

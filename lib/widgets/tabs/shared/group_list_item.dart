@@ -54,7 +54,7 @@ class GroupListItem extends StatelessWidget {
            */
           leading: FavorizeButton(null, _group),
           onTap: () {
-            AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]), context);
+            AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]));
             final future = Navigator.push(
                 context,
                 platformPageRoute(
@@ -65,7 +65,7 @@ class GroupListItem extends StatelessWidget {
                   },
                 ));
             if (_poppedCallback != null) {
-              future.then(_poppedCallback!);
+              future.then(_poppedCallback);
             }
           });
     });

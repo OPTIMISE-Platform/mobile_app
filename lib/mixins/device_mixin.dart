@@ -150,8 +150,7 @@ mixin DeviceMixin on ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   Future<void> searchDevices(
-      DeviceSearchFilter filter,
-      BuildContext context, [
+      DeviceSearchFilter filter, [
         bool force = false,
       ]) async {
     if (!force && _deviceSearchFilter == filter) return;
@@ -159,14 +158,13 @@ mixin DeviceMixin on ChangeNotifier {
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
-    await loadDevices(context, null, true);
+    await loadDevices(null, true);
   }
 
-  Future<void> refreshDevices(BuildContext context) =>
-      searchDevices(_deviceSearchFilter, context, true);
+  Future<void> refreshDevices() =>
+      searchDevices(_deviceSearchFilter, true);
 
-  Future<void> loadDevices(
-      BuildContext context, [
+  Future<void> loadDevices([
         int? offset,
         bool clear = false,
       ]) async {
@@ -355,7 +353,7 @@ mixin DeviceMixin on ChangeNotifier {
   // Device groups
   // ---------------------------------------------------------------------------
 
-  Future<void> loadDeviceGroups(BuildContext context) async {
+  Future<void> loadDeviceGroups() async {
     final locked = _deviceGroupsMutex.isLocked;
     await _deviceGroupsMutex.acquire();
     if (locked) {
