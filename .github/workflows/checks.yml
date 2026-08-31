@@ -1,0 +1,30 @@
+name: 'Checks'
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.3'
+      - run: git config --global url."https://".insteadOf git:// # allows dependency downloads without gpg
+      - run: flutter pub get
+      - name: "Prepare environment"
+        # The analyzer and the tests do not talk to the backend, but the app
+        # reads .env at startup, so the keys have to exist.
+        run: cp .env.example .env
+      - name: "Analyze"
+        # Errors and warnings gate; the remaining style infos are a separate
+        # backlog and would keep this red without saying anything new.
+        run: flutter analyze --no-fatal-infos
+      - name: "Test"
+        run: flutter test
