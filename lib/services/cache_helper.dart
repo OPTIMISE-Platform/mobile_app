@@ -98,6 +98,13 @@ class CacheHelper {
     // The metadata byte cache lives in Isar, not Hive — without this the
     // metadata services keep serving their cached bytes for up to maxAge.
     await MetadataCache.clear();
+    // Deliberately NOT cleared here: the Isar entity collections. They leak
+    // the previous account's devices to the next account until the daily
+    // refresh, but wiping them here destroys the favorites (which live only
+    // on the Isar rows), kills the offline cache on any transient NotLoggedIn
+    // auth event, and three services read the emptied collections as
+    // authoritative. The account-switch leak needs a clear-on-account-change
+    // at login instead.
     return await Future.delayed(const Duration(seconds: 1));
   }
 

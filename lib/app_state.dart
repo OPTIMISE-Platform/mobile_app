@@ -23,10 +23,8 @@ import 'package:mobile_app/mixins/data_mixin.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/mixins/network_mixin.dart';
 import 'package:mobile_app/mixins/notification_mixin.dart';
-import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/native_pipe.dart';
 import 'package:mobile_app/services/auth.dart';
-import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/locations.dart';
@@ -34,7 +32,6 @@ import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/shared/get_broadcast_channel.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
 class AppState extends ChangeNotifier
@@ -108,7 +105,8 @@ class AppState extends ChangeNotifier
     clearNetworkData();
     clearData();
     _initialized = false;
-    CacheHelper.clearCache();
+    // No clearCache here: the only caller (Auth._cleanup) has already awaited
+    // it — this unawaited second run raced whatever a re-login started.
   }
 
   final _refreshPressedController = StreamController.broadcast();
