@@ -25,7 +25,12 @@ import '../services/cache_helper.dart';
 import 'api_available_interceptor.dart';
 import 'http_client_adapter.dart';
 
-enum DioConfig { cached7,cached7withPost, cached365,standard, mgwApi, mgwAuth}
+/// [cached7] and [cached365] serve from the Hive HTTP cache without asking the
+/// backend (forceCache). Only data that may be stale for that long belongs
+/// there: device types, smart-service definitions, images. Anything the user
+/// expects to be current, and anything already persisted in Isar, uses
+/// [standard] — a forceCache response would defeat an explicit refresh.
+enum DioConfig { cached7, cached365, standard, mgwApi, mgwAuth }
 
 class DioFactory {
   DioFactory._();
@@ -66,22 +71,6 @@ class DioFactory {
         ),
         baseOptions: BaseOptions(
           connectTimeout: const Duration(milliseconds: 5000),
-          sendTimeout: const Duration(milliseconds: 5000),
-          receiveTimeout: const Duration(milliseconds: 5000),
-        ),
-      ),
-      DioConfig.cached7withPost => _buildDio(
-        config,
-        cacheOptions: CacheOptions(
-            store: HiveCacheStore(await CacheHelper.getCacheFile()),
-            policy: CachePolicy.forceCache,
-            maxStale: const Duration(days: 7),
-            priority: CachePriority.normal,
-            keyBuilder: CacheHelper.newCacheKeyBuilder,
-            allowPostMethod: true
-        ),
-        baseOptions: BaseOptions(
-          connectTimeout: const Duration(milliseconds: 1500),
           sendTimeout: const Duration(milliseconds: 5000),
           receiveTimeout: const Duration(milliseconds: 5000),
         ),

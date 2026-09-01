@@ -39,7 +39,12 @@ class FcmTokenService {
     final headers = await Auth().getHeaders();
     final Response resp;
     try {
-      final dio = await DioFactory.create(DioConfig.cached7withPost);
+      // Uncached: this used to run on a POST-caching dio to throttle repeat
+      // registrations, but the cached entry outlived a deregistration, so
+      // registering again after a logout was answered from the cache and never
+      // reached the backend — push notifications stayed dead until the entry
+      // aged out. The endpoint carries the token in its path and upserts.
+      final dio = await DioFactory.create(DioConfig.standard);
       resp = await dio.post(url, options: Options(headers: headers));
     } on DioException catch (e) {
       if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
@@ -57,15 +62,12 @@ class FcmTokenService {
     final url = '$baseUrl/$token';
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7withPost);
+    final dio = await DioFactory.create(DioConfig.standard);
     final resp = await dio.delete(url, options: Options(headers: headers));
     if (resp.statusCode == null || (resp.statusCode! > 204 && resp.statusCode != 404)) {
       // dont have to delete what cant be found
       throw UnexpectedStatusCodeException(resp.statusCode, url);
     }
-    //TODO: Fix deletion of fcm token
-    //final key = _options!.keyBuilder(RequestOptions(path: url, method: 'POST'));
-    //await _options?.store?.delete(key); // ensure token is resubmitted when registered again
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(baseUrl);

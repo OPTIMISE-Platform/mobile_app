@@ -28,6 +28,7 @@ import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/semaphore.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
@@ -54,7 +55,7 @@ class DeviceGroupsService {
     var cont = true;
     final rawGroups = <DeviceGroup>[];
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     while (cont) {
       queryParameters["offset"] = rawGroups.length.toString();
       final Response<List<dynamic>?> resp;
@@ -84,6 +85,11 @@ class DeviceGroupsService {
     List<Future> futures = [];
     queryParameters.clear();
     queryParameters["filter_generic_duplicate_criteria"] = "true";
+    // One detail request per group, bounded: the shared client allows eight
+    // connections per host, and an unbounded fan-out makes every request past
+    // that queue against its own connect timeout — on a large account the tail
+    // times out and takes the whole refresh down with it.
+    final limiter = Semaphore(6);
     for (int i = 0; i < rawGroups.length; i++) {
       if (rawGroups[i].auto_generated_by_device != null &&
           rawGroups[i].auto_generated_by_device != "") {
@@ -91,7 +97,7 @@ class DeviceGroupsService {
       }
       final uri =
           '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/${rawGroups[i].id}';
-      futures.add(dio
+      futures.add(limiter.withResource(() => dio
           .get<dynamic>(uri,
               queryParameters: queryParameters,
               options: Options(headers: headers))
@@ -100,11 +106,11 @@ class DeviceGroupsService {
           groupsRepo.add(DeviceGroup.fromJson(value.data));
         }
       }).catchError((e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
+        if (e is! DioException || e.response?.statusCode == null || e.response!.statusCode! > 304) {
           throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
+              e is DioException ? e.response?.statusCode : null, "$uri $e");
         }
-      }));
+      })));
     }
     await Future.wait(futures);
     // Batch the favorite lookup into a single query. The previous
@@ -139,7 +145,7 @@ class DeviceGroupsService {
     final encoded = json.encode(group.toJson());
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<Map<String, dynamic>> resp;
     try {
       resp = await dio.put<Map<String, dynamic>>(uri,
@@ -168,7 +174,7 @@ class DeviceGroupsService {
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/';
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<dynamic> resp;
     try {
       resp = await dio.post<dynamic>(uri,
@@ -196,7 +202,7 @@ class DeviceGroupsService {
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/$id';
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {
@@ -229,7 +235,7 @@ class DeviceGroupsService {
         (dotenv.env["FUNCTION_GET_TIMESTAMP"] ?? "");
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<Map<String, dynamic>> resp;
     try {
       resp = await dio.post<Map<String, dynamic>>(uri,

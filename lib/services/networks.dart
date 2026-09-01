@@ -45,7 +45,7 @@ class NetworksService {
     queryParameters["limit"] = "9999";
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
 
     var cont = true;
     final networks = <Network>[];

@@ -40,7 +40,7 @@ class NotificationsService {
         "$baseUrl?limit=${limit.toString()}&offset=${offset.toString()}&channel=push";
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     final Response<Map<String, dynamic>> resp;
     try {
       resp = await dio
@@ -78,7 +78,7 @@ class NotificationsService {
     final url = '$baseUrl/${notification.id}';
 
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
 
     final resp = await dio.put(url,
         options: Options(headers: headers), data: json.encode(notification));
@@ -90,7 +90,7 @@ class NotificationsService {
 
   static Future deleteNotifications(List<String> ids) async {
     final headers = await Auth().getHeaders();
-    final dio = await DioFactory.create(DioConfig.cached7);
+    final dio = await DioFactory.create(DioConfig.standard);
     final resp = await dio.delete(baseUrl,
         options: Options(headers: headers), data: json.encode(ids));
 

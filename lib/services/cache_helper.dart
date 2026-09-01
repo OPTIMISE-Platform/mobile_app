@@ -105,7 +105,6 @@ class CacheHelper {
     // auth event, and three services read the emptied collections as
     // authoritative. The account-switch leak needs a clear-on-account-change
     // at login instead.
-    return await Future.delayed(const Duration(seconds: 1));
   }
 
   /// [onProgress] reports the fraction of completed refresh tasks (0..1),

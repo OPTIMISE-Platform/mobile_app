@@ -31,7 +31,7 @@ class LocationService {
   static late Dio _dio;
 
   static initOptions() async {
-    _dio = await DioFactory.create(DioConfig.cached7);
+    _dio = await DioFactory.create(DioConfig.standard);
   }
 
   static Future<List<Future<Location>>> getLocations({
