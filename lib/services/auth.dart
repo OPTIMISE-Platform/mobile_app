@@ -209,7 +209,15 @@ class Auth extends ChangeNotifier {
     }
 
     if (AppState().fcmToken != null) {
-      await FcmTokenService.deregisterFcmToken(AppState().fcmToken!);
+      // Never block the logout on this: an unreachable backend used to abort
+      // logout here, leaving the user signed in with no way out. A token that
+      // could not be deregistered stops receiving pushes anyway, because the
+      // next login registers a fresh one.
+      try {
+        await FcmTokenService.deregisterFcmToken(AppState().fcmToken!);
+      } catch (e) {
+        _logger.w("Could not deregister FCM token: $e");
+      }
     }
 
     await _client!.logout();
@@ -234,8 +242,17 @@ class Auth extends ChangeNotifier {
     await AppState().onLogout();
     _listenerRegistered = false;
     if (_client != null) {
-      _client!.clearIdentity();
-      await Future.delayed(const Duration(seconds: 2)); // can't await clearIdentity()
+      // Awaited, not slept on: clearIdentity returns a Future since
+      // openidconnect 2.0. The old fixed 2s wait predates that upgrade and
+      // neither guaranteed completion nor bounded the logout.
+      // Swallowed like the package does in _clearIdentityIgnoringErrors: an
+      // unusable Keystore entry must not stop the logout half-way, or the user
+      // stays logged in with no way back.
+      try {
+        await _client!.clearIdentity();
+      } catch (e) {
+        _logger.w("Could not clear identity: $e");
+      }
     } else {
       await OpenIdIdentity.clear(); // remove saved token
     }
