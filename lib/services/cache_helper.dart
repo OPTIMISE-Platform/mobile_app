@@ -108,6 +108,28 @@ class CacheHelper {
     // rows.
   }
 
+  /// Drops everything the previous account left behind, including the entity
+  /// collections that [clearCache] deliberately spares.
+  ///
+  /// Only called when a different account has actually been observed signing
+  /// in (see Auth), never on logout and never on a transient NotLoggedIn: those
+  /// are the cases where the cache is the offline copy the user still needs.
+  static Future<void> clearForAccountChange() async {
+    await clearCache();
+    if (isar != null) {
+      await isar!.writeTxn(() async {
+        await isar!.deviceInstances.clear();
+        await isar!.deviceGroups.clear();
+        await isar!.networks.clear();
+        await isar!.locations.clear();
+      });
+    }
+    // Without this the emptied cache counts as refreshed today and the next
+    // scheduled refill waits up to a day - three services read their (now
+    // empty) collection as the answer rather than as a cache miss.
+    await Settings.clearCacheUpdated();
+  }
+
   /// [onProgress] reports the fraction of completed refresh tasks (0..1),
   /// one step per finished endpoint.
   ///

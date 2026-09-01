@@ -305,6 +305,18 @@ class Settings {
     return DateTime.fromMillisecondsSinceEpoch(int.parse(ms));
   }
 
+  /// Forgets when each cache was last refreshed, so the next
+  /// [CacheHelper.scheduleCacheUpdates] refills immediately instead of treating
+  /// an emptied cache as up to a day fresh.
+  static Future<void> clearCacheUpdated() async {
+    checkInit();
+    final keys = _box!.keys
+        .where((e) => (e as String).startsWith(_cacheUpdatedAtPrefix))
+        .toList();
+    await Future.wait(keys.map((e) => _box!.delete(e)));
+    await _box?.flush();
+  }
+
   static String? getKeycloakUrl() {
     checkInit();
     return _box!.get(_keycloakUrlKey) ?? dotenv.env["KEYCLOAK_URL"];

@@ -26,6 +26,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
+import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
@@ -167,12 +168,32 @@ class Auth extends ChangeNotifier {
   // Written before loggedIn flips, because the tabs mount on that flag and read
   // the per-account favorites right away. Never cleared on logout: the
   // favorites are keyed by it and have to survive until that account returns.
+  //
+  // This is also the one place that sees an account actually change, which is
+  // what the cache wipe below hangs on. Keying it on the identity just obtained
+  // rather than on loggedIn matters: at the login path loggedIn is set by the
+  // OIDC event listener, so a check placed there fires too late.
   Future<void> _rememberAccount(OpenIdIdentity? identity) async {
     if (identity == null) return;
     try {
+      final previous = Settings.getAccount();
+      if (previous == null || previous == identity.sub) {
+        await Settings.setAccount(identity.sub);
+        return;
+      }
+      // Order matters twice over. The outgoing account's favorites may still
+      // only exist on the rows that are about to be dropped, and the migration
+      // keys by the account that is still set here. And the new key is written
+      // last, so a wipe that fails leaves the old key in place and is retried
+      // on the next sign-in instead of silently leaving the old data behind.
+      await FavoritesMigration.run();
+      await CacheHelper.clearForAccountChange();
       await Settings.setAccount(identity.sub);
+      _logger.d("Account changed, dropped the previous account's cache");
     } catch (e) {
-      _logger.w("Could not remember account: $e");
+      // Never let this escape: init() runs it on the path that decides whether
+      // the app gets past the login spinner at all.
+      _logger.w("Could not switch account cleanly: $e");
     }
   }
 

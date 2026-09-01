@@ -87,6 +87,21 @@ void main() {
     });
   });
 
+  group("cache timestamps", () {
+    test("clearCacheUpdated forgets them all but keeps other settings", () async {
+      await Settings.setCacheUpdated("devices");
+      await Settings.setCacheUpdated("networks");
+      await Settings.setTheme("keep-me");
+      expect(Settings.getCacheUpdated("devices"), isNotNull);
+
+      await Settings.clearCacheUpdated();
+
+      expect(Settings.getCacheUpdated("devices"), isNull);
+      expect(Settings.getCacheUpdated("networks"), isNull);
+      expect(Settings.getTheme(), "keep-me");
+    });
+  });
+
   group("favorites", () {
     test("are empty and unwritable without an account", () async {
       expect(Settings.getFavoriteDeviceIds(), isEmpty);
