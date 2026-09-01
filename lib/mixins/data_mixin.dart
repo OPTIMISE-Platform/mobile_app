@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/characteristic.dart';
 import 'package:mobile_app/models/concept.dart';
@@ -24,11 +23,10 @@ import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/characteristics.dart';
 import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/functions.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 
 mixin DataMixin on ChangeNotifier {
-  static final _logger = Logger(printer: SimplePrinter());
 
   final Map<String, Aspect> aspects = {};
   final _aspectsMutex = Mutex();
@@ -61,9 +59,7 @@ mixin DataMixin on ChangeNotifier {
         aspects[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not load aspects: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not load aspects', e);
       return false;
     } finally {
       _aspectsMutex.release();
@@ -86,9 +82,7 @@ mixin DataMixin on ChangeNotifier {
         concepts[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not get concepts: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not get concepts', e);
       return false;
     } finally {
       _conceptsMutex.release();
@@ -111,9 +105,7 @@ mixin DataMixin on ChangeNotifier {
         characteristics[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not get characteristics: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not get characteristics', e);
       return false;
     } finally {
       _characteristicsMutex.release();
@@ -136,9 +128,7 @@ mixin DataMixin on ChangeNotifier {
         platformFunctions[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not get nested functions: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not get nested functions', e);
       return false;
     } finally {
       _platformFunctionsMutex.release();

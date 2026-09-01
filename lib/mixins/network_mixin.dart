@@ -29,7 +29,7 @@ import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/networks.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:nsd/nsd.dart';
 
@@ -70,9 +70,7 @@ mixin NetworkMixin on ChangeNotifier {
     try {
       networks.addAll(await NetworksService.getNetworks());
     } catch (e) {
-      final err = 'Could not load networks: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not load networks', e);
     }
     _networkByLocalId = null; // networks changed — drop the cached lookup
     _mergeDiscoveredServicesWithNetworks();
@@ -127,9 +125,7 @@ mixin NetworkMixin on ChangeNotifier {
     try {
       locations.addAll(await Future.wait(await LocationService.getLocations()));
     } catch (e) {
-      final err = 'Could not load locations: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not load locations', e);
     } finally {
       _locationsMutex.release();
     }

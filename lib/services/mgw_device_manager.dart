@@ -24,7 +24,7 @@ import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/device_manager_old.dart';
 import 'package:mobile_app/services/mgw/device_manager_new.dart';
@@ -57,13 +57,14 @@ class MgwDeviceManager {
                       .firstWhere((d2) => d2.id == d.id)
                       .connection_state = d.connection_state));
             } on DioException catch (e) {
-              if (e.error! is ApiUnavailableException) {
-                Toast.showToastNoContext(
-                    "Device status could not be loaded from network or cloud");
+              if (e.error is ApiUnavailableException) {
+                ErrorReporter.report(
+                    "Device status could not be loaded from network or cloud",
+                    e);
               }
             }
           } else {
-            Toast.showToastNoContext(
+            ErrorReporter.report(
                 "Device status could not be loaded and local mode is enabled");
           }
         }));

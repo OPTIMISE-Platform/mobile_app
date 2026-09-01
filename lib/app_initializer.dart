@@ -29,7 +29,7 @@ import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/firebase_service.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -88,8 +88,8 @@ class AppInitializer {
     } catch (e) {
       debugPrint('Moving favorites off the cache failed: $e');
     }
-    await CacheHelper.scheduleCacheUpdates()
-        .catchError((_) => Toast.showToastNoContext('Could not refresh cache'));
+    await CacheHelper.scheduleCacheUpdates().catchError(
+        (Object e) => ErrorReporter.report('Could not refresh cache', e));
   }
 
   /// Awaits [fn], prints how long it took, and re-throws any error.

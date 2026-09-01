@@ -21,7 +21,6 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
-import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/location.dart';
@@ -40,16 +39,12 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/locations.dart';
 
 class CacheHelper {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
   static String bodyCacheIDBuilder(RequestOptions request) {
     List<int> bytes = utf8.encode(request.method + request.uri.toString());
     if (request.data != null) {
@@ -193,9 +188,7 @@ class CacheHelper {
             limit, deviceOffset, DeviceSearchFilter(""), last,
             forceBackend: true)).devices);
       } catch (e) {
-        final err = "Could not get devices: $e";
-        _logger.e(err);
-        Toast.showToastNoContext(err);
+        ErrorReporter.report("Could not get devices", e);
         return;
       }
       allDevicesLoaded = newDevices.length < limit;
@@ -248,9 +241,7 @@ class CacheHelper {
       deviceGroups = await Future.wait(
           await DeviceGroupsService.getDeviceGroups(forceBackend: true));
     } catch (e) {
-      final err = "Could not get deviceGroups: $e";
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report("Could not get deviceGroups", e);
       return;
     }
 
@@ -292,9 +283,7 @@ class CacheHelper {
     try {
       networks = await NetworksService.getNetworks(null, true);
     } catch (e) {
-      final err = "Could not get networks: $e";
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report("Could not get networks", e);
       return;
     }
 
@@ -337,9 +326,7 @@ class CacheHelper {
       locations = await Future.wait(
           await LocationService.getLocations(forceBackend: true));
     } catch (e) {
-      final err = "Could not get locations: $e";
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report("Could not get locations", e);
       return;
     }
 

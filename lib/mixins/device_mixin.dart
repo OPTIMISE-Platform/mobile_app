@@ -34,7 +34,7 @@ import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 
 mixin DeviceMixin on ChangeNotifier {
@@ -105,9 +105,7 @@ mixin DeviceMixin on ChangeNotifier {
         deviceClasses[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not get device classes: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not get device classes', e);
       return false;
     } finally {
       _deviceClassesMutex.release();
@@ -134,9 +132,7 @@ mixin DeviceMixin on ChangeNotifier {
         deviceTypes[e.id] = e;
       }
     } catch (e) {
-      final err = 'Could not get device types: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not get device types', e);
       return false;
     } finally {
       _deviceTypesMutex.release();
@@ -199,8 +195,7 @@ mixin DeviceMixin on ChangeNotifier {
       newDevices = d.devices;
       totalDevices = d.total;
     } catch (e) {
-      _logger.e('Could not get devices: $e');
-      Toast.showToastNoContext('Could not load devices');
+      ErrorReporter.report('Could not load devices', e);
       notifyListeners();
       _devicesMutex.release();
       return;
@@ -236,9 +231,7 @@ mixin DeviceMixin on ChangeNotifier {
         dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
       ]);
     } catch (e) {
-      final err = 'Could not load device states: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not load device states', e);
     }
     // notifyListeners() is already called inside loadStates
   }
@@ -259,7 +252,8 @@ mixin DeviceMixin on ChangeNotifier {
             forceBackend: true)
             .catchError((e) async {
           if (!Settings.getLocalMode()) {
-            Toast.showToastNoContext('Error refreshing device status, using cache');
+            ErrorReporter.report(
+                'Error refreshing device status, using cache', e);
           }
           final cached = (await DevicesService.getDevices(
             outsideLocalNet.length, 0, filter, null,
@@ -314,15 +308,11 @@ mixin DeviceMixin on ChangeNotifier {
       result = await DeviceCommandsService.runCommands(
         commandCallbacks.map((e) => e.command).toList(growable: false),
       );
-    } on ApiUnavailableException {
-      const err = 'failed to loadStates: currently unavailable';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+    } on ApiUnavailableException catch (e) {
+      ErrorReporter.report('failed to loadStates: currently unavailable', e);
       result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     } catch (e) {
-      final err = 'failed to loadStates: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('failed to loadStates', e);
       result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     }
 
@@ -367,9 +357,7 @@ mixin DeviceMixin on ChangeNotifier {
         await Future.wait(await DeviceGroupsService.getDeviceGroups()),
       );
     } catch (e) {
-      final err = 'Could not load device groups: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not load device groups', e);
     } finally {
       _deviceGroupsMutex.release();
     }

@@ -32,7 +32,7 @@ import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 
 const notificationUpdateType = 'put notification';
@@ -156,7 +156,9 @@ mixin NotificationMixin on ChangeNotifier {
         notifyListeners();
       }
       if (notifications.isEmpty) {
-        Toast.showToastNoContext('Could not load notifications');
+        // Only worth saying when the fallback came up empty too - the log above
+        // already has the cause.
+        ErrorReporter.report('Could not load notifications', e);
       }
     } finally {
       _notificationsMutex.release();
@@ -167,9 +169,7 @@ mixin NotificationMixin on ChangeNotifier {
     try {
       await NotificationsService.setNotification(notifications[index]);
     } catch (e) {
-      final err = 'Could not update notification: $e';
-      _logger.e(err);
-      Toast.showToastNoContext(err);
+      ErrorReporter.report('Could not update notification', e);
     }
     notifyListeners();
   }
@@ -181,8 +181,7 @@ mixin NotificationMixin on ChangeNotifier {
       // bring them back on the next start without a reachable backend.
       await NotificationsService.removePersisted(ids);
     } catch (e) {
-      _logger.e(e.toString());
-      Toast.showToastNoContext('Could not delete notifications');
+      ErrorReporter.report('Could not delete notifications', e);
     }
   }
 
@@ -284,9 +283,7 @@ mixin NotificationMixin on ChangeNotifier {
         try {
           await FcmTokenService.deregisterFcmToken(fcmToken!);
         } catch (e) {
-          final err = 'Could not deregister FCM: $e';
-          _logger.e(err);
-          Toast.showToastNoContext(err);
+          ErrorReporter.report('Could not deregister FCM', e);
         }
       }
       fcmToken = token;
@@ -295,9 +292,7 @@ mixin NotificationMixin on ChangeNotifier {
         await FcmTokenService.registerFcmToken(fcmToken!);
         if (!kIsWeb) await messaging.subscribeToTopic('announcements');
       } catch (e) {
-        final err = 'Could not setup FCM: $e';
-        _logger.e(err);
-        Toast.showToastNoContext(err);
+        ErrorReporter.report('Could not setup FCM', e);
       }
     });
   }

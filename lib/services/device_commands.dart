@@ -30,7 +30,7 @@ import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
@@ -246,22 +246,19 @@ class DeviceCommandsService {
     }
   }
 
-  /// Fills the responses list and returns success as boolean. A Toast is shown and an error is logged if success is false
+  /// Fills the responses list and returns whether that succeeded. A failure is
+  /// logged and reported to the user.
   static Future<bool> runCommandsSecurely(
       List<DeviceCommand> commands, List<DeviceCommandResponse> responses,
       [bool preferEventValue = true]) async {
     try {
       responses.addAll(
           await DeviceCommandsService.runCommands(commands, preferEventValue));
-    } on ApiUnavailableException {
-      const err = "Currently unavailable";
-      Toast.showToastNoContext(err);
-      _logger.e(err);
+    } on ApiUnavailableException catch (e) {
+      ErrorReporter.report("Currently unavailable", e);
       return false;
     } catch (e) {
-      const err = "Couldn't run command";
-      Toast.showToastNoContext(err);
-      _logger.e(err);
+      ErrorReporter.report("Couldn't run command", e);
       return false;
     }
     return true;
