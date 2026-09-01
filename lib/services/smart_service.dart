@@ -36,7 +36,13 @@ class SmartServiceService {
       '${Settings.getApiUrl() ?? 'localhost'}/smart-services/repository';
 
   static initOptions() async {
-    _dio = await DioFactory.create(DioConfig.cached7);
+    // Uncached. Everything this service returns is live state the user just
+    // changed: instances they started, releases the platform published,
+    // dashboard modules. On the shared seven-day force cache the instance list
+    // came off disk forever — a newly launched instance never showed up, and a
+    // long-running app stopped seeing new releases at all, so nothing could be
+    // launched.
+    _dio = await DioFactory.create(DioConfig.standard);
   }
 
   static Future<SmartServiceInstance> getInstance(String id) async {
