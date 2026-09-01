@@ -88,7 +88,9 @@ class Auth extends ChangeNotifier {
     // -> init(), which blocks on the setup mutex.
     if (!isInitialized && !loggedIn) {
       try {
-        if (await OpenIdIdentity.load() != null) {
+        final identity = await OpenIdIdentity.load();
+        if (identity != null) {
+          await _rememberAccount(identity);
           loggedIn = true;
           isInitialized = true;
           notifyListeners();
@@ -116,6 +118,7 @@ class Auth extends ChangeNotifier {
           autoRefresh: false,
         );
         _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
+        await _rememberAccount(_client?.identity);
         loggedIn = _client?.identity != null;
         notifyListeners();
         if (!_listenerRegistered) {
@@ -125,6 +128,7 @@ class Auth extends ChangeNotifier {
             switch (event.type) {
               case AuthEventTypes.Refresh:
               case AuthEventTypes.Success:
+                await _rememberAccount(_client?.identity);
                 loggedIn = true;
                 notifyListeners();
                 break;
@@ -147,6 +151,7 @@ class Auth extends ChangeNotifier {
           final token = await OpenIdIdentity.load();
           if (token != null) {
             _logger.d("Using token from storage, assuming still valid");
+            await _rememberAccount(token);
             loggedIn = true;
             notifyListeners();
           }
@@ -158,6 +163,18 @@ class Auth extends ChangeNotifier {
   }
 
   bool get _initialized => _client != null;
+
+  // Written before loggedIn flips, because the tabs mount on that flag and read
+  // the per-account favorites right away. Never cleared on logout: the
+  // favorites are keyed by it and have to survive until that account returns.
+  Future<void> _rememberAccount(OpenIdIdentity? identity) async {
+    if (identity == null) return;
+    try {
+      await Settings.setAccount(identity.sub);
+    } catch (e) {
+      _logger.w("Could not remember account: $e");
+    }
+  }
 
   Future<void> login(String user, String pw) async {
     await _m.protect(() async {
@@ -189,6 +206,7 @@ class Auth extends ChangeNotifier {
 
       if (token != null) {
         _logger.i('Logged in');
+        await _rememberAccount(token);
         loggedIn = true;
         notifyListeners();
         //await AppState().initMessaging();

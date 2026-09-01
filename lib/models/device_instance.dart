@@ -37,7 +37,6 @@ enum DeviceConnectionStatus {
   unknown,
 }
 
-const attributeFavorite = "$appOrigin/favorite";
 const attributeNickname = "$sharedOrigin/nickname";
 
 @JsonSerializable()
@@ -121,31 +120,12 @@ class DeviceInstance {
     return result;
   }
 
-  Future<bool> isFavorite() async {
-    final device =
-    await isar!.deviceInstances.where().idEqualTo(id).findFirst();
-    return device?.favorite ?? false;
-  }
-
+  // Mirror of the per-account favorite list (Settings.getFavoriteDeviceIds),
+  // kept on the row only so the Isar query can filter on an index. The list is
+  // the source of truth - this row is cache and may be dropped.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @Index()
   bool favorite = false;
-
-  setFavorite(bool val) {
-    if (val) {
-      attributes ??= [];
-      attributes = attributes!.toList(); // ensure growable
-      attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
-    } else {
-      if (attributes != null) {
-        attributes = attributes!.toList(); // ensure growable
-      }
-      final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
-      if (i != null && i != -1) {
-        attributes!.removeAt(i);
-      }
-    }
-  }
 
   @ignore
   String get displayName => display_name ?? name;

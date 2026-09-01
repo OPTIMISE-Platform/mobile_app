@@ -113,19 +113,22 @@ class DeviceGroupsService {
       })));
     }
     await Future.wait(futures);
-    // Batch the favorite lookup into a single query. The previous
-    // `forEach((e) async { ... })` was also a bug: the async callbacks were
-    // never awaited, so putAll() below ran before `favorite` was set.
-    if (isar != null) {
-      final favoriteIds = (await isar!.deviceGroups
-              .where()
-              .favoriteEqualTo(true)
-              .idProperty()
-              .findAll())
-          .toSet();
-      for (final element in groupsRepo) {
-        element.favorite = favoriteIds.contains(element.id);
-      }
+    // See DevicesService.getDevices: the per-account list is the favorite, this
+    // flag is only the mirror on the cached row - and the row still counts
+    // until FavoritesMigration has moved what is on it.
+    final favoriteIds = Settings.getFavoriteGroupIds();
+    final Set<String> notYetMoved =
+        isar != null && !Settings.getFavoritesMoved()
+            ? (await isar!.deviceGroups
+                    .where()
+                    .favoriteEqualTo(true)
+                    .idProperty()
+                    .findAll())
+                .toSet()
+            : const {};
+    for (final element in groupsRepo) {
+      element.favorite =
+          favoriteIds.contains(element.id) || notYetMoved.contains(element.id);
     }
     if (isar != null && collection != null) {
       await isar!.writeTxn(() async {
@@ -159,6 +162,10 @@ class DeviceGroupsService {
     }
 
     final savedGroup = DeviceGroup.fromJson(resp.data!);
+    // The response cannot carry the favorite - it lives in the per-account
+    // list. Without this the cached row loses its mirror and the group drops
+    // out of the favorites screen until the next fetch.
+    savedGroup.favorite = Settings.getFavoriteGroupIds().contains(savedGroup.id);
 
     if (isar != null) {
       await isar!.writeTxn(() async {

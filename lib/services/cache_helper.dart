@@ -100,11 +100,12 @@ class CacheHelper {
     await MetadataCache.clear();
     // Deliberately NOT cleared here: the Isar entity collections. They leak
     // the previous account's devices to the next account until the daily
-    // refresh, but wiping them here destroys the favorites (which live only
-    // on the Isar rows), kills the offline cache on any transient NotLoggedIn
-    // auth event, and three services read the emptied collections as
-    // authoritative. The account-switch leak needs a clear-on-account-change
-    // at login instead.
+    // refresh, but wiping them here kills the offline cache on any transient
+    // NotLoggedIn auth event, and three services read the emptied collections
+    // as authoritative. The account-switch leak needs a clear-on-account-change
+    // at login instead. Favorites no longer stand in the way: they live in
+    // their own per-account list (Settings.getFavoriteDeviceIds), not on these
+    // rows.
   }
 
   /// [onProgress] reports the fraction of completed refresh tasks (0..1),

@@ -83,6 +83,11 @@ class DevicesService {
     final headers = await Auth().getHeaders();
 
     final queryParameters = filter.toQueryParams(limit, offset, lastDevice);
+    if (filter.favorites == true && (queryParameters["ids"] ?? "").isEmpty) {
+      // A favorites filter that narrowed to nothing is answerable here: the
+      // list is local. Sending ids= empty would return every device instead.
+      return DeviceInstanceWithTotal([], 0);
+    }
     final uri =
         '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-devices';
     //_logger.d("Devices: $queryParameters");
@@ -121,19 +126,25 @@ class DevicesService {
       "Getting devices from remote DB took ${DateTime.now().difference(start)}",
     );
 
-    // Fetch all favorite ids in a single query instead of one isFavorite()
-    // lookup per device. With limit=5000 (cache refresh) that was up to 5000
-    // separate Isar queries on the UI thread, freezing the loading spinner.
-    if (isar != null) {
-      final favoriteIds = (await isar!.deviceInstances
-              .where()
-              .favoriteEqualTo(true)
-              .idProperty()
-              .findAll())
-          .toSet();
-      for (final element in devices) {
-        element.favorite = favoriteIds.contains(element.id);
-      }
+    // Favorites live in their own per-account list, not on these rows, so they
+    // survive the row being replaced here (and the whole cache being dropped).
+    final favoriteIds = Settings.getFavoriteDeviceIds();
+    // Until FavoritesMigration has run, the rows are still the only record of
+    // the favorites made before the changeover. Clearing their flag here would
+    // destroy them before the migration ever gets to read them - the refresh
+    // that runs right after a login would be enough.
+    final Set<String> notYetMoved =
+        isar != null && !Settings.getFavoritesMoved()
+            ? (await isar!.deviceInstances
+                    .where()
+                    .favoriteEqualTo(true)
+                    .idProperty()
+                    .findAll())
+                .toSet()
+            : const {};
+    for (final element in devices) {
+      element.favorite =
+          favoriteIds.contains(element.id) || notYetMoved.contains(element.id);
     }
 
     if (isar != null && collection != null) {

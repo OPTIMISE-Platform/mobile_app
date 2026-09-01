@@ -87,4 +87,48 @@ void main() {
     });
   });
 
+  group("favorites", () {
+    test("are empty and unwritable without an account", () async {
+      expect(Settings.getFavoriteDeviceIds(), isEmpty);
+      await Settings.setFavoriteDeviceIds({"device-1"});
+      expect(Settings.getFavoriteDeviceIds(), isEmpty);
+    });
+
+    test("are stored and read back for the signed-in account", () async {
+      await Settings.setAccount("account-a");
+      await Settings.setFavoriteDeviceIds({"device-1", "device-2"});
+      await Settings.setFavoriteGroupIds({"group-1"});
+      expect(Settings.getFavoriteDeviceIds(), {"device-1", "device-2"});
+      expect(Settings.getFavoriteGroupIds(), {"group-1"});
+    });
+
+    test("devices and groups do not share a list", () async {
+      await Settings.setAccount("account-a");
+      await Settings.setFavoriteDeviceIds({"device-1"});
+      expect(Settings.getFavoriteGroupIds(), isEmpty);
+    });
+
+    test("a second account does not inherit the first one's favorites", () async {
+      await Settings.setAccount("account-a");
+      await Settings.setFavoriteDeviceIds({"device-1"});
+
+      await Settings.setAccount("account-b");
+      expect(Settings.getFavoriteDeviceIds(), isEmpty);
+      await Settings.setFavoriteDeviceIds({"device-2"});
+
+      // and switching back finds the first account's list untouched
+      await Settings.setAccount("account-a");
+      expect(Settings.getFavoriteDeviceIds(), {"device-1"});
+    });
+
+    test("survive a restart", () async {
+      await Settings.setAccount("account-a");
+      await Settings.setFavoriteDeviceIds({"device-1"});
+      await Settings.close();
+      await Settings.init();
+      expect(Settings.getAccount(), "account-a");
+      expect(Settings.getFavoriteDeviceIds(), {"device-1"});
+    });
+  });
+
 }

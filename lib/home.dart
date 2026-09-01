@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
@@ -57,6 +58,14 @@ class _HomeState extends State<Home> {
       await auth.login(_user, _pw);
       _user = ""; // clear from memory
       _pw = ""; // clear from memory
+      // Before the refresh below, and here rather than only at startup: the
+      // account is known for the first time now, and the refresh rewrites the
+      // cached rows that still hold the favorites until this has run.
+      try {
+        await FavoritesMigration.run();
+      } catch (e) {
+        _logger.w("Moving favorites off the cache failed: $e");
+      }
       // Refresh in the background: awaiting it here held the login spinner for
       // the whole multi-endpoint refresh, whose JSON parsing runs on the UI
       // isolate and stutters the spinner. The tabs fetch their first page

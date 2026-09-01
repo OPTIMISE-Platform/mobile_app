@@ -25,6 +25,7 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
@@ -80,6 +81,13 @@ class AppInitializer {
   }
 
   static Future<void> _initCache() async {
+    // Before the refresh: until this has run, the cached rows are the only
+    // record of the existing favorites, and a refresh replaces them.
+    try {
+      await FavoritesMigration.run();
+    } catch (e) {
+      debugPrint('Moving favorites off the cache failed: $e');
+    }
     await CacheHelper.scheduleCacheUpdates()
         .catchError((_) => Toast.showToastNoContext('Could not refresh cache'));
   }

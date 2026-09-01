@@ -166,51 +166,11 @@ class DeviceGroup {
     return result;
   }
 
-  Future<bool> isFavorite() async {
-    final group =
-    await isar!.deviceGroups.where().idEqualTo(id).findFirst();
-    return group?.favorite ?? false;
-  }
-
+  // Mirror of the per-account favorite list (Settings.getFavoriteGroupIds) -
+  // see DeviceInstance.favorite.
   @JsonKey(includeFromJson: false, includeToJson: false)
   @Index()
   bool favorite = false;
-
-  /*
-  bool get favorite {
-    final i = attributes?.indexWhere((element) => element.key == attributeFavorite && element.origin == appOrigin);
-    return i != null && i != -1;
-  }*/
-
-  setFavorite(bool val) {
-    if (val) {
-      attributes ??= [];
-      try {
-        attributes!.add(Attribute.New(attributeFavorite, "true", appOrigin));
-      } on UnsupportedError {
-        final List<Attribute> tmp = [];
-        tmp.addAll(attributes!);
-        tmp.add(Attribute.New(attributeFavorite, "true", appOrigin));
-        attributes = tmp;
-      }
-    } else {
-      final i = attributes?.indexWhere((element) => element.key == attributeFavorite);
-      if (i != null && i != -1) {
-        try {
-          attributes!.removeAt(i);
-        } on UnsupportedError {
-          final List<Attribute> tmp = [];
-          tmp.addAll(attributes!);
-          tmp.removeAt(i);
-          attributes = tmp;
-        }
-      }
-    }
-  }
-
-  toggleFavorite() {
-    setFavorite(!favorite);
-  }
 }
 
 @JsonSerializable()

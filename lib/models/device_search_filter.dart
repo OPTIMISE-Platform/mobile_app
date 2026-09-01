@@ -18,6 +18,7 @@ import 'package:isar_community/isar.dart';
 import 'package:mobile_app/app_state.dart';
 
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/settings.dart';
 
 class DeviceSearchFilter {
   String query;
@@ -95,7 +96,15 @@ class DeviceSearchFilter {
     }
 
     if (favorites == true) {
-      queryParameters["attr-keys"] = attributeFavorite;
+      // Favorites are a local, per-account id list, so narrow by id. The
+      // previous attr-keys query asked for a device attribute that nothing
+      // writes and therefore always came back empty.
+      final favoriteIds = Settings.getFavoriteDeviceIds();
+      final existing = queryParameters["ids"];
+      queryParameters["ids"] = (existing == null || existing.isEmpty
+              ? favoriteIds
+              : favoriteIds.intersection(existing.split(",").toSet()))
+          .join(",");
     }
     return queryParameters;
   }

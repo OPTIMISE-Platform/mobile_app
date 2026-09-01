@@ -70,6 +70,13 @@ class Settings {
 
   static const _preReleaseModeKey = "preRelease_mode";
 
+  static const _accountKey = "account";
+
+  static const _favoriteDevicesKeyPrefix = "favorite_devices_";
+  static const _favoriteGroupsKeyPrefix = "favorite_groups_";
+
+  static const _favoritesMovedKey = "favorites_moved_off_cache";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -378,5 +385,65 @@ class Settings {
   static Future<void> setPreReleaseMode(bool? value) {
     checkInit();
     return _box!.put(_preReleaseModeKey, value.toString());
+  }
+
+  /// The `sub` of the account currently signed in, remembered by [Auth] so it
+  /// is available synchronously and without a client (offline start). Never
+  /// cleared on logout: the favorites below are keyed by it and must survive
+  /// until the same account returns.
+  static String? getAccount() {
+    checkInit();
+    return _box!.get(_accountKey);
+  }
+
+  static Future<void> setAccount(String value) {
+    checkInit();
+    return _box!.put(_accountKey, value).then((v) => _box?.flush());
+  }
+
+  /// Favorites are per installation and per account, and deliberately not part
+  /// of the device/group cache: that cache has to stay disposable so it can be
+  /// dropped when the account changes. Keyed by account so a second account on
+  /// the same phone does not inherit the first one's favorites.
+  static Set<String> getFavoriteDeviceIds() => _getFavoriteIds(_favoriteDevicesKeyPrefix);
+
+  static Future<void> setFavoriteDeviceIds(Set<String> ids) =>
+      _setFavoriteIds(_favoriteDevicesKeyPrefix, ids);
+
+  static Set<String> getFavoriteGroupIds() => _getFavoriteIds(_favoriteGroupsKeyPrefix);
+
+  static Future<void> setFavoriteGroupIds(Set<String> ids) =>
+      _setFavoriteIds(_favoriteGroupsKeyPrefix, ids);
+
+  static Set<String> _getFavoriteIds(String prefix) {
+    checkInit();
+    final account = getAccount();
+    if (account == null) return {};
+    final str = _box!.get(prefix + account);
+    if (str == null) return {};
+    try {
+      return (json.decode(str) as List<dynamic>).map((e) => e.toString()).toSet();
+    } catch (_) {
+      return {}; // ignore an unreadable entry rather than breaking every list
+    }
+  }
+
+  static Future<void> _setFavoriteIds(String prefix, Set<String> ids) async {
+    checkInit();
+    final account = getAccount();
+    if (account == null) return;
+    await _box?.put(prefix + account, json.encode(ids.toList())).then((v) => _box?.flush());
+  }
+
+  /// Whether the favorites stored on the cached device/group rows have been
+  /// copied into the per-account lists above (see FavoritesMigration).
+  static bool getFavoritesMoved() {
+    checkInit();
+    return _box!.get(_favoritesMovedKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setFavoritesMoved(bool value) {
+    checkInit();
+    return _box!.put(_favoritesMovedKey, value.toString()).then((v) => _box?.flush());
   }
 }
