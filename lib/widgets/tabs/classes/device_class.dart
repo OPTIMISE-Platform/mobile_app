@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -34,13 +35,12 @@ class DeviceListByDeviceClass extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListByDeviceClassState();
 }
 
-class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with WidgetsBindingObserver {
+class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with ResumeRefreshMixin {
   int? _selected;
   StreamSubscription? _refreshSubscription;
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     super.dispose();
   }
@@ -48,7 +48,6 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       if (_selected == null) {
@@ -61,16 +60,13 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      if (_selected == null) {
-        AppState().loadDeviceClasses();
-      } else {
-        final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
-        final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-        AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
-      }
+  void onResumed() {
+    if (_selected == null) {
+      AppState().loadDeviceClasses();
+    } else {
+      final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
+      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+      AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
     }
   }
 

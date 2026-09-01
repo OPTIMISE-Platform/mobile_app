@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -40,7 +41,7 @@ class DeviceListByNetwork extends StatefulWidget {
 }
 
 class _DeviceListByNetworkState extends State<DeviceListByNetwork>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   int? _selected;
   bool _loading = false;
   StreamSubscription? _refreshSubscription;
@@ -62,7 +63,6 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();
     });
@@ -70,17 +70,12 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) _refresh();
-  }
+  void onResumed() => _refresh();
 
   @override
   Widget build(BuildContext context) {

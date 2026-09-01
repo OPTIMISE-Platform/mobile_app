@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -35,7 +36,7 @@ class Gateways extends StatefulWidget {
   State<StatefulWidget> createState() => _GatewaysState();
 }
 
-class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
+class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
   StreamSubscription? _refreshSubscription;
   StreamSubscription? _fabSubscription;
   late final DeviceTabsState? parentState;
@@ -47,7 +48,6 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       _refresh();
     });
@@ -126,15 +126,10 @@ class _GatewaysState extends State<Gateways> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) _refresh();
-  }
+  void onResumed() => _refresh();
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     _fabSubscription?.cancel();
     super.dispose();

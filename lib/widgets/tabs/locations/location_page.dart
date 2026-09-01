@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -49,7 +50,7 @@ class LocationPage extends StatefulWidget {
 }
 
 class LocationPageState extends State<LocationPage>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   final StreamController _toggleStreamController = StreamController();
   late final Stream _toggleStream;
 
@@ -68,24 +69,8 @@ class LocationPageState extends State<LocationPage>
   }
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true)
+  void onResumed() =>
       _refresh(AppState().locations[widget._stateLocationIndex]);
-  }
 
   @override
   Widget build(BuildContext context) {

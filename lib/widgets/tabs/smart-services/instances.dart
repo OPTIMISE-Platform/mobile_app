@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -42,7 +43,7 @@ class SmartServicesInstances extends StatefulWidget {
 }
 
 class _SmartServicesInstancesState extends State<SmartServicesInstances>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   bool allInstancesLoaded = false;
   final List<SmartServiceInstance> instances = [];
   List<bool> upgradingInstances = [];
@@ -53,7 +54,6 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
     super.dispose();
@@ -81,17 +81,10 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
       _refresh();
     });
     _refresh();
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      _refresh();
-    }
-  }
+  void onResumed() => _refresh();
 
   _refresh() async {
     instances.clear();

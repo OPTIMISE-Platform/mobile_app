@@ -14,16 +14,10 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:logger/logger.dart';
-import 'package:mobile_app/shared/base64_response_decoder.dart';
-import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/dio_status.dart';
-import 'package:mobile_app/shared/semaphore.dart';
+import 'package:mobile_app/shared/entity_image.dart';
 
 part 'device_class.g.dart';
 
@@ -39,37 +33,11 @@ class DeviceClass {
   @JsonKey(ignore: true)
   List<String> deviceIds = [];
 
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
   Future<void> _initImage() async {
-    if (image.isEmpty) {
-      return;
-    }
-    try {
-      final dio = await DioFactory.create(DioConfig.cached365);
-      // Throttled so a batch of device classes doesn't hammer the image host
-      // (imgur returns HTTP 429 when too many requests arrive at once).
-      final resp = await imageDownloadLimiter.withResource(
-        () => dio.get<String?>(image,
-            options: Options(responseDecoder: DecodeIntoBase64())),
-      );
-      if (!isReadableStatus(resp.statusCode)) {
-        _logger.e("Could not load deviceClass image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
-        return;
-      }
-      if (resp.data == null) {
-        _logger.e("Could not load deviceClass image: response was null. ID: $id, URL: $image");
-        return;
-      }
-      final b64 = const Base64Decoder().convert(resp.data!);
-      imageWidget = Image.memory(b64);
-    } catch (e) {
-      // Fire-and-forget from fromJson — swallow so it never surfaces as an
-      // unhandled async exception (e.g. a 429 from the image host).
-      _logger.e("Could not load deviceClass image. ID: $id, URL: $image. Error: $e");
-    }
+    // Only on success, so a later failed reload does not blank an image that
+    // is already on screen.
+    final loaded = await loadEntityImage(image, "deviceClass", id);
+    if (loaded != null) imageWidget = loaded;
   }
 
   DeviceClass(this.id, this.name, this.image);

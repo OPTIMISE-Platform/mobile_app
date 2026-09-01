@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -39,18 +40,12 @@ class DeviceListFavorites extends StatefulWidget {
 }
 
 class _DeviceListFavoritesState extends State<DeviceListFavorites>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   final GlobalKey _keyFavButton = GlobalKey();
 
   // Nullable: created once in didChangeDependencies. A late field here made
   // dispose/lifecycle throw LateInitializationError when creation failed.
   DeviceListFavoritesController? controller;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
 
   @override
   void didChangeDependencies() {
@@ -65,18 +60,12 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     controller?.dispose();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      controller?.onResume(context);
-    }
-  }
+  void onResumed() => controller?.onResume(context);
 
   void _openDeviceListView(BuildContext context) {
     final parentState =

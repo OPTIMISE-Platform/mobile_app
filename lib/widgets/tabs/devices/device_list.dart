@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -32,12 +33,11 @@ class DeviceList extends StatefulWidget {
   State<StatefulWidget> createState() => _DeviceListState();
 }
 
-class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
+class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
   StreamSubscription? _refreshSubscription;
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     super.dispose();
   }
@@ -45,19 +45,13 @@ class _DeviceListState extends State<DeviceList> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().refreshDevices();
     });
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().refreshDevices();
-    }
-  }
+  void onResumed() => AppState().refreshDevices();
 
   @override
   Widget build(BuildContext context) {

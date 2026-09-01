@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -37,7 +38,7 @@ class DeviceListByLocation extends StatefulWidget {
 }
 
 class _DeviceListByLocationState extends State<DeviceListByLocation>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   // Not static: a static field let a second instance overwrite the first
   // instance's subscription (leak) and the first's dispose cancel the
   // second's — the FAB silently died after leaving and re-entering the tab.
@@ -49,7 +50,6 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   void dispose() {
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -57,7 +57,6 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   void initState() {
     super.initState();
     AppState().loadLocations();
-    WidgetsBinding.instance.addObserver(this);
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>()
         as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
@@ -97,13 +96,9 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      AppState().loadLocations();
-      setState(() {});
-    }
+  void onResumed() {
+    AppState().loadLocations();
+    setState(() {});
   }
 
   void _openLocationPage(int i, DeviceTabsState? parentState) async {

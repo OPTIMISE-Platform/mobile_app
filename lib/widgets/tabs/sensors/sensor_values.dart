@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -57,7 +58,7 @@ class SensorValues extends StatefulWidget {
 }
 
 class _SensorValuesState extends State<SensorValues>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   StreamSubscription? _fabSubscription;
   StreamSubscription? _refreshSubscription;
   DeviceTabsState? parentState;
@@ -86,7 +87,6 @@ class _SensorValuesState extends State<SensorValues>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _tabs = Settings.getSensorTabs();
     parentState =
         context.findAncestorStateOfType<State<DeviceTabs>>()
@@ -104,18 +104,11 @@ class _SensorValuesState extends State<SensorValues>
   void dispose() {
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      _loadValues();
-    }
-  }
+  void onResumed() => _loadValues();
 
   // ---------------------------------------------------------------------------
   // Loading

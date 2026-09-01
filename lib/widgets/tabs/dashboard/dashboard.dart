@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -40,7 +41,7 @@ class Dashboard extends StatefulWidget {
   State<StatefulWidget> createState() => DashboardState();
 }
 
-class DashboardState extends State<Dashboard> with WidgetsBindingObserver, TickerProviderStateMixin {
+class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerProviderStateMixin {
   Map<String, SmartServiceModuleWidget>? _smartServiceWidgets;
   final List<SmartServiceDashboard> _dashboards = Settings.getSmartServiceDashboards();
 
@@ -58,7 +59,6 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     _toggleStreamController.close();
     _tabController?.dispose();
@@ -81,7 +81,6 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
       if (mounted) setState(() {});
       _refresh();
     });
-    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(
       initialIndex: 0,
       length: 0,
@@ -99,17 +98,7 @@ class DashboardState extends State<Dashboard> with WidgetsBindingObserver, Ticke
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    // Only on resume: without the guard every backgrounding (inactive/paused)
-    // reloaded all smart-service widgets.
-    if (state != AppLifecycleState.resumed ||
-        !mounted ||
-        ModalRoute.of(context)?.isCurrent != true) {
-      return;
-    }
-    _refresh();
-  }
+  void onResumed() => _refresh();
 
   @override
   Widget build(BuildContext context) {

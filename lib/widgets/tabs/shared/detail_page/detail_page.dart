@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,7 @@ class DetailPage extends StatefulWidget {
   State<StatefulWidget> createState() => _DetailPageState();
 }
 
-class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
+class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -552,7 +553,6 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
     if ((widget._device == null && widget._group == null) || (widget._device != null && widget._group != null)) {
       throw ArgumentException("Must set ONE of device or group");
     }
-    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       if (!mounted) return;
@@ -562,14 +562,10 @@ class _DetailPageState extends State<DetailPage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _refreshSubscription?.cancel();
     super.dispose();
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) _refresh(context);
-  }
+  void onResumed() => _refresh(context);
 }

@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/foundation.dart';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
@@ -37,7 +38,7 @@ class SmartServicesReleases extends StatefulWidget {
 }
 
 class _SmartServicesReleasesState extends State<SmartServicesReleases>
-    with WidgetsBindingObserver {
+    with ResumeRefreshMixin {
   bool allInstancesLoaded = false;
   final List<SmartServiceRelease> releases = [];
   Mutex releasesMutex = Mutex();
@@ -46,26 +47,13 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
   static final _format = DateFormat.yMd().add_jms();
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
   void initState() {
     super.initState();
     _refresh();
-    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      _refresh();
-    }
-  }
+  void onResumed() => _refresh();
 
   _refresh() async {
     releases.clear();

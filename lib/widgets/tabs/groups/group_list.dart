@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -37,7 +38,7 @@ class GroupList extends StatefulWidget {
   State<StatefulWidget> createState() => _GroupListState();
 }
 
-class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
+class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
   StreamSubscription? _fabSubscription;
   StreamSubscription? _refreshSubscription;
   DeviceTabsState? parentState;
@@ -46,14 +47,12 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   void dispose() {
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
     _fabSubscription = parentState?.fabPressed.listen((_) async {
       final titleController = TextEditingController(text: "");
@@ -91,12 +90,7 @@ class _GroupListState extends State<GroupList> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed && ModalRoute.of(context)?.isCurrent == true) {
-      AppState().loadDeviceGroups();
-    }
-  }
+  void onResumed() => AppState().loadDeviceGroups();
 
   void _openGroupPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];

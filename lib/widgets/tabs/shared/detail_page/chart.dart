@@ -15,6 +15,7 @@
  */
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
@@ -40,7 +41,7 @@ class Chart extends StatefulWidget {
   State<StatefulWidget> createState() => _ChartState();
 }
 
-class _ChartState extends State<Chart> with WidgetsBindingObserver {
+class _ChartState extends State<Chart> with ResumeRefreshMixin {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -56,25 +57,7 @@ class _ChartState extends State<Chart> with WidgetsBindingObserver {
   List<FlSpot>? _spots;
 
   @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        ModalRoute.of(context)?.isCurrent == true) {
-      _refresh(context, _range);
-    }
-  }
+  void onResumed() => _refresh(context, _range);
 
   _refresh(BuildContext context, int range) async {
     await _refreshMutex.protect(() async {
