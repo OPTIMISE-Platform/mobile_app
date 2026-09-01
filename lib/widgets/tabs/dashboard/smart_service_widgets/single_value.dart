@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 class SmSeSingleValue extends SmSeRequest {
@@ -37,7 +38,7 @@ class SmSeSingleValue extends SmSeRequest {
   @override
   Future<void> refreshInternal() async {
     final resp = await request.perform();
-    if (resp.statusCode == null || resp.statusCode! > 299) {
+    if (!isSuccessStatus(resp.statusCode)) {
       value = "ERROR Status " + resp.statusCode.toString();
     } else {
       value = resp.data.endsWith("\n") ? resp.data.substring(0, resp.data.length - 1) : resp.data;

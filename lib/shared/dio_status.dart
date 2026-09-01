@@ -42,6 +42,12 @@ void checkWriteStatus(DioException e, String uri) =>
 bool isReadableStatus(int? statusCode) =>
     statusCode != null && statusCode <= _readTolerated;
 
+/// The stricter counterpart of [isReadableStatus], for a response that has to
+/// be a plain success. The smart-service dashboard widgets use it: they render
+/// whatever came back, so a redirect is no more usable to them than an error.
+bool isSuccessStatus(int? statusCode) =>
+    statusCode != null && statusCode <= _writeTolerated;
+
 void _check(DioException e, String uri, int tolerated) {
   final code = e.response?.statusCode;
   if (code == null || code > tolerated) {

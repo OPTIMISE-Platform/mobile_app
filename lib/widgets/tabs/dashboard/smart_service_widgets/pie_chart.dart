@@ -15,6 +15,7 @@
  */
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
@@ -160,7 +161,7 @@ class SmSePieChart extends SmSeRequest {
   Future<void> refreshInternal() async {
     _sections.clear();
     final resp = await request.perform<List<dynamic>>();
-    if (resp.statusCode == null || resp.statusCode! > 299 || resp.data == null) {
+    if (!isSuccessStatus(resp.statusCode) || resp.data == null) {
       return;
     } else {
       final respArr = resp.data!;

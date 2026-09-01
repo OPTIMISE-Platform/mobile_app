@@ -15,6 +15,7 @@
  */
 
 import 'dart:convert';
+import 'package:mobile_app/shared/dio_status.dart';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -70,7 +71,7 @@ class SmSeImage extends SmSeRequest {
     final resp = await dio.request(request.url,
         data: request.body, options: Options(method: request.method, headers: headers, responseDecoder: DecodeIntoBase64()));
 
-    if (resp.statusCode == null || resp.statusCode! > 304) {
+    if (!isReadableStatus(resp.statusCode)) {
       return;
     }
     if (resp.data == null) {

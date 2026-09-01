@@ -15,6 +15,7 @@
  */
 
 import 'dart:convert';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
@@ -355,9 +356,7 @@ class SmSeLineChart extends SmSeRequest {
 
   Future<void> addFromRequest(Request request) async {
     final resp = await request.perform<List<dynamic>>();
-    if (resp.statusCode == null ||
-        resp.statusCode! > 299 ||
-        resp.data == null) {
+    if (!isSuccessStatus(resp.statusCode) || resp.data == null) {
       return;
     } else {
       final respArr = resp.data!;
