@@ -93,13 +93,13 @@ mixin NotificationMixin on ChangeNotifier {
       _logger.w(e);
       return;
     }
-    if (!kIsWeb && Platform.isAndroid) {
+    if (Platform.isAndroid) {
       await messaging.subscribeToTopic('android');
     }
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
 
-    if (!kIsWeb && Platform.isIOS) {
+    if (Platform.isIOS) {
       await messaging.getAPNSToken(); // must be called before getToken on iOS
     }
     final token = await messaging.getToken(
@@ -290,7 +290,7 @@ mixin NotificationMixin on ChangeNotifier {
       _logger.d('Firebase token: $fcmToken');
       try {
         await FcmTokenService.registerFcmToken(fcmToken!);
-        if (!kIsWeb) await messaging.subscribeToTopic('announcements');
+        await messaging.subscribeToTopic('announcements');
       } catch (e) {
         ErrorReporter.report('Could not setup FCM', e);
       }

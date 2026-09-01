@@ -30,7 +30,6 @@ import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/services/smart_service.dart';
-import 'package:mobile_app/shared/get_broadcast_channel.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
 class AppState extends ChangeNotifier
@@ -52,12 +51,6 @@ class AppState extends ChangeNotifier
 
   AppState._internal() {
     WidgetsBinding.instance.addObserver(this);
-    if (kIsWeb) {
-      getBroadcastChannel('optimise-mobile-app').onMessage.listen((event) {
-        // ignore: invalid_use_of_protected_member
-        handleQueuedMessages();
-      });
-    }
     manageNetworkDiscovery();
     NativePipe.init();
   }

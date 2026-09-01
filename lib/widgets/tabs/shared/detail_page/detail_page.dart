@@ -289,13 +289,6 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
           cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         ));
       }
-      if (kIsWeb) {
-        appBarActions.add(PlatformIconButton(
-          onPressed: () => _refresh(context),
-          icon: const Icon(Icons.refresh),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-        ));
-      }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
       KeyedList<String, Widget> functionWidgets = KeyedList();

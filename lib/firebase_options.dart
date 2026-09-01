@@ -2,7 +2,7 @@
 // ignore_for_file: lines_longer_than_80_chars
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Default [FirebaseOptions] for use with your Firebase apps.
@@ -17,9 +17,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// ```
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
-    if (kIsWeb) {
-      return web;
-    }
     // ignore: missing_enum_constant_in_switch
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -45,15 +42,6 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );}
   }
-
-  static final FirebaseOptions web = FirebaseOptions(
-    apiKey: dotenv.env['FirebaseOptionsWebapiKey'] ?? "",
-    appId: dotenv.env['FirebaseOptionsWebappId'] ?? "",
-    messagingSenderId: dotenv.env['FirebaseOptionsWebmessagingSenderId'] ?? "",
-    projectId: dotenv.env['FirebaseOptionsWebprojectId'] ?? "",
-    authDomain: dotenv.env['FirebaseOptionsWebauthDomain'] ?? "",
-    storageBucket: dotenv.env['FirebaseOptionsWebstorageBucket'] ?? "",
-  );
 
   static final FirebaseOptions android = FirebaseOptions(
     apiKey: dotenv.env['FirebaseOptionsAndroidapiKey'] ?? "",

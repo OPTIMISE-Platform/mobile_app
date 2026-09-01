@@ -405,15 +405,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
       ));
     }
 
-    if (kIsWeb) {
-      actions.add(PlatformIconButton(
-        onPressed: () => AppState().pushRefresh(),
-        icon: const Icon(Icons.refresh),
-        cupertino: (_, __) =>
-            CupertinoIconButtonData(padding: EdgeInsets.zero),
-      ));
-    }
-
     if (Settings.getFilterMode()) {
       FilterMenuBuilder(
         navigationIndex: _navigationIndex,

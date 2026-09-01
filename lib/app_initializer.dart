@@ -60,7 +60,7 @@ class AppInitializer {
     // open is local and cheap; Firebase and Auth (network OIDC discovery)
     // stay parallel. _initCache needs both isar and Auth, so it runs last.
     await _timed('Isar', () async {
-      isar = kIsWeb ? null : await IsarService().db;
+      isar = await IsarService().db;
     });
     await Future.wait([
       _timed('Firebase', FirebaseService.init),

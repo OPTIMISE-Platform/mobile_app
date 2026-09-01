@@ -52,17 +52,6 @@ class _NotificationListState extends State<NotificationList> {
       state.checkMessageDisplay(context);
       final List<Widget> appBarActions = [];
 
-      if (kIsWeb) {
-        appBarActions.add(PlatformIconButton(
-          onPressed: !NotificationsService.isAvailable()
-              ? null
-              : () => state.loadNotifications(context),
-          icon: const Icon(Icons.refresh),
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
-        ));
-      }
-
       if (_selectionMode) {
         appBarActions.addAll([
           PlatformIconButton(

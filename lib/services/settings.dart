@@ -16,7 +16,6 @@
 
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile_app/exceptions/settings_exception.dart';
@@ -85,9 +84,7 @@ class Settings {
 
   static init() async {
     if (!isInitialized) {
-      if (!kIsWeb) {
-        Hive.init((await getApplicationDocumentsDirectory()).path);
-      }
+      Hive.init((await getApplicationDocumentsDirectory()).path);
       _box = await Hive.openBox<String>(_boxName);
 
       _setDefaults();

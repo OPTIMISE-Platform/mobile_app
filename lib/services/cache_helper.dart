@@ -19,7 +19,6 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
@@ -74,9 +73,6 @@ class CacheHelper {
   }
 
   static Future<Directory?> getCacheDir() async {
-    if (kIsWeb) {
-      return null;
-    }
     if (Platform.isAndroid) {
       List<Directory>? cacheDirs = await getExternalCacheDirectories();
       if (cacheDirs != null && cacheDirs.isNotEmpty) {

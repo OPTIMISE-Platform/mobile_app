@@ -146,7 +146,6 @@ mixin NetworkMixin on ChangeNotifier {
   bool _discoveryStarting = false;
 
   Future<void> manageNetworkDiscovery() async {
-    if (kIsWeb) return;
     if (_discovery != null || _discoveryStarting) return;
     _discoveryStarting = true;
 

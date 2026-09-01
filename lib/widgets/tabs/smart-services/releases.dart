@@ -78,16 +78,6 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
   @override
   Widget build(BuildContext context) {
     final actions = MyAppBar.getDefaultActions(context);
-    if (kIsWeb) {
-      actions.insert(
-          0,
-          PlatformIconButton(
-            onPressed: () => _refresh(),
-            icon: const Icon(Icons.refresh),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
-          ));
-    }
 
     return PlatformScaffold(
         appBar: appBar.getAppBar(context, actions),

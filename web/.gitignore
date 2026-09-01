@@ -1,1 +1,0 @@
-firebase-messaging-sw.js

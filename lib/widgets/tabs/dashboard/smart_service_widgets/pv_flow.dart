@@ -17,7 +17,6 @@
 import 'dart:math';
 
 import 'package:arrow_path/arrow_path.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:mobile_app/theme.dart';
@@ -49,7 +48,7 @@ class SmSePvFlow extends SmartServiceModuleWidget {
   setPreview(bool enabled) => preview = enabled;
 
   @override
-  double height = kIsWeb ? 11.5 : 10.5;
+  double height = 10.5;
 
   @override
   double width = 1;

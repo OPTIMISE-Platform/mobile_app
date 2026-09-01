@@ -109,9 +109,7 @@ class Auth extends ChangeNotifier {
           discoveryDocumentUrl: _discoveryUrl,
           clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
           encryptionKey: encKey,
-          redirectUrl: kIsWeb
-              ? "${Uri.base.scheme}://${Uri.base.host}:${Uri.base.port}/callback.html"
-              : Settings.getKeycloakRedirect() ?? "https://localhost",
+          redirectUrl: Settings.getKeycloakRedirect() ?? "https://localhost",
           scopes: [
             OpenIdConnectClient.OFFLINE_ACCESS_SCOPE,
             ...OpenIdConnectClient.DEFAULT_SCOPES

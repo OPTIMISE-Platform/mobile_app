@@ -19,7 +19,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
-import 'package:http_cache_hive_store/http_cache_hive_store.dart';import 'package:flutter/foundation.dart';
+import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
@@ -63,7 +63,6 @@ class AppUpdater {
   static DateTime? _foundUpdateAt;
 
   static cleanup() async {
-    if (kIsWeb) return;
     final f = '${(await getApplicationSupportDirectory()).path}/update.apk';
     final file = File(f);
     if (await file.exists()) {
@@ -76,8 +75,7 @@ class AppUpdater {
   }
 
   static bool _updateSupported() {
-    if (!kIsWeb &&
-        Platform.isAndroid &&
+    if (Platform.isAndroid &&
         dotenv.env["DISTRIBUTOR"] == "github" &&
         dotenv.env["GITHUB_REPO"] != null &&
         dotenv.env["VERSION"] != null) {

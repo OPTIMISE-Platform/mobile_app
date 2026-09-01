@@ -15,30 +15,25 @@
  */
 
 import 'dart:io';
+import 'dart:typed_data';
 
-import "fake_browser_adapter.dart" if (dart.library.html) 'package:dio/adapter_browser.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'package:flutter/foundation.dart';
 
 class AppHttpClientAdapter implements HttpClientAdapter {
   late final HttpClientAdapter _adapter;
 
   AppHttpClientAdapter() {
-    if (kIsWeb) {
-      _adapter = BrowserHttpClientAdapter();
-    } else {
-      _adapter = IOHttpClientAdapter(
-        createHttpClient: () {
-          final client = HttpClient();
-          client.maxConnectionsPerHost = 8;
-          client.idleTimeout = const Duration(seconds: 30);
-          client.connectionTimeout = const Duration(seconds: 10);
-          client.autoUncompress = true;
-          return client;
-        },
-      );
-    }
+    _adapter = IOHttpClientAdapter(
+      createHttpClient: () {
+        final client = HttpClient();
+        client.maxConnectionsPerHost = 8;
+        client.idleTimeout = const Duration(seconds: 30);
+        client.connectionTimeout = const Duration(seconds: 10);
+        client.autoUncompress = true;
+        return client;
+      },
+    );
   }
 
   @override
