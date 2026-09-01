@@ -22,6 +22,7 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/shared/base64_response_decoder.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/semaphore.dart';
 
 part 'device_class.g.dart';
@@ -54,7 +55,7 @@ class DeviceClass {
         () => dio.get<String?>(image,
             options: Options(responseDecoder: DecodeIntoBase64())),
       );
-      if (resp.statusCode == null || resp.statusCode! > 304) {
+      if (!isReadableStatus(resp.statusCode)) {
         _logger.e("Could not load deviceClass image: Response code was: ${resp.statusCode}. ID: $id, URL: $image");
         return;
       }

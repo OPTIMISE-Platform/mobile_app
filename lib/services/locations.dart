@@ -15,11 +15,11 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -64,12 +64,7 @@ class LocationService {
           options: Options(headers: headers),
         );
       } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-            e.response?.statusCode,
-            "$uri ${e.message}",
-          );
-        }
+        checkReadStatus(e, uri);
         rethrow;
       }
       if (resp.statusCode == 304) {
@@ -106,12 +101,7 @@ class LocationService {
         data: location.toJson(),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
 
@@ -138,12 +128,7 @@ class LocationService {
         data: Location("", name, "", "", [], []).toJson(),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
     final savedLocation = Location.fromJson(resp.data);
@@ -164,12 +149,7 @@ class LocationService {
     try {
       await _dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
 

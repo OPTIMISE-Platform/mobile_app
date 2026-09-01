@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:isar_community/isar.dart';
@@ -48,10 +49,7 @@ class NotificationsService {
       resp = await dio
           .get<Map<String, dynamic>>(uri, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
+      checkReadStatus(e, uri);
       rethrow;
     }
     if (resp.statusCode == 304) {

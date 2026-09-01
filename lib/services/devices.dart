@@ -17,13 +17,13 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
@@ -101,12 +101,7 @@ class DevicesService {
       );
       _logger.d("getDevices ${DateTime.now().difference(start)}");
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkReadStatus(e, uri);
       rethrow;
     }
 
@@ -172,12 +167,7 @@ class DevicesService {
         data: encoded,
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
 

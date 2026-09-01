@@ -15,11 +15,11 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/services/auth.dart';
 
@@ -39,12 +39,7 @@ class AspectsService {
     try {
       resp = await dio.get<List<dynamic>?>(uri, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$uri ${e.message}",
-        );
-      }
+      checkReadStatus(e, uri);
       rethrow;
     }
     return resp.data ?? [];

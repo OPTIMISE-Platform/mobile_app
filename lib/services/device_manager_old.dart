@@ -15,10 +15,10 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 
 const LOG_PREFIX = "MGW-OLD-DEVICE-MANAGER-SERVICE";
@@ -48,9 +48,7 @@ class DeviceManagerOld {
         throw ApiUnavailableException();
       }
       _logger.d("$LOG_PREFIX: Could not load devices: ${e.message}");
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$devicesUrl ${e.message}");
-      }
+      checkReadStatus(e, devicesUrl);
       rethrow;
     }
   }

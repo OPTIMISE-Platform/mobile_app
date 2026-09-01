@@ -17,10 +17,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -54,12 +54,7 @@ class SmartServiceService {
     try {
       resp = await _dio.get<dynamic>(url, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {
@@ -88,12 +83,7 @@ class SmartServiceService {
         options: Options(headers: headers),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {
@@ -115,12 +105,7 @@ class SmartServiceService {
     try {
       await _dio.delete(url, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkWriteStatus(e, url);
       rethrow;
     }
 
@@ -149,12 +134,7 @@ class SmartServiceService {
         data: json.encode(body),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkWriteStatus(e, url);
       rethrow;
     }
     return SmartServiceInstance.fromJson(resp.data);
@@ -183,12 +163,7 @@ class SmartServiceService {
         data: json.encode(parameters),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkWriteStatus(e, url);
       rethrow;
     }
 
@@ -216,12 +191,7 @@ class SmartServiceService {
         data: json.encode(body),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkWriteStatus(e, url);
       rethrow;
     }
 
@@ -242,12 +212,7 @@ class SmartServiceService {
         options: Options(headers: headers),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {
@@ -286,12 +251,7 @@ class SmartServiceService {
         options: Options(headers: headers),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {
@@ -314,12 +274,7 @@ class SmartServiceService {
     try {
       resp = await _dio.get<dynamic>(url, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {
@@ -353,12 +308,7 @@ class SmartServiceService {
         options: Options(headers: headers),
       );
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-          e.response?.statusCode,
-          "$url ${e.message}",
-        );
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
     if (resp.statusCode == 304) {

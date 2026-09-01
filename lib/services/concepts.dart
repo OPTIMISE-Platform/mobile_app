@@ -15,9 +15,9 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/concept.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/services/api_available.dart';
@@ -51,10 +51,7 @@ class ConceptsService {
             queryParameters: queryParameters,
             options: Options(headers: headers));
       } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
-        }
+        checkReadStatus(e, uri);
         rethrow;
       }
       final l = resp.data ?? [];

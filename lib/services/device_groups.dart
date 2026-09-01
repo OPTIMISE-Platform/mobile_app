@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
@@ -64,10 +65,7 @@ class DeviceGroupsService {
             queryParameters: queryParameters,
             options: Options(headers: headers));
       } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
-        }
+        checkReadStatus(e, uri);
         rethrow;
       }
       if (resp.statusCode == 304) {
@@ -105,11 +103,13 @@ class DeviceGroupsService {
         if (value.data != null) {
           groupsRepo.add(DeviceGroup.fromJson(value.data));
         }
-      }).catchError((e) {
-        if (e is! DioException || e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-              e is DioException ? e.response?.statusCode : null, "$uri $e");
+      }).catchError((Object e) {
+        // A tolerated status leaves this group out of the batch instead of
+        // failing all of them, so nothing is rethrown here.
+        if (e is! DioException) {
+          throw UnexpectedStatusCodeException(null, "$uri $e");
         }
+        checkReadStatus(e, uri);
       })));
     }
     await Future.wait(futures);
@@ -154,10 +154,7 @@ class DeviceGroupsService {
       resp = await dio.put<Map<String, dynamic>>(uri,
           options: Options(headers: headers), data: encoded);
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
 
@@ -188,10 +185,7 @@ class DeviceGroupsService {
           options: Options(headers: headers),
           data: DeviceGroup("", name, [], "", [], []).toJson());
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
     final savedGroup = DeviceGroup.fromJson(resp.data);
@@ -213,10 +207,7 @@ class DeviceGroupsService {
     try {
       await dio.delete(uri, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 299) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
+      checkWriteStatus(e, uri);
       rethrow;
     }
 
@@ -250,10 +241,7 @@ class DeviceGroupsService {
           options: Options(headers: headers),
           data: json.encode(deviceIds));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(
-            e.response?.statusCode, "$uri ${e.message}");
-      }
+      checkReadStatus(e, uri);
       rethrow;
     }
     if (resp.statusCode == 304) {

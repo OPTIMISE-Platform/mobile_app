@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
@@ -47,9 +48,7 @@ class FcmTokenService {
       final dio = await DioFactory.create(DioConfig.standard);
       resp = await dio.post(url, options: Options(headers: headers));
     } on DioException catch (e) {
-      if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-        throw UnexpectedStatusCodeException(e.response?.statusCode, "$url ${e.message}");
-      }
+      checkReadStatus(e, url);
       rethrow;
     }
 

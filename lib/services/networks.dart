@@ -15,10 +15,10 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -58,10 +58,7 @@ class NetworksService {
             uri, queryParameters: queryParameters,
             options: Options(headers: headers));
       } on DioException catch (e) {
-        if (e.response?.statusCode == null || e.response!.statusCode! > 304) {
-          throw UnexpectedStatusCodeException(
-              e.response?.statusCode, "$uri ${e.message}");
-        }
+        checkReadStatus(e, uri);
         rethrow;
       }
       if (resp.statusCode == 304) {
