@@ -125,33 +125,39 @@ mixin NotificationMixin on ChangeNotifier {
   Future<void> loadNotifications(BuildContext? context) async {
     final locked = _notificationsMutex.isLocked;
     await _notificationsMutex.acquire();
-    if (locked) return;
-    notifications.clear();
+    if (locked) {
+      _notificationsMutex.release();
+      return;
+    }
     await _storage.delete(key: messageKey);
 
     const limit = 10000;
     int offset = 0;
     app.NotificationResponse? response;
+    // Collected separately: the visible list is only replaced once the whole
+    // set has arrived, so a failure part-way leaves what the user already had.
+    final fetched = <app.Notification>[];
     try {
       do {
-        try {
-          response = await NotificationsService.getNotifications(limit, offset);
-        } catch (e) {
-          final err = 'Could not load notifications: $e';
-          _logger.e(err);
-          Toast.showToastNoContext(err);
-          return;
-        }
-        final batch = response?.notifications.reversed.toList() ?? [];
-        batch.addAll(notifications);
-        notifications = batch;
+        response = await NotificationsService.getNotifications(limit, offset);
+        fetched.insertAll(0, response?.notifications.reversed ?? []);
         offset += response?.notifications.length ?? 0;
-        notifyListeners();
       } while (response != null && response.notifications.length == limit);
+      notifications = fetched;
+      notifyListeners();
+      await NotificationsService.persist(fetched);
     } catch (e) {
-      const err = 'Could not load notifications';
-      _logger.e('$err: $e');
-      if (context != null) Toast.showToastNoContext(err);
+      _logger.e('Could not load notifications: $e');
+      if (notifications.isEmpty) {
+        // Nothing loaded this session: fall back to the last set we stored, so
+        // an unreachable backend shows the previous notifications instead of
+        // an empty list.
+        notifications = await NotificationsService.loadPersisted();
+        notifyListeners();
+      }
+      if (notifications.isEmpty) {
+        Toast.showToastNoContext('Could not load notifications');
+      }
     } finally {
       _notificationsMutex.release();
     }
@@ -171,6 +177,9 @@ mixin NotificationMixin on ChangeNotifier {
   Future<void> deleteNotifications(List<String> ids) async {
     try {
       await NotificationsService.deleteNotifications(ids);
+      // Drop them from the persisted set too, or the offline fallback would
+      // bring them back on the next start without a reachable backend.
+      await NotificationsService.removePersisted(ids);
     } catch (e) {
       _logger.e(e.toString());
       Toast.showToastNoContext('Could not delete notifications');

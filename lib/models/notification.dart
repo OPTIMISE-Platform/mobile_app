@@ -16,14 +16,28 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/shared/isar.dart';
 
 part 'notification.g.dart';
 
-//@JsonSerializable() EDIT CHANGES MANUALLY!
+/// Persisted so the list survives a start without a reachable backend. The
+/// server stays the source of truth: a successful fetch replaces the stored
+/// set, and a delete removes the rows as well.
+@JsonSerializable()
+@collection
 class Notification {
-  String created_at, message, userId, id, title;
+  String created_at, message, userId, title;
+
+  @JsonKey(name: '_id')
+  @Index(unique: true, replace: true)
+  String id;
+
   bool isRead;
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  Id isarId = -1;
 
   DateTime createdAt() {
     return DateTime.parse(created_at).toLocal();
@@ -46,33 +60,13 @@ class Notification {
       });
   }
 
-  Notification(this.created_at, this.message, this.userId, this.id, this.isRead, this.title);
+  Notification(this.created_at, this.message, this.userId, this.id, this.isRead, this.title) {
+    isarId = fastHash(id);
+  }
+
   factory Notification.fromJson(Map<String, dynamic> json) => _$NotificationFromJson(json);
   Map<String, dynamic> toJson() => _$NotificationToJson(this);
 }
-
-Notification _$NotificationFromJson(
-    Map<String, dynamic> json) =>
-    Notification(
-      json['created_at'] as String,
-      json['message'] as String,
-      json['userId'] as String,
-      json['_id'] as String,
-      json['isRead'] as bool,
-      json['title'] as String,
-    );
-
-Map<String, dynamic> _$NotificationToJson(
-    Notification instance) =>
-    <String, dynamic>{
-      'created_at': instance.created_at,
-      'message': instance.message,
-      'userId': instance.userId,
-      '_id': instance.id,
-      'isRead': instance.isRead,
-      'title': instance.title,
-    };
-
 
 @JsonSerializable()
 class NotificationResponse {

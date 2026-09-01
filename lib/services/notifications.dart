@@ -19,7 +19,9 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
+import 'package:isar_community/isar.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
@@ -96,6 +98,49 @@ class NotificationsService {
 
     if (resp.statusCode == null || resp.statusCode! > 204) {
       throw UnexpectedStatusCodeException(resp.statusCode, baseUrl);
+    }
+  }
+
+  /// Replaces the persisted set with [notifications]. The server is the source
+  /// of truth, so a successful fetch defines what is stored — entries deleted
+  /// on the backend disappear here too.
+  static Future<void> persist(List<app.Notification> notifications) async {
+    final db = isar;
+    if (db == null) return;
+    try {
+      await db.writeTxn(() async {
+        await db.notifications.clear();
+        await db.notifications.putAll(notifications);
+      });
+    } catch (e) {
+      // Best-effort mirror; a failed write must not fail the fetch.
+      _logger.w("Could not persist notifications: $e");
+    }
+  }
+
+  /// The last persisted set, oldest first to match the order the list expects.
+  static Future<List<app.Notification>> loadPersisted() async {
+    final db = isar;
+    if (db == null) return [];
+    try {
+      final stored = await db.notifications.where().findAll();
+      stored.sort((a, b) => a.created_at.compareTo(b.created_at));
+      return stored;
+    } catch (e) {
+      _logger.w("Could not read persisted notifications: $e");
+      return [];
+    }
+  }
+
+  /// Drops [ids] from the persisted set after they were deleted on the backend.
+  static Future<void> removePersisted(List<String> ids) async {
+    final db = isar;
+    if (db == null) return;
+    try {
+      await db.writeTxn(() =>
+          db.notifications.deleteAll(ids.map(fastHash).toList(growable: false)));
+    } catch (e) {
+      _logger.w("Could not remove persisted notifications: $e");
     }
   }
 
