@@ -59,13 +59,15 @@ class DeviceTypesService {
   }
 
 
-  static Future<List<DeviceType>> getDeviceTypes([List<String>? ids]) async {
+  static Future<List<DeviceType>> getDeviceTypes([List<String>? ids,
+      Duration maxAge = metadataMaxAge]) async {
     if (ids != null && ids.isNotEmpty) {
       // Specific ids are fetched fresh and never stored as the full-list cache.
       return parseListChunked(await _fetchRaw(ids), DeviceType.fromJson);
     }
     return loadMetadataCached(
-        'device-types', () => _fetchRaw(null), DeviceType.fromJson);
+        'device-types', () => _fetchRaw(null), DeviceType.fromJson,
+        maxAge: maxAge);
   }
 
   static Future<List<dynamic>> _fetchRaw(List<String>? ids) async {

@@ -95,7 +95,10 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
     AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null));
     await Navigator.push(context, MaterialPageRoute(builder: (context) => DetailPage(null, AppState().deviceGroups[i])));
-    parentState?.filter.locationIds = null;
+    if (!mounted) return;
+    // deviceGroupIds, not locationIds: this method sets the group filter, and
+    // clearing the wrong one left the group filter applied after going back.
+    parentState?.filter.deviceGroupIds = null;
   }
 
   @override

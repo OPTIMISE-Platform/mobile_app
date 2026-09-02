@@ -37,13 +37,18 @@ final _logger = Logger(
   printer: SimplePrinter(),
 );
 
-Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
+/// Asks for the gateway's basic-auth password and stores it.
+///
+/// Returns whether a password was entered: on cancel the caller must not go on
+/// to register the gateway, or it lands in the paired list with no credentials
+/// and every later request against it fails.
+Future<bool> pairWithBasicAuth(BuildContext context, MGW mgw) async {
   // TODO remove pairing with basic auth credentials
   // Controller per invocation, not a global one: it holds the password, and a
   // global keeps it in memory for the process and pre-fills the next pairing.
   final controller = TextEditingController();
   try {
-    await showDialog<void>(
+    final stored = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
@@ -58,21 +63,26 @@ Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
             TextButton(
               child: const Text('CANCEL'),
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context, false);
               },
             ),
             TextButton(
               child: const Text('OK'),
               onPressed: () async {
+                if (controller.text.isEmpty) {
+                  Navigator.pop(context, false);
+                  return;
+                }
                 await MgwStorage.StoreBasicAuthCredentials(controller.text);
                 if (!context.mounted) return;
-                Navigator.pop(context);
+                Navigator.pop(context, true);
               },
             ),
           ],
         );
       },
     );
+    return stored ?? false;
   } finally {
     controller.dispose();
   }
@@ -136,9 +146,17 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
       // MGW is still using basic auth protection -> ask user for password
       try {
         _logger.d("Try to pair basic auth based");
-        if (widgetBuildContext.mounted) {
-          await pairWithBasicAuth(widgetBuildContext, mgw);
+        if (!widgetBuildContext.mounted) {
+          // Nothing left to ask on: say so rather than closing the sheet as if
+          // the gateway had been paired.
+          _logger.e("Cannot ask for the password, the page is gone");
+          Toast.showToastNoContext("Pairing was not possible");
+        } else if (await pairWithBasicAuth(widgetBuildContext, mgw)) {
           await StoreGateway(mgw, appState);
+        } else {
+          // Cancelled or left empty - registering the gateway now would add it
+          // to the list without credentials.
+          Toast.showToastNoContext("Pairing needs the gateway password");
         }
       } catch (e) {
         _logger.e("Pairing is not possible: $e");

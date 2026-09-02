@@ -389,10 +389,12 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                             onTap: () => Navigator.pop(context, Pair(items[idx].id, items[idx].instance_id)),
                           ))));
         });
-    if (newId == null) return;
+    // The dialog can outlive this State; _tabController is disposed with it, so
+    // the force-unwrap below would throw on a dashboard closed while it was up.
+    if (newId == null || !mounted) return;
     _dashboards[_tabController!.index].widgetAndInstanceIds.add(newId);
     Settings.setSmartServiceDashboards(_dashboards);
-    if (mounted) setState(() {});
+    setState(() {});
   }
 
   _refresh() async {

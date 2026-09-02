@@ -18,9 +18,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
 import 'package:mobile_app/models/cached_metadata.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/semaphore.dart';
+
+final _logger = Logger(printer: SimplePrinter());
 
 /// Local persistence for large, stable reference metadata (device types,
 /// functions, aspects, concepts, characteristics), stored as UTF-8 JSON bytes
@@ -91,16 +95,29 @@ final _jsonFromUtf8 = const Utf8Decoder().fuse(const JsonDecoder());
 List<dynamic> _decodeJsonListFromUtf8(Uint8List bytes) =>
     _jsonFromUtf8.convert(bytes) as List<dynamic>;
 
+/// Bounds how many decode isolates exist at once. All six metadata blobs load
+/// in parallel at startup, and each isolate holds a copy of its multi-MB input
+/// plus the decoded tree — six at once is a memory spike on a weak device for
+/// no gain, since the decodes are CPU-bound anyway.
+final _decodeLimiter = Semaphore(2);
+
+/// How long cached reference metadata counts as current. These sets change
+/// rarely, so a week of staleness is cheaper than refetching megabytes.
+const metadataMaxAge = Duration(days: 7);
+
 /// Returns metadata for [key]: decoded from the Isar byte cache when it is
 /// younger than [maxAge], otherwise fetched fresh via [fetchRaw], persisted,
 /// and parsed. The JSON decode of the cached bytes runs in a background
 /// isolate, the `fromJson` build is chunked — neither blocks the UI isolate
 /// in one go.
+///
+/// Pass `Duration.zero` to skip the cache and fetch. That keeps the stored copy
+/// intact if the fetch fails, which clearing the cache beforehand would not.
 Future<List<T>> loadMetadataCached<T>(
   String key,
   Future<List<dynamic>> Function() fetchRaw,
   T Function(Map<String, dynamic>) fromJson, {
-  Duration maxAge = const Duration(days: 7),
+  Duration maxAge = metadataMaxAge,
 }) async {
   final bytes = await MetadataCache.read(key, maxAge);
   if (bytes != null) {
@@ -112,10 +129,14 @@ Future<List<T>> loadMetadataCached<T>(
       // back — the copy-out concern in parseListChunked's doc applies to
       // constructed model objects, not to this plain JSON tree.
       final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      final decoded = await compute(_decodeJsonListFromUtf8, data);
+      final decoded = await _decodeLimiter
+          .withResource(() => compute(_decodeJsonListFromUtf8, data));
       return await parseListChunked(decoded, fromJson);
-    } catch (_) {
-      // corrupt/incompatible cache — fall through to a fresh fetch
+    } catch (e) {
+      // Corrupt cache, an incompatible shape, or a failed isolate spawn — all
+      // recoverable by fetching, but logged rather than swallowed: a spawn
+      // failure otherwise looks like six corrupt blobs.
+      _logger.w("Cached metadata for $key unusable, fetching: $e");
     }
   }
   final raw = await fetchRaw();

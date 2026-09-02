@@ -142,11 +142,17 @@ class CacheHelper {
       _refreshNetworks(Duration.zero, reschedule: false),
       _refreshLocations(Duration.zero, reschedule: false),
       if (includeMetadata) ...[
-        FunctionsService.getFunctions(),
-        AspectsService.getAspects(),
-        ConceptsService.getConcepts(),
-        CharacteristicsService.getCharacteristics(),
-        DeviceTypesService.getDeviceTypes(),
+        // maxAge zero, or these serve the byte cache straight back and refresh
+        // nothing - anything younger than the default counts as current, so
+        // "include the metadata" was warming a cache that was already warm.
+        // Skipping the cache rather than clearing it keeps the stored copy if
+        // the fetch fails. A cold start with a stored session never reaches
+        // this method, so there the metadata can still be maxAge old.
+        FunctionsService.getFunctions(maxAge: Duration.zero),
+        AspectsService.getAspects(maxAge: Duration.zero),
+        ConceptsService.getConcepts(maxAge: Duration.zero),
+        CharacteristicsService.getCharacteristics(maxAge: Duration.zero),
+        DeviceTypesService.getDeviceTypes(null, Duration.zero),
         DeviceClassesService.getDeviceClasses(),
       ],
     ];

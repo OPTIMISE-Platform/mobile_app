@@ -110,6 +110,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
         context,
         MaterialPageRoute(
             builder: (context) => LocationPage(i, parentState!)));
+    if (!mounted) return;
     parentState?.filter.locationIds = null;
   }
 

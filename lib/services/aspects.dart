@@ -27,8 +27,10 @@ class AspectsService {
   static String uri =
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/aspects';
 
-  static Future<List<Aspect>> getAspects() async {
-    return loadMetadataCached('aspects', _fetchRaw, Aspect.fromJson);
+  static Future<List<Aspect>> getAspects(
+      {Duration maxAge = metadataMaxAge}) async {
+    return loadMetadataCached('aspects', _fetchRaw, Aspect.fromJson,
+        maxAge: maxAge);
   }
 
   static Future<List<dynamic>> _fetchRaw() async {

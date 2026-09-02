@@ -27,8 +27,10 @@ class FunctionsService {
   static String uri =
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/functions';
 
-  static Future<List<PlatformFunction>> getFunctions() async {
-    return loadMetadataCached('functions', _fetchRaw, PlatformFunction.fromJson);
+  static Future<List<PlatformFunction>> getFunctions(
+      {Duration maxAge = metadataMaxAge}) async {
+    return loadMetadataCached('functions', _fetchRaw, PlatformFunction.fromJson,
+        maxAge: maxAge);
   }
 
   static Future<List<dynamic>> _fetchRaw() async {
