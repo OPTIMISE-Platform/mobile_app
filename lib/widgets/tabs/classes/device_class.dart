@@ -29,7 +29,7 @@ import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
 class DeviceListByDeviceClass extends StatefulWidget {
-  const DeviceListByDeviceClass({Key? key}) : super(key: key);
+  const DeviceListByDeviceClass({super.key});
 
   @override
   State<StatefulWidget> createState() => _DeviceListByDeviceClassState();
@@ -92,9 +92,9 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                  child: IntrinsicHeight(
+                                  child: const IntrinsicHeight(
                                     child: Column(
-                                      children: const [
+                                      children: [
                                         Expanded(
                                           child: Center(child: Text("No Classes")),
                                         ),

@@ -35,7 +35,7 @@ import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart
 import '../../shared/toast.dart';
 
 class SmartServicesInstances extends StatefulWidget {
-  const SmartServicesInstances({Key? key}) : super(key: key);
+  const SmartServicesInstances({super.key});
 
   @override
   State<StatefulWidget> createState() => _SmartServicesInstancesState();
@@ -162,7 +162,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                       Text(instances[i].name),
                                       Badge(
                                         label: instances[i].error != null
-                                            ? Icon(Icons.error,
+                                            ? const Icon(Icons.error,
                                                 size: 16,
                                                 color: MyTheme.warnColor)
                                             : const Icon(Icons.pending,
@@ -249,12 +249,13 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                                           false;
                                                     });
                                                     Toast.showToastNoContext(
-                                                        "Upgrade was not possible: ${e}");
+                                                        "Upgrade was not possible: $e");
                                                   }
                                                   upgradingInstances[i] = false;
                                                   if (!upgradingInstances
-                                                      .contains(true))
+                                                      .contains(true)) {
                                                     _refresh();
+                                                  }
                                                 },
                                               ),
                                   )

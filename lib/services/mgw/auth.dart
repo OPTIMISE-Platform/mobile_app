@@ -50,7 +50,7 @@ class MgwAuth {
   String baseUrl = "";
 
   MgwAuth(String host) {
-    baseUrl = "http://" + host + ":8080" + authPath;
+    baseUrl = "http://$host:8080$authPath";
   }
 
   final _logger = Logger(
@@ -79,12 +79,12 @@ class MgwAuth {
     final payload = jsonEncode(data);
     Response<Map<String, dynamic>> resp;
     try {
-      resp = await dio.post<Map<String, dynamic>>(baseUrl + loginPath + "?refresh=true&flow=" + flowId, data: payload, options: Options(contentType: Headers.jsonContentType));
+      resp = await dio.post<Map<String, dynamic>>("$baseUrl$loginPath?refresh=true&flow=$flowId", data: payload, options: Options(contentType: Headers.jsonContentType));
     } on DioException catch (e) {
-      _logger.e(LOG_PREFIX + ": Could not login");
+      _logger.e("$LOG_PREFIX: Could not login");
       var failure = handleDioException(e);
       throw(failure);
-    };
+    }
 
     if(resp.data == null) {
       throw("Login response empty");
@@ -97,12 +97,12 @@ class MgwAuth {
     Response<Map<String, dynamic>> resp;
 
     try {
-      resp = await dio.get<Map<String, dynamic>>(baseUrl + loginPath + "/api");
+      resp = await dio.get<Map<String, dynamic>>("$baseUrl$loginPath/api");
     } on DioException catch (e) {
-      _logger.e(LOG_PREFIX + ": Could not init login");
+      _logger.e("$LOG_PREFIX: Could not init login");
       var failure = handleDioException(e);
       throw(failure);
-    };
+    }
 
     if(resp.data == null) {
       throw("Login response empty");

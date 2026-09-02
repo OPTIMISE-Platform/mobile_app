@@ -41,8 +41,8 @@ class SmSeButton extends SmSeRequest {
     return (child is SmSeIcon
         ? IconButton(icon: w, onPressed: onPressed)
         : TextButton(
-            child: w,
             onPressed: onPressed,
+            child: w,
           ));
   }
 

@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -30,7 +29,7 @@ import 'package:mobile_app/widgets/shared/app_bar.dart';
 class NotificationList extends StatefulWidget {
   static const preferredRouteName = "notifications";
 
-  const NotificationList({Key? key}) : super(key: key);
+  const NotificationList({super.key});
 
   @override
   State<StatefulWidget> createState() => _NotificationListState();
@@ -58,12 +57,12 @@ class _NotificationListState extends State<NotificationList> {
               _selected.clear();
               _selectionMode = false;
             }),
-            icon: Icon(Icons.clear),
+            icon: const Icon(Icons.clear),
           ),
           IconButton(
             onPressed: () =>
                 setState(() => _selected.addAll(state.notifications)),
-            icon: Icon(Icons.add_circle_outline),
+            icon: const Icon(Icons.add_circle_outline),
           ),
           IconButton(
             onPressed: !NotificationsService.isAvailable()
@@ -117,11 +116,11 @@ class _NotificationListState extends State<NotificationList> {
                             "Do you want to permanently delete selected notifications?"),
                         actions: <Widget>[
                           TextButton(
-                            child: Text('Cancel'),
+                            child: const Text('Cancel'),
                             onPressed: () => Navigator.pop(context, false),
                           ),
                           TextButton(
-                              child: Text('OK'),
+                              child: const Text('OK'),
                               onPressed: () => Navigator.pop(context, true)),
                         ],
                       ),
@@ -135,7 +134,7 @@ class _NotificationListState extends State<NotificationList> {
                       });
                     }
                   },
-            icon: Icon(Icons.delete),
+            icon: const Icon(Icons.delete),
           ),
         ]);
       }
@@ -165,7 +164,7 @@ class _NotificationListState extends State<NotificationList> {
                                       alignment: Alignment.centerRight,
                                       padding: MyTheme.inset,
                                       color: MyTheme.warnColor,
-                                      child: Icon(
+                                      child: const Icon(
                                         Icons.delete,
                                         color: Colors.white,
                                       ),

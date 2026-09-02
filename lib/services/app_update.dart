@@ -203,8 +203,8 @@ class AppUpdater {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Current Build: ${currentBuild}"),
-                  Text("Latest Build: ${latestBuild}"),
+                  Text("Current Build: $currentBuild"),
+                  Text("Latest Build: $latestBuild"),
                   Text(
                       "Uploaded: ${DateFormat.yMd().add_jms().format(updateDate.toLocal())}"),
                   Text(
@@ -213,11 +213,11 @@ class AppUpdater {
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancel'),
+                  child: const Text('Cancel'),
                   onPressed: () => Navigator.pop(context, false),
                 ),
                 TextButton(
-                    child: Text('OK'),
+                    child: const Text('OK'),
                     onPressed: () => Navigator.pop(context, true))
               ],
             ));

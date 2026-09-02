@@ -33,7 +33,7 @@ import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import '../../../services/mgw/storage.dart';
 
 class DeviceListByNetwork extends StatefulWidget {
-  const DeviceListByNetwork({Key? key}) : super(key: key);
+  const DeviceListByNetwork({super.key});
 
   @override
   State<StatefulWidget> createState() => _DeviceListByNetworkState();
@@ -126,7 +126,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                       title: Row(children: [
                                         Text(state.networks[i].name),
                                         Badge(
-                                          label: Icon(
+                                          label: const Icon(
                                               Icons.error,
                                               size: 16,
                                               color: MyTheme.warnColor),

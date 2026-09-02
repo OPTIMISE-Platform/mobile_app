@@ -197,7 +197,7 @@ class _NameIconDialogState extends State<_NameIconDialog> {
       ),
       actions: [
         TextButton(
-          child: Text('Cancel'),
+          child: const Text('Cancel'),
           onPressed: () => Navigator.pop(context),
         ),
         TextButton(

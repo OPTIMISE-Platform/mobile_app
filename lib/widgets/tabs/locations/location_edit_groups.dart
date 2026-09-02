@@ -30,7 +30,7 @@ class LocationEditGroups extends StatefulWidget {
     printer: SimplePrinter(),
   );
 
-  LocationEditGroups(this._stateLocationIndex, {Key? key}) : super(key: key);
+  LocationEditGroups(this._stateLocationIndex, {super.key});
 
   @override
   State<StatefulWidget> createState() => _LocationEditGroupsState();
@@ -70,8 +70,8 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
           body: Scaffold(
               appBar: MyAppBar(location.name).getAppBar(context, MyAppBar.getDefaultActions(context)),
               body: state.loadingDeviceGroups()
-                  ? Center(
-                child: const DelayedCircularProgressIndicator(),
+                  ? const Center(
+                child: DelayedCircularProgressIndicator(),
               )
                   : ListView.builder(
                 padding: MyTheme.inset,

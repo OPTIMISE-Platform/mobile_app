@@ -229,7 +229,7 @@ class _TargetPickerState extends State<_TargetPicker> {
                 padding: MyTheme.inset,
                 child: TextFormField(
                   controller: _searchController,
-                  decoration: InputDecoration(hintText: 'Search devices'),
+                  decoration: const InputDecoration(hintText: 'Search devices'),
                   onChanged: _onQueryChanged,
                 ),
               ),
@@ -248,11 +248,11 @@ class _TargetPickerState extends State<_TargetPicker> {
         content: Text('Discard the ${_selection.count} value(s) you selected?'),
         actions: [
           TextButton(
-            child: Text('Keep choosing'),
+            child: const Text('Keep choosing'),
             onPressed: () => Navigator.pop(context, false),
           ),
           TextButton(
-            child: Text('Discard'),
+            child: const Text('Discard'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],

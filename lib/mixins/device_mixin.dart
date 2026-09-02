@@ -288,7 +288,9 @@ mixin DeviceMixin on ChangeNotifier {
     for (final device in devices) {
       final callbacks = device.getStateFillFunctions(limitToFunctionIds);
       if (device.connection_state == DeviceConnectionStatus.offline) {
-        for (final cb in callbacks) cb.callback(null);
+        for (final cb in callbacks) {
+          cb.callback(null);
+        }
       } else {
         commandCallbacks.addAll(callbacks);
       }

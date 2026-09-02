@@ -32,7 +32,7 @@ import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 class GroupEditDevices extends StatefulWidget {
   final DeviceGroup _group;
 
-  GroupEditDevices(this._group, {Key? key}) : super(key: key);
+  const GroupEditDevices(this._group, {super.key});
 
   @override
   State<StatefulWidget> createState() => _GroupEditDevicesState();
@@ -96,14 +96,14 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
   Widget _buildListWidget() {
     return Stack(children: [
       _reloading
-          ? Row(children: const [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
+          ? const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
           : ListView.builder(
               padding: MyTheme.inset,
               itemCount: _candidates.length + _selected.length + (_allCandidatesLoaded ? 0 : 1),
               itemBuilder: (_, i) {
                 if (i == _candidates.length + _selected.length - 1 && !_allCandidatesLoaded) {
                   _loadMoreDevices();
-                  return Row(children: const [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]);
+                  return const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]);
                 }
                 if (i > _candidates.length + _selected.length - 1) {
                   return const SizedBox.shrink();
@@ -113,7 +113,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                     i > 0 ? const Divider() : const SizedBox.shrink(),
                     i < _selected.length
                         ? ListTile(
-                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            leading: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.check_circle,
                                 color: MyTheme.appColor,
@@ -126,7 +126,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                             },
                           )
                         : ListTile(
-                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: const [
+                            leading: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.circle_outlined,
                                 color: MyTheme.appColor,

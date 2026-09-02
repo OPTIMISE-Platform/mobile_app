@@ -398,7 +398,7 @@ class _ArrowPainter extends CustomPainter {
       this._batteryToGrid,
       this._householdToBattery,
       this._chargingViaInverter,
-      this._pos){}
+      this._pos);
   
   @override
   void paint(Canvas canvas, Size size) {
@@ -527,6 +527,20 @@ class _ArrowPainter extends CustomPainter {
         other._chargingViaInverter == _chargingViaInverter &&
         other._pos == _pos;
   }
+
+  // shouldRepaint compares by ==, so the two have to agree.
+  @override
+  int get hashCode => Object.hash(
+        _solarToBattery,
+        _solarToHousehold,
+        _solarToGrid,
+        _gridToHousehold,
+        _batteryToHousehold,
+        _batteryToGrid,
+        _householdToBattery,
+        _chargingViaInverter,
+        _pos,
+      );
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {

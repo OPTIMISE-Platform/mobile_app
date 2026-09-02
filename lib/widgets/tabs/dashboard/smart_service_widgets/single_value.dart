@@ -39,7 +39,7 @@ class SmSeSingleValue extends SmSeRequest {
   Future<void> refreshInternal() async {
     final resp = await request.perform();
     if (!isSuccessStatus(resp.statusCode)) {
-      value = "ERROR Status " + resp.statusCode.toString();
+      value = "ERROR Status ${resp.statusCode}";
     } else {
       value = resp.data.endsWith("\n") ? resp.data.substring(0, resp.data.length - 1) : resp.data;
     }

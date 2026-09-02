@@ -34,7 +34,7 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 class Chart extends StatefulWidget {
   final DeviceState _state;
 
-  const Chart(this._state, {Key? key}) : super(key: key);
+  const Chart(this._state, {super.key});
 
   @override
   State<StatefulWidget> createState() => _ChartState();

@@ -312,11 +312,11 @@ class _SensorValuesState extends State<SensorValues>
         ),
         actions: [
           TextButton(
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context, false),
           ),
           TextButton(
-            child: Text('Delete'),
+            child: const Text('Delete'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -469,11 +469,11 @@ class _SensorValuesState extends State<SensorValues>
         content: Text('Remove "$label" from this tab?'),
         actions: [
           TextButton(
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context, false),
           ),
           TextButton(
-            child: Text('Remove'),
+            child: const Text('Remove'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],

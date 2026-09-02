@@ -86,7 +86,7 @@ class MgwStorage {
 
   static Future<void> StorePairedMGW(MGW mgw) async {
     await init();
-    _logger.d(LOG_PREFIX + ": Store paired mgw: " + mgw.mDNSServiceName);
+    _logger.d("$LOG_PREFIX: Store paired mgw: ${mgw.mDNSServiceName}");
     var storedMGWs = await LoadPairedMGWs();
     storedMGWs.add(mgw);
     return await _box?.put(_mgwConnectedKeyPrefix, json.encode(storedMGWs)).then((
@@ -95,15 +95,15 @@ class MgwStorage {
 
   static Future<List<MGW>> LoadPairedMGWs() async {
     await init();
-    _logger.d(LOG_PREFIX + ": Load paired mgws");
-    var encodedMgws = await _box?.get(_mgwConnectedKeyPrefix);
+    _logger.d("$LOG_PREFIX: Load paired mgws");
+    var encodedMgws = _box?.get(_mgwConnectedKeyPrefix);
     List<MGW> mgws = [];
     if(encodedMgws != null) {
       for(final mgw in jsonDecode(encodedMgws)) {
         mgws.add(MGW.fromJson(mgw));
       }
     }
-    _logger.d(LOG_PREFIX + ": Loaded mgws: " + mgws.toString());
+    _logger.d("$LOG_PREFIX: Loaded mgws: $mgws");
     return mgws;
   }
 

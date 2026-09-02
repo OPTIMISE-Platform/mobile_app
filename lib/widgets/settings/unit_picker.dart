@@ -61,11 +61,11 @@ class _UnitPickerListState extends State<UnitPickerList> {
                       child: Text(e.name)),
                 )
                 .toList()
-              ..add(PopupMenuItem<String?>(
+              ..add(const PopupMenuItem<String?>(
                   value: null,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [Divider(), Text("Reset")],
+                    children: [Divider(), Text("Reset")],
                   ))),
             onSelected: (v) {
               settings_service.Settings

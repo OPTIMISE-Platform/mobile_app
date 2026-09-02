@@ -37,8 +37,7 @@ class DeviceListItem extends StatefulWidget {
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final GlobalKey _keyFavButton = GlobalKey();
 
-  DeviceListItem(this._device, this._poppedCallback, {Key? key})
-      : super(key: key);
+  DeviceListItem(this._device, this._poppedCallback, {super.key});
 
   @override
   State<StatefulWidget> createState() => _DeviceListItemState();
@@ -72,7 +71,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
           child: element.transitioning
               ? const Center(child: DelayedCircularProgressIndicator())
               : element.value == null
-                  ? Center(
+                  ? const Center(
                       child: Tooltip(
                           message: "Status unknown",
                           triggerMode: TooltipTriggerMode.tap,

@@ -19,7 +19,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
 class ApiAvailableService {
-  bool _offline = false;
+  final bool _offline = false;
 
   static final _instance = ApiAvailableService._internal();
 

@@ -34,7 +34,7 @@ class LocationEditDevices extends StatefulWidget {
     printer: SimplePrinter(),
   );
 
-  LocationEditDevices(this._stateLocationIndex, {Key? key}) : super(key: key);
+  LocationEditDevices(this._stateLocationIndex, {super.key});
 
   @override
   State<StatefulWidget> createState() => _LocationEditDevicesState();

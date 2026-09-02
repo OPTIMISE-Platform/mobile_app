@@ -143,7 +143,7 @@ class _HomeState extends State<Home> {
                   child: Column(children: [
                     Image.asset("assets/icon/icon.png", width: MediaQuery.of(context).size.width * 0.4),
                     TextFormField(
-                      decoration: InputDecoration(hintText: "Username"),
+                      decoration: const InputDecoration(hintText: "Username"),
                       keyboardType: TextInputType.text,
                       onChanged: (value) => setState(() => _user = value),
                       onFieldSubmitted: (_) => _login(),

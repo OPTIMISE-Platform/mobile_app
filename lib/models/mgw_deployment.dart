@@ -58,7 +58,7 @@ class DeploymentModuleInfo {
   DeploymentModuleInfo(this.id, this.version);
   DeploymentModuleInfo.fromJson(Map<String, dynamic> json): id=json['id'], version=json['version'];
   Map<String, dynamic> toJson() => <String, dynamic> {
-    "id": this.id,
-    "version": this.version
+    "id": id,
+    "version": version
   };
 }

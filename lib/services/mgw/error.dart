@@ -28,7 +28,7 @@ enum ErrorCode {
 }
 
 Failure handleDioException(DioException error) {
-  final _logger = Logger(
+  final logger = Logger(
     printer: SimplePrinter(),
   );
 
@@ -76,7 +76,7 @@ Failure handleDioException(DioException error) {
       break;
   }
 
-  _logger.e(
+  logger.e(
       "Error Code: ${failure.errorCode} - Detail: ${failure.detailedMessage}");
   return failure;
 }

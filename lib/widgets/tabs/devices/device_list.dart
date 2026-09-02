@@ -27,7 +27,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
 class DeviceList extends StatefulWidget {
-  const DeviceList({Key? key}) : super(key: key);
+  const DeviceList({super.key});
 
   @override
   State<StatefulWidget> createState() => _DeviceListState();
@@ -78,9 +78,9 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                  child: IntrinsicHeight(
+                                  child: const IntrinsicHeight(
                                     child: Column(
-                                      children: const [
+                                      children: [
                                         Expanded(
                                           child: Center(child: Text("No Devices")),
                                         ),

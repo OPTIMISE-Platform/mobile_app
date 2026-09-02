@@ -39,9 +39,9 @@ class DeviceUserCredentials {
   DeviceUserCredentials(this.id, this.login, this.secret);
   DeviceUserCredentials.fromJson(Map<String, dynamic> json): id=json['id'], login=json['login'], secret=json['secret'];
   Map<String, dynamic> toJson() => <String, dynamic> {
-  'id': this.id,
-  'login': this.login,
-  'secret': this.secret,
+  'id': id,
+  'login': login,
+  'secret': secret,
   };
 }
 
@@ -84,15 +84,15 @@ class MgwAuthService {
   MgwApiService mgwApiService = MgwApiService("", false);
 
   MgwAuthService(String host) {
-    this.mgwApiService = MgwApiService(host, false);
+    mgwApiService = MgwApiService(host, false);
   }
   final _logger = Logger(
     printer: SimplePrinter(),
   );
 
   Future<DeviceUserCredentials> RegisterDevice() async {
-    _logger.d(LOG_PREFIX + ": Register device");
-    var path = basePath + "/pairing/request";
+    _logger.d("$LOG_PREFIX: Register device");
+    var path = "$basePath/pairing/request";
     var pairRequest = {
       "manufacturer": await getManufacturer(),
       "model": await getDeviceName()
@@ -101,7 +101,7 @@ class MgwAuthService {
     var resp = await mgwApiService.Post(path, payload, Options());
     // DeviceUserCredentials a = json.decode(resp.data);
     var user = DeviceUserCredentials.fromJson(resp.data);
-    _logger.d(LOG_PREFIX + ": Registration was successfull - Device username: " + user.login);
+    _logger.d("$LOG_PREFIX: Registration was successfull - Device username: ${user.login}");
     return user;
   }
 }

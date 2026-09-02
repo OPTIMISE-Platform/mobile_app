@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/content_variable.dart';
@@ -276,7 +275,7 @@ class Characteristic {
           _fields.add(ListTile(
               title: Text(characteristic.name),
               trailing: IconButton(
-                icon: Icon(Icons.add),
+                icon: const Icon(Icons.add),
                 onPressed: () {
                   final clone = characteristic.sub_characteristics![0].clone();
                   clone.name = characteristic.sub_characteristics!.length.toString();

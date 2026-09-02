@@ -69,7 +69,7 @@ class CacheHelper {
     if (dir == null) {
       return null;
     }
-    return "${dir.path}/cache${customSuffix}.box";
+    return "${dir.path}/cache$customSuffix.box";
   }
 
   static Future<Directory?> getCacheDir() async {

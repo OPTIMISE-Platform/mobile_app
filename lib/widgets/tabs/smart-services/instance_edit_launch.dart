@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
@@ -34,7 +33,7 @@ class SmartServicesReleaseLaunch extends StatefulWidget {
   final SmartServiceInstance? instance;
   final List<SmartServiceExtendedParameter>? parameters;
 
-  const SmartServicesReleaseLaunch(this.release, {this.instance, this.parameters, Key? key}) : super(key: key);
+  const SmartServicesReleaseLaunch(this.release, {this.instance, this.parameters, super.key});
 
   @override
   State<StatefulWidget> createState() => _SmartServicesReleaseLaunchState();
@@ -93,7 +92,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
       return DropdownButtonFormField<dynamic>(
         key: ValueKey(i.toString()),
         items: items,
-        value: p.value,
+        initialValue: p.value,
         onChanged: (value) => setState(() => p.value = value),
         hint: Text(p.label),
         isExpanded: true,
@@ -276,7 +275,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             subtitle: ExpandableText(p.description, 2),
             trailing: p.multiple && p.options == null
                 ? IconButton(
-                    icon: Icon(Icons.add),
+                    icon: const Icon(Icons.add),
                     onPressed: () {
                       setState(() {
                         if (p.value is List) {
@@ -295,7 +294,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             dense: true,
             title: _getEditWidget(i, sub: j),
             trailing: IconButton(
-              icon: Icon(Icons.delete),
+              icon: const Icon(Icons.delete),
               onPressed: () {
                 setState(() {
                   (p.value as List).removeAt(j);
@@ -329,12 +328,12 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 TextFormField(
-                                  decoration: InputDecoration(hintText: "Name"),
+                                  decoration: const InputDecoration(hintText: "Name"),
                                   initialValue: widget.release.name,
                                   onChanged: (newValue) => result["name"] = newValue,
                                 ),
                                 TextFormField(
-                                  decoration: InputDecoration(hintText: "Description"),
+                                  decoration: const InputDecoration(hintText: "Description"),
                                   maxLines: 8,
                                   minLines: 8,
                                   initialValue: widget.release.description,
@@ -343,8 +342,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                               ],
                             ),
                             actions: <Widget>[
-                              TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-                              TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, result)),
+                              TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                              TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, result)),
                             ],
                           );
                         });

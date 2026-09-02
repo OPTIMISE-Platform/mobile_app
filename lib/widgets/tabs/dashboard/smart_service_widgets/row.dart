@@ -42,7 +42,7 @@ class SmSeRow extends SmartServiceModuleWidget {
     if (data is! Map<String, dynamic> || data["children"] == null) return;
 
     children.clear();
-    (data["children"] as List<dynamic>).asMap().forEach((i, e) async => children.add(await SmartServiceModuleWidget.fromWidgetInfo(id + "_" + i.toString(), WidgetInfo.fromJson(e))));
+    (data["children"] as List<dynamic>).asMap().forEach((i, e) async => children.add(await SmartServiceModuleWidget.fromWidgetInfo("${id}_$i", WidgetInfo.fromJson(e))));
   }
 
   @override

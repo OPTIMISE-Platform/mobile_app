@@ -102,7 +102,7 @@ class DeviceCommandPort {
   Future<List<DeviceCommandResponse>> runCommands(
       commands, preferEventValue) async {
     // TODO service.port was used  but shoud be device command port ?????
-    var url = "http://${host}:8002$commandUrlPrefix$preferEventValue";
+    var url = "http://$host:8002$commandUrlPrefix$preferEventValue";
     _logger.d("$LOG_PREFIX: Run commands via exposed port at: $url");
 
     final Response<List<dynamic>> resp;
@@ -209,10 +209,10 @@ class DeviceCommandsService {
     try {
       endpoints = await DeviceCommandPath(host).getEndpoints();
     } on Failure catch (e) {
-      _logger.e("Cant check device command endpoints: " + e.detailedMessage);
+      _logger.e("Cant check device command endpoints: ${e.detailedMessage}");
       return false;
     } catch (e) {
-      _logger.e("Cant check device command endpoints: " + e.toString());
+      _logger.e("Cant check device command endpoints: $e");
       return false;
     }
 
@@ -237,8 +237,7 @@ class DeviceCommandsService {
 
     var usePathBasedCommandService =
         await checkPathBasedCommandServiceAvailable(host);
-    _logger.d("Load devices from new path based device command: " +
-        usePathBasedCommandService.toString());
+    _logger.d("Load devices from new path based device command: $usePathBasedCommandService");
     if (usePathBasedCommandService) {
       return DeviceCommandPath(host).runCommands(commands, preferEventValue);
     } else {

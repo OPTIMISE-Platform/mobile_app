@@ -121,7 +121,7 @@ class SmSePvForecast extends SmSeRequest {
       }
     }
     _lines.addAll(lineSpots.where((e) => e.isNotEmpty).toList(growable: false).asMap().entries.map((e) => LineChartBarData(
-          dotData: FlDotData(show: false),
+          dotData: const FlDotData(show: false),
           spots: e.value,
           color: _getLineColor(e.key + colorOffset),
         )));

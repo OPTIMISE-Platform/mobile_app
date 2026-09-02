@@ -154,10 +154,10 @@ Future<void> performDeviceStateAction({
         content: content,
         actions: <Widget>[
           TextButton(
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context),
           ),
-          TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
+          TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
         ],
       ),
     );

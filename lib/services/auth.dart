@@ -19,7 +19,6 @@ import 'dart:math';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -349,7 +348,12 @@ class Auth extends ChangeNotifier {
     if (_lastOnlineCheck != null && DateTime.now().difference(_lastOnlineCheck!) < _checkCacheDuration) {
       return _checkCache;
     }
-    if (await Connectivity().checkConnectivity() == ConnectivityResult.none) {
+    // checkConnectivity returns a List since connectivity_plus 6, so comparing
+    // it to a single value was always false and this fast path never fired -
+    // an offline logout waited out the 5s connect timeout below instead.
+    final connectivity = await Connectivity().checkConnectivity();
+    if (connectivity.isEmpty ||
+        connectivity.contains(ConnectivityResult.none)) {
       _checkCache = false;
       _lastOnlineCheck = DateTime.now();
       return false;

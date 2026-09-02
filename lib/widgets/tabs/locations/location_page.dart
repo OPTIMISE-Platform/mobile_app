@@ -17,7 +17,6 @@
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -41,8 +40,7 @@ class LocationPage extends StatefulWidget {
   final int _stateLocationIndex;
   final DeviceTabsState parentState;
 
-  const LocationPage(this._stateLocationIndex, this.parentState, {Key? key})
-      : super(key: key);
+  const LocationPage(this._stateLocationIndex, this.parentState, {super.key});
 
   @override
   State<StatefulWidget> createState() => LocationPageState();
@@ -107,11 +105,11 @@ class LocationPageState extends State<LocationPage>
                       TextFormField(controller: titleController),
                       actions: [
                         TextButton(
-                          child: Text('Cancel'),
+                          child: const Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
                         TextButton(
-                            child: Text('Save'),
+                            child: const Text('Save'),
                             onPressed: () {
                               Navigator.pop(
                                   context, titleController.value.text);
@@ -126,7 +124,7 @@ class LocationPageState extends State<LocationPage>
             state.locations[widget._stateLocationIndex] = newLocation;
             state.notifyListeners();
           },
-          icon: Icon(Icons.edit),
+          icon: const Icon(Icons.edit),
         ));
 
         appBarActions.add(IconButton(
@@ -140,11 +138,11 @@ class LocationPageState extends State<LocationPage>
                               .name}'?"),
                       actions: [
                         TextButton(
-                          child: Text('Cancel'),
+                          child: const Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
                         TextButton(
-                            child: Text('Delete'),
+                            child: const Text('Delete'),
                             onPressed: () async {
                               await LocationService.deleteLocation(location.id);
                               state.locations
@@ -159,7 +157,7 @@ class LocationPageState extends State<LocationPage>
               state.notifyListeners();
             }
           },
-          icon: Icon(Icons.delete),
+          icon: const Icon(Icons.delete),
         ));
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
@@ -208,8 +206,8 @@ class LocationPageState extends State<LocationPage>
           body: Scaffold(
             appBar: MyAppBar(location.name).getAppBar(context, appBarActions),
             body: state.loadingDevices || state.loadingDeviceGroups()
-                ? Center(
-                    child: const DelayedCircularProgressIndicator(),
+                ? const Center(
+                    child: DelayedCircularProgressIndicator(),
                   )
                 : RefreshIndicator(
                     onRefresh: () async {
@@ -225,9 +223,9 @@ class LocationPageState extends State<LocationPage>
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(
                                       minHeight: constraint.maxHeight),
-                                  child: IntrinsicHeight(
+                                  child: const IntrinsicHeight(
                                     child: Column(
-                                      children: const [
+                                      children: [
                                         Expanded(
                                           child: Center(
                                               child: Text("Empty Location")),
@@ -250,8 +248,8 @@ class LocationPageState extends State<LocationPage>
                                       matchingGroups.length -
                                       1) {
                                 state.loadDevices();
-                                return Column(
-                                  children: const [Divider(), ListTile()],
+                                return const Column(
+                                  children: [Divider(), ListTile()],
                                 );
                               }
                               if (i < state.devices.length) {

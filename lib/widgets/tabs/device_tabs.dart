@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:mobile_app/app_state.dart';
@@ -314,7 +313,7 @@ class DeviceTabsState extends State<DeviceTabs> {
         final leadingAction = onBackCallback != null
             ? IconButton(
           onPressed: () => onBackCallback!(),
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
         )
             : null;
 

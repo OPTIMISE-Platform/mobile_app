@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class DelayedCircularProgressIndicator extends StatefulWidget {
   const DelayedCircularProgressIndicator({super.key});
@@ -41,5 +40,5 @@ class _DelayedCircularProgressIndicatorState extends State<DelayedCircularProgre
   }
 
   @override
-  Widget build(BuildContext context) => _show ? CircularProgressIndicator.adaptive() : const SizedBox.shrink();
+  Widget build(BuildContext context) => _show ? const CircularProgressIndicator.adaptive() : const SizedBox.shrink();
 }

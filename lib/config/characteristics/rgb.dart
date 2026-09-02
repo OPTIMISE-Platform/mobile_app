@@ -26,23 +26,23 @@ class RGB {
   );
 
   static Widget build(BuildContext context, Characteristic characteristic, StateSetter setState) {
-    var _color = _getColor(characteristic);
+    var color = _getColor(characteristic);
     void setter(Color c) => setState(() {
-          _color = c;
+          color = c;
           characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
         });
     return Column(mainAxisSize: MainAxisSize.min, children: [
       ColorPicker(
-        pickerColor: _color,
+        pickerColor: color,
         onColorChanged: (c) {
-          _color = c;
+          color = c;
           characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
         },
         enableAlpha: false,
         displayThumbColor: false,
         portraitOnly: false,
         paletteType: PaletteType.hueWheel,
-        labelTypes: [],
+        labelTypes: const [],
       ),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         _getQuickButton(Colors.red, setter),
@@ -58,7 +58,7 @@ class RGB {
     var value = characteristic.value;
     if (value == null) {
       if (characteristic.sub_characteristics?.length == 3) {
-        value = Map<String, dynamic>();
+        value = <String, dynamic>{};
         for(var sub in characteristic.sub_characteristics!) {
           value[sub.name] = sub.value;
         }

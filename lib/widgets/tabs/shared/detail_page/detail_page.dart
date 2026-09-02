@@ -17,7 +17,6 @@
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
@@ -50,7 +49,7 @@ class DetailPage extends StatefulWidget {
   final DeviceInstance? _device;
   final DeviceGroup? _group;
 
-  const DetailPage(this._device, this._group, {Key? key}) : super(key: key);
+  const DetailPage(this._device, this._group, {super.key});
 
   @override
   State<StatefulWidget> createState() => _DetailPageState();
@@ -170,7 +169,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         if (!state.loadingDevices) {
           state.loadDevices(); //ensure all devices get loaded
         }
-        return Center(child: DelayedCircularProgressIndicator());
+        return const Center(child: DelayedCircularProgressIndicator());
       }
 
       final device = widget._device;
@@ -204,8 +203,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     ),
                     content: TextFormField(controller: controller),
                     actions: <Widget>[
-                      TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-                      TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                      TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                      TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
                     ],
                   );
                 });
@@ -219,7 +218,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               device.setNickname(oldName);
             }
           },
-          icon: Icon(Icons.edit),
+          icon: const Icon(Icons.edit),
         ));
       } else if (deviceGroup != null && DeviceGroupsService.isCreateEditDeleteAvailable()) {
         appBarActions.add(IconButton(
@@ -236,8 +235,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     ),
                     content: TextFormField(controller: controller),
                     actions: <Widget>[
-                      TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-                      TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                      TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                      TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
                     ],
                   );
                 });
@@ -251,7 +250,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               deviceGroup.name = oldName;
             }
           },
-          icon: Icon(Icons.edit),
+          icon: const Icon(Icons.edit),
         ));
         appBarActions.add(IconButton(
           onPressed: () async {
@@ -261,11 +260,11 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                       title: Text("Do you want to permanently delete group '${deviceGroup.name}'?"),
                       actions: [
                         TextButton(
-                          child: Text('Cancel'),
+                          child: const Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
                         TextButton(
-                            child: Text('Delete'),
+                            child: const Text('Delete'),
                             onPressed: () async {
                               await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
                               state.deviceGroups.remove(deviceGroup);
@@ -281,7 +280,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               state.notifyListeners();
             }
           },
-          icon: Icon(Icons.delete),
+          icon: const Icon(Icons.delete),
         ));
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
@@ -331,9 +330,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                   padding: const EdgeInsets.only(right: 12),
                   child: element.transitioning
-                      ? DelayedCircularProgressIndicator()
+                      ? const DelayedCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
-                          Text("${formatValue(element.value)} ${unit}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text("${formatValue(element.value)} $unit", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 )),
           );
         } else {
@@ -355,7 +354,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     ? Container(
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                         padding: const EdgeInsets.only(right: 12),
-                        child: DelayedCircularProgressIndicator())
+                        child: const DelayedCircularProgressIndicator())
                     : functionConfig.displayValue(element.value, context) != null
                         ? IconButton(
                             icon: functionConfig.displayValue(element.value, context)!,
@@ -402,7 +401,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     )),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
-                ? Container(padding: const EdgeInsets.only(right: 12), child: DelayedCircularProgressIndicator())
+                ? Container(padding: const EdgeInsets.only(right: 12), child: const DelayedCircularProgressIndicator())
                 : IconButton(
                     splashRadius: 25,
                     icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
@@ -445,15 +444,15 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       }
       if (deviceGroup != null) {
         // prevent fab overlap
-        widgets.add(Column(
-          children: const [Divider(), ListTile()],
+        widgets.add(const Column(
+          children: [Divider(), ListTile()],
         ));
       }
 
       final List<Widget> trailingHeader = [];
 
       if (connectionStatus == DeviceConnectionStatus.offline) {
-        trailingHeader.add(Tooltip(
+        trailingHeader.add(const Tooltip(
             message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
       }
       if (device != null) {

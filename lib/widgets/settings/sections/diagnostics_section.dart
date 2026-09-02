@@ -58,7 +58,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                 const Text("Debug"),
                 const Spacer(),
                 IconButton(
-                    icon: Icon(Icons.share),
+                    icon: const Icon(Icons.share),
                     onPressed: () => Share.share(
                         "OPTIMISE Debug Information\n$txt",
                         subject: "OPTIMISE Debug Information"))
@@ -124,7 +124,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
             content: Column(
               children: [
                 TextFormField(
-                    decoration: InputDecoration(hintText: "Keycloak Url"),
+                    decoration: const InputDecoration(hintText: "Keycloak Url"),
                     initialValue: keycloakUrl,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,
@@ -132,7 +132,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                       keycloakUrl = value;
                     }),
                 TextFormField(
-                    decoration: InputDecoration(hintText: "Keycloak Redirect"),
+                    decoration: const InputDecoration(hintText: "Keycloak Redirect"),
                     initialValue: keycloakRedirect,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,
@@ -140,7 +140,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                       keycloakRedirect = value;
                     }),
                 TextFormField(
-                    decoration: InputDecoration(hintText: "Api Url"),
+                    decoration: const InputDecoration(hintText: "Api Url"),
                     initialValue: apiUrl,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,

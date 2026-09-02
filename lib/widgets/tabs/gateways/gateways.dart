@@ -29,7 +29,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
 class Gateways extends StatefulWidget {
-  const Gateways({Key? key}) : super(key: key);
+  const Gateways({super.key});
 
   @override
   State<StatefulWidget> createState() => _GatewaysState();

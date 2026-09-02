@@ -14,7 +14,6 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/foundation.dart';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -30,7 +29,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
-  const SmartServicesReleases({Key? key}) : super(key: key);
+  const SmartServicesReleases({super.key});
 
   @override
   State<StatefulWidget> createState() => _SmartServicesReleasesState();
@@ -96,9 +95,9 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                 child: ConstrainedBox(
                                   constraints: BoxConstraints(
                                       minHeight: constraint.maxHeight),
-                                  child: IntrinsicHeight(
+                                  child: const IntrinsicHeight(
                                     child: Column(
-                                      children: const [
+                                      children: [
                                         Expanded(
                                           child: Center(
                                               child: Text("No Releases")),
@@ -133,7 +132,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                             : null,
                                       ),
                                       Badge(
-                                        label: Icon(
+                                        label: const Icon(
                                             Icons.error,
                                             size: 16,
                                             color: MyTheme.warnColor),

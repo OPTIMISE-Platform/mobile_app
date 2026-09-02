@@ -42,7 +42,6 @@ class SmSeFlip extends SmartServiceModuleWidget {
     back?.setPreview(preview);
     return GestureDetector(
         behavior: HitTestBehavior.opaque,
-        child: (_showFront ? front : back)?.buildInternal(context, false),
         onTap: preview
             ? null
             : () async {
@@ -51,15 +50,16 @@ class SmSeFlip extends SmartServiceModuleWidget {
                 await refresh();
                 if (!context.mounted) return;
                 redrawDashboard(context);
-              });
+              },
+        child: (_showFront ? front : back)?.buildInternal(context, false));
   }
 
   @override
   Future<void> configure(data) async {
     if (data is! Map<String, dynamic> || data["front"] == null || data["back"] == null) return;
 
-    front = await SmartServiceModuleWidget.fromWidgetInfo(id + "_front", WidgetInfo.fromJson(data["front"]));
-    back = await SmartServiceModuleWidget.fromWidgetInfo(id + "_back", WidgetInfo.fromJson(data["back"]));
+    front = await SmartServiceModuleWidget.fromWidgetInfo("${id}_front", WidgetInfo.fromJson(data["front"]));
+    back = await SmartServiceModuleWidget.fromWidgetInfo("${id}_back", WidgetInfo.fromJson(data["back"]));
   }
 
   @override

@@ -34,7 +34,7 @@ import 'package:mobile_app/widgets/shared/expandable_fab.dart';
 const double heightUnit = 32;
 
 class Dashboard extends StatefulWidget {
-  const Dashboard({Key? key}) : super(key: key);
+  const Dashboard({super.key});
 
   @override
   State<StatefulWidget> createState() => DashboardState();
@@ -111,7 +111,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
     final tabs = List<Widget>.generate(
         _dashboards.length,
         (index) => SingleChildScrollView(
-            scrollDirection: Axis.vertical, child: Container(width: MediaQuery.of(context).size.width, child: _tabBody(index))));
+            scrollDirection: Axis.vertical, child: SizedBox(width: MediaQuery.of(context).size.width, child: _tabBody(index))));
 
     // Add dashboard with all widgets
     tabHeaders.add(const Tab(
@@ -139,7 +139,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                     })))));
 
     // Add button for new dashboard
-    tabHeaders.add(Tab(
+    tabHeaders.add(const Tab(
       icon: Icon(Icons.add),
     ));
     tabs.add(const Tab(
@@ -167,14 +167,14 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
               context: context,
               builder: (_) => AlertDialog.adaptive(
                     title: const Text("New Dashboard"),
-                    content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
+                    content: TextFormField(controller: titleController, decoration: const InputDecoration(hintText: "Name")),
                     actions: [
                       TextButton(
-                        child: Text('Cancel'),
+                        child: const Text('Cancel'),
                         onPressed: () => Navigator.pop(context),
                       ),
                       TextButton(
-                          child: Text('Create'),
+                          child: const Text('Create'),
                           onPressed: () {
                             newName = titleController.value.text;
                             Navigator.pop(context, titleController.value.text);
@@ -231,14 +231,14 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                 context: context,
                 builder: (_) => AlertDialog.adaptive(
                       title: const Text("Rename Dashboard"),
-                      content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
+                      content: TextFormField(controller: titleController, decoration: const InputDecoration(hintText: "Name")),
                       actions: [
                         TextButton(
-                          child: Text('Cancel'),
+                          child: const Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
                         TextButton(
-                            child: Text('Save'),
+                            child: const Text('Save'),
                             onPressed: () {
                               newName = titleController.value.text;
                               Navigator.pop(context, titleController.value.text);
@@ -260,14 +260,14 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             final delete = await showAdaptiveDialog(
                 context: context,
                 builder: (context) => AlertDialog.adaptive(
-                      title: Text("Do you want to permanently delete dashboard '" + _dashboards[_tabController!.index].name + "'?"),
+                      title: Text("Do you want to permanently delete dashboard '${_dashboards[_tabController!.index].name}'?"),
                       actions: [
                         TextButton(
-                          child: Text('Cancel'),
+                          child: const Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
                         TextButton(
-                            child: Text('Delete'),
+                            child: const Text('Delete'),
                             onPressed: () async {
                               Navigator.pop(context, true);
                             })
@@ -318,7 +318,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
           HapticFeedbackProxy.lightImpact();
           _refresh();
         },
-        child: Container(
+        child: SizedBox(
             //SizedBox does not work here
             height: MediaQuery.of(context).size.height - 192,
             child: ReorderableListView.builder(
@@ -333,7 +333,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                       alignment: Alignment.centerRight,
                       padding: MyTheme.inset,
                       color: MyTheme.warnColor,
-                      child: Icon(
+                      child: const Icon(
                         Icons.delete,
                         color: Colors.white,
                       ),

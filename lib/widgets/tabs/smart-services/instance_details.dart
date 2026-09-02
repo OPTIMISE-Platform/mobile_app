@@ -29,7 +29,7 @@ class SmartServicesInstanceDetails extends StatefulWidget {
   final SmartServiceInstance instance;
   final BuildContext? parentContext;
 
-  const SmartServicesInstanceDetails(this.instance, this.parentContext, {Key? key}) : super(key: key);
+  const SmartServicesInstanceDetails(this.instance, this.parentContext, {super.key});
 
   @override
   State<StatefulWidget> createState() => _SmartServicesInstanceDetailsState();
@@ -44,7 +44,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
 
     if (widget.instance.error != null) {
       trailingHeader.add(Tooltip(
-          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
+          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: const Icon(Icons.error, color: MyTheme.warnColor)));
     }
 
     trailingHeader.add(IconButton(
@@ -55,11 +55,11 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                   title: const Text("Do you want to permanently delete this service?"),
                   actions: [
                     TextButton(
-                      child: Text('Cancel'),
+                      child: const Text('Cancel'),
                       onPressed: () => Navigator.pop(dialogContext),
                     ),
                     TextButton(
-                        child: Text('Delete'),
+                        child: const Text('Delete'),
                         onPressed: () async {
                           final f = SmartServiceService.deleteInstance(widget.instance.id);
                           f.catchError(
@@ -75,7 +75,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           Navigator.pop(this.context);
         }
       },
-      icon: Icon(Icons.delete),
+      icon: const Icon(Icons.delete),
     ));
 
     return Scaffold(
@@ -124,12 +124,12 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   TextFormField(
-                                    decoration: InputDecoration(hintText: "Name"),
+                                    decoration: const InputDecoration(hintText: "Name"),
                                     initialValue: widget.instance.name,
                                     onChanged: (newValue) => result["name"] = newValue,
                                   ),
                                   TextFormField(
-                                    decoration: InputDecoration(hintText: "Description"),
+                                    decoration: const InputDecoration(hintText: "Description"),
                                     maxLines: 8,
                                     minLines: 8,
                                     initialValue: widget.instance.description,
@@ -138,8 +138,8 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                                 ],
                               ),
                               actions: <Widget>[
-                                TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
-                                TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, result)),
+                                TextButton(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                                TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, result)),
                               ],
                             );
                           });
@@ -151,9 +151,9 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                       widget.instance.description = updated.description;
                       setState(() {});
                     },
-                    icon: Icon(Icons.edit),
-                  )
-                ]..addAll(MyAppBar.getDefaultActions(context))),
+                    icon: const Icon(Icons.edit),
+                  ), ...MyAppBar.getDefaultActions(context)
+                ]),
             body: Scrollbar(
               child: widget.instance.parameters == null
                   ? const Center(child: DelayedCircularProgressIndicator())

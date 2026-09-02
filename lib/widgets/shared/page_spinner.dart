@@ -24,7 +24,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 class PageSpinner extends StatelessWidget {
   final String _title;
 
-  const PageSpinner(this._title, {Key? key}) : super(key: key);
+  const PageSpinner(this._title, {super.key});
 
   @override
   Widget build(BuildContext context) {

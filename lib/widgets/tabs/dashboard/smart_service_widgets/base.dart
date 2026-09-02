@@ -128,7 +128,7 @@ abstract class SmartServiceModuleWidget {
       return null;
     }
     final widgetInfo = WidgetInfo.fromJson(data);
-    final id = widgetInfo.widget_key != null ?  (module.instance_id + "_" + widgetInfo.widget_key!) : module.id;
+    final id = widgetInfo.widget_key != null ?  ("${module.instance_id}_${widgetInfo.widget_key!}") : module.id;
     final w = await fromWidgetInfo(id, widgetInfo);
     if (w != null) {
       w.instance_id = module.instance_id;

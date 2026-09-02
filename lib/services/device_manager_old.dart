@@ -27,7 +27,7 @@ class DeviceManagerOld {
   var basePath = "";
 
   DeviceManagerOld(String host) {
-    this.basePath = "http://" + host  + ":7002";
+    basePath = "http://$host:7002";
   }
 
   final _logger = Logger(

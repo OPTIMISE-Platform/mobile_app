@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/mgw.dart';
@@ -16,15 +15,15 @@ class MGWDetail extends StatelessWidget {
 
   handleDeployments(deployments) {
     if (deployments.length == 0) {
-      return Column(
+      return const Column(
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               color: Colors.red,
               size: 40,
             ),
             Padding(
-              padding: const EdgeInsets.only(top: TOP_PADDING),
+              padding: EdgeInsets.only(top: TOP_PADDING),
               child: Text('No deployments!'),
             ),
           ]);
@@ -76,9 +75,9 @@ class MGWDetail extends StatelessWidget {
   handlError(error) {
     return Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: const Icon(
+          const Padding(
+            padding: EdgeInsets.only(top: TOP_PADDING),
+            child: Icon(
               Icons.error_outline,
               color: Colors.red,
               size: 40,
@@ -86,16 +85,16 @@ class MGWDetail extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Error: ${error}', style: textStyle),
+            child: Text('Error: $error', style: textStyle),
           ),
         ]);
   }
 
   handleLoading() {
-    return Column(
+    return const Column(
         children: [
           Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
+            padding: EdgeInsets.only(top: TOP_PADDING),
             child: SizedBox(
               width: 40,
               height: 40,

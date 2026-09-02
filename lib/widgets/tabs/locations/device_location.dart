@@ -30,7 +30,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
 class DeviceListByLocation extends StatefulWidget {
-  const DeviceListByLocation({Key? key}) : super(key: key);
+  const DeviceListByLocation({super.key});
 
   @override
   State<StatefulWidget> createState() => _DeviceListByLocationState();
@@ -67,14 +67,14 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
           builder: (_) => AlertDialog.adaptive(
                 title: const Text("New Location"),
                 content: TextFormField(
-                    controller: titleController, decoration: InputDecoration(hintText: "Name")),
+                    controller: titleController, decoration: const InputDecoration(hintText: "Name")),
                 actions: [
                   TextButton(
-                    child: Text('Cancel'),
+                    child: const Text('Cancel'),
                     onPressed: () => Navigator.pop(context),
                   ),
                   TextButton(
-                      child: Text('Create'),
+                      child: const Text('Create'),
                       onPressed: () {
                         newName = titleController.value.text;
                         Navigator.popUntil(context, (route) => route.isFirst);
@@ -133,9 +133,9 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                               child: ConstrainedBox(
                                 constraints: BoxConstraints(
                                     minHeight: constraint.maxHeight),
-                                child: IntrinsicHeight(
+                                child: const IntrinsicHeight(
                                   child: Column(
-                                    children: const [
+                                    children: [
                                       Expanded(
                                         child:
                                             Center(child: Text("No Locations")),
@@ -186,8 +186,8 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                                         onTap: () =>
                                             _openLocationPage(i, parentState))
                                   ])
-                                : Column(
-                                    children: const [Divider(), ListTile()],
+                                : const Column(
+                                    children: [Divider(), ListTile()],
                                   );
                           },
                         )));

@@ -31,7 +31,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
-  const GroupList({Key? key}) : super(key: key);
+  const GroupList({super.key});
 
   @override
   State<StatefulWidget> createState() => _GroupListState();
@@ -61,14 +61,14 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
           context: context,
           builder: (_) => AlertDialog.adaptive(
                 title: const Text("New Group"),
-                content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
+                content: TextFormField(controller: titleController, decoration: const InputDecoration(hintText: "Name")),
                 actions: [
                   TextButton(
-                    child: Text('Cancel'),
+                    child: const Text('Cancel'),
                     onPressed: () => Navigator.pop(context),
                   ),
                   TextButton(
-                      child: Text('Create'),
+                      child: const Text('Create'),
                       onPressed: () {
                         newName = titleController.value.text;
                         Navigator.popUntil(context, (route) => route.isFirst);
@@ -118,9 +118,9 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
                           physics: const AlwaysScrollableScrollPhysics(),
                           child: ConstrainedBox(
                             constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                            child: IntrinsicHeight(
+                            child: const IntrinsicHeight(
                               child: Column(
-                                children: const [
+                                children: [
                                   Expanded(
                                     child: Center(child: Text("No Groups")),
                                   ),
@@ -142,7 +142,7 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
                           i > 0 ? const Divider() : const SizedBox.shrink(),
                                 GroupListItem(state.deviceGroups[i], null),
                               ])
-                            : Column(children: const [
+                            : const Column(children: [
                                 Divider(),
                                 ListTile(),
                               ]);

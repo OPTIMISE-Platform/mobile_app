@@ -28,7 +28,7 @@ class GroupListItem extends StatelessWidget {
   final DeviceGroup _group;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
 
-  const GroupListItem(this._group, this._poppedCallback, {Key? key}) : super(key: key);
+  const GroupListItem(this._group, this._poppedCallback, {super.key});
 
   @override
   Widget build(BuildContext context) {

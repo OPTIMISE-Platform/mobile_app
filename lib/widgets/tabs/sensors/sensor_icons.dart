@@ -101,7 +101,7 @@ class _IconPickerState extends State<_IconPicker> {
             padding: MyTheme.inset,
             child: TextFormField(
               controller: _searchController,
-              decoration: InputDecoration(hintText: 'Search icons'),
+              decoration: const InputDecoration(hintText: 'Search icons'),
               onChanged: (v) => setState(() => _query = v),
             ),
           ),

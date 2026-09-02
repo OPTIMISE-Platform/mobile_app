@@ -325,9 +325,10 @@ class SmartServiceService {
   static Future<Pair<List<SmartServiceExtendedParameter>, bool>> prepareUpgrade(
     SmartServiceInstance oldInstance,
   ) async {
-    if (oldInstance.new_release_id == null)
+    if (oldInstance.new_release_id == null) {
       throw ArgumentError("No Update available");
-    final params;
+    }
+    final List<SmartServiceExtendedParameter> params;
     try {
       params = await getReleaseParameters(oldInstance.new_release_id!);
     } catch (e) {

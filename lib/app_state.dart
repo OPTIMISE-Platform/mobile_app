@@ -16,7 +16,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:mobile_app/mixins/data_mixin.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';

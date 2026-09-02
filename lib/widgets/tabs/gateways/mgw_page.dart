@@ -108,7 +108,7 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
       foundHostnames.add(hostname);
     });
   });
-  await Future.delayed(Duration(seconds: 5));
+  await Future.delayed(const Duration(seconds: 5));
 
   await stopDiscovery(discovery);
   return gateways;
@@ -173,7 +173,7 @@ Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildCo
 }
 
 class AddLocalNetwork extends StatefulWidget {
-  const AddLocalNetwork({Key? key}) : super(key: key);
+  const AddLocalNetwork({super.key});
 
   @override
   _AddLocalNetworkState createState() => _AddLocalNetworkState();
@@ -203,7 +203,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
   }
 
   handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
-    if (mgws.length == 0) {
+    if (mgws.isEmpty) {
       return const Column(
           children: [
             Icon(

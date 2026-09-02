@@ -20,7 +20,7 @@ class ExpandableText extends StatefulWidget {
   final String _text;
   final int _collapsed_lines;
 
-  const ExpandableText(this._text, this._collapsed_lines, {Key? key}) : super(key: key);
+  const ExpandableText(this._text, this._collapsed_lines, {super.key});
 
   @override
   State<StatefulWidget> createState() => _ExpandableTextState();

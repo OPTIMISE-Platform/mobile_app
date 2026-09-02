@@ -52,7 +52,7 @@ class Notification {
             title: Text(title, overflow: TextOverflow.ellipsis,),
             content: Text(message),
             actions: <Widget>[
-              TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context)),
+              TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context)),
             ],
           ),
         );

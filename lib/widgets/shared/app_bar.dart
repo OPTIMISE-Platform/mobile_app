@@ -97,18 +97,18 @@ class MyAppBar {
             if (value != null && value != hasUpdate)
               {setState(() => hasUpdate = value)}
           });
-      return hasUpdate != true ? const SizedBox.shrink() : UpdateIcon();
+      return hasUpdate != true ? const SizedBox.shrink() : const UpdateIcon();
     });
   }
 
   static Widget settings(BuildContext context) {
     return IconButton(
-      icon: Icon(Icons.settings),
+      icon: const Icon(Icons.settings),
       onPressed: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Settings(),
+            builder: (context) => const Settings(),
           ),
         );
       },
@@ -137,6 +137,8 @@ class MyAppBar {
 }
 
 class UpdateIcon extends StatefulWidget {
+  const UpdateIcon({super.key});
+
   @override
   _UpdateIconState createState() => _UpdateIconState();
 }

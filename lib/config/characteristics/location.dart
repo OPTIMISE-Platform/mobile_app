@@ -75,7 +75,7 @@ class _LocationState extends State<Location> {
           lat: lat,
           lon: lon,
           displayName: "Augustusplatz, Leipzig",
-          geojson: GeoGeometry.point(LatLng(lat, lon), MyTheme.appColor),
+          geojson: GeoGeometry.point(const LatLng(lat, lon), MyTheme.appColor),
         );
       }
 

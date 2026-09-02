@@ -36,7 +36,7 @@ class FunctionConfigGetOnOffState extends FunctionConfig {
       if (value.every((element) => element == value[0])) {
         return displayValue(value[0], context);
       }
-      return Icon(Icons.remove);
+      return const Icon(Icons.remove);
     }
 
     return null;

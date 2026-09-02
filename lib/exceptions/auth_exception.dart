@@ -17,5 +17,5 @@
 import 'package:mobile_app/models/exception_log_element.dart';
 
 class AuthException extends ExceptionLogElement {
-  AuthException([String? message]) : super.Log(message);
+  AuthException([super.message]) : super.Log();
 }

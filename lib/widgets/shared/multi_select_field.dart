@@ -74,11 +74,11 @@ class _MultiSelectDialogState extends State<_MultiSelectDialog> {
       ),
       actions: [
         TextButton(
-          child: Text("Cancel"),
+          child: const Text("Cancel"),
           onPressed: () => Navigator.pop(context),
         ),
         TextButton(
-          child: Text("OK"),
+          child: const Text("OK"),
           onPressed: () => Navigator.pop(context, _current),
         ),
       ],

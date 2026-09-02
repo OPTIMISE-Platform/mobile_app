@@ -23,10 +23,10 @@ class MGW {
   MGW(this.hostname, this.mDNSServiceName, this.coreId, this.ip);
   MGW.fromJson(Map<String, dynamic> json): hostname=json['hostname'], mDNSServiceName=json['mDNSServiceName'], coreId=json['coreId'], ip=json['ip'];
   Map<String, dynamic> toJson() => <String, dynamic> {
-      "hostname": this.hostname,
-      "mDNSServiceName": this.mDNSServiceName,
-      "coreId": this.coreId,
-      "ip": this.ip
+      "hostname": hostname,
+      "mDNSServiceName": mDNSServiceName,
+      "coreId": coreId,
+      "ip": ip
   };
 }
 

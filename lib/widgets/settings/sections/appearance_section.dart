@@ -132,11 +132,11 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                   title: const Text("Choose Color"),
                   actions: [
                     TextButton(
-                      child: Text('Cancel'),
+                      child: const Text('Cancel'),
                       onPressed: () => Navigator.pop(context, false),
                     ),
                     TextButton(
-                        child: Text('System Default'),
+                        child: const Text('System Default'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(null);
                           RestartController.restart();
@@ -144,7 +144,7 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                           Navigator.pop(context);
                         }),
                     TextButton(
-                        child: Text('Dark'),
+                        child: const Text('Dark'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(dark);
                           RestartController.restart();
@@ -152,7 +152,7 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                           Navigator.pop(context);
                         }),
                     TextButton(
-                        child: Text('Light'),
+                        child: const Text('Light'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(light);
                           RestartController.restart();

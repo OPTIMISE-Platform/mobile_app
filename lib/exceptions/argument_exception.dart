@@ -17,5 +17,5 @@
 import 'package:mobile_app/models/exception_log_element.dart';
 
 class ArgumentException extends ExceptionLogElement {
-  ArgumentException([String? message]) : super.Log(message);
+  ArgumentException([super.message]) : super.Log();
 }

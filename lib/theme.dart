@@ -72,8 +72,8 @@ class MyTheme {
       }),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
-          padding: MaterialStateProperty.all(MyTheme.inset),
-          foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
+          padding: WidgetStateProperty.all(MyTheme.inset),
+          foregroundColor: WidgetStateProperty.all(const Color(0xFF32b8ba)),
         ),
       ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -128,8 +128,8 @@ class MyTheme {
     }),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        padding: MaterialStateProperty.all(MyTheme.inset),
-        foregroundColor: MaterialStateProperty.all(const Color(0xFF32b8ba)),
+        padding: WidgetStateProperty.all(MyTheme.inset),
+        foregroundColor: WidgetStateProperty.all(const Color(0xFF32b8ba)),
       ),
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(

@@ -34,7 +34,7 @@ const Direction down = 270;
 @immutable
 class ExpandableFab extends StatefulWidget {
   const ExpandableFab({
-    Key? key,
+    super.key,
     this.initialOpen,
     this.toggleStream,
     required this.distance,
@@ -44,7 +44,7 @@ class ExpandableFab extends StatefulWidget {
     this.angle = 90,
     this.elevation,
     this.direction = around,
-  }) : super(key: key);
+  });
 
   final bool? initialOpen;
   final double distance;
@@ -192,8 +192,6 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
 @immutable
 class _ExpandingActionButton extends StatelessWidget {
   const _ExpandingActionButton({
-    Key? key,
-    //required this.directionInDegrees,
     required this.index,
     required this.total,
     required this.maxDistance,
@@ -201,7 +199,7 @@ class _ExpandingActionButton extends StatelessWidget {
     required this.child,
     required this.angle,
     required this.direction,
-  }) : super(key: key);
+  });
 
   //final double directionInDegrees;
   final int index;
@@ -242,13 +240,13 @@ class _ExpandingActionButton extends StatelessWidget {
 @immutable
 class ActionButton extends StatelessWidget {
   const ActionButton({
-    Key? key,
+    super.key,
     this.onPressed,
     this.color = MyTheme.appColor,
     this.backgroundColor = MyTheme.appColor,
     this.elevation = 4,
     required this.icon,
-  }) : super(key: key);
+  });
 
   final VoidCallback? onPressed;
   final Widget icon;
