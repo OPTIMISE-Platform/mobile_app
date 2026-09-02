@@ -16,9 +16,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mutex/mutex.dart';
@@ -40,7 +38,7 @@ class GroupEditDevices extends StatefulWidget {
   State<StatefulWidget> createState() => _GroupEditDevicesState();
 }
 
-class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMixin {
+class _GroupEditDevicesState extends State<GroupEditDevices> {
   final Set<String> _selected = {};
   final int _pageSize = 50;
   bool _initialized = false;
@@ -55,8 +53,6 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
   List<DeviceInstanceWithRemovesCriteria> _candidates = [];
   List<DeviceGroupCriteria> _criteria = [];
   final Map<String, DeviceInstance> _deviceCollection = {};
-
-  final _cupertinoSearchController = RestorableTextEditingController();
 
   _searchChanged(String search, bool force) {
     if (_query == search && !force) {
@@ -119,7 +115,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
                         ? ListTile(
                             leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
-                                PlatformIcons(context).checkMarkCircledSolid,
+                                Icons.check_circle,
                                 color: MyTheme.appColor,
                               )
                             ]),
@@ -213,60 +209,35 @@ class _GroupEditDevicesState extends State<GroupEditDevices> with RestorationMix
       }
 
       return Scaffold(
-          body: PlatformScaffold(
+          body: Scaffold(
         appBar: MyAppBar(deviceGroup.name).getAppBar(context, [
-          PlatformWidget(
-            material: (context, __) => PlatformIconButton(
-                icon: Icon(PlatformIcons(context).search),
-                onPressed: () async {
-                  _searchClosed = false;
-                  _delegateOpen = true;
-                  final willCloseThis = await showSearch(
-                      context: context,
-                      delegate: DevicesSearchDelegate(
-                        (query) {
-                          _searchChanged(query, false);
-                          return _buildListWidget();
-                        },
-                        (q) => _searchChanged(q, false),
-                      ));
-                  _searchClosed = true;
-                  _delegateOpen = false;
-                  _searchDebounce?.cancel();
-                  if (willCloseThis != true) _searchChanged("", false);
-                }),
-            cupertino: (_, __) => const SizedBox.shrink(),
-          ),
+          IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                _searchClosed = false;
+                _delegateOpen = true;
+                final willCloseThis = await showSearch(
+                    context: context,
+                    delegate: DevicesSearchDelegate(
+                      (query) {
+                        _searchChanged(query, false);
+                        return _buildListWidget();
+                      },
+                      (q) => _searchChanged(q, false),
+                    ));
+                _searchClosed = true;
+                _delegateOpen = false;
+                _searchDebounce?.cancel();
+                if (willCloseThis != true) _searchChanged("", false);
+              }),
           ...MyAppBar.getDefaultActions(context)
         ]),
         body: _reloading
-            ? Center(
-                child: const DelayedCircularProgressIndicator(),
+            ? const Center(
+                child: DelayedCircularProgressIndicator(),
               )
-            : Column(children: [
-                PlatformWidget(
-                  cupertino: (_, __) => Container(
-                    padding: MyTheme.inset,
-                    child: CupertinoSearchTextField(
-                      onChanged: (query) => _searchChanged(query, false),
-                      style: TextStyle(color: MyTheme.textColor),
-                      itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-                      restorationId: "cupertino-device-search",
-                      controller: _cupertinoSearchController.value,
-                    ),
-                  ),
-                ),
-                Expanded(child: _buildListWidget())
-              ]),
+            : _buildListWidget(),
       ));
     });
-  }
-
-  @override
-  String? get restorationId => "GroupEditDevices";
-
-  @override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_cupertinoSearchController, "_cupertinoSearchController");
   }
 }

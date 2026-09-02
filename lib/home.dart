@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/favorites_migration.dart';
@@ -86,25 +85,23 @@ class _HomeState extends State<Home> {
     }
   }
 
-  PlatformTextFormField _passwordField() {
-    return PlatformTextFormField(
-      hintText: "Password",
+  TextFormField _passwordField() {
+    return TextFormField(
+      decoration: InputDecoration(
+        hintText: "Password",
+        suffixIcon: _visibilityButton(),
+      ),
       keyboardType: TextInputType.visiblePassword,
       obscureText: _pwHidden,
       onChanged: (value) => setState(() => _pw = value),
       onFieldSubmitted: (_) => _login(),
       initialValue: _pw,
       autofillHints: const [AutofillHints.password],
-      material: (context, _) => MaterialTextFormFieldData(
-        decoration: InputDecoration(
-          suffixIcon: PlatformIconButton(icon: _visibilityButton()),
-        ),
-      ),
     );
   }
 
   Widget _visibilityButton() {
-    return PlatformIconButton(
+    return IconButton(
         icon: Icon(_pwHidden ? Icons.visibility : Icons.visibility_off), onPressed: () => setState(() => _pwHidden = !_pwHidden));
   }
 
@@ -133,20 +130,20 @@ class _HomeState extends State<Home> {
         // and bring the login spinner back for the whole token refresh.
         if (auth.loggedIn) return const DeviceTabs();
         if (!auth.isInitialized || auth.loggingIn) {
-          return PlatformScaffold(
+          return Scaffold(
             appBar: appBar.getAppBar(context, []),
             body: const Center(child: DelayedCircularProgressIndicator()),
           );
         }
-        return PlatformScaffold(
+        return Scaffold(
             appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
             body: Container(
               padding: MyTheme.inset * 3,
               child: SingleChildScrollView(
                   child: Column(children: [
                     Image.asset("assets/icon/icon.png", width: MediaQuery.of(context).size.width * 0.4),
-                    PlatformTextFormField(
-                      hintText: "Username",
+                    TextFormField(
+                      decoration: InputDecoration(hintText: "Username"),
                       keyboardType: TextInputType.text,
                       onChanged: (value) => setState(() => _user = value),
                       onFieldSubmitted: (_) => _login(),
@@ -154,11 +151,8 @@ class _HomeState extends State<Home> {
                       autofocus: true,
                       autofillHints: const [AutofillHints.username],
                     ),
-                    PlatformWidget(
-                        material: (_, __) => _passwordField(),
-                        cupertino: (context, __) =>
-                            Row(mainAxisSize: MainAxisSize.min, children: [Expanded(child: _passwordField()), _visibilityButton()])),
-                    PlatformElevatedButton(
+                    _passwordField(),
+                    ElevatedButton(
                       onPressed: _pw.isEmpty || _user.isEmpty ? null : () => _login(),
                       child: const Text("Login"),
                     ),

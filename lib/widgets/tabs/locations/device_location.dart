@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/widgets/tabs/locations/location_page.dart';
 import 'package:provider/provider.dart';
@@ -63,19 +62,19 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
       final titleController = TextEditingController(text: "");
       String? newName;
       if (!mounted) return;
-      await showPlatformDialog(
+      await showAdaptiveDialog(
           context: context,
-          builder: (_) => PlatformAlertDialog(
+          builder: (_) => AlertDialog.adaptive(
                 title: const Text("New Location"),
-                content: PlatformTextFormField(
-                    controller: titleController, hintText: "Name"),
+                content: TextFormField(
+                    controller: titleController, decoration: InputDecoration(hintText: "Name")),
                 actions: [
-                  PlatformDialogAction(
-                    child: PlatformText('Cancel'),
+                  TextButton(
+                    child: Text('Cancel'),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  PlatformDialogAction(
-                      child: PlatformText('Create'),
+                  TextButton(
+                      child: Text('Create'),
                       onPressed: () {
                         newName = titleController.value.text;
                         Navigator.popUntil(context, (route) => route.isFirst);
@@ -109,8 +108,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                 "", null, null, null, [AppState().locations[i].id]));
     await Navigator.push(
         context,
-        platformPageRoute(
-            context: context,
+        MaterialPageRoute(
             builder: (context) => LocationPage(i, parentState!)));
     parentState?.filter.locationIds = null;
   }
@@ -178,9 +176,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                                                     8),
                                             child: state
                                                     .locations[i].imageWidget ??
-                                                Icon(
-                                                    PlatformIcons(context)
-                                                        .location,
+                                                const Icon(Icons.location_on,
                                                     color: Colors.white),
                                           ),
                                         ),

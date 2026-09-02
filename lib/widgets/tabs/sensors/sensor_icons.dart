@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/material_icons.dart';
 
@@ -51,8 +50,7 @@ final List<String> _allIconNames = iconNameToCodePoints.keys.toList()..sort();
 Future<String?> pickIcon(BuildContext context, {String? current}) =>
     Navigator.push<String>(
       context,
-      platformPageRoute(
-        context: context,
+      MaterialPageRoute(
         builder: (_) => _IconPicker(current: current),
       ),
     );
@@ -86,12 +84,12 @@ class _IconPickerState extends State<_IconPicker> {
   @override
   Widget build(BuildContext context) {
     final results = _results;
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: const Text('Choose Icon'),
-        trailingActions: [
+        actions: [
           if (widget.current != null)
-            PlatformTextButton(
+            TextButton(
               onPressed: () => Navigator.pop(context, ''), // clear
               child: const Text('Clear'),
             ),
@@ -101,9 +99,9 @@ class _IconPickerState extends State<_IconPicker> {
         children: [
           Padding(
             padding: MyTheme.inset,
-            child: PlatformTextFormField(
+            child: TextFormField(
               controller: _searchController,
-              hintText: 'Search icons',
+              decoration: InputDecoration(hintText: 'Search icons'),
               onChanged: (v) => setState(() => _query = v),
             ),
           ),

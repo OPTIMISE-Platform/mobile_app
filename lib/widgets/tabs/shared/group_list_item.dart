@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
@@ -57,8 +56,7 @@ class GroupListItem extends StatelessWidget {
             AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]));
             final future = Navigator.push(
                 context,
-                platformPageRoute(
-                  context: context,
+                MaterialPageRoute(
                   builder: (context) {
                     final target = DetailPage(null, _group);
                     return target;

@@ -15,17 +15,22 @@
  *
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
 import 'tab_config.dart';
 
-/// Builds and appends the filter [PlatformPopupMenu] to [actions].
+/// One entry of the filter menu.
+class _FilterOption {
+  const _FilterOption({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+}
+
+/// Builds and appends the filter [PopupMenuButton] to [actions].
 ///
 /// Hidden for [tabGroups], [tabSmartServices], and [tabDashboard].
 class FilterMenuBuilder {
@@ -51,33 +56,33 @@ class FilterMenuBuilder {
   void appendTo(List<Widget> actions, BuildContext context) {
     if (!_isVisible) return;
 
-    final options = _buildOptions(context);
     final count = _filterCount();
 
-    actions.add(PlatformPopupMenu(
-      options: options,
+    actions.add(PopupMenuButton<VoidCallback>(
+      tooltip: "Select Filters",
       icon: Badge(
         label: Text(count.toString()),
         isLabelVisible: count > 0,
         textColor: Colors.white,
-        child: Icon(
-          Icons.filter_alt,
-          color: isCupertino(context) ? MyTheme.appColor : null,
-        ),
+        child: const Icon(Icons.filter_alt),
       ),
-      cupertino: (context, _) => CupertinoPopupMenuData(
-        title: const Text("Select Filters"),
-        cancelButtonData: CupertinoPopupMenuCancelButtonData(
-          child: const Text('Close'),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      onSelected: (onTap) => onTap(),
+      // Built when the menu opens, not when the app bar does: the entries carry
+      // the current filter state in their labels.
+      itemBuilder: (_) => [
+        for (final o in _buildOptions(context))
+          PopupMenuItem<VoidCallback>(value: o.onTap, child: Text(o.label)),
+        if (_filterCount() > 0) ...[
+          const PopupMenuDivider(),
+          PopupMenuItem<VoidCallback>(value: _reset, child: const Text('Reset')),
+        ],
+      ],
     ));
   }
 
-  List<PopupMenuOption> _buildOptions(BuildContext context) {
+  List<_FilterOption> _buildOptions(BuildContext context) {
     final config = tabConfigs[navigationIndex];
-    final options = <PopupMenuOption>[];
+    final options = <_FilterOption>[];
 
     if (!(config?.ownsDeviceClass() ?? false) &&
         state.deviceClasses.isNotEmpty) {
@@ -95,16 +100,14 @@ class FilterMenuBuilder {
     if (!(config?.ownsFavorites() ?? false)) {
       options.add(_favoritesToggleOption());
     }
-    _appendResetIfNeeded(options);
-
     return options;
   }
 
   // ── Individual filter options ──────────────────────────────────────────────
 
-  PopupMenuOption _classesOption(BuildContext context) => PopupMenuOption(
+  _FilterOption _classesOption(BuildContext context) => _FilterOption(
     label: '${filter.deviceClassIds != null ? '✓ ' : ''}Classes',
-    onTap: (_) => _showFilterDialog(
+    onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Classes',
       itemCount: state.deviceClasses.values.length,
@@ -125,9 +128,9 @@ class FilterMenuBuilder {
     ),
   );
 
-  PopupMenuOption _locationsOption(BuildContext context) => PopupMenuOption(
+  _FilterOption _locationsOption(BuildContext context) => _FilterOption(
     label: '${filter.locationIds != null ? '✓ ' : ''}Locations',
-    onTap: (_) => _showFilterDialog(
+    onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Locations',
       itemCount: state.locations.length,
@@ -148,9 +151,9 @@ class FilterMenuBuilder {
     ),
   );
 
-  PopupMenuOption _groupsOption(BuildContext context) => PopupMenuOption(
+  _FilterOption _groupsOption(BuildContext context) => _FilterOption(
     label: '${filter.deviceGroupIds != null ? '✓ ' : ''}Groups',
-    onTap: (_) => _showFilterDialog(
+    onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Groups',
       itemCount: state.deviceGroups.length,
@@ -171,9 +174,9 @@ class FilterMenuBuilder {
     ),
   );
 
-  PopupMenuOption _networksOption(BuildContext context) => PopupMenuOption(
+  _FilterOption _networksOption(BuildContext context) => _FilterOption(
     label: '${filter.networkIds != null ? '✓ ' : ''}Networks',
-    onTap: (_) => _showFilterDialog(
+    onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Networks',
       itemCount: state.networks.length,
@@ -194,36 +197,22 @@ class FilterMenuBuilder {
     ),
   );
 
-  PopupMenuOption _favoritesToggleOption() => PopupMenuOption(
+  _FilterOption _favoritesToggleOption() => _FilterOption(
     label: '${filter.favorites == true ? '✓ ' : ''}Favorites',
-    onTap: (_) {
+    onTap: () {
       filter.favorites = filter.favorites == true ? null : true;
       onFilterApplied();
     },
   );
 
-  void _appendResetIfNeeded(List<PopupMenuOption> options) {
-    if (_filterCount() == 0) return;
-    options.add(PopupMenuOption(
-      material: (context, __) => MaterialPopupMenuOptionData(
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [Divider(), Text("Reset")],
-        ),
-      ),
-      cupertino: (context, __) =>
-          CupertinoPopupMenuOptionData(isDestructiveAction: true),
-      label: 'Reset',
-      onTap: (_) {
-        final config = tabConfigs[navigationIndex];
-        if (!(config?.ownsLocation() ?? false)) filter.locationIds = null;
-        if (!(config?.ownsGroup() ?? false)) filter.deviceGroupIds = null;
-        if (!(config?.ownsNetwork() ?? false)) filter.networkIds = null;
-        if (!(config?.ownsDeviceClass() ?? false)) filter.deviceClassIds = null;
-        if (!(config?.ownsFavorites() ?? false)) filter.favorites = null;
-        onFilterApplied();
-      },
-    ));
+  void _reset() {
+    final config = tabConfigs[navigationIndex];
+    if (!(config?.ownsLocation() ?? false)) filter.locationIds = null;
+    if (!(config?.ownsGroup() ?? false)) filter.deviceGroupIds = null;
+    if (!(config?.ownsNetwork() ?? false)) filter.networkIds = null;
+    if (!(config?.ownsDeviceClass() ?? false)) filter.deviceClassIds = null;
+    if (!(config?.ownsFavorites() ?? false)) filter.favorites = null;
+    onFilterApplied();
   }
 
   // ── Dialog helper ──────────────────────────────────────────────────────────
@@ -234,9 +223,9 @@ class FilterMenuBuilder {
     required int itemCount,
     required Widget Function(int) itemBuilder,
   }) {
-    showPlatformDialog(
+    showAdaptiveDialog(
       context: context,
-      builder: (context) => PlatformAlertDialog(
+      builder: (context) => AlertDialog.adaptive(
         title: Text(title),
         content: SizedBox(
           width: double.maxFinite,
@@ -251,7 +240,7 @@ class FilterMenuBuilder {
           ),
         ),
         actions: [
-          PlatformDialogAction(
+          TextButton(
             child: const Text("OK"),
             onPressed: () {
               onFilterApplied();
@@ -318,7 +307,7 @@ class _FilterListTileState extends State<_FilterListTile> {
   @override
   Widget build(BuildContext context) => ListTile(
     title: Text(widget.label),
-    trailing: PlatformSwitch(
+    trailing: Switch.adaptive(
       value: _checked,
       onChanged: (value) {
         setState(() => _checked = value);

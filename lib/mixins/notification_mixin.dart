@@ -21,9 +21,8 @@ import 'dart:math';
 import 'package:eraser/eraser.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
@@ -201,8 +200,7 @@ mixin NotificationMixin on ChangeNotifier {
           NotificationList.preferredRouteName) {
         Navigator.push(
           context,
-          platformPageRoute(
-            context: context,
+          MaterialPageRoute(
             settings: const RouteSettings(
               name: NotificationList.preferredRouteName,
             ),

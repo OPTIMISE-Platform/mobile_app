@@ -17,7 +17,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/shared/math_list.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
@@ -148,10 +147,7 @@ class SmSePieChart extends SmSeRequest {
                           icon: Icon(maximized ? Icons.zoom_in_map : Icons.zoom_out_map)))
                 ])),
                 const SizedBox(height: 8),
-                PlatformWidget(
-                  cupertino: (_, __) => Material(child: legend),
-                  material: (_, __) => legend,
-                )
+                legend,
               ]);
             }));
     return parentFlexible ? Expanded(child: w) : w;

@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
@@ -148,17 +147,17 @@ Future<void> performDeviceStateAction({
       _logger.e("$err: ${element.functionId}");
       return;
     }
-    input = await showPlatformDialog(
+    input = await showAdaptiveDialog(
       context: context,
-      builder: (_) => PlatformAlertDialog(
+      builder: (_) => AlertDialog.adaptive(
         title: const Text('Configure'),
         content: content,
         actions: <Widget>[
-          PlatformDialogAction(
-            child: PlatformText('Cancel'),
+          TextButton(
+            child: Text('Cancel'),
             onPressed: () => Navigator.pop(context),
           ),
-          PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
+          TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
         ],
       ),
     );

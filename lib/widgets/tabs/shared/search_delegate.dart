@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -40,11 +39,10 @@ class DevicesSearchDelegate extends SearchDelegate {
 
   @override
   Widget? buildLeading(BuildContext context) {
-    return PlatformIconButton(
+    return IconButton(
         onPressed: () {
           close(context, null);
         },
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
         icon: const Icon(Icons.arrow_back));
   }
 

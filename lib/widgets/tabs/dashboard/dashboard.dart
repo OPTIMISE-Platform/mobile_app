@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -141,7 +140,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
 
     // Add button for new dashboard
     tabHeaders.add(Tab(
-      icon: Icon(PlatformIcons(context).add),
+      icon: Icon(Icons.add),
     ));
     tabs.add(const Tab(
       child: SizedBox.shrink(),
@@ -164,18 +163,18 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
           final titleController = TextEditingController(text: "");
           String? newName;
           _newDashboardDialogOpen = true;
-          await showPlatformDialog(
+          await showAdaptiveDialog(
               context: context,
-              builder: (_) => PlatformAlertDialog(
+              builder: (_) => AlertDialog.adaptive(
                     title: const Text("New Dashboard"),
-                    content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+                    content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
                     actions: [
-                      PlatformDialogAction(
-                        child: PlatformText('Cancel'),
+                      TextButton(
+                        child: Text('Cancel'),
                         onPressed: () => Navigator.pop(context),
                       ),
-                      PlatformDialogAction(
-                          child: PlatformText('Create'),
+                      TextButton(
+                          child: Text('Create'),
                           onPressed: () {
                             newName = titleController.value.text;
                             Navigator.pop(context, titleController.value.text);
@@ -228,18 +227,18 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             final titleController = TextEditingController(text: _dashboards[_tabController!.index].name);
             String? newName;
             _newDashboardDialogOpen = true;
-            newName = await showPlatformDialog(
+            newName = await showAdaptiveDialog(
                 context: context,
-                builder: (_) => PlatformAlertDialog(
+                builder: (_) => AlertDialog.adaptive(
                       title: const Text("Rename Dashboard"),
-                      content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+                      content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
                       actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
+                        TextButton(
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        PlatformDialogAction(
-                            child: PlatformText('Save'),
+                        TextButton(
+                            child: Text('Save'),
                             onPressed: () {
                               newName = titleController.value.text;
                               Navigator.pop(context, titleController.value.text);
@@ -258,18 +257,17 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
         ),
         ActionButton(
           onPressed: () async {
-            final delete = await showPlatformDialog(
+            final delete = await showAdaptiveDialog(
                 context: context,
-                builder: (context) => PlatformAlertDialog(
+                builder: (context) => AlertDialog.adaptive(
                       title: Text("Do you want to permanently delete dashboard '" + _dashboards[_tabController!.index].name + "'?"),
                       actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
+                        TextButton(
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        PlatformDialogAction(
-                            child: PlatformText('Delete'),
-                            cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                        TextButton(
+                            child: Text('Delete'),
                             onPressed: () async {
                               Navigator.pop(context, true);
                             })
@@ -287,9 +285,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
       ],
     );
     return Scaffold(
-      floatingActionButton: !_showFab
-          ? null
-          : PlatformWidget(material: (_, __) => fab, cupertino: (_, __) => Container(margin: const EdgeInsets.only(bottom: 55), child: fab)),
+      floatingActionButton: !_showFab ? null : fab,
       appBar: TabBar(
         isScrollable: true,
         tabs: tabHeaders,
@@ -338,7 +334,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                       padding: MyTheme.inset,
                       color: MyTheme.warnColor,
                       child: Icon(
-                        PlatformIcons(context).delete,
+                        Icons.delete,
                         color: Colors.white,
                       ),
                     ),
@@ -376,10 +372,10 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
 
   Future<void> _addWidget() async {
     final items = _smartServiceWidgets?.values.toList() ?? [];
-    final newId = await showPlatformDialog(
+    final newId = await showAdaptiveDialog(
         context: context,
         builder: (context) {
-          return PlatformAlertDialog(
+          return AlertDialog.adaptive(
               title: const Text("Add Widget"),
               content: SizedBox(
                   width: MediaQuery.of(context).size.width,

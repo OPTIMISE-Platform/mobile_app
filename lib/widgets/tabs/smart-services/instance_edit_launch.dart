@@ -16,7 +16,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/content_variable.dart';
@@ -107,9 +106,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
 
     switch (p.type) {
       case ContentVariable.integer:
-        return PlatformTextFormField(
+        return TextFormField(
           key: ValueKey(i.toString() + sub.toString()),
-          hintText: p.label,
+          decoration: InputDecoration(hintText: p.label),
           initialValue: sub != null
               ? (subValue ?? 0).toString()
               : p.value != null && p.value is! List
@@ -147,9 +146,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           },
         );
       case ContentVariable.float:
-        return PlatformTextFormField(
+        return TextFormField(
           key: ValueKey(i.toString() + sub.toString()),
-          hintText: p.label,
+          decoration: InputDecoration(hintText: p.label),
           initialValue: sub != null
               ? (subValue ?? 0.0).toString()
               : p.value != null && p.value is! List
@@ -184,9 +183,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           },
         );
       case ContentVariable.string:
-        return PlatformTextFormField(
+        return TextFormField(
           key: ValueKey(i.toString() + sub.toString()),
-          hintText: p.label,
+          decoration: InputDecoration(hintText: p.label),
           initialValue: (sub == null ? null : subValue ?? "") ?? (p.value != null && p.value is! List ? p.value : null) ?? p.default_value ?? "",
           onChanged: (newValue) {
             final old = p.value;
@@ -202,7 +201,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
       case ContentVariable.boolean:
         return Row(children: [
           Container(padding: const EdgeInsets.only(right: MyTheme.insetSize), child: Text(p.label)),
-          PlatformSwitch(
+          Switch.adaptive(
             key: ValueKey(i.toString() + sub.toString()),
             onChanged: (bool newValue) {
               setState(() {
@@ -276,8 +275,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
             title: p.multiple && p.options == null ? Text(p.label) : _getEditWidget(i),
             subtitle: ExpandableText(p.description, 2),
             trailing: p.multiple && p.options == null
-                ? PlatformIconButton(
-                    icon: Icon(PlatformIcons(context).add),
+                ? IconButton(
+                    icon: Icon(Icons.add),
                     onPressed: () {
                       setState(() {
                         if (p.value is List) {
@@ -295,8 +294,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           configs.add(ListTile(
             dense: true,
             title: _getEditWidget(i, sub: j),
-            trailing: PlatformIconButton(
-              icon: Icon(PlatformIcons(context).delete),
+            trailing: IconButton(
+              icon: Icon(Icons.delete),
               onPressed: () {
                 setState(() {
                   (p.value as List).removeAt(j);
@@ -320,22 +319,22 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
               ? null
               : () async {
                   if (widget.instance == null) {
-                    final nameDescription = await showPlatformDialog(
+                    final nameDescription = await showAdaptiveDialog(
                         context: context,
                         builder: (_) {
                           final result = {"name": widget.release.name, "description": widget.release.description};
-                          return PlatformAlertDialog(
+                          return AlertDialog.adaptive(
                             title: const Text("Set Name and Description"),
                             content: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                PlatformTextFormField(
-                                  hintText: "Name",
+                                TextFormField(
+                                  decoration: InputDecoration(hintText: "Name"),
                                   initialValue: widget.release.name,
                                   onChanged: (newValue) => result["name"] = newValue,
                                 ),
-                                PlatformTextFormField(
-                                  hintText: "Description",
+                                TextFormField(
+                                  decoration: InputDecoration(hintText: "Description"),
                                   maxLines: 8,
                                   minLines: 8,
                                   initialValue: widget.release.description,
@@ -344,8 +343,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                               ],
                             ),
                             actions: <Widget>[
-                              PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                              PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                              TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                              TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, result)),
                             ],
                           );
                         });
@@ -379,7 +378,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
           label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: MyTheme.textColor)),
           icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: MyTheme.textColor),
         ),
-        body: PlatformScaffold(
+        body: Scaffold(
             appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),
             body: Scrollbar(
                 child: parameters == null

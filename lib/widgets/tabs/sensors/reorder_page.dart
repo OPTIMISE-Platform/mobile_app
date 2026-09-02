@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 /// Drag-and-drop reordering of [items] on a dedicated page.
 ///
@@ -31,8 +30,7 @@ Future<List<T>?> reorderItems<T>(
   String Function(T item)? subtitle,
 }) => Navigator.push<List<T>>(
   context,
-  platformPageRoute(
-    context: context,
+  MaterialPageRoute(
     builder: (_) => _ReorderPage<T>(
       title: title,
       items: items,
@@ -67,11 +65,11 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: Text(widget.title),
-        trailingActions: [
-          PlatformTextButton(
+        actions: [
+          TextButton(
             onPressed: () => Navigator.pop(context, _items),
             child: const Text('Done'),
           ),

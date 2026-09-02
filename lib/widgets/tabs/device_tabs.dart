@@ -16,11 +16,9 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -53,7 +51,7 @@ class DeviceTabs extends StatefulWidget {
   State<DeviceTabs> createState() => DeviceTabsState();
 }
 
-class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
+class DeviceTabsState extends State<DeviceTabs> {
   Timer? _searchDebounce;
   /// Position within the bottom bar's items — not a tab index. The bar's first
   /// entry is the configurable start page, so the two no longer coincide.
@@ -75,8 +73,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
 
   Stream get fabPressed => _fabPressedStream;
 
-  final _cupertinoSearchController = RestorableTextEditingController();
-  final controller = CupertinoTabController(initialIndex: 0);
   final _sidebarController =
   SidebarXController(selectedIndex: 0, extended: true);
 
@@ -169,10 +165,8 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return first.index == second.index ? [first] : [first, second];
   }
 
-  PlatformNavBar _buildBottomNavBar(BuildContext context, List<bool> disabled) {
-    final disabledColor = isCupertino(context)
-        ? Theme.of(context).disabledColor.withAlpha(32)
-        : Theme.of(context).disabledColor;
+  Widget _buildBottomNavBar(BuildContext context, List<bool> disabled) {
+    final disabledColor = Theme.of(context).disabledColor;
 
     final barNavItems = _bottomBarNavItems;
     final items = barNavItems
@@ -192,19 +186,16 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     final currentInBar =
         barNavItems.indexWhere((n) => n.index == _navigationIndex);
 
-    return PlatformNavBar(
+    return BottomNavigationBar(
       items: items,
       currentIndex: currentInBar >= 0
           ? currentInBar
           : _bottomBarIndex.clamp(0, items.length - 1),
       // The callback reports the position in the bar, which is not the tab
       // index — the start page can be any tab.
-      itemChanged: (position) {
+      onTap: (position) {
         final navItem = barNavItems[position];
-        if (disabled[navItem.index]) {
-          controller.index = _bottomBarIndex;
-          return;
-        }
+        if (disabled[navItem.index]) return;
         setState(() {
           _bottomBarIndex = position;
           _navigationIndex = navItem.index;
@@ -251,9 +242,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
   void dispose() {
     _searchDebounce?.cancel();
     _fabPressedController.close();
-    _cupertinoSearchController.dispose();
     _sidebarController.dispose();
-    controller.dispose();
     super.dispose();
   }
 
@@ -325,7 +314,7 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         final leadingAction = onBackCallback != null
             ? IconButton(
           onPressed: () => onBackCallback!(),
-          icon: Icon(PlatformIcons(context).back),
+          icon: Icon(Icons.arrow_back),
         )
             : null;
 
@@ -348,18 +337,11 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
                 ),
                 highlightColor: Colors.transparent,
               ),
-              child: PlatformScaffold(
-                material: (_, __) => MaterialScaffoldData(drawer: drawer),
+              child: Scaffold(
+                drawer: drawer,
                 appBar: appBar.getAppBar(context, actions, leadingAction),
-                body: Column(
-                  children: [
-                    _buildCupertinoSearch(context),
-                    Expanded(child: _buildTabBody()),
-                  ],
-                ),
-                cupertino: (context, _) =>
-                    CupertinoPageScaffoldData(controller: controller),
-                bottomNavBar: _buildBottomNavBar(context, disabled),
+                body: _buildTabBody(),
+                bottomNavigationBar: _buildBottomNavBar(context, disabled),
               ),
             ),
           ),
@@ -381,27 +363,24 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     final actions = <Widget>[];
 
     if (!_hideSearch) {
-      actions.add(PlatformWidget(
-        material: (context, __) => PlatformIconButton(
-          icon: Icon(PlatformIcons(context).search),
-          onPressed: () async {
-            _searchClosed = false;
-            await showSearch(
-              context: context,
-              delegate: DevicesSearchDelegate(
-                    (query) {
-                  _searchChanged(query);
-                  return const DeviceList();
-                },
-                _searchChanged,
-              ),
-            );
-            _searchClosed = true;
-            _searchDebounce?.cancel();
-            _searchChanged("");
-          },
-        ),
-        cupertino: (_, __) => const SizedBox.shrink(),
+      actions.add(IconButton(
+        icon: const Icon(Icons.search),
+        onPressed: () async {
+          _searchClosed = false;
+          await showSearch(
+            context: context,
+            delegate: DevicesSearchDelegate(
+              (query) {
+                _searchChanged(query);
+                return const DeviceList();
+              },
+              _searchChanged,
+            ),
+          );
+          _searchClosed = true;
+          _searchDebounce?.cancel();
+          _searchChanged("");
+        },
       ));
     }
 
@@ -418,23 +397,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
     return actions;
   }
 
-  Widget _buildCupertinoSearch(BuildContext context) {
-    if (_hideSearch) return const SizedBox.shrink();
-    return PlatformWidget(
-      cupertino: (_, __) => Container(
-        padding: MyTheme.inset,
-        child: CupertinoSearchTextField(
-          onChanged: _searchChanged,
-          style: TextStyle(color: MyTheme.textColor),
-          itemColor:
-          MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-          restorationId: "cupertino-device-search",
-          controller: _cupertinoSearchController.value,
-        ),
-      ),
-      material: (_, __) => const SizedBox.shrink(),
-    );
-  }
 
   Widget _buildTabBody() {
     switch (_navigationIndex) {
@@ -542,15 +504,6 @@ class DeviceTabsState extends State<DeviceTabs> with RestorationMixin {
         iconTheme: IconThemeData(color: iconColor, size: 20),
       ),
     );
-  }
-
-  @override
-  String? get restorationId => "device_list";
-
-  @override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(
-        _cupertinoSearchController, "_cupertinoSearchController");
   }
 }
 

@@ -16,7 +16,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/content_variable.dart';
@@ -68,13 +67,7 @@ class Characteristic {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: _fields,
     );
-    return SingleChildScrollView(
-        child: PlatformWidget(
-      cupertino: (_, __) => Material(
-        child: column,
-      ),
-      material: (_, __) => column,
-    ));
+    return SingleChildScrollView(child: column);
   }
 
   _walkTree(BuildContext context, String path, Characteristic characteristic, dynamic value, void Function(void Function()) setState) {
@@ -91,7 +84,7 @@ class Characteristic {
               return Column(mainAxisSize: MainAxisSize.min, children: [
                 SizedBox(
                     width: MediaQuery.of(context).size.width,
-                    child: PlatformSlider(
+                    child: Slider.adaptive(
                       onChanged: (double newValue) {
                         _insertValueIntoResult(newValue, path, setState);
                         setState(() => value = newValue);
@@ -156,7 +149,7 @@ class Characteristic {
               return Column(mainAxisSize: MainAxisSize.min, children: [
                 SizedBox(
                     width: MediaQuery.of(context).size.width,
-                    child: PlatformSlider(
+                    child: Slider.adaptive(
                       onChanged: (double newValue) {
                         _insertValueIntoResult(newValue.toInt(), path, setState);
                         setState(() => value = newValue.toInt());
@@ -251,7 +244,7 @@ class Characteristic {
           )),
           StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
-              return PlatformSwitch(
+              return Switch.adaptive(
                 onChanged: (bool newValue) {
                   _insertValueIntoResult(newValue, path, setState);
                   setState(() => value = newValue);
@@ -282,8 +275,8 @@ class Characteristic {
         if (hasStarElement) {
           _fields.add(ListTile(
               title: Text(characteristic.name),
-              trailing: PlatformIconButton(
-                icon: Icon(PlatformIcons(context).add),
+              trailing: IconButton(
+                icon: Icon(Icons.add),
                 onPressed: () {
                   final clone = characteristic.sub_characteristics![0].clone();
                   clone.name = characteristic.sub_characteristics!.length.toString();
@@ -381,11 +374,14 @@ class Characteristic {
     }
   }
 
-  PlatformTextFormField defaultTextFormField(Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator,
+  TextFormField defaultTextFormField(Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator,
       dynamic Function(String?) parse, StateSetter setState,
       [TextInputType? keyboardType]) {
-    return PlatformTextFormField(
-      hintText: characteristic.name,
+    return TextFormField(
+      decoration: InputDecoration(
+        labelText: characteristic.name,
+        suffixText: characteristic.display_unit,
+      ),
       initialValue: value?.toString(),
       keyboardType: keyboardType,
       autovalidateMode: AutovalidateMode.always,
@@ -397,15 +393,6 @@ class Characteristic {
           _logger.d("error parsing user input");
         }
       },
-      material: (_, __) => MaterialTextFormFieldData(
-        decoration: InputDecoration(
-          suffixText: characteristic.display_unit,
-          labelText: characteristic.name,
-        ),
-      ),
-      cupertino: (_, __) => CupertinoTextFormFieldData(
-        prefix: Text(characteristic.name + (characteristic.display_unit != "" ? (" (${characteristic.display_unit})") : "")),
-      ),
     );
   }
 

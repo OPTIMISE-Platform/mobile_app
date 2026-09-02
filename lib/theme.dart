@@ -51,7 +51,11 @@ class MyTheme {
   static final formatY = DateFormat.y();
   static final formatEddMMy = DateFormat('E, dd.MM.y');
 
+  // Pinned to Android on every platform: the adaptive widgets and dialogs then
+  // stay Material on iOS, which is what the app has always shipped there. The
+  // dialog contents are Material-only and would lack their ancestor otherwise.
   static ThemeData materialTheme = ThemeData(
+      platform: TargetPlatform.android,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF32b8ba)),
       primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
@@ -101,6 +105,7 @@ class MyTheme {
   );
 
   static ThemeData materialDarkTheme = ThemeData(
+    platform: TargetPlatform.android,
     primaryColor: const Color(0xFF32b8ba),
     colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFF32b8ba),
@@ -169,13 +174,14 @@ class MyTheme {
     return currentColor == dark;
   }
 
-  static TargetPlatform initialPlatform = TargetPlatform.android;
-
   static ThemeStyle currentTheme = themeMaterial;
 
   static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
 
-  static ThemeMode? themeMode = ThemeMode.light;
+  // Follows the system unless the user picked a colour: currentColor above is
+  // already derived from the platform brightness, so a fixed light default here
+  // would have the text colours and the theme disagree on a dark system.
+  static ThemeMode themeMode = ThemeMode.system;
 
   static loadTheme() async {
     final val = Settings.getThemeColor();
@@ -186,6 +192,16 @@ class MyTheme {
       themeMode = ThemeMode.light;
       currentColor = light;
     }
+  }
+
+  /// Re-reads the platform brightness into [currentColor] while no colour is
+  /// pinned. Returns whether it changed, so the caller knows to rebuild.
+  static bool followSystemBrightness() {
+    if (themeMode != ThemeMode.system) return false;
+    final next = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
+    if (next == currentColor) return false;
+    currentColor = next;
+    return true;
   }
 
   static selectThemeColor(ThemeColor? theme) async {
@@ -202,6 +218,7 @@ class MyTheme {
       default:
         await Settings.resetThemeColor();
         currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
+        themeMode = ThemeMode.system;
     }
   }
 

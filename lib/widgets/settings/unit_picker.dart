@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
@@ -52,75 +50,33 @@ class _UnitPickerListState extends State<UnitPickerList> {
         itemBuilder: (context, i) {
           final f = functions[i];
           return ListTile(
-              title: PlatformWidget(
-                  material: (_, __) => PopupMenuButton<String?>(
-                        initialValue: settings_service.Settings
-                                .getFunctionPreferredCharacteristicId(f.id) ??
-                            AppState().concepts[f.concept_id]?.base_characteristic_id,
-                        itemBuilder: (_) => (AppState().concepts[f.concept_id]?.characteristics ?? [])
-                            .map(
-                              (e) => PopupMenuItem<String?>(
-                                  value: e.id,
-                                  child: Text(e.name)),
-                            )
-                            .toList()
-                          ..add(PopupMenuItem<String?>(
-                              value: null,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [Divider(), Text("Reset")],
-                              ))),
-                        onSelected: (v) {
-                          settings_service.Settings
-                              .setFunctionPreferredCharacteristicId(f.id, v);
-                          reinit();
-                          AppState().notifyListeners();
-                          AppState().pushRefresh();
-                          setState(() {});
-                        },
-                        child: Text(f.name),
-                      ),
-                  cupertino: (_, __) => GestureDetector(
-                        onTap: () => showPlatformModalSheet(
-                            context: context,
-                            builder: (context) => CupertinoActionSheet(
-                                  actions: AppState().concepts[f.concept_id]?.characteristics
-                                      .map((e) => CupertinoActionSheetAction(
-                                            isDefaultAction: (settings_service
-                                                            .Settings
-                                                        .getFunctionPreferredCharacteristicId(
-                                                            f.id) ??
-                                                AppState().concepts[f.concept_id]?.base_characteristic_id) == e.id,
-                                            child: Text(e.name),
-                                            onPressed: () {
-                                              settings_service.Settings
-                                                  .setFunctionPreferredCharacteristicId(
-                                                      f.id, e.id);
-                                              reinit();
-                                              AppState().notifyListeners();
-                                              setState(() {});
-                                              AppState().pushRefresh();
-                                              Navigator.pop(context);
-                                            },
-                                          ))
-                                      .toList()
-                                    ?..add(CupertinoActionSheetAction(
-                                      isDestructiveAction: true,
-                                      child: const Text("Reset"),
-                                      onPressed: () {
-                                        settings_service.Settings
-                                            .setFunctionPreferredCharacteristicId(
-                                                f.id, null);
-                                        reinit();
-                                        AppState().notifyListeners();
-                                        setState(() {});
-                                        AppState().pushRefresh();
-                                        Navigator.pop(context);
-                                      },
-                                    )),
-                                )),
-                        child: Text(f.name),
-                      )));
+              title: PopupMenuButton<String?>(
+            initialValue: settings_service.Settings
+                    .getFunctionPreferredCharacteristicId(f.id) ??
+                AppState().concepts[f.concept_id]?.base_characteristic_id,
+            itemBuilder: (_) => (AppState().concepts[f.concept_id]?.characteristics ?? [])
+                .map(
+                  (e) => PopupMenuItem<String?>(
+                      value: e.id,
+                      child: Text(e.name)),
+                )
+                .toList()
+              ..add(PopupMenuItem<String?>(
+                  value: null,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [Divider(), Text("Reset")],
+                  ))),
+            onSelected: (v) {
+              settings_service.Settings
+                  .setFunctionPreferredCharacteristicId(f.id, v);
+              reinit();
+              AppState().notifyListeners();
+              AppState().pushRefresh();
+              setState(() {});
+            },
+            child: Text(f.name),
+          ));
         });
     final column = SizedBox(
         width: double.maxFinite,
@@ -139,12 +95,7 @@ class _UnitPickerListState extends State<UnitPickerList> {
               )),
           Expanded(child: Scrollbar(child: list))
         ]));
-    return PlatformWidget(
-      cupertino: (_, __) => Material(
-        child: column,
-      ),
-      material: (_, __) => column,
-    );
+    return column;
   }
 }
 
@@ -154,9 +105,9 @@ StatefulBuilder Function(BuildContext context)
     var currentDisplayedFractionDigitsSetting =
         settings_service.Settings.getDisplayedFractionDigits();
     return StatefulBuilder(
-      builder: (context, setState) => PlatformAlertDialog(
+      builder: (context, setState) => AlertDialog.adaptive(
           actions: [
-            PlatformDialogAction(
+            TextButton(
                 child: const Text("OK"),
                 onPressed: () => Navigator.pop(context)),
           ],

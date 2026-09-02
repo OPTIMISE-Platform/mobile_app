@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 /// Asks the user to tick any number of [options].
 ///
@@ -27,7 +26,7 @@ Future<List<String>?> showMultiSelectDialog(
   required List<String> options,
   required List<String> selected,
 }) =>
-    showPlatformDialog<List<String>>(
+    showAdaptiveDialog<List<String>>(
       context: context,
       builder: (_) =>
           _MultiSelectDialog(title: title, options: options, selected: selected),
@@ -56,7 +55,7 @@ class _MultiSelectDialogState extends State<_MultiSelectDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformAlertDialog(
+    return AlertDialog.adaptive(
       title: Text(widget.title),
       content: SizedBox(
         width: double.maxFinite,
@@ -74,12 +73,12 @@ class _MultiSelectDialogState extends State<_MultiSelectDialog> {
         ),
       ),
       actions: [
-        PlatformDialogAction(
-          child: PlatformText("Cancel"),
+        TextButton(
+          child: Text("Cancel"),
           onPressed: () => Navigator.pop(context),
         ),
-        PlatformDialogAction(
-          child: PlatformText("OK"),
+        TextButton(
+          child: Text("OK"),
           onPressed: () => Navigator.pop(context, _current),
         ),
       ],

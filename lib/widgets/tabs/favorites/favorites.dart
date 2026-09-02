@@ -16,7 +16,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
@@ -120,8 +119,8 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: constraint.maxHeight),
               child: Center(
-                child: PlatformElevatedButton(
-                  widgetKey: _keyFavButton,
+                child: ElevatedButton(
+                  key: _keyFavButton,
                   child: const Text("Add Favorites"),
                   onPressed: () => _openDeviceListView(context),
                 ),

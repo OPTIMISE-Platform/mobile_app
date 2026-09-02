@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/restart_controller.dart';
@@ -41,9 +40,9 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
     ListTile(
       title: const Text("Start Page"),
       subtitle: Text(_initialTabName()),
-      onTap: () => showPlatformDialog(
+      onTap: () => showAdaptiveDialog(
         context: context,
-        builder: (dialogContext) => PlatformAlertDialog(
+        builder: (dialogContext) => AlertDialog.adaptive(
           title: const Text("Start Page"),
           content: SizedBox(
             width: double.maxFinite,
@@ -74,7 +73,7 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
             ),
           ),
           actions: [
-            PlatformDialogAction(
+            TextButton(
                 child: const Text("Cancel"),
                 onPressed: () => Navigator.pop(dialogContext)),
           ],
@@ -84,7 +83,7 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
     const Divider(),
     ListTile(
         title: const Text("Set Displayed Fraction Digits"),
-        onTap: () => showPlatformDialog(
+        onTap: () => showAdaptiveDialog(
               context: context,
               builder: getDisplayedFractionsDigitSelectDialog(state),
             )),
@@ -92,9 +91,9 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
     ListTile(
         title: const Text("Edit Units"),
         onTap: () {
-          showPlatformDialog(
+          showAdaptiveDialog(
             context: context,
-            builder: (context) => PlatformAlertDialog(
+            builder: (context) => AlertDialog.adaptive(
               title: Row(children: [
                 const Text("Edit Units"),
                 const Spacer(),
@@ -111,7 +110,7 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
               ]),
               content: const UnitPickerList(),
               actions: [
-                PlatformDialogAction(
+                TextButton(
                     child: const Text("Close"),
                     onPressed: () => Navigator.pop(context)),
               ],
@@ -127,33 +126,33 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
       const Divider(),
       ListTile(
         title: const Text("Choose Color"),
-        onTap: () => showPlatformDialog(
+        onTap: () => showAdaptiveDialog(
             context: context,
-            builder: (context) => PlatformAlertDialog(
+            builder: (context) => AlertDialog.adaptive(
                   title: const Text("Choose Color"),
                   actions: [
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
+                    TextButton(
+                      child: Text('Cancel'),
                       onPressed: () => Navigator.pop(context, false),
                     ),
-                    PlatformDialogAction(
-                        child: PlatformText('System Default'),
+                    TextButton(
+                        child: Text('System Default'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(null);
                           RestartController.restart();
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         }),
-                    PlatformDialogAction(
-                        child: PlatformText('Dark'),
+                    TextButton(
+                        child: Text('Dark'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(dark);
                           RestartController.restart();
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         }),
-                    PlatformDialogAction(
-                        child: PlatformText('Light'),
+                    TextButton(
+                        child: Text('Light'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(light);
                           RestartController.restart();

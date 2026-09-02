@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
@@ -45,23 +44,22 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
 
     if (widget.instance.error != null) {
       trailingHeader.add(Tooltip(
-          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
     }
 
-    trailingHeader.add(PlatformIconButton(
+    trailingHeader.add(IconButton(
       onPressed: () async {
-        final deleted = await showPlatformDialog(
+        final deleted = await showAdaptiveDialog(
             context: context,
-            builder: (dialogContext) => PlatformAlertDialog(
+            builder: (dialogContext) => AlertDialog.adaptive(
                   title: const Text("Do you want to permanently delete this service?"),
                   actions: [
-                    PlatformDialogAction(
-                      child: PlatformText('Cancel'),
+                    TextButton(
+                      child: Text('Cancel'),
                       onPressed: () => Navigator.pop(dialogContext),
                     ),
-                    PlatformDialogAction(
-                        child: PlatformText('Delete'),
-                        cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                    TextButton(
+                        child: Text('Delete'),
                         onPressed: () async {
                           final f = SmartServiceService.deleteInstance(widget.instance.id);
                           f.catchError(
@@ -77,8 +75,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           Navigator.pop(this.context);
         }
       },
-      icon: Icon(PlatformIcons(context).delete),
-      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+      icon: Icon(Icons.delete),
     ));
 
     return Scaffold(
@@ -95,8 +92,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
               if (!mounted) return;
               await Navigator.push(
                   this.context,
-                  platformPageRoute(
-                    context: this.context,
+                  MaterialPageRoute(
                     builder: (_) => SmartServicesReleaseLaunch(
                       release,
                       instance: widget.instance,
@@ -112,28 +108,28 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           backgroundColor: MyTheme.appColor,
           child: Icon(Icons.edit, color: MyTheme.textColor),
         ),
-        body: PlatformScaffold(
+        body: Scaffold(
             appBar: appBar.getAppBar(
                 context,
                 [
-                  PlatformIconButton(
+                  IconButton(
                     onPressed: () async {
-                      final nameDescription = await showPlatformDialog(
+                      final nameDescription = await showAdaptiveDialog(
                           context: context,
                           builder: (_) {
                             final result = {"name": widget.instance.name, "description": widget.instance.description};
-                            return PlatformAlertDialog(
+                            return AlertDialog.adaptive(
                               title: const Text("Set Name and Description"),
                               content: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  PlatformTextFormField(
-                                    hintText: "Name",
+                                  TextFormField(
+                                    decoration: InputDecoration(hintText: "Name"),
                                     initialValue: widget.instance.name,
                                     onChanged: (newValue) => result["name"] = newValue,
                                   ),
-                                  PlatformTextFormField(
-                                    hintText: "Description",
+                                  TextFormField(
+                                    decoration: InputDecoration(hintText: "Description"),
                                     maxLines: 8,
                                     minLines: 8,
                                     initialValue: widget.instance.description,
@@ -142,8 +138,8 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                                 ],
                               ),
                               actions: <Widget>[
-                                PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                                PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, result)),
+                                TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                                TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, result)),
                               ],
                             );
                           });
@@ -155,8 +151,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                       widget.instance.description = updated.description;
                       setState(() {});
                     },
-                    icon: Icon(PlatformIcons(context).edit),
-                    cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                    icon: Icon(Icons.edit),
                   )
                 ]..addAll(MyAppBar.getDefaultActions(context))),
             body: Scrollbar(

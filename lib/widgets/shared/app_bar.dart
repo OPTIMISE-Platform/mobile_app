@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart' as SettingsService;
 import 'package:mobile_app/widgets/settings/settings.dart';
@@ -39,7 +38,7 @@ class MyAppBar {
         return state.notifications.where((element) => !element.isRead).length;
       },
       builder: (_, unread, __) {
-        return PlatformIconButton(
+        return IconButton(
           icon: Badge(
             isLabelVisible: unread > 0,
             label: Text(unread.toString()),
@@ -49,16 +48,13 @@ class MyAppBar {
           onPressed: () {
             Navigator.push(
               context,
-              platformPageRoute(
-                context: context,
+              MaterialPageRoute(
                 settings: const RouteSettings(
                     name: NotificationList.preferredRouteName),
                 builder: (context) => const NotificationList(),
               ),
             );
           },
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
         );
       },
     );
@@ -106,18 +102,16 @@ class MyAppBar {
   }
 
   static Widget settings(BuildContext context) {
-    return PlatformIconButton(
-      icon: Icon(PlatformIcons(context).settings),
+    return IconButton(
+      icon: Icon(Icons.settings),
       onPressed: () {
         Navigator.push(
           context,
-          platformPageRoute(
-            context: context,
+          MaterialPageRoute(
             builder: (context) => Settings(),
           ),
         );
       },
-      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
     );
   }
 
@@ -130,27 +124,13 @@ class MyAppBar {
     return actions;
   }
 
-  PlatformAppBar getAppBar(BuildContext context,
-      [List<Widget>? trailingActions, Widget? leading]) {
-    return PlatformAppBar(
-      title: PlatformWidget(
-          material: (_, __) => Text(_title, overflow: TextOverflow.fade),
-          cupertino: (_, __) => Text(
-              _title +
-                  (SettingsService.Settings.getLocalMode() ? " (Offline)" : ""),
-              style: const TextStyle(color: Colors.white),
-              overflow: TextOverflow.fade)),
-      cupertino: (_, __) => CupertinoNavigationBarData(
-        // Issue with cupertino where a bar with no transparency
-        // will push the list down. Adding some alpha value fixes it (in a hacky way)
-        backgroundColor: Colors.black,
-      ),
-      material: (_, __) => MaterialAppBarData(
-        bottom: _localMode(context),
-      ),
-      trailingActions: [
-        ...trailingActions ?? [],
-      ],
+  AppBar getAppBar(BuildContext context,
+      [List<Widget>? actions, Widget? leading]) {
+    return AppBar(
+      title: Text(_title, overflow: TextOverflow.fade),
+      // Local mode is shown as a bar under the title (see _localMode).
+      bottom: _localMode(context),
+      actions: actions,
       leading: leading,
     );
   }

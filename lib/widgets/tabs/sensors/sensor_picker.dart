@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -43,8 +42,7 @@ Future<List<SensorPin>?> pickSensors(
   Iterable<SensorPin> existing = const [],
 }) => Navigator.push<List<SensorPin>>(
   context,
-  platformPageRoute(
-    context: context,
+  MaterialPageRoute(
     builder: (_) => _TargetPicker(existing: existing.toSet()),
   ),
 );
@@ -201,10 +199,10 @@ class _TargetPickerState extends State<_TargetPicker> {
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) _confirmDiscard();
       },
-      child: PlatformScaffold(
-        appBar: PlatformAppBar(
+      child: Scaffold(
+        appBar: AppBar(
           title: const Text('Choose Device or Group'),
-          trailingActions: [
+          actions: [
             _buildDoneAction(
               context,
               _selection,
@@ -229,9 +227,9 @@ class _TargetPickerState extends State<_TargetPicker> {
             if (!_showGroups)
               Padding(
                 padding: MyTheme.inset,
-                child: PlatformTextFormField(
+                child: TextFormField(
                   controller: _searchController,
-                  hintText: 'Search devices',
+                  decoration: InputDecoration(hintText: 'Search devices'),
                   onChanged: _onQueryChanged,
                 ),
               ),
@@ -243,18 +241,18 @@ class _TargetPickerState extends State<_TargetPicker> {
   }
 
   Future<void> _confirmDiscard() async {
-    final discard = await showPlatformDialog<bool>(
+    final discard = await showAdaptiveDialog<bool>(
       context: context,
-      builder: (_) => PlatformAlertDialog(
+      builder: (_) => AlertDialog.adaptive(
         title: const Text('Discard selection'),
         content: Text('Discard the ${_selection.count} value(s) you selected?'),
         actions: [
-          PlatformDialogAction(
-            child: PlatformText('Keep choosing'),
+          TextButton(
+            child: Text('Keep choosing'),
             onPressed: () => Navigator.pop(context, false),
           ),
-          PlatformDialogAction(
-            child: PlatformText('Discard'),
+          TextButton(
+            child: Text('Discard'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -329,8 +327,7 @@ class _TargetPickerState extends State<_TargetPicker> {
   Future<void> _openValuePicker(_PickTarget target) async {
     final done = await Navigator.push<bool>(
       context,
-      platformPageRoute(
-        context: context,
+      MaterialPageRoute(
         builder: (_) => _ValuePicker(target, _selection),
       ),
     );
@@ -446,10 +443,10 @@ class _ValuePickerState extends State<_ValuePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return PlatformScaffold(
-      appBar: PlatformAppBar(
+    return Scaffold(
+      appBar: AppBar(
         title: Text(widget.target.title),
-        trailingActions: [
+        actions: [
           _buildDoneAction(
             context,
             widget.selection,

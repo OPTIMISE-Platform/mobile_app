@@ -18,7 +18,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -78,19 +77,15 @@ class _DeviceListItemState extends State<DeviceListItem> {
                           message: "Status unknown",
                           triggerMode: TooltipTriggerMode.tap,
                           child: Icon(
-                            PlatformIcons(context).remove,
+                            Icons.remove,
                           )))
-                  : PlatformIconButton(
-                      cupertino: (_, __) =>
-                          CupertinoIconButtonData(padding: EdgeInsets.zero),
-                      material: (_, __) => MaterialIconButtonData(
-                          splashRadius: 25,
-                          tooltip: AppState()
-                              .platformFunctions[functionConfigs[
-                                      dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
-                                  ?.getRelatedControllingFunction(
-                                      element.value)]
-                              ?.display_name),
+                  : IconButton(
+                      splashRadius: 25,
+                      tooltip: AppState()
+                          .platformFunctions[functionConfigs[
+                                  dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
+                              ?.getRelatedControllingFunction(element.value)]
+                          ?.display_name,
                       icon: functionConfigs[
                                   dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                               ?.displayValue(element.value, context) ??
@@ -198,17 +193,15 @@ class _DeviceListItemState extends State<DeviceListItem> {
                 onPressed: null,
                 icon: Icon(
                     connectionStatus == DeviceConnectionStatus.offline
-                        ? PlatformIcons(context).error
+                        ? Icons.error
                         : Icons.lan_outlined,
                     color: MyTheme.warnColor))
             : trailingWidgets.isEmpty
                 ? null
                 : trailingWidgets.length == 1
                     ? trailingWidgets[0]
-                    : PlatformIconButton(
-                        material: (_, __) => MaterialIconButtonData(
-                              splashRadius: 25,
-                            ),
+                    : IconButton(
+                        splashRadius: 25,
                         icon: Icon(
                             _expanded ? Icons.expand_less : Icons.expand_more),
                         onPressed: () => setState(() => _expanded = !_expanded)),
@@ -238,8 +231,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
   _onTap(BuildContext context) {
     final future = Navigator.push(
         context,
-        platformPageRoute(
-          context: context,
+        MaterialPageRoute(
           builder: (context) {
             final target = DetailPage(widget._device, null);
             return target;

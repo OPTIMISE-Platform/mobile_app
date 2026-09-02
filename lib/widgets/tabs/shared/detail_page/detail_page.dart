@@ -20,7 +20,6 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/config/functions/get_timestamp.dart';
@@ -191,22 +190,22 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       List<Widget> appBarActions = [];
 
       if (device != null && DevicesService.isSaveAvailable()) {
-        appBarActions.add(PlatformIconButton(
+        appBarActions.add(IconButton(
           onPressed: () async {
             final oldName = device.displayName;
-            final newName = await showPlatformDialog(
+            final newName = await showAdaptiveDialog(
                 context: context,
                 builder: (_) {
                   final controller = TextEditingController(text: device.displayName);
-                  return PlatformAlertDialog(
+                  return AlertDialog.adaptive(
                     title: Text(
                       "Rename ${device.displayName}",
                       overflow: TextOverflow.ellipsis,
                     ),
-                    content: PlatformTextFormField(controller: controller),
+                    content: TextFormField(controller: controller),
                     actions: <Widget>[
-                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                      TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                      TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
                     ],
                   );
                 });
@@ -220,26 +219,25 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               device.setNickname(oldName);
             }
           },
-          icon: Icon(PlatformIcons(context).edit),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Icon(Icons.edit),
         ));
       } else if (deviceGroup != null && DeviceGroupsService.isCreateEditDeleteAvailable()) {
-        appBarActions.add(PlatformIconButton(
+        appBarActions.add(IconButton(
           onPressed: () async {
             final oldName = deviceGroup.name;
-            final newName = await showPlatformDialog(
+            final newName = await showAdaptiveDialog(
                 context: context,
                 builder: (_) {
                   final controller = TextEditingController(text: deviceGroup.name);
-                  return PlatformAlertDialog(
+                  return AlertDialog.adaptive(
                     title: Text(
                       "Rename ${deviceGroup.name}",
                       overflow: TextOverflow.ellipsis,
                     ),
-                    content: PlatformTextFormField(controller: controller),
+                    content: TextFormField(controller: controller),
                     actions: <Widget>[
-                      PlatformDialogAction(child: PlatformText('Cancel'), onPressed: () => Navigator.pop(context)),
-                      PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
+                      TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context)),
+                      TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context, controller.value.text)),
                     ],
                   );
                 });
@@ -253,23 +251,21 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               deviceGroup.name = oldName;
             }
           },
-          icon: Icon(PlatformIcons(context).edit),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Icon(Icons.edit),
         ));
-        appBarActions.add(PlatformIconButton(
+        appBarActions.add(IconButton(
           onPressed: () async {
-            final deleted = await showPlatformDialog(
+            final deleted = await showAdaptiveDialog(
                 context: context,
-                builder: (context) => PlatformAlertDialog(
+                builder: (context) => AlertDialog.adaptive(
                       title: Text("Do you want to permanently delete group '${deviceGroup.name}'?"),
                       actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
+                        TextButton(
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        PlatformDialogAction(
-                            child: PlatformText('Delete'),
-                            cupertino: (_, __) => CupertinoDialogActionData(isDestructiveAction: true),
+                        TextButton(
+                            child: Text('Delete'),
                             onPressed: () async {
                               await DeviceGroupsService.deleteDeviceGroup(deviceGroup.id);
                               state.deviceGroups.remove(deviceGroup);
@@ -285,8 +281,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               state.notifyListeners();
             }
           },
-          icon: Icon(PlatformIcons(context).delete),
-          cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Icon(Icons.delete),
         ));
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
@@ -327,8 +322,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     ? null
                     : () => Navigator.push(
                         context,
-                        platformPageRoute(
-                          context: context,
+                        MaterialPageRoute(
                           builder: (context) => Chart(element),
                         )),
                 title: Text(_getTitle(element)),
@@ -352,8 +346,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     ? null
                     : () => Navigator.push(
                         context,
-                        platformPageRoute(
-                          context: context,
+                        MaterialPageRoute(
                           builder: (context) => Chart(element),
                         )),
                 title: Text(_getTitle(element)),
@@ -364,8 +357,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                         padding: const EdgeInsets.only(right: 12),
                         child: DelayedCircularProgressIndicator())
                     : functionConfig.displayValue(element.value, context) != null
-                        ? PlatformIconButton(
-                            cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
+                        ? IconButton(
                             icon: functionConfig.displayValue(element.value, context)!,
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
@@ -376,7 +368,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                                       states,
                                     ),
                           )
-                        : PlatformTextButton(
+                        : TextButton(
                             onPressed: connectionStatus == DeviceConnectionStatus.offline
                                 ? null
                                 : () => _performAction(
@@ -405,16 +397,14 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                 ? null
                 : () => Navigator.push(
                     context,
-                    platformPageRoute(
-                      context: context,
+                    MaterialPageRoute(
                       builder: (context) => Chart(element),
                     )),
             subtitle: subtitle.isEmpty ? null : Text(subtitle),
             trailing: element.transitioning
                 ? Container(padding: const EdgeInsets.only(right: 12), child: DelayedCircularProgressIndicator())
-                : PlatformIconButton(
-                    cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-                    material: (_, __) => MaterialIconButtonData(splashRadius: 25),
+                : IconButton(
+                    splashRadius: 25,
                     icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
                     onPressed: connectionStatus == DeviceConnectionStatus.offline
                         ? null
@@ -464,7 +454,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
       if (connectionStatus == DeviceConnectionStatus.offline) {
         trailingHeader.add(Tooltip(
-            message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(PlatformIcons(context).error, color: MyTheme.warnColor)));
+            message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
       }
       if (device != null) {
         if (device.network?.localService != null) {
@@ -483,7 +473,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               ? null
               : FloatingActionButton(
                   onPressed: () async {
-                    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => GroupEditDevices(widget._group!)));
+                    await Navigator.push(context, MaterialPageRoute(builder: (context) => GroupEditDevices(widget._group!)));
                     await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), true);
                     deviceGroup.prepareStates(true);
                     if (!context.mounted) return;
@@ -492,7 +482,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   backgroundColor: MyTheme.appColor,
                   child: Icon(Icons.list, color: MyTheme.textColor),
                 ),
-          body: PlatformScaffold(
+          body: Scaffold(
             appBar: appBar.getAppBar(context, appBarActions),
             body: RefreshIndicator(
               onRefresh: () async {

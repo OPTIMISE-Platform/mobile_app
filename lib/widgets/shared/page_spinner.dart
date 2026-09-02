@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
@@ -30,7 +29,7 @@ class PageSpinner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appBar = MyAppBar(_title);
-    return PlatformScaffold(
+    return Scaffold(
       //backgroundColor: MyTheme.appColor,
       appBar: appBar.getAppBar(context),
       body: const Center(

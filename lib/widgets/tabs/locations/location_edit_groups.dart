@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:provider/provider.dart';
@@ -68,7 +67,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
             label: Text("Save", style: TextStyle(color: MyTheme.textColor)),
             icon: Icon(Icons.save, color: MyTheme.textColor),
           ),
-          body: PlatformScaffold(
+          body: Scaffold(
               appBar: MyAppBar(location.name).getAppBar(context, MyAppBar.getDefaultActions(context)),
               body: state.loadingDeviceGroups()
                   ? Center(
@@ -84,7 +83,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                       ListTile(
                         leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Icon(
-                            _selected.contains(state.deviceGroups[i].id) ? PlatformIcons(context).checkMarkCircledSolid : Icons.circle_outlined,
+                            _selected.contains(state.deviceGroups[i].id) ? Icons.check_circle : Icons.circle_outlined,
                             color: MyTheme.appColor,
                           )
                         ]),

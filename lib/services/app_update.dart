@@ -22,7 +22,6 @@ import 'package:dio_cache_interceptor/dio_cache_interceptor.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -196,9 +195,9 @@ class AppUpdater {
   }
 
   static showUpdateDialog(BuildContext context) async {
-    final proceed = await showPlatformDialog(
+    final proceed = await showAdaptiveDialog(
         context: context,
-        builder: (context) => PlatformAlertDialog(
+        builder: (context) => AlertDialog.adaptive(
               title: const Text("Update now?"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -213,12 +212,12 @@ class AppUpdater {
                 ],
               ),
               actions: [
-                PlatformDialogAction(
-                  child: PlatformText('Cancel'),
+                TextButton(
+                  child: Text('Cancel'),
                   onPressed: () => Navigator.pop(context, false),
                 ),
-                PlatformDialogAction(
-                    child: PlatformText('OK'),
+                TextButton(
+                    child: Text('OK'),
                     onPressed: () => Navigator.pop(context, true))
               ],
             ));
@@ -228,9 +227,9 @@ class AppUpdater {
     final stream = (await downloadUpdate()).asBroadcastStream();
     stream.listen(null, onDone: () => OpenFilex.open(localFile));
     if (!context.mounted) return;
-    await showPlatformDialog(
+    await showAdaptiveDialog(
       context: context,
-      builder: (context) => PlatformAlertDialog(
+      builder: (context) => AlertDialog.adaptive(
         title: const Text("Update"),
         content: StreamBuilder<double>(
             stream: stream,
@@ -245,11 +244,11 @@ class AppUpdater {
           StreamBuilder<double>(
               stream: stream,
               initialData: 0,
-              builder: (context, snapshot) => PlatformDialogAction(
+              builder: (context, snapshot) => TextButton(
                   onPressed: snapshot.data == 100
                       ? () => OpenFilex.open(localFile)
                       : null,
-                  child: PlatformText(
+                  child: Text(
                       snapshot.data == 100 ? 'Install' : 'Downloading...')))
         ],
       ),

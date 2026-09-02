@@ -16,9 +16,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/locations.dart';
@@ -42,7 +40,7 @@ class LocationEditDevices extends StatefulWidget {
   State<StatefulWidget> createState() => _LocationEditDevicesState();
 }
 
-class _LocationEditDevicesState extends State<LocationEditDevices> with RestorationMixin {
+class _LocationEditDevicesState extends State<LocationEditDevices> {
   final Set<String> _selected = {};
   bool _initialized = false;
   Timer? _searchDebounce;
@@ -50,8 +48,6 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
   bool _delegateOpen = false;
 
   DeviceSearchFilter filter = DeviceSearchFilter("");
-
-  final _cupertinoSearchController = RestorableTextEditingController();
 
   _searchChanged(String search) {
     if (filter.query == search) {
@@ -85,7 +81,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
               ListTile(
                 leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(
-                    _selected.contains(AppState().devices[i].id) ? PlatformIcons(context).checkMarkCircledSolid : Icons.circle_outlined,
+                    _selected.contains(AppState().devices[i].id) ? Icons.check_circle : Icons.circle_outlined,
                     color: MyTheme.appColor,
                   )
                 ]),
@@ -147,60 +143,35 @@ class _LocationEditDevicesState extends State<LocationEditDevices> with Restorat
       }
 
       return Scaffold(
-          body: PlatformScaffold(
+          body: Scaffold(
         appBar: MyAppBar(location.name).getAppBar(context, [
-          PlatformWidget(
-            material: (context, __) => PlatformIconButton(
-                icon: Icon(PlatformIcons(context).search),
-                onPressed: () async {
-                  _searchClosed = false;
-                  _delegateOpen = true;
-                  final willCloseThis = await showSearch(
-                      context: context,
-                      delegate: DevicesSearchDelegate(
-                        (query) {
-                          _searchChanged(query);
-                          return _buildListWidget();
-                        },
-                        (q) => _searchChanged(q),
-                      ));
-                  _searchClosed = true;
-                  _delegateOpen = false;
-                  _searchDebounce?.cancel();
-                  if (willCloseThis != true) _searchChanged("");
-                }),
-            cupertino: (_, __) => const SizedBox.shrink(),
-          ),
+          IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () async {
+                _searchClosed = false;
+                _delegateOpen = true;
+                final willCloseThis = await showSearch(
+                    context: context,
+                    delegate: DevicesSearchDelegate(
+                      (query) {
+                        _searchChanged(query);
+                        return _buildListWidget();
+                      },
+                      (q) => _searchChanged(q),
+                    ));
+                _searchClosed = true;
+                _delegateOpen = false;
+                _searchDebounce?.cancel();
+                if (willCloseThis != true) _searchChanged("");
+              }),
           ...MyAppBar.getDefaultActions(context)
         ]),
         body: state.devices.isEmpty && state.loadingDevices
             ? const Center(
                 child: DelayedCircularProgressIndicator(),
               )
-            : Column(children: [
-                PlatformWidget(
-                  cupertino: (_, __) => Container(
-                    padding: MyTheme.inset,
-                    child: CupertinoSearchTextField(
-                      onChanged: (query) => _searchChanged(query),
-                      style: TextStyle(color: MyTheme.textColor),
-                      itemColor: MyTheme.textColor ?? CupertinoColors.secondaryLabel,
-                      restorationId: "cupertino-device-search",
-                      controller: _cupertinoSearchController.value,
-                    ),
-                  ),
-                ),
-                Expanded(child: _buildListWidget())
-              ]),
+            : _buildListWidget(),
       ));
     });
-  }
-
-  @override
-  String? get restorationId => "LocationEditDevices";
-
-  @override
-  void restoreState(RestorationBucket? oldBucket, bool initialRestore) {
-    registerForRestoration(_cupertinoSearchController, "_cupertinoSearchController");
   }
 }

@@ -20,7 +20,6 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
@@ -52,14 +51,14 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
             }
           }
           if (!context.mounted) return;
-          showPlatformDialog(
+          showAdaptiveDialog(
             context: context,
-            builder: (context) => PlatformAlertDialog(
+            builder: (context) => AlertDialog.adaptive(
               title: Row(children: [
                 const Text("Debug"),
                 const Spacer(),
-                PlatformIconButton(
-                    icon: Icon(PlatformIcons(context).share),
+                IconButton(
+                    icon: Icon(Icons.share),
                     onPressed: () => Share.share(
                         "OPTIMISE Debug Information\n$txt",
                         subject: "OPTIMISE Debug Information"))
@@ -71,7 +70,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                 textAlign: TextAlign.left,
               ))),
               actions: [
-                PlatformDialogAction(
+                TextButton(
                     child: const Text("Clear Log"),
                     onPressed: () async {
                       if (isar != null) {
@@ -83,7 +82,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                       if (!context.mounted) return;
                       Navigator.pop(context);
                     }),
-                PlatformDialogAction(
+                TextButton(
                     child: const Text("Close"),
                     onPressed: () => Navigator.pop(context)),
               ],
@@ -118,30 +117,30 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
             settings_service.Settings.getKeycloakRedirect();
         String? apiUrl = settings_service.Settings.getApiUrl();
 
-        await showPlatformDialog(
+        await showAdaptiveDialog(
           context: context,
-          builder: (context) => PlatformAlertDialog(
+          builder: (context) => AlertDialog.adaptive(
             title: const Text("Edit Server Settings"),
             content: Column(
               children: [
-                PlatformTextFormField(
-                    hintText: "Keycloak Url",
+                TextFormField(
+                    decoration: InputDecoration(hintText: "Keycloak Url"),
                     initialValue: keycloakUrl,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,
                     onChanged: (value) {
                       keycloakUrl = value;
                     }),
-                PlatformTextFormField(
-                    hintText: "Keycloak Redirect",
+                TextFormField(
+                    decoration: InputDecoration(hintText: "Keycloak Redirect"),
                     initialValue: keycloakRedirect,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,
                     onChanged: (value) {
                       keycloakRedirect = value;
                     }),
-                PlatformTextFormField(
-                    hintText: "Api Url",
+                TextFormField(
+                    decoration: InputDecoration(hintText: "Api Url"),
                     initialValue: apiUrl,
                     keyboardType: TextInputType.url,
                     autovalidateMode: AutovalidateMode.always,
@@ -151,7 +150,7 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
               ],
             ),
             actions: [
-              PlatformDialogAction(
+              TextButton(
                   child: const Text("Reset"),
                   onPressed: () async {
                     await settings_service.Settings.setKeycloakUrl(null);
@@ -162,10 +161,10 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                     if (!context.mounted) return;
                     Navigator.pop(context);
                   }),
-              PlatformDialogAction(
+              TextButton(
                   child: const Text("Close"),
                   onPressed: () => Navigator.pop(context)),
-              PlatformDialogAction(
+              TextButton(
                   child: const Text("Save"),
                   onPressed: () async {
                     await settings_service.Settings.setKeycloakUrl(keycloakUrl);

@@ -17,9 +17,7 @@
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -303,9 +301,9 @@ class _SensorValuesState extends State<SensorValues>
 
   Future<void> _deleteTab(int index) async {
     final tab = _tabs[index];
-    final confirmed = await showPlatformDialog<bool>(
+    final confirmed = await showAdaptiveDialog<bool>(
       context: context,
-      builder: (_) => PlatformAlertDialog(
+      builder: (_) => AlertDialog.adaptive(
         title: const Text('Delete tab'),
         content: Text(
           tab.pins.isEmpty
@@ -313,12 +311,12 @@ class _SensorValuesState extends State<SensorValues>
               : 'Delete "${tab.name}" and its ${tab.pins.length} value(s)?',
         ),
         actions: [
-          PlatformDialogAction(
-            child: PlatformText('Cancel'),
+          TextButton(
+            child: Text('Cancel'),
             onPressed: () => Navigator.pop(context, false),
           ),
-          PlatformDialogAction(
-            child: PlatformText('Delete'),
+          TextButton(
+            child: Text('Delete'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -332,59 +330,32 @@ class _SensorValuesState extends State<SensorValues>
 
   Future<void> _showTabMenu(int index) async {
     HapticFeedbackProxy.lightImpact();
-    final action = await showPlatformModalSheet<String>(
+    final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => PlatformWidget(
-        material: (_, __) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Rename / change icon'),
-                onTap: () => Navigator.pop(context, 'edit'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.swap_vert),
-                title: const Text('Reorder values'),
-                onTap: () => Navigator.pop(context, 'reorderValues'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.reorder),
-                title: const Text('Reorder tabs'),
-                onTap: () => Navigator.pop(context, 'reorderTabs'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Delete tab'),
-                onTap: () => Navigator.pop(context, 'delete'),
-              ),
-            ],
-          ),
-        ),
-        cupertino: (_, __) => CupertinoActionSheet(
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(context, 'edit'),
-              child: const Text('Rename / change icon'),
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Rename / change icon'),
+              onTap: () => Navigator.pop(context, 'edit'),
             ),
-            CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(context, 'reorderValues'),
-              child: const Text('Reorder values'),
+            ListTile(
+              leading: const Icon(Icons.swap_vert),
+              title: const Text('Reorder values'),
+              onTap: () => Navigator.pop(context, 'reorderValues'),
             ),
-            CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(context, 'reorderTabs'),
-              child: const Text('Reorder tabs'),
+            ListTile(
+              leading: const Icon(Icons.reorder),
+              title: const Text('Reorder tabs'),
+              onTap: () => Navigator.pop(context, 'reorderTabs'),
             ),
-            CupertinoActionSheetAction(
-              isDestructiveAction: true,
-              onPressed: () => Navigator.pop(context, 'delete'),
-              child: const Text('Delete tab'),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text('Delete tab'),
+              onTap: () => Navigator.pop(context, 'delete'),
             ),
           ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
         ),
       ),
     );
@@ -491,18 +462,18 @@ class _SensorValuesState extends State<SensorValues>
   }
 
   Future<void> _removePin(SensorPin pin, String label) async {
-    final confirmed = await showPlatformDialog<bool>(
+    final confirmed = await showAdaptiveDialog<bool>(
       context: context,
-      builder: (_) => PlatformAlertDialog(
+      builder: (_) => AlertDialog.adaptive(
         title: const Text('Remove value'),
         content: Text('Remove "$label" from this tab?'),
         actions: [
-          PlatformDialogAction(
-            child: PlatformText('Cancel'),
+          TextButton(
+            child: Text('Cancel'),
             onPressed: () => Navigator.pop(context, false),
           ),
-          PlatformDialogAction(
-            child: PlatformText('Remove'),
+          TextButton(
+            child: Text('Remove'),
             onPressed: () => Navigator.pop(context, true),
           ),
         ],
@@ -514,41 +485,22 @@ class _SensorValuesState extends State<SensorValues>
 
   Future<void> _showPinMenu(SensorPin pin, String label) async {
     HapticFeedbackProxy.lightImpact();
-    final action = await showPlatformModalSheet<String>(
+    final action = await showModalBottomSheet<String>(
       context: context,
-      builder: (_) => PlatformWidget(
-        material: (_, __) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.edit),
-                title: const Text('Edit title / subtitle / icon'),
-                onTap: () => Navigator.pop(context, 'edit'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Remove value'),
-                onTap: () => Navigator.pop(context, 'remove'),
-              ),
-            ],
-          ),
-        ),
-        cupertino: (_, __) => CupertinoActionSheet(
-          actions: [
-            CupertinoActionSheetAction(
-              onPressed: () => Navigator.pop(context, 'edit'),
-              child: const Text('Edit title / subtitle / icon'),
+      builder: (_) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('Edit title / subtitle / icon'),
+              onTap: () => Navigator.pop(context, 'edit'),
             ),
-            CupertinoActionSheetAction(
-              isDestructiveAction: true,
-              onPressed: () => Navigator.pop(context, 'remove'),
-              child: const Text('Remove value'),
+            ListTile(
+              leading: const Icon(Icons.delete),
+              title: const Text('Remove value'),
+              onTap: () => Navigator.pop(context, 'remove'),
             ),
           ],
-          cancelButton: CupertinoActionSheetAction(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
         ),
       ),
     );
@@ -699,7 +651,7 @@ class _SensorValuesState extends State<SensorValues>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            PlatformElevatedButton(
+            ElevatedButton(
               onPressed: _addTab,
               child: const Text('Create tab'),
             ),
@@ -731,7 +683,7 @@ class _SensorValuesState extends State<SensorValues>
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
-                  PlatformElevatedButton(
+                  ElevatedButton(
                     onPressed: _addSensors,
                     child: const Text('Add values'),
                   ),
@@ -775,8 +727,7 @@ class _SensorValuesState extends State<SensorValues>
         final openChart = state != null && state.value is num && device != null
             ? () => Navigator.push(
                 context,
-                platformPageRoute(
-                  context: context,
+                MaterialPageRoute(
                   builder: (_) => Chart(state),
                 ),
               )
@@ -1014,9 +965,8 @@ class _SensorValuesState extends State<SensorValues>
     final action = _actionFor(state, device, group);
     if (action == null) return display;
 
-    return PlatformIconButton(
-      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
-      material: (_, __) => MaterialIconButtonData(splashRadius: 25),
+    return IconButton(
+      splashRadius: 25,
       icon: display,
       onPressed: action,
     );
@@ -1030,7 +980,7 @@ class _SensorValuesState extends State<SensorValues>
   ) {
     final offline = connectionStatus == DeviceConnectionStatus.offline;
     final warning = Icon(
-      offline ? PlatformIcons(context).error : Icons.lan_outlined,
+      offline ? Icons.error : Icons.lan_outlined,
       color: MyTheme.warnColor,
     );
     if (state.isControlling || state.value == null) return warning;

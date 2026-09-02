@@ -17,7 +17,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
@@ -179,94 +178,39 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
       _refresh(context, _range);
     }
     final List<Widget> appBarActions = [
-      PlatformPopupMenu(
-        options: [
-          PopupMenuOption(
-              label: 'Mean',
-              onTap: (_) {
-                _aggregation = "mean";
-                _refresh(context, _range);
-              }),
-          PopupMenuOption(
-              label: 'Max',
-              onTap: (_) {
-                _aggregation = "max";
-                _refresh(context, _range);
-              }),
-          PopupMenuOption(
-              label: 'Min',
-              onTap: (_) {
-                _aggregation = "min";
-                _refresh(context, _range);
-              }),
+      PopupMenuButton<String>(
+        icon: const Icon(Icons.show_chart),
+        tooltip: "Select Aggregation",
+        onSelected: (aggregation) {
+          _aggregation = aggregation;
+          _refresh(context, _range);
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: "mean", child: Text('Mean')),
+          PopupMenuItem(value: "max", child: Text('Max')),
+          PopupMenuItem(value: "min", child: Text('Min')),
         ],
-        icon: PlatformIconButton(
-          icon: Icon(Icons.show_chart,
-              color: isCupertino(context) ? MyTheme.appColor : null),
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
-          material: (_, __) =>
-              MaterialIconButtonData(disabledColor: MyTheme.textColor),
-        ),
-        cupertino: (context, _) => CupertinoPopupMenuData(
-            title: const Text("Select Aggregation"),
-            cancelButtonData: CupertinoPopupMenuCancelButtonData(
-              child: const Text('Close'),
-              onPressed: () => Navigator.pop(context),
-            )),
       ),
-      PlatformPopupMenu(
-        options: [
-          PopupMenuOption(
-              label: '15 Minutes',
-              onTap: (_) {
-                _refresh(context, 0);
-              }),
-          PopupMenuOption(
-              label: '2 Hours',
-              onTap: (_) {
-                _refresh(context, 1);
-              }),
-          PopupMenuOption(
-              label: '12 Hours',
-              onTap: (_) {
-                _refresh(context, 2);
-              }),
-          PopupMenuOption(
-              label: '1 Day',
-              onTap: (_) {
-                _refresh(context, 3);
-              }),
-          PopupMenuOption(
-              label: '7 Days',
-              onTap: (_) {
-                _refresh(context, 4);
-              }),
+      PopupMenuButton<int>(
+        icon: const Icon(Icons.watch_later),
+        tooltip: "Select Range",
+        onSelected: (range) => _refresh(context, range),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 0, child: Text('15 Minutes')),
+          PopupMenuItem(value: 1, child: Text('2 Hours')),
+          PopupMenuItem(value: 2, child: Text('12 Hours')),
+          PopupMenuItem(value: 3, child: Text('1 Day')),
+          PopupMenuItem(value: 4, child: Text('7 Days')),
         ],
-        icon: PlatformIconButton(
-          icon: Icon(PlatformIcons(context).clockSolid,
-              color: isCupertino(context) ? MyTheme.appColor : null),
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
-          material: (_, __) =>
-              MaterialIconButtonData(disabledColor: MyTheme.textColor),
-        ),
-        cupertino: (context, _) => CupertinoPopupMenuData(
-            title: const Text("Select Range"),
-            cancelButtonData: CupertinoPopupMenuCancelButtonData(
-              child: const Text('Close'),
-              onPressed: () => Navigator.pop(context),
-            )),
       ),
-      PlatformIconButton(
+      IconButton(
         onPressed: _refreshing ? null : () => _refresh(context, _range),
         icon: _refreshing
             ? const DelayedCircularProgressIndicator()
             : const Icon(Icons.refresh),
-        cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
       )
     ];
-    return PlatformScaffold(
+    return Scaffold(
         appBar: _appBar.getAppBar(context, appBarActions),
         body: _spots == null
             ? const Center(child: DelayedCircularProgressIndicator())

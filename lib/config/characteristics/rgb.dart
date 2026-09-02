@@ -16,7 +16,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 
 import 'package:mobile_app/models/characteristic.dart';
@@ -79,7 +78,7 @@ class RGB {
   }
 
   static Widget _getQuickButton(Color c, void Function(Color c) set) {
-    return PlatformIconButton(
+    return IconButton(
       icon: Stack(
         alignment: AlignmentDirectional.center,
         children: [
@@ -91,7 +90,6 @@ class RGB {
         ],
       ),
       onPressed: () => set(c),
-      cupertino: (_, __) => CupertinoIconButtonData(padding: EdgeInsets.zero),
     );
   }
 }

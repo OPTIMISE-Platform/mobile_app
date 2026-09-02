@@ -17,7 +17,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
@@ -79,7 +78,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
   Widget build(BuildContext context) {
     final actions = MyAppBar.getDefaultActions(context);
 
-    return PlatformScaffold(
+    return Scaffold(
         appBar: appBar.getAppBar(context, actions),
         body: Scrollbar(
             child: releasesMutex.isLocked
@@ -135,7 +134,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                       ),
                                       Badge(
                                         label: Icon(
-                                            PlatformIcons(context).error,
+                                            Icons.error,
                                             size: 16,
                                             color: MyTheme.warnColor),
                                         isLabelVisible:
@@ -156,8 +155,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                         ? () => Toast.showToastNoContext("Missing devices for this service")
                                         : () => Navigator.push(
                                             context,
-                                            platformPageRoute(
-                                                context: context,
+                                            MaterialPageRoute(
                                                 builder: (context) =>
                                                     SmartServicesReleaseLaunch(
                                                         releases[i])))),

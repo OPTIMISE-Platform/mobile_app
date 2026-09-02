@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
@@ -68,8 +67,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
       if (!mounted) return;
       await Navigator.push(
           context,
-          platformPageRoute(
-            context: context,
+          MaterialPageRoute(
             builder: (context) {
               const target = SmartServicesReleases();
               return target;
@@ -164,7 +162,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                       Text(instances[i].name),
                                       Badge(
                                         label: instances[i].error != null
-                                            ? Icon(PlatformIcons(context).error,
+                                            ? Icon(Icons.error,
                                                 size: 16,
                                                 color: MyTheme.warnColor)
                                             : const Icon(Icons.pending,
@@ -188,8 +186,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                     onTap: () async {
                                       await Navigator.push(
                                           context,
-                                          platformPageRoute(
-                                            context: context,
+                                          MaterialPageRoute(
                                             builder: (context) =>
                                                 SmartServicesInstanceDetails(
                                                     instances[i],
@@ -234,8 +231,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                                       if (context.mounted) {
                                                         await Navigator.push(
                                                             context,
-                                                            platformPageRoute(
-                                                                context: context,
+                                                            MaterialPageRoute(
                                                                 builder: (context) =>
                                                                     SmartServicesReleaseLaunch(
                                                                       release,

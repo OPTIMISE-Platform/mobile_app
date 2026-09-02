@@ -17,9 +17,8 @@
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
@@ -104,8 +103,7 @@ class NativePipe {
           if (navigatorKey.currentContext != null) {
             Navigator.push(
                 navigatorKey.currentContext!,
-                platformPageRoute(
-                    context: navigatorKey.currentContext!,
+                MaterialPageRoute(
                     builder: (context) => DetailPage(device, null)));
           } else {
             throw "No root context";

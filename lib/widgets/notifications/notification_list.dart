@@ -16,7 +16,6 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/notifications.dart';
@@ -54,23 +53,19 @@ class _NotificationListState extends State<NotificationList> {
 
       if (_selectionMode) {
         appBarActions.addAll([
-          PlatformIconButton(
+          IconButton(
             onPressed: () => setState(() {
               _selected.clear();
               _selectionMode = false;
             }),
-            icon: Icon(PlatformIcons(context).clear),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
+            icon: Icon(Icons.clear),
           ),
-          PlatformIconButton(
+          IconButton(
             onPressed: () =>
                 setState(() => _selected.addAll(state.notifications)),
-            icon: Icon(PlatformIcons(context).addCircledOutline),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
+            icon: Icon(Icons.add_circle_outline),
           ),
-          PlatformIconButton(
+          IconButton(
             onPressed: !NotificationsService.isAvailable()
                 ? null
                 : () async {
@@ -89,10 +84,8 @@ class _NotificationListState extends State<NotificationList> {
                     });
                   },
             icon: const Icon(Icons.mark_email_read),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
-          PlatformIconButton(
+          IconButton(
             onPressed: !NotificationsService.isAvailable()
                 ? null
                 : () async {
@@ -111,28 +104,24 @@ class _NotificationListState extends State<NotificationList> {
                     });
                   },
             icon: const Icon(Icons.mark_email_unread),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
           ),
-          PlatformIconButton(
+          IconButton(
             onPressed: !NotificationsService.isAvailable()
                 ? null
                 : () async {
-                    final confirmed = await showPlatformDialog(
+                    final confirmed = await showAdaptiveDialog(
                       context: context,
-                      builder: (_) => PlatformAlertDialog(
+                      builder: (_) => AlertDialog.adaptive(
                         title: const Text('Confirmation'),
                         content: const Text(
                             "Do you want to permanently delete selected notifications?"),
                         actions: <Widget>[
-                          PlatformDialogAction(
-                            child: PlatformText('Cancel'),
+                          TextButton(
+                            child: Text('Cancel'),
                             onPressed: () => Navigator.pop(context, false),
                           ),
-                          PlatformDialogAction(
-                              child: PlatformText('OK'),
-                              cupertino: (_, __) => CupertinoDialogActionData(
-                                  isDestructiveAction: true),
+                          TextButton(
+                              child: Text('OK'),
                               onPressed: () => Navigator.pop(context, true)),
                         ],
                       ),
@@ -146,14 +135,12 @@ class _NotificationListState extends State<NotificationList> {
                       });
                     }
                   },
-            icon: Icon(PlatformIcons(context).delete),
-            cupertino: (_, __) =>
-                CupertinoIconButtonData(padding: EdgeInsets.zero),
+            icon: Icon(Icons.delete),
           ),
         ]);
       }
 
-      return PlatformScaffold(
+      return Scaffold(
           appBar: appBar.getAppBar(context, appBarActions),
           body: RefreshIndicator(
               onRefresh: () async {
@@ -179,7 +166,7 @@ class _NotificationListState extends State<NotificationList> {
                                       padding: MyTheme.inset,
                                       color: MyTheme.warnColor,
                                       child: Icon(
-                                        PlatformIcons(context).delete,
+                                        Icons.delete,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -207,8 +194,7 @@ class _NotificationListState extends State<NotificationList> {
                                                   Icon(
                                                     _selected.contains(state
                                                             .notifications[i])
-                                                        ? PlatformIcons(context)
-                                                            .checkMarkCircledSolid
+                                                        ? Icons.check_circle
                                                         : Icons.circle_outlined,
                                                     color: MyTheme.appColor,
                                                   )

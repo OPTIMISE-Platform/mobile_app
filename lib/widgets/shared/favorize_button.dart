@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mutex/mutex.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -121,9 +120,7 @@ class FavorizeButton extends StatelessWidget {
         children.add(Icon(Icons.star_border,
             color: disabled ? Theme.of(context).disabledColor : Colors.grey));
       }
-      return PlatformIconButton(
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
+      return IconButton(
           icon: Stack(
             alignment: AlignmentDirectional.center,
             children: children,

@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:provider/provider.dart';
@@ -128,7 +127,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                         Text(state.networks[i].name),
                                         Badge(
                                           label: Icon(
-                                              PlatformIcons(context).error,
+                                              Icons.error,
                                               size: 16,
                                               color: MyTheme.warnColor),
                                           isLabelVisible: state.networks[i]
@@ -200,8 +199,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                   onPressed: () async => {
                                                         await Navigator.push(
                                                             context,
-                                                            platformPageRoute(
-                                                              context: context,
+                                                            MaterialPageRoute(
                                                               builder:
                                                                   (context) {
                                                                 const target =

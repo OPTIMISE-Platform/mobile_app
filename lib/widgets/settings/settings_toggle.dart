@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 
 /// A settings row with a switch.
@@ -39,7 +38,7 @@ class SettingsToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListTile(
         title: Text(title),
-        trailing: PlatformSwitch(
+        trailing: Switch.adaptive(
           value: value,
           onChanged: (v) async {
             await onChanged(v);

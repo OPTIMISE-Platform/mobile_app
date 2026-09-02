@@ -19,7 +19,6 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/locations.dart';
@@ -95,24 +94,24 @@ class LocationPageState extends State<LocationPage>
 
       List<Widget> appBarActions = [];
       if (LocationService.isCreateEditDeleteAvailable()) {
-        appBarActions.add(PlatformIconButton(
+        appBarActions.add(IconButton(
           onPressed: () async {
             final titleController = TextEditingController(text: location.name);
 
-            final newName = await showPlatformDialog(
+            final newName = await showAdaptiveDialog(
                 context: context,
                 builder: (context) =>
-                    PlatformAlertDialog(
+                    AlertDialog.adaptive(
                       title: Text("Edit ${location.name}"),
                       content:
-                      PlatformTextFormField(controller: titleController),
+                      TextFormField(controller: titleController),
                       actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
+                        TextButton(
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        PlatformDialogAction(
-                            child: PlatformText('Save'),
+                        TextButton(
+                            child: Text('Save'),
                             onPressed: () {
                               Navigator.pop(
                                   context, titleController.value.text);
@@ -127,30 +126,25 @@ class LocationPageState extends State<LocationPage>
             state.locations[widget._stateLocationIndex] = newLocation;
             state.notifyListeners();
           },
-          icon: Icon(PlatformIcons(context).edit),
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Icon(Icons.edit),
         ));
 
-        appBarActions.add(PlatformIconButton(
+        appBarActions.add(IconButton(
           onPressed: () async {
-            final deleted = await showPlatformDialog(
+            final deleted = await showAdaptiveDialog(
                 context: context,
                 builder: (context) =>
-                    PlatformAlertDialog(
+                    AlertDialog.adaptive(
                       title: Text(
                           "Do you want to permanently delete location '${location
                               .name}'?"),
                       actions: [
-                        PlatformDialogAction(
-                          child: PlatformText('Cancel'),
+                        TextButton(
+                          child: Text('Cancel'),
                           onPressed: () => Navigator.pop(context),
                         ),
-                        PlatformDialogAction(
-                            child: PlatformText('Delete'),
-                            cupertino: (_, __) =>
-                                CupertinoDialogActionData(
-                                    isDestructiveAction: true),
+                        TextButton(
+                            child: Text('Delete'),
                             onPressed: () async {
                               await LocationService.deleteLocation(location.id);
                               state.locations
@@ -165,9 +159,7 @@ class LocationPageState extends State<LocationPage>
               state.notifyListeners();
             }
           },
-          icon: Icon(PlatformIcons(context).delete),
-          cupertino: (_, __) =>
-              CupertinoIconButtonData(padding: EdgeInsets.zero),
+          icon: Icon(Icons.delete),
         ));
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
@@ -193,8 +185,7 @@ class LocationPageState extends State<LocationPage>
                   _toggleStreamController.add(null);
                   await Navigator.push(
                       context,
-                      platformPageRoute(
-                          context: context,
+                      MaterialPageRoute(
                           builder: (context) =>
                               LocationEditDevices(widget._stateLocationIndex)));
                   state.searchDevices(widget.parentState.filter);
@@ -206,8 +197,7 @@ class LocationPageState extends State<LocationPage>
                   _toggleStreamController.add(null);
                   Navigator.push(
                       context,
-                      platformPageRoute(
-                          context: context,
+                      MaterialPageRoute(
                           builder: (context) =>
                               LocationEditGroups(widget._stateLocationIndex)));
                 },
@@ -215,7 +205,7 @@ class LocationPageState extends State<LocationPage>
               )
             ],
           ),
-          body: PlatformScaffold(
+          body: Scaffold(
             appBar: MyAppBar(location.name).getAppBar(context, appBarActions),
             body: state.loadingDevices || state.loadingDeviceGroups()
                 ? Center(

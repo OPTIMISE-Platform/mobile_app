@@ -16,7 +16,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 
 class FunctionConfigGetOnOffState extends FunctionConfig {
@@ -37,7 +36,7 @@ class FunctionConfigGetOnOffState extends FunctionConfig {
       if (value.every((element) => element == value[0])) {
         return displayValue(value[0], context);
       }
-      return Icon(PlatformIcons(context).remove);
+      return Icon(Icons.remove);
     }
 
     return null;

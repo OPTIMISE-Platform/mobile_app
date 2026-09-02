@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/widgets/shared/page_spinner.dart';
@@ -33,8 +32,7 @@ List<Widget> accountSection(BuildContext context, AppState state) {
         onTap: () async {
           Navigator.push(
               context,
-              platformPageRoute(
-                context: context,
+              MaterialPageRoute(
                 builder: (context) => const PageSpinner("Logout"),
               ));
           try {

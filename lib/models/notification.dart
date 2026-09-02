@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -47,13 +46,13 @@ class Notification {
     Future.delayed(const Duration(milliseconds: 100),
       () {
         if (!context.mounted) return;
-        showPlatformDialog(
+        showAdaptiveDialog(
           context: context,
-          builder: (_) => PlatformAlertDialog(
+          builder: (_) => AlertDialog.adaptive(
             title: Text(title, overflow: TextOverflow.ellipsis,),
             content: Text(message),
             actions: <Widget>[
-              PlatformDialogAction(child: PlatformText('OK'), onPressed: () => Navigator.pop(context)),
+              TextButton(child: Text('OK'), onPressed: () => Navigator.pop(context)),
             ],
           ),
         );

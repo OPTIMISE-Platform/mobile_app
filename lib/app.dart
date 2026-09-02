@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/home.dart';
 import 'package:mobile_app/navigator_key.dart';
 import 'package:mobile_app/restart_controller.dart';
@@ -30,7 +28,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   // A new [UniqueKey] forces the entire subtree to rebuild, effectively
   // restarting the app without relaunching the process.
   Key _appKey = UniqueKey();
@@ -38,12 +36,14 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     AppUpdater.cleanup();
     RestartController.instance.addListener(_onRestartRequested);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     RestartController.instance.removeListener(_onRestartRequested);
     super.dispose();
   }
@@ -54,31 +54,23 @@ class _MyAppState extends State<MyApp> {
   }
 
   @override
+  void didChangePlatformBrightness() {
+    // MaterialApp follows the OS on its own; MyTheme's colour snapshot does
+    // not, and the widgets that paint with MyTheme.textColor would keep the
+    // old brightness until a restart.
+    if (MyTheme.followSystemBrightness()) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     debugPrint('MyApp rebuild');
-    return Theme(
+    return MaterialApp(
       key: _appKey,
-      data: MyTheme.materialTheme,
-      child: PlatformProvider(
-        initialPlatform: MyTheme.initialPlatform,
-        settings: PlatformSettingsData(iosUsesMaterialWidgets: true),
-        builder: (_) => PlatformTheme(
-          themeMode: MyTheme.themeMode,
-          materialLightTheme: MyTheme.materialTheme,
-          materialDarkTheme: MyTheme.materialDarkTheme,
-          matchCupertinoSystemChromeBrightness: true,
-          onThemeModeChanged: (mode) => MyTheme.themeMode = mode,
-          builder: (_) => PlatformApp(
-            navigatorKey: navigatorKey,
-            localizationsDelegates: const [
-              DefaultMaterialLocalizations.delegate,
-              DefaultWidgetsLocalizations.delegate,
-              DefaultCupertinoLocalizations.delegate,
-            ],
-            home: const Home(),
-          ),
-        ),
-      ),
+      navigatorKey: navigatorKey,
+      theme: MyTheme.materialTheme,
+      darkTheme: MyTheme.materialDarkTheme,
+      themeMode: MyTheme.themeMode,
+      home: const Home(),
     );
   }
 }

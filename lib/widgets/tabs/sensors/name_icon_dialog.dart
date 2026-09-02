@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_icons.dart';
 
 /// The name and icon the user confirmed in a [showNameIconDialog].
@@ -56,7 +55,7 @@ Future<NameIconResult?> showNameIconDialog(
   String initialSubtitle = '',
   String subtitleHint = 'Subtitle',
   bool initialSubtitleHidden = false,
-}) => showPlatformDialog<NameIconResult>(
+}) => showAdaptiveDialog<NameIconResult>(
   context: context,
   builder: (_) => _NameIconDialog(
     title: title,
@@ -143,7 +142,7 @@ class _NameIconDialogState extends State<_NameIconDialog> {
   @override
   Widget build(BuildContext context) {
     final icon = sensorIcon(_iconName);
-    return PlatformAlertDialog(
+    return AlertDialog.adaptive(
       title: Text(widget.title),
       content: SingleChildScrollView(
         child: Column(
@@ -152,9 +151,9 @@ class _NameIconDialogState extends State<_NameIconDialog> {
             // Two bare fields would be indistinguishable, so they get captions
             // as soon as there is more than one.
             if (widget.withSubtitle) _buildCaption('Title'),
-            PlatformTextFormField(
+            TextFormField(
               controller: _controller,
-              hintText: widget.nameHint,
+              decoration: InputDecoration(hintText: widget.nameHint),
               autofocus: true,
             ),
             if (widget.withSubtitle) ...[
@@ -164,9 +163,9 @@ class _NameIconDialogState extends State<_NameIconDialog> {
               // visible what would come back.
               Opacity(
                 opacity: _subtitleHidden ? 0.4 : 1,
-                child: PlatformTextFormField(
+                child: TextFormField(
                   controller: _subtitleController,
-                  hintText: widget.subtitleHint,
+                  decoration: InputDecoration(hintText: widget.subtitleHint),
                   enabled: !_subtitleHidden,
                 ),
               ),
@@ -174,7 +173,7 @@ class _NameIconDialogState extends State<_NameIconDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Flexible(child: Text('Show on card')),
-                  PlatformSwitch(
+                  Switch.adaptive(
                     value: !_subtitleHidden,
                     onChanged: (show) =>
                         setState(() => _subtitleHidden = !show),
@@ -187,7 +186,7 @@ class _NameIconDialogState extends State<_NameIconDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon ?? Icons.image_not_supported_outlined),
-                PlatformTextButton(
+                TextButton(
                   onPressed: _chooseIcon,
                   child: Text(icon == null ? 'Choose icon' : 'Change icon'),
                 ),
@@ -197,11 +196,11 @@ class _NameIconDialogState extends State<_NameIconDialog> {
         ),
       ),
       actions: [
-        PlatformDialogAction(
-          child: PlatformText('Cancel'),
+        TextButton(
+          child: Text('Cancel'),
           onPressed: () => Navigator.pop(context),
         ),
-        PlatformDialogAction(
+        TextButton(
           onPressed: widget.nameRequired && _empty
               ? null
               : () => Navigator.pop(
@@ -213,7 +212,7 @@ class _NameIconDialogState extends State<_NameIconDialog> {
                     subtitleHidden: _subtitleHidden,
                   ),
                 ),
-          child: PlatformText(widget.confirmLabel),
+          child: Text(widget.confirmLabel),
         ),
       ],
     );

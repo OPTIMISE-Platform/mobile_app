@@ -15,7 +15,6 @@
  */
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/widgets/settings/sections/account_section.dart';
 import 'package:mobile_app/widgets/settings/sections/appearance_section.dart';
@@ -37,7 +36,7 @@ class Settings extends StatelessWidget {
     const appBar = MyAppBar("Settings");
 
     return Consumer<AppState>(builder: (context, state, _) {
-      return PlatformScaffold(
+      return Scaffold(
         appBar: appBar.getAppBar(context),
         body: ListView(
           children: [

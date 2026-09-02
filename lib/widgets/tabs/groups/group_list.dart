@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
@@ -58,18 +57,18 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
       final titleController = TextEditingController(text: "");
       String? newName;
       if (!mounted) return;
-      await showPlatformDialog(
+      await showAdaptiveDialog(
           context: context,
-          builder: (_) => PlatformAlertDialog(
+          builder: (_) => AlertDialog.adaptive(
                 title: const Text("New Group"),
-                content: PlatformTextFormField(controller: titleController, hintText: "Name"),
+                content: TextFormField(controller: titleController, decoration: InputDecoration(hintText: "Name")),
                 actions: [
-                  PlatformDialogAction(
-                    child: PlatformText('Cancel'),
+                  TextButton(
+                    child: Text('Cancel'),
                     onPressed: () => Navigator.pop(context),
                   ),
-                  PlatformDialogAction(
-                      child: PlatformText('Create'),
+                  TextButton(
+                      child: Text('Create'),
                       onPressed: () {
                         newName = titleController.value.text;
                         Navigator.popUntil(context, (route) => route.isFirst);
@@ -95,7 +94,7 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
   void _openGroupPage(int i, DeviceTabsState? parentState) async {
     parentState?.filter.deviceGroupIds = [AppState().deviceGroups[i].id];
     AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", null, null, [AppState().deviceGroups[i].id], null));
-    await Navigator.push(context, platformPageRoute(context: context, builder: (context) => DetailPage(null, AppState().deviceGroups[i])));
+    await Navigator.push(context, MaterialPageRoute(builder: (context) => DetailPage(null, AppState().deviceGroups[i])));
     parentState?.filter.locationIds = null;
   }
 

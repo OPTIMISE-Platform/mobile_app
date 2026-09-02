@@ -18,7 +18,6 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_platform_widgets/flutter_platform_widgets.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/details.dart';
@@ -57,8 +56,7 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
       if (!mounted) return;
       await Navigator.push(
           context,
-          platformPageRoute(
-            context: context,
+          MaterialPageRoute(
             builder: (context) {
               const target = AddLocalNetwork();
               return target;
