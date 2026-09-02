@@ -1,5 +1,9 @@
 # OPTIMISE mobile app
 
+## Documentation
+Hand-written notes on parts of the app whose behaviour spans several files live
+in [docs/](docs). Each document states up front what it applies to.
+
 ## Android
 The android app can be downloaded from the [releases](https://github.com/OPTIMISE-Platform/mobile_app/releases) page.
 
