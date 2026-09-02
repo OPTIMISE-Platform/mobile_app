@@ -254,7 +254,15 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                                           ElevatedButton(
                                                                         onPressed:
                                                                             () async {
-                                                                          MgwStorage.RemovePairedMGW(mgw);
+                                                                          // Awaited: it clears the
+                                                                          // stored secrets, and
+                                                                          // _refresh() re-reads the
+                                                                          // pairing right after.
+                                                                          await MgwStorage
+                                                                              .RemovePairedMGW(mgw);
+                                                                          if (!context.mounted) {
+                                                                            return;
+                                                                          }
                                                                           Navigator.pop(
                                                                               context,
                                                                               'OK');

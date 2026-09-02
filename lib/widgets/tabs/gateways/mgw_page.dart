@@ -37,39 +37,45 @@ final _logger = Logger(
   printer: SimplePrinter(),
 );
 
-TextEditingController _textFieldController = TextEditingController();
-
 Future<void> pairWithBasicAuth(BuildContext context, MGW mgw) async {
   // TODO remove pairing with basic auth credentials
-  await showDialog<void>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text('Password'),
-        content: TextField(
-          controller: _textFieldController,
-          decoration: const InputDecoration(hintText: "Password"),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('CANCEL'),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+  // Controller per invocation, not a global one: it holds the password, and a
+  // global keeps it in memory for the process and pre-fills the next pairing.
+  final controller = TextEditingController();
+  try {
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Password'),
+          content: TextField(
+            controller: controller,
+            obscureText: true,
+            autofillHints: const [AutofillHints.password],
+            decoration: const InputDecoration(hintText: "Password"),
           ),
-          TextButton(
-            child: const Text('OK'),
-            onPressed: () async {
-              var password = _textFieldController.text;
-              await MgwStorage.StoreBasicAuthCredentials(password);
-              if (!context.mounted) return;
-              Navigator.pop(context);
-            },
-          ),
-        ],
-      );
-    },
-  );
+          actions: <Widget>[
+            TextButton(
+              child: const Text('CANCEL'),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+            ),
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () async {
+                await MgwStorage.StoreBasicAuthCredentials(controller.text);
+                if (!context.mounted) return;
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  } finally {
+    controller.dispose();
+  }
 }
 
 Future<List<MGW>> DiscoverLocalGatewayHosts() async {
