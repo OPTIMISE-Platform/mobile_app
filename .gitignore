@@ -44,6 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Gradle build directories; /build/ above only covers the Flutter one
+/android/build/
+/android/app/build/
+
 .env
 
 ios/Runner.xcodeproj
