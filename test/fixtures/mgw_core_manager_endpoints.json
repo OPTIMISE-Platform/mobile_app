@@ -1,0 +1,27 @@
+{
+    "61097ecaf809d918ff0561536313867b84efd8e5": {
+        "id": "61097ecaf809d918ff0561536313867b84efd8e5",
+        "parent_id": "",
+        "type": 1,
+        "location": "/endpoints/deployment/01a080e0-94b4-7c0c-9f82-7d75d4208347/api",
+        "ref": "01a080e0-94b4-7c0c-9f82-7d75d4208347",
+        "host": "mgw-d109d982-9fe8c17352946fd2a96b7d888504bb30cc3c6094",
+        "port": 80,
+        "int_path": "",
+        "ext_path": "api",
+        "proxy_conf": {
+            "headers": null,
+            "websocket": false,
+            "read_timeout": 0
+        },
+        "string_sub": {
+            "replace_once": false,
+            "mime_types": null,
+            "filters": null
+        },
+        "labels": {
+            "mod_id": "github.com/SENERGY-Platform/device-management-service/mgw-module",
+            "srv_ref": "01a080e0-94b4-7c0c-9f82-7d75d4208347"
+        }
+    }
+}

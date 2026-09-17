@@ -1,0 +1,84 @@
+[
+  {
+    "id": "github.com/SENERGY-Platform/device-management-service/mgw-module",
+    "source": "github.com/SENERGY-Platform/mgw-module-repository",
+    "channel": "main",
+    "version": "v0.1.4",
+    "name": "Device Management Service",
+    "description": "Lists IoT devices connected to the gateway.",
+    "tags": [],
+    "license": "Apache-2.0 license",
+    "author": "InfAI (CC SES)",
+    "is_deployed": true,
+    "deployment": {
+      "id": "01a080e0-94b4-7c0c-9f82-7d75d4208347",
+      "module_source": "github.com/SENERGY-Platform/mgw-module-repository",
+      "module_channel": "main",
+      "module_version": "v0.1.4",
+      "enabled": true,
+      "created": "2026-09-08T11:56:36.916798Z",
+      "updated": "2026-09-08T12:39:45.014177Z",
+      "state": 1,
+      "has_error": false,
+      "error_msg": ""
+    },
+    "has_error": false,
+    "error_msg": ""
+  },
+  {
+    "id": "github.com/SENERGY-Platform/test-mod-a",
+    "source": "github.com/SENERGY-Platform/test-mgw-module-repository",
+    "channel": "channel-a",
+    "version": "v1.1.0",
+    "name": "Test Module A",
+    "description": "Test module implementing every attribute of the v1 modfile reference.",
+    "tags": [
+      "all-attributes",
+      "test",
+      "reference"
+    ],
+    "license": "Apache License 2.0",
+    "author": "InfAI (CC SES)",
+    "is_deployed": false,
+    "deployment": {
+      "id": "",
+      "module_source": "",
+      "module_channel": "",
+      "module_version": "",
+      "enabled": false,
+      "created": "0001-01-01T00:00:00Z",
+      "updated": "0001-01-01T00:00:00Z",
+      "state": 0,
+      "has_error": false,
+      "error_msg": ""
+    },
+    "has_error": false,
+    "error_msg": ""
+  },
+  {
+    "id": "github.com/SENERGY-Platform/mgw-wmbus-module",
+    "source": "github.com/SENERGY-Platform/mgw-module-repository",
+    "channel": "main",
+    "version": "v0.0.12",
+    "name": "wmbus Module",
+    "description": "",
+    "tags": [],
+    "license": "Apache License 2.0",
+    "author": "",
+    "is_deployed": true,
+    "deployment": {
+      "id": "01a056e0-2c71-7e2f-bfcd-6dcbb8e65dfa",
+      "module_source": "github.com/SENERGY-Platform/mgw-module-repository",
+      "module_channel": "main",
+      "module_version": "v0.0.12",
+      "enabled": false,
+      "created": "2026-08-31T08:12:07.153958Z",
+      "updated": "2026-08-31T08:12:07.153958Z",
+      "state": 0,
+      "has_error": false,
+      "error_msg": ""
+    },
+    "has_error": false,
+    "error_msg": ""
+  }
+]

@@ -40,25 +40,46 @@ class Endpoint {
   Map<String, dynamic> toJson() => _$EndpointToJson(this);
 }
 
-@JsonSerializable()
+/// Deployment of a module, as the module-manager reports it alongside the
+/// module itself. A module without a deployment carries a zero value here, so
+/// read it only when [Module.is_deployed] is set.
 class Deployment {
-  String id, name, updated, created;
-  String? state;
+  String id, module_source, module_channel, module_version, updated, created;
   bool enabled;
-  DeploymentModuleInfo module;
 
-  Deployment(this.id, this.name, this.updated, this.created, this.state, this.enabled, this.module);
-  factory Deployment.fromJson(Map<String, dynamic> json) => _$DeploymentFromJson(json);
-  Map<String, dynamic> toJson() => _$DeploymentToJson(this);
-}
+  /// Health derived from the container states: 1 healthy, 2 unhealthy, 0 when
+  /// the deployment is disabled or the state could not be determined.
+  int state;
 
-class DeploymentModuleInfo {
-  String id, version;
+  bool has_error;
+  String error_msg;
 
-  DeploymentModuleInfo(this.id, this.version);
-  DeploymentModuleInfo.fromJson(Map<String, dynamic> json): id=json['id'], version=json['version'];
-  Map<String, dynamic> toJson() => <String, dynamic> {
-    "id": id,
-    "version": version
-  };
+  Deployment(this.id, this.module_source, this.module_channel,
+      this.module_version, this.updated, this.created, this.enabled, this.state,
+      {this.has_error = false, this.error_msg = ""});
+
+  Deployment.fromJson(Map<String, dynamic> json)
+      : id = json['id'] ?? "",
+        module_source = json['module_source'] ?? "",
+        module_channel = json['module_channel'] ?? "",
+        module_version = json['module_version'] ?? "",
+        updated = json['updated'] ?? "",
+        created = json['created'] ?? "",
+        enabled = json['enabled'] ?? false,
+        state = json['state'] ?? 0,
+        has_error = json['has_error'] ?? false,
+        error_msg = json['error_msg'] ?? "";
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        "id": id,
+        "module_source": module_source,
+        "module_channel": module_channel,
+        "module_version": module_version,
+        "updated": updated,
+        "created": created,
+        "enabled": enabled,
+        "state": state,
+        "has_error": has_error,
+        "error_msg": error_msg,
+      };
 }

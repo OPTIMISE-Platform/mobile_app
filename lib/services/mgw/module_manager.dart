@@ -16,7 +16,6 @@
 
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/models/mgw_module.dart';
 
 import 'package:mobile_app/services/mgw/api.dart';
@@ -36,51 +35,30 @@ class MgwModuleService {
     printer: SimplePrinter(),
   );
 
+  /// Installed modules, each with its deployment nested.
+  ///
+  /// There is no deployments collection to read instead: the module-manager
+  /// answers `GET /deployments` with 404 and reports a deployment only as part
+  /// of its module.
   Future<List<Module>> getModules() async {
-    var path = "$basePath/modules";
+    var path = "$basePath/modules-reduced";
     _logger.d("$LOG_PREFIX: Load modules from MGW at $path");
     var resp = await mgwApiService.Get(path, Options());
+    final body = resp.data;
+    // Not a cast: a gateway that answers with an error envelope or a proxy page
+    // would otherwise escape as a raw TypeError, which no caller handles.
+    if (body is! List) {
+      _logger.e("$LOG_PREFIX: Modules response is not a list: $body");
+      throw ("Modules response is not a list");
+    }
+
     List<Module> modules = [];
-    if(resp.data == null) {
-      _logger.e("$LOG_PREFIX: Modules response is null");
-      throw("Modules response is null");
+    for (final value in body) {
+      modules.add(Module.fromJson(value));
     }
-
-    for (final value in resp.data!.values) {
-      var module = Module.fromJson(value);
-      modules.add(module);
-    }
+    // The endpoint returns the modules in a different order between calls, so a
+    // list rendered as received swaps rows on its own on every refresh.
+    modules.sort((a, b) => a.id.compareTo(b.id));
     return modules;
-  }
-
-  Future<List<Deployment>> getDeployments(String? modID) async {
-    var path = "$basePath/deployments";
-
-    if(modID != null) {
-      path += "?module_id=$modID&container_info=true";
-    } else {
-      path += "?container_info=true";
-    }
-
-    _logger.d("$LOG_PREFIX: MGW-Module-Manager: Load deployments from MGW at $path");
-    var resp = await mgwApiService.Get(path, Options());
-    List<Deployment> deployments = [];
-    if(resp.data == null) {
-      _logger.e("$LOG_PREFIX: MGW-Module-Manager: Deployments response is null");
-      throw("Deployments response is null");
-    }
-    _logger.d("$LOG_PREFIX: MGW-Module-Manager: Got deployments: ${resp.data}");
-
-    for (final value in resp.data!.values) {
-      var deployment = Deployment.fromJson(value);
-      deployments.add(deployment);
-    }
-    return deployments;
-  }
-
-  Future<bool> ModuleIsDeployed(String modID) async {
-    _logger.d("$LOG_PREFIX: MGW-Module-Manager: Check if module $modID is deployed");
-    var moduleMap = await getDeployments(modID);
-    return moduleMap.isEmpty;
   }
 }

@@ -1,135 +1,138 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/mgw.dart';
-import 'package:mobile_app/models/mgw_deployment.dart';
+import 'package:mobile_app/models/mgw_module.dart';
 import 'package:mobile_app/services/mgw/module_manager.dart';
 import 'package:mobile_app/theme.dart';
-import 'package:provider/provider.dart';
 
 const double TOP_PADDING = 100;
 const textStyle = TextStyle(color: Colors.white, fontSize: 35);
 
-class MGWDetail extends StatelessWidget {
+class MGWDetail extends StatefulWidget {
   const MGWDetail({super.key, required this.mgw});
   final MGW mgw;
 
-  handleDeployments(deployments) {
-    if (deployments.length == 0) {
-      return const Column(
-          children: [
-            Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 40,
-            ),
-            Padding(
-              padding: EdgeInsets.only(top: TOP_PADDING),
-              child: Text('No deployments!'),
-            ),
-          ]);
+  @override
+  State<MGWDetail> createState() => _MGWDetailState();
+}
+
+class _MGWDetailState extends State<MGWDetail> {
+  // Held in state: building the future inside build() reissued the request on
+  // every rebuild.
+  late Future<List<Module>> _modules;
+
+  @override
+  void initState() {
+    super.initState();
+    _modules = MgwModuleService(widget.mgw.ip).getModules();
+  }
+
+  /// Grey unless the module is deployed; the deployment's state is 1 for
+  /// healthy and 2 for unhealthy, anything else means disabled or unknown.
+  Color _stateColor(Module module) {
+    if (!module.is_deployed) return Colors.grey;
+    switch (module.deployment.state) {
+      case 1:
+        return Colors.green;
+      case 2:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget handleModules(List<Module> modules) {
+    if (modules.isEmpty) {
+      return const Column(children: [
+        Icon(
+          Icons.error_outline,
+          color: Colors.red,
+          size: 40,
+        ),
+        Padding(
+          padding: EdgeInsets.only(top: TOP_PADDING),
+          child: Text('No modules!'),
+        ),
+      ]);
     }
 
     return Material(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(mgw.mDNSServiceName),
-        ),
-        //passing in the ListView.builder
-        body: ListView.builder(
+        child: Scaffold(
+            appBar: AppBar(
+              title: Text(widget.mgw.mDNSServiceName),
+            ),
+            body: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: MyTheme.inset,
-                itemCount: deployments.length,
+                itemCount: modules.length,
                 itemBuilder: (BuildContext context, int index) {
-                  var deployment = deployments.elementAt(index);
-                  var stateColor = Colors.grey;
-                  switch(deployment.state) {
-                    case "healthy":
-                      stateColor = Colors.green;
-                      break;
-                    case "unhealthy":
-                      stateColor = Colors.red;
-                      break;
-                    case "transitioning":
-                      stateColor = Colors.lime;
-                      break;
-                    default:
-                      stateColor = Colors.grey;
-                  }
-
+                  final module = modules.elementAt(index);
                   return Padding(
                       padding: const EdgeInsets.only(top: 30),
                       child: ListTile(
-                        title: Text(deployment.name),
-                          subtitle: Text(deployment.module.version),
+                        title: Text(module.name),
+                        subtitle: Text(module.version),
                         leading: Icon(
                           Icons.fiber_manual_record,
-                          color: stateColor,
+                          color: _stateColor(module),
                           size: 18,
                         ),
                       ));
-                })
-        )
-    );
+                })));
   }
 
-  handlError(error) {
-    return Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: TOP_PADDING),
-            child: Icon(
-              Icons.error_outline,
-              color: Colors.red,
-              size: 40,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Error: $error', style: textStyle),
-          ),
-        ]);
+  Widget handlError(error) {
+    return Column(children: [
+      const Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: Icon(
+          Icons.error_outline,
+          color: Colors.red,
+          size: 40,
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: TOP_PADDING),
+        child: Text('Error: $error', style: textStyle),
+      ),
+    ]);
   }
 
-  handleLoading() {
-    return const Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(top: TOP_PADDING),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: CircularProgressIndicator(),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.only(top: TOP_PADDING),
-            child: Text('Load...', style: textStyle),
-          )
-        ]);
+  Widget handleLoading() {
+    return const Column(children: [
+      Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      Padding(
+        padding: EdgeInsets.only(top: TOP_PADDING),
+        child: Text('Load...', style: textStyle),
+      )
+    ]);
   }
 
-  handleDeploymentsResponse(AsyncSnapshot<List<Deployment>> deploymentsWrapper) {
-    if (deploymentsWrapper.hasData) {
-      return handleDeployments(deploymentsWrapper.data);
+  Widget handleModulesResponse(AsyncSnapshot<List<Module>> modulesWrapper) {
+    if (modulesWrapper.hasData) {
+      return handleModules(modulesWrapper.data!);
     }
 
-    if (deploymentsWrapper.hasError) {
-      return handlError(deploymentsWrapper.error);
+    if (modulesWrapper.hasError) {
+      return handlError(modulesWrapper.error);
     }
 
     return handleLoading();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
-    return Consumer<AppState>(builder: (context, state, child) {
-      var moduleManager = MgwModuleService(mgw.ip);
-      return FutureBuilder(
-          future: moduleManager.getDeployments(null),
-          builder: (BuildContext context, AsyncSnapshot<List<Deployment>> deploymentsWrapper) {
-            return handleDeploymentsResponse(deploymentsWrapper);
-          }
-      );
-    });
+    return FutureBuilder(
+        future: _modules,
+        builder:
+            (BuildContext context, AsyncSnapshot<List<Module>> modulesWrapper) {
+          return handleModulesResponse(modulesWrapper);
+        });
   }
 }
