@@ -75,13 +75,14 @@ class _BootstrapState extends State<_Bootstrap> {
 
     return MultiProvider(
       providers: [
-        // create:, not .value — the lazy construction is load-bearing.
-        // AppState's constructor reads FirebaseMessaging.instance, starts mDNS
-        // discovery and initializes the native pipe, none of which exist until
-        // AppInitializer.runDeferred() has run, and that runs after this build.
-        // create: defers construction to the first read by a descendant, by
-        // which time the setup is done; .value constructs it here and throws
-        // "No Firebase App '[DEFAULT]' has been created", leaving a grey screen.
+        // create:, not .value — the lazy construction keeps AppState's setup
+        // (mDNS discovery, the native pipe) off this build, which runs before
+        // AppInitializer.runDeferred() is done.
+        // It used to be load-bearing for more than timing: the constructor read
+        // FirebaseMessaging.instance, which throws "No Firebase App '[DEFAULT]'
+        // has been created" until runDeferred() initialized Firebase, and since
+        // that future is not awaited a descendant could still get there first.
+        // NotificationMixin resolves messaging on use now, so that race is gone.
         //
         // The cost is that the provider owns these singletons and would dispose
         // them if it were ever removed from the tree. It never is: _Bootstrap

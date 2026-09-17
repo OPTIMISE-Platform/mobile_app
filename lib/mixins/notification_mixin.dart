@@ -55,7 +55,12 @@ mixin NotificationMixin on ChangeNotifier {
   bool _notificationInited = false;
   String? _messageIdToDisplay;
 
-  FirebaseMessaging messaging = FirebaseMessaging.instance;
+  /// Resolved on use, not as a field: a field initializer runs while AppState is
+  /// being constructed, and FirebaseMessaging.instance throws until
+  /// Firebase.initializeApp has completed - which AppInitializer.runDeferred
+  /// does without being awaited, so the widget tree can get there first.
+  FirebaseMessaging get messaging => FirebaseMessaging.instance;
+
   String? fcmToken;
 
   static Future<void> queueRemoteMessage(RemoteMessage message) async {
