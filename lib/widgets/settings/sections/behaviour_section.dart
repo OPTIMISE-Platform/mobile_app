@@ -59,13 +59,4 @@ List<Widget> behaviourSection(BuildContext context, AppState state) => [
           state.notifyListeners();
         },
       ),
-      const Divider(),
-      SettingsToggle(
-        title: "New Device Manager",
-        value: settings_service.Settings.getDeviceManagerMode(),
-        onChanged: (v) async {
-          await settings_service.Settings.setDeviceManagerMode(v);
-          state.notifyListeners();
-        },
-      ),
     ];

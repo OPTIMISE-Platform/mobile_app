@@ -15,7 +15,10 @@
  */
 
 
+import 'package:flutter/foundation.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/settings.dart';
 
 class ApiAvailableService {
@@ -51,19 +54,24 @@ class ApiAvailableService {
       return false;
     }
     // TODO request from backend, cache, match against routes
-    final parsedUri = Uri.parse(uri);
-    try {
-      AppState().networks.firstWhere((element) {
-        element.localService?.firstWhere(
-            (s) => s.host?.toLowerCase() == parsedUri.host.toLowerCase());
-        return true;
-      });
-      // a network has the requested host
+    if (servedLocally(AppState().networks, uri)) {
       return true;
-    } on StateError {
-      // pass
     }
-    final rv = !Settings.getLocalMode();
-    return rv;
+    return !Settings.getLocalMode();
+  }
+
+  /// Whether [uri] addresses a gateway that serves one of [networks].
+  ///
+  /// Such a request stays inside the local network and is reachable even when
+  /// the cloud is not, which is what makes it available regardless of the local
+  /// mode setting.
+  @visibleForTesting
+  static bool servedLocally(Iterable<Network> networks, String uri) {
+    final host = Uri.parse(uri).host.toLowerCase();
+    if (host.isEmpty) return false;
+    return networks.any((network) =>
+        network.localGatewayHosts?.any(
+            (gateway) => gatewayHostOnly(gateway).toLowerCase() == host) ??
+        false);
   }
 }

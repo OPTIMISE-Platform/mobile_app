@@ -17,7 +17,6 @@
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/device_state.dart';
-import 'package:nsd/nsd.dart';
 
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -40,9 +39,11 @@ class Network {
   @JsonKey(ignore: true)
   Id isarId = -1;
 
+  /// Hosts of the paired gateways that serve this network, empty or null when
+  /// none is reachable and the cloud has to answer instead.
   @JsonKey(ignore: true)
   @ignore
-  List<Service>? localService;
+  List<String>? localGatewayHosts;
 
   @JsonKey(ignore: true)
   @ignore

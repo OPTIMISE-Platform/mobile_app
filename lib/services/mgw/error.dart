@@ -27,6 +27,20 @@ enum ErrorCode {
   DEFAULT
 }
 
+/// The core services answer errors with a plain text body that names the cause,
+/// while the status message only carries the HTTP reason phrase. Prefer the
+/// body, but fall back for an empty, oversized or non-text one.
+String _responseDetail(Response response) {
+  final body = response.data;
+  if (body is String) {
+    final text = body.trim();
+    if (text.isNotEmpty && text.length <= 200 && !text.startsWith("<")) {
+      return text;
+    }
+  }
+  return response.statusMessage ?? "";
+}
+
 Failure handleDioException(DioException error) {
   final logger = Logger(
     printer: SimplePrinter(),
@@ -47,7 +61,7 @@ Failure handleDioException(DioException error) {
       if (error.response != null &&
           error.response?.statusCode != null &&
           error.response?.statusMessage != null) {
-        var message = error.response?.statusMessage ?? "";
+        var message = _responseDetail(error.response!);
         switch (error.response?.statusCode) {
           case 404:
             failure = Failure(ErrorCode.NOT_FOUND, message);

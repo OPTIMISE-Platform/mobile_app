@@ -26,16 +26,12 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/services/devices.dart';
-import 'package:mobile_app/services/device_manager_old.dart';
 import 'package:mobile_app/services/mgw/device_manager_new.dart';
-import 'package:mobile_app/services/mgw/error.dart';
 
 class MgwDeviceManager {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
-
-  static var useNewDeviceManager = false;
 
   static Future<void> updateDeviceConnectionStatusFromMgw(
       Iterable<DeviceInstance> devices) async {
@@ -43,7 +39,7 @@ class MgwDeviceManager {
     devices.forEach((d) => devicesByNetwork.insert(d.network, d));
     final List<Future> futures = [];
     devicesByNetwork.m.forEach((network, devices) async {
-      if (network?.localService != null) {
+      if (network?.localGatewayHosts?.isNotEmpty == true) {
         futures.add(_updateFromMgw(network!, devices)
             .onError((error, stackTrace) async {
           ExceptionLogElement.Log(error.toString());
@@ -79,60 +75,15 @@ class MgwDeviceManager {
         "updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
   }
 
-  static Future<void> _setupDeviceManager(String host) async {
-    if (Settings.getDeviceManagerMode()) {
-      useNewDeviceManager = true;
-      return;
-    }
-    // TODO: remove this check when the old port based deployment of device manager is not running anymore
-    _logger.d(
-        "MGW-DEVICE-MANAGER: Find out which device manager to use by checking endpoints");
-    var deviceManagerEndpoints = [];
-    try {
-      deviceManagerEndpoints =
-          await DeviceManagerNew(host).getDeviceManagerEndpoints();
-    } on Failure catch (e) {
-      _logger.e("Cant check device manager endpoints: ${e.detailedMessage}");
-      return;
-    } catch (e) {
-      _logger.e("Cant check device manager endpoints: $e");
-      return;
-    }
-
-    if (deviceManagerEndpoints.isEmpty) {
-      useNewDeviceManager = false;
-      _logger.d(
-          "No endpoints found for device manager -> use port based device manager");
-      return;
-    }
-    _logger.d(
-        "Endpoints found for device manager -> use new path based device manager");
-    useNewDeviceManager = true;
-  }
-
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
-    final service = network.localService?.first;
-    var ip = service?.host;
+    final ip = network.localGatewayHosts?.first;
     if (ip == null) {
       _logger.d("ip not set");
       return;
     }
 
-    await _setupDeviceManager(ip);
-    Response<dynamic> devicesFromMgw;
-    _logger.d(
-        "MGW-DEVICE-MANAGER: Load devices from new device manager: $useNewDeviceManager");
-    // TODO remove this part when port based device manager are not used anymore in the future
-    if (useNewDeviceManager) {
-      devicesFromMgw = await DeviceManagerNew(ip).getDevices();
-    } else {
-      try {
-        devicesFromMgw = await DeviceManagerOld(ip).getDevices();
-      } catch (e) {
-        rethrow;
-      }
-    }
+    final devicesFromMgw = await DeviceManagerNew(ip).getDevices();
     _logger
         .d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
     for (final device in devices) {

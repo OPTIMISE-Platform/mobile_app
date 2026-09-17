@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/error.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
 
 
@@ -50,7 +51,7 @@ class MgwAuth {
   String baseUrl = "";
 
   MgwAuth(String host) {
-    baseUrl = "http://$host:8080$authPath";
+    baseUrl = "http://${gatewayAuthority(host)}$authPath";
   }
 
   final _logger = Logger(

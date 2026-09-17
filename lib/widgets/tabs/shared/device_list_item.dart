@@ -182,7 +182,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
 
       final connectionStatus = device.connection_state;
       final unavailable = connectionStatus == DeviceConnectionStatus.offline ||
-          device.network?.localService == null && Settings.getLocalMode();
+          device.network?.localGatewayHosts?.isNotEmpty != true && Settings.getLocalMode();
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
         title: Text(device.displayName),

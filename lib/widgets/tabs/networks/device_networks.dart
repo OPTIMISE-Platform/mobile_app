@@ -124,7 +124,15 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                       : const SizedBox.shrink(),
                                   ListTile(
                                       title: Row(children: [
-                                        Text(state.networks[i].name),
+                                        // Flexible with an ellipsis: a network
+                                        // name is free text and overflows the
+                                        // row as soon as it is long.
+                                        Flexible(
+                                          child: Text(
+                                            state.networks[i].name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
                                         Badge(
                                           label: const Icon(
                                               Icons.error,
@@ -194,7 +202,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                               });
                                             },
                                       trailing:
-                                          state.networks[i].localService == null
+                                          state.networks[i].localGatewayHosts?.isNotEmpty != true
                                               ? IconButton(
                                                   onPressed: () async => {
                                                         await Navigator.push(

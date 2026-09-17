@@ -14,13 +14,13 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/auth.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 
 const LOG_PREFIX = "MGW-RESTRICTED-API-SERVICE";
@@ -60,7 +60,7 @@ class MgwService {
 
 
   MgwService(String host, bool authenticate) {
-    baseUrl = "http://$host:8080";
+    baseUrl = "http://${gatewayAuthority(host)}";
     mgwAuthService = MgwAuth(host);
 
     if (authenticate) {
@@ -72,12 +72,7 @@ class MgwService {
           _logger.d("Try to get session token");
           options.headers['X-Session-Token'] = await GetSessionToken();
         } catch (e) {
-          try {
-            _logger.d("Try to get basic auth");
-            options.headers['Authorization'] = await GetBasicAuthValue();
-          } catch (e) {
-            _logger.d(e);
-          }
+          _logger.d(e);
         }
         _logger.d("$LOG_PREFIX: End interceptor");
         return handler.next(options);
@@ -107,18 +102,6 @@ class MgwService {
     await _storage.write(
         key: sessionExpirationStorageKey, value: loginResponse.expires_at);
     return loginResponse.token;
-  }
-
-  Future<String> GetBasicAuthValue() async {
-    _logger.d("$LOG_PREFIX: Load basic auth credentials from storage");
-    try {
-      var password = await MgwStorage.LoadBasicAuthCredentials();
-      String basicAuth =
-          'Basic ${base64.encode(utf8.encode('admin:$password'))}';
-      return basicAuth;
-    } catch (e) {
-      rethrow;
-    }
   }
 
   LoadCredentialsFromStorage() async {

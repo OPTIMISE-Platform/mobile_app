@@ -456,12 +456,12 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
             message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
       }
       if (device != null) {
-        if (device.network?.localService != null) {
+        if (device.network?.localGatewayHosts?.isNotEmpty == true) {
           trailingHeader.add(const Tooltip(message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined)));
         }
         trailingHeader.add(FavorizeButton(widget._device!, null));
       } else {
-        if (deviceGroup?.network?.localService != null) {
+        if (deviceGroup?.network?.localGatewayHosts?.isNotEmpty == true) {
           trailingHeader.add(const Tooltip(message: "In local network", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined)));
         }
         trailingHeader.add(FavorizeButton(null, widget._group));

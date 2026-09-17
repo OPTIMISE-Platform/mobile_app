@@ -15,19 +15,20 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/mgw.dart';
+import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/mgw/discovery.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
-import 'package:nsd/nsd.dart';
 import 'package:provider/provider.dart';
 
 const double TOP_PADDING = 100;
@@ -37,81 +38,94 @@ final _logger = Logger(
   printer: SimplePrinter(),
 );
 
-/// Asks for the gateway's basic-auth password and stores it.
-///
-/// Returns whether a password was entered: on cancel the caller must not go on
-/// to register the gateway, or it lands in the paired list with no credentials
-/// and every later request against it fails.
-Future<bool> pairWithBasicAuth(BuildContext context, MGW mgw) async {
-  // TODO remove pairing with basic auth credentials
-  // Controller per invocation, not a global one: it holds the password, and a
-  // global keeps it in memory for the process and pre-fills the next pairing.
-  final controller = TextEditingController();
-  try {
-    final stored = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Password'),
-          content: TextField(
-            controller: controller,
-            obscureText: true,
-            autofillHints: const [AutofillHints.password],
-            decoration: const InputDecoration(hintText: "Password"),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('CANCEL'),
-              onPressed: () {
-                Navigator.pop(context, false);
-              },
-            ),
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () async {
-                if (controller.text.isEmpty) {
-                  Navigator.pop(context, false);
-                  return;
-                }
-                await MgwStorage.StoreBasicAuthCredentials(controller.text);
-                if (!context.mounted) return;
-                Navigator.pop(context, true);
-              },
-            ),
-          ],
-        );
-      },
-    );
-    return stored ?? false;
-  } finally {
-    controller.dispose();
-  }
-}
-
 Future<List<MGW>> DiscoverLocalGatewayHosts() async {
   _logger.d("Discover local gateways...");
-  Discovery discovery = await startDiscovery('_snrgy._tcp', ipLookupType: IpLookupType.any);
-  List<MGW> gateways = [];
-  List<String> foundHostnames = [];
-  discovery.addListener(() {
-    discovery.services.forEach((service) {
-      _logger.d("Found service: $service");
-      var hostname = service.host??"";
-      var serviceName = service.name??"";
-      var coreId = utf8.decode(service.txt?["serial"]??[]);
+  final found = await MgwDiscoveryService.discover();
+  return found.map((g) {
+    final host = g.ip.isEmpty ? g.hostname : g.ip;
+    // Carry the advertised port: a core is not necessarily on the default one.
+    final address =
+        g.port == defaultGatewayPort ? host : "$host:${g.port}";
+    return MGW(g.hostname, g.name, g.coreId, address);
+  }).toList();
+}
 
-      var ip = service.addresses?[0].address??"";
-      if(!foundHostnames.contains(hostname)) {
-        var gateway = MGW(hostname, serviceName, coreId, ip);
-        gateways.add(gateway);
-      }
-      foundHostnames.add(hostname);
-    });
-  });
-  await Future.delayed(const Duration(seconds: 5));
+/// Asks which cloud network the gateway serves.
+///
+/// The gateway cannot answer this. It advertises its own core id and exposes no
+/// endpoint naming its cloud network, so without the binding the app pairs
+/// successfully and still never talks to the gateway.
+Future<Network?> _askForNetwork(BuildContext context, AppState appState) async {
+  if (appState.networks.isEmpty) {
+    Toast.showToastNoContext("No networks loaded yet");
+    return null;
+  }
+  return showDialog<Network>(
+    context: context,
+    builder: (context) => SimpleDialog(
+      title: const Text("Which network does this gateway serve?"),
+      children: appState.networks
+          .map((n) => SimpleDialogOption(
+                onPressed: () => Navigator.pop(context, n),
+                child: Text(n.name),
+              ))
+          .toList(),
+    ),
+  );
+}
 
-  await stopDiscovery(discovery);
-  return gateways;
+/// Asks for a gateway's host or address.
+Future<String?> _askForHost(BuildContext context) =>
+    showDialog<String>(context: context, builder: (_) => const _HostDialog());
+
+/// Owns the text controller so it outlives the dialog's closing animation.
+///
+/// Disposing it right after [showDialog] returns is too early: that future
+/// completes on the pop, while the route animates out and its text field keeps
+/// rebuilding - and rebuilding re-subscribes to the controller, which then
+/// throws for having been disposed.
+class _HostDialog extends StatefulWidget {
+  const _HostDialog();
+
+  @override
+  State<_HostDialog> createState() => _HostDialogState();
+}
+
+class _HostDialogState extends State<_HostDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.pop(context, _controller.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Gateway address"),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        keyboardType: TextInputType.url,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        decoration: const InputDecoration(hintText: "Host or IP"),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('CANCEL'),
+        ),
+        TextButton(
+          onPressed: _submit,
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  }
 }
 
 Future<void> PairWithGateway(MGW mgw) async {
@@ -133,40 +147,24 @@ Future<void> StoreGateway(MGW mgw, AppState appState) async {
   _logger.d("Stored mgw");
 
   appState.gateways.add(mgw);
+  // Without this the gateway stays unused until the next network load.
+  await appState.mergeGatewaysWithNetworks();
 }
 
-Future<void> StartPairing(MGW mgw, AppState appState, BuildContext widgetBuildContext, BuildContext context) async {
+Future<void> StartPairing(MGW mgw, AppState appState, BuildContext context) async {
   try {
     _logger.d("Try to pair token based");
     await PairWithGateway(mgw);
     await StoreGateway(mgw, appState);
   } on Failure catch (e) {
     _logger.e("Pairing is not possible: ${e.detailedMessage}");
-    if (e.errorCode == ErrorCode.UNAUTHORIZED) {
-      // MGW is still using basic auth protection -> ask user for password
-      try {
-        _logger.d("Try to pair basic auth based");
-        if (!widgetBuildContext.mounted) {
-          // Nothing left to ask on: say so rather than closing the sheet as if
-          // the gateway had been paired.
-          _logger.e("Cannot ask for the password, the page is gone");
-          Toast.showToastNoContext("Pairing was not possible");
-        } else if (await pairWithBasicAuth(widgetBuildContext, mgw)) {
-          await StoreGateway(mgw, appState);
-        } else {
-          // Cancelled or left empty - registering the gateway now would add it
-          // to the list without credentials.
-          Toast.showToastNoContext("Pairing needs the gateway password");
-        }
-      } catch (e) {
-        _logger.e("Pairing is not possible: $e");
-        Toast.showToastNoContext(
-            "Pairing was not possible");
-      }
-    } else {
-      Toast.showToastNoContext(
-          "Pairing was not possible. Check if pairing mode is enabled!");
-    }
+    // Pairing without an open pairing window is the common failure and the
+    // gateway reports it as a 500 with "no credential session open", which
+    // names the cause but not the remedy - so keep the hint for that case and
+    // let the gateway speak for every other one.
+    Toast.showToastNoContext(e.errorCode == ErrorCode.SERVER_ERROR
+        ? "Pairing was not possible. Check if pairing mode is enabled! (${e.detailedMessage})"
+        : "Pairing was not possible: ${e.detailedMessage}");
   }
   if (!context.mounted) return;
   Navigator.pop(context);
@@ -202,6 +200,26 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
     }
   }
 
+  /// Pairs a gateway the user entered by hand.
+  ///
+  /// Needed beside discovery because a core that does not advertise - the
+  /// installer makes that optional - is otherwise unreachable for the app.
+  Future<void> _addManually(AppState appState) async {
+    final host = await _askForHost(context);
+    if (host == null || host.isEmpty || !mounted) return;
+    final network = await _askForNetwork(context, appState);
+    if (network == null || !mounted) return;
+    await StartPairing(
+        MGW(host, host, "", host, networkId: network.id), appState, context);
+  }
+
+  Future<void> _pairDiscovered(MGW mgw, AppState appState) async {
+    final network = await _askForNetwork(context, appState);
+    if (network == null || !mounted) return;
+    mgw.networkId = network.id;
+    await StartPairing(mgw, appState, context);
+  }
+
   handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
     if (mgws.isEmpty) {
       return const Column(
@@ -233,7 +251,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
                         child: const Icon(
                             Icons.add
                         ),
-                        onPressed: () => StartPairing(mgw, appState, widgetBuildContext, context)
+                        onPressed: () => _pairDiscovered(mgw, appState)
                     )
                   )
               );
@@ -296,6 +314,11 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
           appBar: AppBar(
             title: const Text("Gateways"),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: "Add by address",
+                onPressed: () => _addManually(state),
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: "Search again",

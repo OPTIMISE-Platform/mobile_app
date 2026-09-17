@@ -241,7 +241,7 @@ mixin DeviceMixin on ChangeNotifier {
       MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices),
     ];
     final outsideLocalNet = newDevices
-        .where((d) => d.network?.localService == null)
+        .where((d) => d.network?.localGatewayHosts?.isNotEmpty != true)
         .map((d) => d.id)
         .toList(growable: false);
 

@@ -20,13 +20,31 @@ import 'package:json_annotation/json_annotation.dart';
 class MGW {
   String hostname, mDNSServiceName, coreId, ip;
 
-  MGW(this.hostname, this.mDNSServiceName, this.coreId, this.ip);
-  MGW.fromJson(Map<String, dynamic> json): hostname=json['hostname'], mDNSServiceName=json['mDNSServiceName'], coreId=json['coreId'], ip=json['ip'];
-  Map<String, dynamic> toJson() => <String, dynamic> {
-      "hostname": hostname,
-      "mDNSServiceName": mDNSServiceName,
-      "coreId": coreId,
-      "ip": ip
-  };
+  /// Id of the cloud network this gateway serves.
+  ///
+  /// Kept separately from [coreId] because the gateway does not publish it: the
+  /// core advertises its own 8 character core id, which is never a network id,
+  /// so the binding is set when the gateway is added.
+  String networkId;
+
+  MGW(this.hostname, this.mDNSServiceName, this.coreId, this.ip,
+      {this.networkId = ""});
+
+  // Entries written before the split carried the network id in coreId, so fall
+  // back to it rather than dropping an existing binding.
+  MGW.fromJson(Map<String, dynamic> json)
+      : hostname = json['hostname'],
+        mDNSServiceName = json['mDNSServiceName'],
+        coreId = json['coreId'] ?? "",
+        ip = json['ip'],
+        networkId = json['networkId'] ?? json['coreId'] ?? "";
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        "hostname": hostname,
+        "mDNSServiceName": mDNSServiceName,
+        "coreId": coreId,
+        "ip": ip,
+        "networkId": networkId
+      };
 }
 

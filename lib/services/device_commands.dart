@@ -25,7 +25,6 @@ import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/mgw/core_manager.dart';
 import 'package:mobile_app/services/mgw/endpoint.dart';
-import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/device_command_response.dart';
@@ -91,29 +90,6 @@ class DeviceCommandPath {
   }
 }
 
-class DeviceCommandPort {
-  String host;
-  DeviceCommandPort(this.host);
-  final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
-
-  Future<List<DeviceCommandResponse>> runCommands(
-      commands, preferEventValue) async {
-    // TODO service.port was used  but shoud be device command port ?????
-    var url = "http://$host:8002$commandUrlPrefix$preferEventValue";
-    _logger.d("$LOG_PREFIX: Run commands via exposed port at: $url");
-
-    final Response<List<dynamic>> resp;
-    final dioH1 = await DioFactory.create(DioConfig.standard);
-    resp = await dioH1.post<List<dynamic>>(url, data: json.encode(commands));
-
-    return List<DeviceCommandResponse>.generate(resp.data!.length,
-        (index) => DeviceCommandResponse.fromJson(resp.data![index]));
-  }
-}
-
 class DeviceCommandCloud {
   static final _logger = Logger(
     printer: SimplePrinter(),
@@ -162,9 +138,9 @@ class DeviceCommandsService {
     final List<DeviceCommand> cloudRetries = [];
 
     map.entries.forEach((network) {
-      final service = network.key?.localService?.first;
-      futures.add(_runCommands(network.value, service == null,
-              service?.host ?? "", preferEventValue)
+      final host = network.key?.localGatewayHosts?.first;
+      futures.add(_runCommands(network.value, host == null,
+              host ?? "", preferEventValue)
           .onError((_, __) {
         cloudRetries.addAll(network.value);
         return [];
@@ -202,30 +178,6 @@ class DeviceCommandsService {
         .toList();
   }
 
-  static Future<bool> checkPathBasedCommandServiceAvailable(String host) async {
-    _logger.d(
-        "Find out which device command service to use by checking endpoints");
-    var endpoints = [];
-    try {
-      endpoints = await DeviceCommandPath(host).getEndpoints();
-    } on Failure catch (e) {
-      _logger.e("Cant check device command endpoints: ${e.detailedMessage}");
-      return false;
-    } catch (e) {
-      _logger.e("Cant check device command endpoints: $e");
-      return false;
-    }
-
-    if (endpoints.isEmpty) {
-      _logger.d(
-          "No endpoints found for device command -> use port based device command");
-      return false;
-    }
-    _logger.d(
-        "Endpoints found for device command -> use new path based device command");
-    return true;
-  }
-
   static Future<List<DeviceCommandResponse>> _runCommands(
       List<DeviceCommand> commands,
       bool sendToCloud,
@@ -235,14 +187,7 @@ class DeviceCommandsService {
       return DeviceCommandCloud().runCommands(commands, preferEventValue);
     }
 
-    var usePathBasedCommandService =
-        await checkPathBasedCommandServiceAvailable(host);
-    _logger.d("Load devices from new path based device command: $usePathBasedCommandService");
-    if (usePathBasedCommandService) {
-      return DeviceCommandPath(host).runCommands(commands, preferEventValue);
-    } else {
-      return DeviceCommandPort(host).runCommands(commands, preferEventValue);
-    }
+    return DeviceCommandPath(host).runCommands(commands, preferEventValue);
   }
 
   /// Fills the responses list and returns whether that succeeded. A failure is

@@ -65,8 +65,6 @@ class Settings {
 
   static const _filterModeKey = "filter_mode";
 
-  static const _dmModeKey = "dm_mode";
-
   static const _preReleaseModeKey = "preRelease_mode";
 
   static const _accountKey = "account";
@@ -374,16 +372,6 @@ class Settings {
   static Future<void> setFilterMode(bool? value) {
     checkInit();
     return _box!.put(_filterModeKey, value.toString());
-  }
-
-  static bool getDeviceManagerMode() {
-    checkInit();
-    return _box!.get(_dmModeKey, defaultValue: "true") == "true";
-  }
-
-  static Future<void> setDeviceManagerMode(bool? value) {
-    checkInit();
-    return _box!.put(_dmModeKey, value.toString());
   }
 
   static bool getPreReleaseMode() {

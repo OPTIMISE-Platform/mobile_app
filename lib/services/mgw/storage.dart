@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -28,20 +29,24 @@ const LOG_PREFIX = "MGW-STORAGE-SERVICE";
 
 /// Persistence for gateway pairing.
 ///
-/// The two secrets live in the encrypted store, the list of paired gateways in
-/// the plain Hive box. The split matters: the device secret and the basic-auth
-/// password mint session tokens and do not expire, so they are worth more to an
-/// attacker than the session token that [MgwService] already kept encrypted.
+/// The device secret lives in the encrypted store, the list of paired
+/// gateways in the plain Hive box. It mints session tokens and does not
+/// expire, so it is worth more to an attacker than the session token that
+/// [MgwService] already kept encrypted.
 class MgwStorage {
-  // Both were Hive keys until 0.0.386. Still read once so an existing pairing
+  // Was a Hive key until 0.0.386. Still read once so an existing pairing
   // survives the move, then deleted from the plaintext box.
   static const _mgwCredentialsKeyPrefix = "credentials_";
-  static const _mgwBasicAuthCredentialsKeyPrefix = "basic_auth_credentials_";
 
   static const _mgwConnectedKeyPrefix = "connected_mgws_";
 
   static const _credentialsKey = "mgw-device-credentials";
+
+  // The basic-auth path was removed with the old, port-based gateway
+  // generation. These two keys are kept only so init() can delete any
+  // leftover password instead of leaving it on the device.
   static const _basicAuthKey = "mgw-basic-auth-password";
+  static const _mgwBasicAuthCredentialsKeyPrefix = "basic_auth_credentials_";
 
   static const _boxName = "mgw.box";
   static Box<String>? _box;
@@ -65,6 +70,20 @@ class MgwStorage {
     Hive.init((await getApplicationDocumentsDirectory()).path);
     _box = await Hive.openBox<String>(_boxName);
     isInitialized = true;
+    // One-time cleanup of the basic-auth password left over from the old,
+    // port-based gateway generation. Deliberately not awaited: this runs on the
+    // startup path, and the first secure-storage access pays the one-off
+    // EncryptedSharedPreferences crypto init that AppInitializer keeps off it.
+    unawaited(_dropLegacyBasicAuth());
+  }
+
+  static Future<void> _dropLegacyBasicAuth() async {
+    try {
+      await _secure.delete(key: _basicAuthKey);
+      await _box?.delete(_mgwBasicAuthCredentialsKeyPrefix);
+    } catch (e) {
+      _logger.e("$LOG_PREFIX: Could not drop the legacy basic auth password: $e");
+    }
   }
 
   static Future<void> StoreCredentials(DeviceUserCredentials user) async {
@@ -91,6 +110,15 @@ class MgwStorage {
     storedMGWs.add(mgw);
     return await _box?.put(_mgwConnectedKeyPrefix, json.encode(storedMGWs)).then((
         value) => _box?.flush());
+  }
+
+  /// Writes the whole list back, for updating an entry in place.
+  static Future<void> ReplacePairedMGWs(List<MGW> mgws) async {
+    await init();
+    _logger.d("$LOG_PREFIX: Replace ${mgws.length} paired mgws");
+    return await _box
+        ?.put(_mgwConnectedKeyPrefix, json.encode(mgws))
+        .then((value) => _box?.flush());
   }
 
   static Future<List<MGW>> LoadPairedMGWs() async {
@@ -128,24 +156,6 @@ class MgwStorage {
     }
     return await _box?.put(_mgwConnectedKeyPrefix, json.encode(filteredMGWs)).then((
         value) => _box?.flush());
-  }
-
-  // TODO: remove loading and saving of basic auth credentials later
-  static Future<void> StoreBasicAuthCredentials(String password) async {
-    await init();
-    _logger.d("$LOG_PREFIX: Store mgw device basic auth credentials");
-    await _secure.write(key: _basicAuthKey, value: password);
-  }
-
-  static Future<String> LoadBasicAuthCredentials() async {
-    await init();
-    _logger.d("$LOG_PREFIX: Load mgw device basic auth credentials");
-    final password = await _readAndMigrate(
-        _basicAuthKey, _mgwBasicAuthCredentialsKeyPrefix);
-    if (password != null) {
-      return password;
-    }
-    throw("Credentials not stored");
   }
 
   /// Reads [secureKey], falling back once to the plaintext Hive entry under
