@@ -236,6 +236,25 @@ mixin DeviceMixin on ChangeNotifier {
     // notifyListeners() is already called inside loadStates
   }
 
+  /// Copies the connection state of [source] onto the matching entries of
+  /// [target] and tells each one it changed.
+  ///
+  /// The notification is the point: the list listens per device, so a state
+  /// written without it stays invisible until something else rebuilds the whole
+  /// list - which is the slower states load right after, or nothing at all.
+  @visibleForTesting
+  static void applyConnectionStates(
+      List<DeviceInstance> target, List<DeviceInstance> source) {
+    for (final d in source) {
+      final match = target.where((t) => t.id == d.id);
+      if (match.isEmpty) continue;
+      final device = match.first;
+      if (device.connection_state == d.connection_state) continue;
+      device.connection_state = d.connection_state;
+      device.notifyStateChanged();
+    }
+  }
+
   Future<void> _refreshConnectionStatuses(List<DeviceInstance> newDevices) async {
     final futures = <Future>[
       MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices),
@@ -263,12 +282,7 @@ mixin DeviceMixin on ChangeNotifier {
             d.connection_state = DeviceConnectionStatus.unknown;
           }
           return DeviceInstanceWithTotal(cached, cached.length);
-        }).then((ds) {
-          for (final d in ds.devices) {
-            newDevices.firstWhere((d2) => d2.id == d.id).connection_state =
-                d.connection_state;
-          }
-        }),
+        }).then((ds) => applyConnectionStates(newDevices, ds.devices)),
       );
     }
     await Future.wait(futures);
