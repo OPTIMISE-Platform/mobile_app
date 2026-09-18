@@ -21,6 +21,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/mgw/advertisements.dart';
 import 'package:mobile_app/services/mgw/discovery.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
@@ -52,9 +53,10 @@ Future<List<MGW>> DiscoverLocalGatewayHosts() async {
 
 /// Asks which cloud network the gateway serves.
 ///
-/// The gateway cannot answer this. It advertises its own core id and exposes no
-/// endpoint naming its cloud network, so without the binding the app pairs
-/// successfully and still never talks to the gateway.
+/// Only the fallback: the gateway publishes this itself under /core/discovery,
+/// see [MgwAdvertisements]. It is asked when nothing is published - a gateway
+/// whose cloud proxy is not signed in - because without the binding the app
+/// pairs successfully and still never talks to the gateway.
 Future<Network?> _askForNetwork(BuildContext context, AppState appState) async {
   if (appState.networks.isEmpty) {
     Toast.showToastNoContext("No networks loaded yet");
@@ -207,17 +209,35 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
   Future<void> _addManually(AppState appState) async {
     final host = await _askForHost(context);
     if (host == null || host.isEmpty || !mounted) return;
-    final network = await _askForNetwork(context, appState);
+    final network = await _networkFor(host, appState);
     if (network == null || !mounted) return;
     await StartPairing(
         MGW(host, host, "", host, networkId: network.id), appState, context);
   }
 
   Future<void> _pairDiscovered(MGW mgw, AppState appState) async {
-    final network = await _askForNetwork(context, appState);
+    final network = await _networkFor(mgw.ip, appState);
     if (network == null || !mounted) return;
     mgw.networkId = network.id;
     await StartPairing(mgw, appState, context);
+  }
+
+  /// The network the gateway serves.
+  ///
+  /// The gateway publishes it under /core/discovery and needs no session for
+  /// that, so asking is the fallback rather than the rule: it is left for a
+  /// gateway that publishes nothing - its cloud proxy is not signed in - or one
+  /// that names a network this account does not have.
+  Future<Network?> _networkFor(String host, AppState appState) async {
+    final advertised = await MgwAdvertisements.networkIdOf(host);
+    if (advertised.isNotEmpty) {
+      final match = appState.networks.where((n) => n.id == advertised);
+      if (match.isNotEmpty) return match.first;
+      _logger.d(
+          "Gateway serves $advertised, which is not among the loaded networks");
+    }
+    if (!mounted) return null;
+    return _askForNetwork(context, appState);
   }
 
   handleData(List<MGW> mgws, AppState appState, widgetBuildContext) {
