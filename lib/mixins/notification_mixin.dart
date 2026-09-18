@@ -65,27 +65,35 @@ mixin NotificationMixin on ChangeNotifier {
 
   static Future<void> queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
-    _logger.d('Queuing message ${message.messageId}');
-    final map = remoteMessageToMap(message);
+    // Everything after the acquire is inside the try: the payload is decoded
+    // here, and a malformed one throws. This runs in the background isolate
+    // that FCM reuses, so a lock left behind blocks every later message
+    // silently - they are never queued and never show up after a resume.
+    try {
+      _logger.d('Queuing message ${message.messageId}');
+      final map = remoteMessageToMap(message);
 
-    switch (map['data']['type']) {
-      case notificationUpdateType:
-        final n = app.Notification.fromJson(json.decode(map['data']['payload']));
-        if (n.isRead) await Eraser.clearAppNotificationsByTag(n.id);
-        break;
-      case notificationDeleteManyType:
-        final ids = json.decode(map['data']['payload']) as List<dynamic>;
-        for (final id in ids) {
-          await Eraser.clearAppNotificationsByTag(id as String);
-        }
-        break;
+      switch (map['data']['type']) {
+        case notificationUpdateType:
+          final n =
+              app.Notification.fromJson(json.decode(map['data']['payload']));
+          if (n.isRead) await Eraser.clearAppNotificationsByTag(n.id);
+          break;
+        case notificationDeleteManyType:
+          final ids = json.decode(map['data']['payload']) as List<dynamic>;
+          for (final id in ids) {
+            await Eraser.clearAppNotificationsByTag(id as String);
+          }
+          break;
+      }
+
+      final read = await _storage.read(key: messageKey);
+      final list = read != null ? json.decode(read) as List : [];
+      list.add(map);
+      await _storage.write(key: messageKey, value: json.encode(list));
+    } finally {
+      _messageMutex.release();
     }
-
-    final read = await _storage.read(key: messageKey);
-    final list = read != null ? json.decode(read) as List : [];
-    list.add(map);
-    await _storage.write(key: messageKey, value: json.encode(list));
-    _messageMutex.release();
   }
 
   Future<void> initMessaging() async {
@@ -221,12 +229,23 @@ mixin NotificationMixin on ChangeNotifier {
 
   Future<void> handleQueuedMessages() async {
     await _messageMutex.acquire();
-    final read = await _storage.read(key: messageKey);
-    final list = read != null ? json.decode(read) as List : [];
-    list.map((e) => RemoteMessage.fromMap(e as Map<String, dynamic>))
-        .forEach(_handleRemoteMessage);
-    await _storage.delete(key: messageKey);
-    _messageMutex.release();
+    try {
+      final read = await _storage.read(key: messageKey);
+      final list = read != null ? json.decode(read) as List : [];
+      list.map((e) => RemoteMessage.fromMap(e as Map<String, dynamic>))
+          .forEach(_handleRemoteMessage);
+    } finally {
+      try {
+        // Dropped even when handling threw, and this runs on every resume: an
+        // entry that cannot be decoded would otherwise be retried forever, and
+        // the ones before it re-applied each time - every release_info among
+        // them schedules another update check.
+        await _storage.delete(key: messageKey);
+      } catch (e) {
+        _logger.e('Could not clear the queued messages: $e');
+      }
+      _messageMutex.release();
+    }
   }
 
   void _handleRemoteMessage(RemoteMessage message) =>

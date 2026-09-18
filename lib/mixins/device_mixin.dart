@@ -174,54 +174,58 @@ mixin DeviceMixin on ChangeNotifier {
       return;
     }
 
-    if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
-      _devicesMutex.release();
-      notifyListeners();
-      return;
-    }
-    if (clear) devices.clear();
-
-    await ensureInitialized();
-
-    const limit = 50;
-    late final List<DeviceInstance> newDevices;
+    // Single release in a finally: loadingDevices is read straight off this
+    // mutex, so any path out of here that skips the release leaves the list
+    // spinning for the rest of the process.
     try {
-      final d = await DevicesService.getDevices(
-        limit,
-        _deviceOffset,
-        _deviceSearchFilter,
-        devices.isNotEmpty ? devices.last : null,
-      );
-      newDevices = d.devices;
-      totalDevices = d.total;
-    } catch (e) {
-      ErrorReporter.report('Could not load devices', e);
-      notifyListeners();
-      _devicesMutex.release();
-      return;
-    }
-
-    _devicesLoadedOnce = true;
-    _allDevicesLoaded = newDevices.length < limit;
-    _deviceOffset += newDevices.length;
-
-    if (newDevices.isNotEmpty) {
-      for (final d in newDevices) {
-        if (deviceTypes[d.device_type_id] != null) {
-          d.prepareStates(deviceTypes[d.device_type_id]!);
-        }
+      if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
+        notifyListeners();
+        return;
       }
-      devices.addAll(newDevices);
-      notifyListeners(); // <-- show devices immediately, before states load
+      if (clear) devices.clear();
+
+      await ensureInitialized();
+
+      const limit = 50;
+      late final List<DeviceInstance> newDevices;
+      try {
+        final d = await DevicesService.getDevices(
+          limit,
+          _deviceOffset,
+          _deviceSearchFilter,
+          devices.isNotEmpty ? devices.last : null,
+        );
+        newDevices = d.devices;
+        totalDevices = d.total;
+      } catch (e) {
+        ErrorReporter.report('Could not load devices', e);
+        notifyListeners();
+        return;
+      }
+
+      _devicesLoadedOnce = true;
+      _allDevicesLoaded = newDevices.length < limit;
+      _deviceOffset += newDevices.length;
+
+      if (newDevices.isNotEmpty) {
+        for (final d in newDevices) {
+          if (deviceTypes[d.device_type_id] != null) {
+            d.prepareStates(deviceTypes[d.device_type_id]!);
+          }
+        }
+        devices.addAll(newDevices);
+        notifyListeners(); // <-- show devices immediately, before states load
+
+        // Started, not awaited - it suspends on its first await, so the
+        // release below still happens right after the list is on screen.
+        unawaited(_loadStatesInBackground(newDevices));
+        return;
+      }
+
+      notifyListeners();
+    } finally {
       _devicesMutex.release();
-
-      // load connection statuses and states in the background
-      unawaited(_loadStatesInBackground(newDevices));
-      return;
     }
-
-    notifyListeners();
-    _devicesMutex.release();
   }
 
   Future<void> _loadStatesInBackground(List<DeviceInstance> newDevices) async {

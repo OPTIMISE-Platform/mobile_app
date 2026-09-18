@@ -139,11 +139,14 @@ mixin NetworkMixin on ChangeNotifier {
   Future<void> loadStoredMGWs() async {
     _logger.d('NetworkMixin: loading stored MGWs');
     await _gatewaysMutex.acquire();
-    final storedMGWs = await MgwStorage.LoadPairedMGWs();
-    gateways
-      ..clear()
-      ..addAll(storedMGWs);
-    _gatewaysMutex.release();
+    try {
+      final storedMGWs = await MgwStorage.LoadPairedMGWs();
+      gateways
+        ..clear()
+        ..addAll(storedMGWs);
+    } finally {
+      _gatewaysMutex.release();
+    }
     notifyListeners();
   }
 
