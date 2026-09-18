@@ -23,6 +23,7 @@ import 'package:mobile_app/app.dart';
 import 'package:mobile_app/app_initializer.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
@@ -30,6 +31,21 @@ Future<void> main() async {
   // Timeline logging writes an event per HTTP request; only useful while
   // profiling, so keep it out of release builds.
   if (kDebugMode) HttpClient.enableTimelineLogging = true;
+  // Everything that escapes a catch is recorded here. Without it those
+  // failures reach the console only, and the diagnostics dump a user shares
+  // when something is wrong holds no trace of them. Neither handler shows
+  // anything: a framework error can repeat per frame and would bury the
+  // message that belongs to whatever the user just did.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    ErrorReporter.log("Unhandled framework error", details.exception,
+        details.stack);
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    ErrorReporter.log("Unhandled error", error, stack);
+    // Not claimed as handled - the platform still prints it as before.
+    return false;
+  };
   runApp(
     const _Bootstrap(),
   );

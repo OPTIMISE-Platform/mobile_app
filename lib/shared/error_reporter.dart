@@ -73,22 +73,30 @@ class ErrorReporter {
   /// Logs [message] with [error] and shows it unless it repeats what is
   /// already on screen.
   static void report(String message, [Object? error, StackTrace? stack]) {
+    log(message, error, stack);
+    _show(isOffline(error) ? offlineMessage : message);
+  }
+
+  /// Records a failure without putting anything on screen.
+  ///
+  /// For failures the user is not to be told about individually - what escapes
+  /// a catch entirely, and what a widget already answers with its own message
+  /// about the action that failed. The diagnostics log is written here rather
+  /// than from the exception classes, which used to do it from their
+  /// constructors: raising one then cost a database write, and it recorded
+  /// exceptions that are ordinary control flow. [stack] comes from the site
+  /// that caught the failure, because the one this would capture on its own is
+  /// always the same few frames.
+  static void log(String message, [Object? error, StackTrace? stack]) {
     final text = error == null ? message : "$message: $error";
     _logger.e(text);
-    // The diagnostics log is written here rather than from the exception
-    // classes, which used to do it from their constructors: raising one then
-    // cost a database write, and it recorded exceptions that are ordinary
-    // control flow. What the log holds now is what actually went wrong far
-    // enough to be reported. [stack] comes from the catch site, because the
-    // one this would capture on its own is always the same three frames.
     ExceptionLogElement.Log(text, stack);
-    _show(isOffline(error) ? offlineMessage : message);
   }
 
   /// For a failure whose cause is already known to be a missing connection, or
   /// which has no exception to inspect.
   static void reportOffline() {
-    ExceptionLogElement.Log(offlineMessage);
+    log(offlineMessage);
     _show(offlineMessage);
   }
 
