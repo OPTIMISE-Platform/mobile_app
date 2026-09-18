@@ -51,19 +51,20 @@ class MgwDeviceManager {
                       DeviceSearchFilter("", null, deviceIds), null,
                       forceBackend: true)
                   .then((ds) => applyCloudStates(devices, ds.devices));
-            } on DioException catch (e) {
+            } on DioException catch (e, s) {
               if (e.error is ApiUnavailableException) {
                 ErrorReporter.report(
                     "Device status could not be loaded from network or cloud",
-                    e);
+                    e,
+                    s);
               }
-            } catch (e) {
+            } catch (e, s) {
               // This is already the recovery path, and only DioException was
               // caught above - getDevices also throws UnexpectedStatusCode and
               // AuthException, which are neither. Letting one out rejects the
               // future the caller awaits and strands its networks mutex.
               ErrorReporter.report(
-                  "Device status could not be loaded from network or cloud", e);
+                  "Device status could not be loaded from network or cloud", e, s);
             }
           } else {
             ErrorReporter.report(

@@ -157,7 +157,7 @@ mixin NotificationMixin on ChangeNotifier {
       notifications = fetched;
       notifyListeners();
       await NotificationsService.persist(fetched);
-    } catch (e) {
+    } catch (e, s) {
       _logger.e('Could not load notifications: $e');
       if (notifications.isEmpty) {
         // Nothing loaded this session: fall back to the last set we stored, so
@@ -169,7 +169,7 @@ mixin NotificationMixin on ChangeNotifier {
       if (notifications.isEmpty) {
         // Only worth saying when the fallback came up empty too - the log above
         // already has the cause.
-        ErrorReporter.report('Could not load notifications', e);
+        ErrorReporter.report('Could not load notifications', e, s);
       }
     } finally {
       _notificationsMutex.release();
@@ -179,8 +179,8 @@ mixin NotificationMixin on ChangeNotifier {
   Future<void> updateNotifications(BuildContext context, int index) async {
     try {
       await NotificationsService.setNotification(notifications[index]);
-    } catch (e) {
-      ErrorReporter.report('Could not update notification', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not update notification', e, s);
     }
     notifyListeners();
   }
@@ -191,8 +191,8 @@ mixin NotificationMixin on ChangeNotifier {
       // Drop them from the persisted set too, or the offline fallback would
       // bring them back on the next start without a reachable backend.
       await NotificationsService.removePersisted(ids);
-    } catch (e) {
-      ErrorReporter.report('Could not delete notifications', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not delete notifications', e, s);
     }
   }
 
@@ -303,8 +303,8 @@ mixin NotificationMixin on ChangeNotifier {
       if (fcmToken != null) {
         try {
           await FcmTokenService.deregisterFcmToken(fcmToken!);
-        } catch (e) {
-          ErrorReporter.report('Could not deregister FCM', e);
+        } catch (e, s) {
+          ErrorReporter.report('Could not deregister FCM', e, s);
         }
       }
       fcmToken = token;
@@ -312,8 +312,8 @@ mixin NotificationMixin on ChangeNotifier {
       try {
         await FcmTokenService.registerFcmToken(fcmToken!);
         await messaging.subscribeToTopic('announcements');
-      } catch (e) {
-        ErrorReporter.report('Could not setup FCM', e);
+      } catch (e, s) {
+        ErrorReporter.report('Could not setup FCM', e, s);
       }
     });
   }

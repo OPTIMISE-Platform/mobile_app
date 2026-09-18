@@ -58,8 +58,8 @@ mixin DataMixin on ChangeNotifier {
       for (final e in fetched) {
         aspects[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not load aspects', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not load aspects', e, s);
       return false;
     } finally {
       _aspectsMutex.release();
@@ -81,8 +81,8 @@ mixin DataMixin on ChangeNotifier {
       for (final e in fetched) {
         concepts[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not get concepts', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not get concepts', e, s);
       return false;
     } finally {
       _conceptsMutex.release();
@@ -104,8 +104,8 @@ mixin DataMixin on ChangeNotifier {
       for (final e in fetched) {
         characteristics[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not get characteristics', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not get characteristics', e, s);
       return false;
     } finally {
       _characteristicsMutex.release();
@@ -127,8 +127,8 @@ mixin DataMixin on ChangeNotifier {
       for (final e in fetched) {
         platformFunctions[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not get nested functions', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not get nested functions', e, s);
       return false;
     } finally {
       _platformFunctionsMutex.release();

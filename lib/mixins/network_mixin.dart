@@ -68,8 +68,8 @@ mixin NetworkMixin on ChangeNotifier {
       notifyListeners();
       try {
         networks.addAll(await NetworksService.getNetworks());
-      } catch (e) {
-        ErrorReporter.report('Could not load networks', e);
+      } catch (e, s) {
+        ErrorReporter.report('Could not load networks', e, s);
       }
       _networkByLocalId = null; // networks changed — drop the cached lookup
       await mergeGatewaysWithNetworks();
@@ -128,8 +128,8 @@ mixin NetworkMixin on ChangeNotifier {
     notifyListeners();
     try {
       locations.addAll(await Future.wait(await LocationService.getLocations()));
-    } catch (e) {
-      ErrorReporter.report('Could not load locations', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not load locations', e, s);
     } finally {
       _locationsMutex.release();
     }

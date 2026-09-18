@@ -104,8 +104,8 @@ mixin DeviceMixin on ChangeNotifier {
       for (final e in fetched) {
         deviceClasses[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not get device classes', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not get device classes', e, s);
       return false;
     } finally {
       _deviceClassesMutex.release();
@@ -131,8 +131,8 @@ mixin DeviceMixin on ChangeNotifier {
       for (final e in fetched) {
         deviceTypes[e.id] = e;
       }
-    } catch (e) {
-      ErrorReporter.report('Could not get device types', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not get device types', e, s);
       return false;
     } finally {
       _deviceTypesMutex.release();
@@ -197,8 +197,8 @@ mixin DeviceMixin on ChangeNotifier {
         );
         newDevices = d.devices;
         totalDevices = d.total;
-      } catch (e) {
-        ErrorReporter.report('Could not load devices', e);
+      } catch (e, s) {
+        ErrorReporter.report('Could not load devices', e, s);
         notifyListeners();
         return;
       }
@@ -234,8 +234,8 @@ mixin DeviceMixin on ChangeNotifier {
       await loadStates(newDevices, [], [
         dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
       ]);
-    } catch (e) {
-      ErrorReporter.report('Could not load device states', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not load device states', e, s);
     }
     // notifyListeners() is already called inside loadStates
   }
@@ -273,10 +273,10 @@ mixin DeviceMixin on ChangeNotifier {
       futures.add(
         DevicesService.getDevices(outsideLocalNet.length, 0, filter, null,
             forceBackend: true)
-            .catchError((e) async {
+            .catchError((Object e, StackTrace s) async {
           if (!Settings.getLocalMode()) {
             ErrorReporter.report(
-                'Error refreshing device status, using cache', e);
+                'Error refreshing device status, using cache', e, s);
           }
           final cached = (await DevicesService.getDevices(
             outsideLocalNet.length, 0, filter, null,
@@ -328,11 +328,11 @@ mixin DeviceMixin on ChangeNotifier {
       result = await DeviceCommandsService.runCommands(
         commandCallbacks.map((e) => e.command).toList(growable: false),
       );
-    } on ApiUnavailableException catch (e) {
-      ErrorReporter.report('failed to loadStates: currently unavailable', e);
+    } on ApiUnavailableException catch (e, s) {
+      ErrorReporter.report('failed to loadStates: currently unavailable', e, s);
       result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
-    } catch (e) {
-      ErrorReporter.report('failed to loadStates', e);
+    } catch (e, s) {
+      ErrorReporter.report('failed to loadStates', e, s);
       result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     }
 
@@ -376,8 +376,8 @@ mixin DeviceMixin on ChangeNotifier {
       deviceGroups.addAll(
         await Future.wait(await DeviceGroupsService.getDeviceGroups()),
       );
-    } catch (e) {
-      ErrorReporter.report('Could not load device groups', e);
+    } catch (e, s) {
+      ErrorReporter.report('Could not load device groups', e, s);
     } finally {
       _deviceGroupsMutex.release();
     }

@@ -189,8 +189,8 @@ class CacheHelper {
         newDevices.addAll((await DevicesService.getDevices(
             limit, deviceOffset, DeviceSearchFilter(""), last,
             forceBackend: true)).devices);
-      } catch (e) {
-        ErrorReporter.report("Could not get devices", e);
+      } catch (e, s) {
+        ErrorReporter.report("Could not get devices", e, s);
         return;
       }
       allDevicesLoaded = newDevices.length < limit;
@@ -242,8 +242,8 @@ class CacheHelper {
     try {
       deviceGroups = await Future.wait(
           await DeviceGroupsService.getDeviceGroups(forceBackend: true));
-    } catch (e) {
-      ErrorReporter.report("Could not get deviceGroups", e);
+    } catch (e, s) {
+      ErrorReporter.report("Could not get deviceGroups", e, s);
       return;
     }
 
@@ -284,8 +284,8 @@ class CacheHelper {
 
     try {
       networks = await NetworksService.getNetworks(null, true);
-    } catch (e) {
-      ErrorReporter.report("Could not get networks", e);
+    } catch (e, s) {
+      ErrorReporter.report("Could not get networks", e, s);
       return;
     }
 
@@ -327,8 +327,8 @@ class CacheHelper {
     try {
       locations = await Future.wait(
           await LocationService.getLocations(forceBackend: true));
-    } catch (e) {
-      ErrorReporter.report("Could not get locations", e);
+    } catch (e, s) {
+      ErrorReporter.report("Could not get locations", e, s);
       return;
     }
 

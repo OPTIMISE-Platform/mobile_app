@@ -198,11 +198,11 @@ class DeviceCommandsService {
     try {
       responses.addAll(
           await DeviceCommandsService.runCommands(commands, preferEventValue));
-    } on ApiUnavailableException catch (e) {
-      ErrorReporter.report("Currently unavailable", e);
+    } on ApiUnavailableException catch (e, s) {
+      ErrorReporter.report("Currently unavailable", e, s);
       return false;
-    } catch (e) {
-      ErrorReporter.report("Couldn't run command", e);
+    } catch (e, s) {
+      ErrorReporter.report("Couldn't run command", e, s);
       return false;
     }
     return true;
