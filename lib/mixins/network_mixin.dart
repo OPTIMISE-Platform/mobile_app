@@ -63,19 +63,25 @@ mixin NetworkMixin on ChangeNotifier {
       _networksMutex.release();
       return;
     }
-    networks.clear();
-    notifyListeners();
     try {
-      networks.addAll(await NetworksService.getNetworks());
-    } catch (e) {
-      ErrorReporter.report('Could not load networks', e);
+      networks.clear();
+      notifyListeners();
+      try {
+        networks.addAll(await NetworksService.getNetworks());
+      } catch (e) {
+        ErrorReporter.report('Could not load networks', e);
+      }
+      _networkByLocalId = null; // networks changed — drop the cached lookup
+      await mergeGatewaysWithNetworks();
+      _assignNetworksToDevicesAndGroups();
+      await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
+      notifyListeners();
+    } finally {
+      // Released whatever happened above: a lock left behind here is not
+      // recoverable without an app restart - loadingNetworks() stays true, the
+      // tab shows its spinner for good and every later load blocks on acquire.
+      _networksMutex.release();
     }
-    _networkByLocalId = null; // networks changed — drop the cached lookup
-    await mergeGatewaysWithNetworks();
-    _assignNetworksToDevicesAndGroups();
-    await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
-    notifyListeners();
-    _networksMutex.release();
   }
 
   /// O(1) local_id -> Network lookup backed by [_networkByLocalId].
