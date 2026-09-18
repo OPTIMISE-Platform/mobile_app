@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
@@ -49,15 +50,20 @@ class MgwDeviceManager {
               await DevicesService.getDevices(devices.length, 0,
                       DeviceSearchFilter("", null, deviceIds), null,
                       forceBackend: true)
-                  .then((ds) => ds.devices.forEach((d) => devices
-                      .firstWhere((d2) => d2.id == d.id)
-                      .connection_state = d.connection_state));
+                  .then((ds) => applyCloudStates(devices, ds.devices));
             } on DioException catch (e) {
               if (e.error is ApiUnavailableException) {
                 ErrorReporter.report(
                     "Device status could not be loaded from network or cloud",
                     e);
               }
+            } catch (e) {
+              // This is already the recovery path, and only DioException was
+              // caught above - getDevices also throws UnexpectedStatusCode and
+              // AuthException, which are neither. Letting one out rejects the
+              // future the caller awaits and strands its networks mutex.
+              ErrorReporter.report(
+                  "Device status could not be loaded from network or cloud", e);
             }
           } else {
             ErrorReporter.report(
@@ -68,11 +74,34 @@ class MgwDeviceManager {
     });
     final start = DateTime.now();
     await Future.wait(futures);
+    // Unconditional on purpose, although most states are unchanged: a row
+    // listens on its own device only, and what it renders also depends on the
+    // network binding, which loadNetworks recomputes right before this. On the
+    // devices tab nothing else reaches the row, so notifying just the changed
+    // states would leave a device stuck on its pre-merge appearance.
     for (final d in devices) {
       d.notifyStateChanged();
     }
     _logger.d(
         "updateDeviceConnectionStatusFromMgw ${DateTime.now().difference(start)}");
+  }
+
+  /// Copies the connection state of [source] onto the matching entries of
+  /// [target], without announcing it - the loop at the end of
+  /// [updateDeviceConnectionStatusFromMgw] announces every path at once.
+  ///
+  /// A device [target] does not hold is skipped rather than an error: the id
+  /// filter answers loosely, and a device can move networks between the list
+  /// load and this refresh. Throwing here escapes the error handler this runs
+  /// in and leaves the caller's networks mutex locked for good.
+  @visibleForTesting
+  static void applyCloudStates(
+      Iterable<DeviceInstance> target, Iterable<DeviceInstance> source) {
+    for (final d in source) {
+      final match = target.where((t) => t.id == d.id);
+      if (match.isEmpty) continue;
+      match.first.connection_state = d.connection_state;
+    }
   }
 
   static Future<void> _updateFromMgw(

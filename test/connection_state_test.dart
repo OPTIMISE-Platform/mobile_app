@@ -17,6 +17,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/mgw_device_manager.dart';
 
 DeviceInstance _device(String id, DeviceConnectionStatus state) =>
     DeviceInstance(id, "local-$id", id, [], "dt", false, "owner", id, state);
@@ -75,6 +76,44 @@ void main() {
           equals(DeviceConnectionStatus.offline));
       expect(target[1].connection_state, equals(DeviceConnectionStatus.online));
       expect(notified, equals(["a"]));
+    });
+  });
+
+  group("applyCloudStates", () {
+    test("skips a device the network list does not hold", () {
+      // Throwing here escapes the error handler this runs in, and the caller
+      // then never releases its networks mutex - the tab spins until restart.
+      final target = [_device("a", DeviceConnectionStatus.online)];
+      expect(
+          () => MgwDeviceManager.applyCloudStates(
+              target, [_device("b", DeviceConnectionStatus.offline)]),
+          returnsNormally);
+      expect(target.first.connection_state,
+          equals(DeviceConnectionStatus.online));
+    });
+
+    test("copies the state it does hold", () {
+      final target = [
+        _device("a", DeviceConnectionStatus.online),
+        _device("b", DeviceConnectionStatus.online),
+      ];
+      MgwDeviceManager.applyCloudStates(target, [
+        _device("b", DeviceConnectionStatus.offline),
+        _device("c", DeviceConnectionStatus.offline),
+      ]);
+      expect(target[0].connection_state, equals(DeviceConnectionStatus.online));
+      expect(target[1].connection_state,
+          equals(DeviceConnectionStatus.offline));
+    });
+
+    test("leaves the announcing to the caller", () {
+      // Announcing here too would rebuild every changed row twice.
+      final target = [_device("a", DeviceConnectionStatus.online)];
+      var notified = 0;
+      target.first.stateNotifier.addListener(() => notified++);
+      MgwDeviceManager.applyCloudStates(
+          target, [_device("a", DeviceConnectionStatus.offline)]);
+      expect(notified, equals(0));
     });
   });
 }
