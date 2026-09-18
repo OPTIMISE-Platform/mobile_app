@@ -239,8 +239,15 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                               "", null, null, [
                                                             state.networks[i].id
                                                           ]), true)
-                                                  .then((_) => setState(
-                                                      () => _loading = false));
+                                                  .then((_) {
+                                                // Guarded: the search is a
+                                                // network call, and leaving the
+                                                // tab before it answers used to
+                                                // land here on a disposed
+                                                // state.
+                                                if (!mounted) return;
+                                                setState(() => _loading = false);
+                                              });
                                               parentState?.setState(() {
                                                 parentState
                                                     .setHideSearchOverride(
@@ -259,8 +266,13 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                         .setHideSearchOverride(
                                                         null);
                                                   });
-                                                  setState(
-                                                      () => _selected = null);
+                                                  // The callback lives on the
+                                                  // parent state and therefore
+                                                  // outlives this widget.
+                                                  if (mounted) {
+                                                    setState(
+                                                        () => _selected = null);
+                                                  }
                                                 };
                                                 parentState.customAppBarTitle =
                                                     state.networks[i].name;

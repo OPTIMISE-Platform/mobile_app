@@ -30,13 +30,20 @@ class _DelayedCircularProgressIndicatorState extends State<DelayedCircularProgre
   @override
   void initState() {
     super.initState();
-    _f = Future.delayed(const Duration(milliseconds: 200)).then((_) => setState(() => _show=true));
+    // Guarded rather than cancelled: ignore() below only suppresses error
+    // reporting, it does not stop the callback. This widget is shown while
+    // something loads, so a load that finishes inside the delay disposes it
+    // before the timer fires - which used to be a setState after dispose.
+    _f = Future.delayed(const Duration(milliseconds: 200)).then((_) {
+      if (!mounted) return;
+      setState(() => _show = true);
+    });
   }
 
   @override
   void dispose() {
-    super.dispose();
     _f?.ignore();
+    super.dispose();
   }
 
   @override
