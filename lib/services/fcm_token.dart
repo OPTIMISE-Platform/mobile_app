@@ -30,6 +30,10 @@ class FcmTokenService {
 
   static final baseUrl = '${Settings.getApiUrl() ?? 'localhost'}/notifications-v2/fcm-tokens';
 
+  /// Stands in for [url] wherever the address is logged or reported: the real
+  /// one carries the token in its path, and the diagnostics dump is shareable.
+  static String get _loggableUrl => '$baseUrl/<token>';
+
   static registerFcmToken(String token) async {
     final url = '$baseUrl/$token';
 
@@ -48,7 +52,7 @@ class FcmTokenService {
       final dio = await DioFactory.create(DioConfig.standard);
       resp = await dio.post(url, options: Options(headers: headers));
     } on DioException catch (e) {
-      checkReadStatus(e, url);
+      checkReadStatus(e, _loggableUrl);
       rethrow;
     }
 
@@ -65,7 +69,7 @@ class FcmTokenService {
     final resp = await dio.delete(url, options: Options(headers: headers));
     if (resp.statusCode == null || (resp.statusCode! > 204 && resp.statusCode != 404)) {
       // dont have to delete what cant be found
-      throw UnexpectedStatusCodeException(resp.statusCode, url);
+      throw UnexpectedStatusCodeException(resp.statusCode, _loggableUrl);
     }
   }
 
