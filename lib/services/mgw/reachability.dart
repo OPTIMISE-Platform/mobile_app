@@ -15,22 +15,49 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/services/mgw/advertisements.dart';
+import 'package:mobile_app/services/mgw/api.dart';
+import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
 
 const LOG_PREFIX = "MGW-REACHABILITY";
 
-/// Tells whether a paired gateway can be reached from the network the device is
-/// on right now.
+/// What a paired gateway is currently good for.
+enum MgwStatus {
+  /// Nothing answers at its address - a different local network, or the gateway
+  /// is down.
+  unreachable,
+
+  /// Something answers, but it serves a different cloud network than the one
+  /// this gateway was bound to - so it is not the gateway we mean, just a
+  /// device at the same private address.
+  foreign,
+
+  /// It answers, but rejects this device. The pairing is stored and no longer
+  /// valid, which is what a reinstalled gateway looks like: it serves its
+  /// unauthenticated endpoints and knows nothing of the identity behind the
+  /// stored credentials.
+  unauthorized,
+
+  /// Reachable and authenticated - the local path can be used.
+  ok,
+}
+
+/// Tells what a paired gateway is currently good for.
 ///
-/// A gateway sits in one local network and the device is not always in it, so a
-/// paired gateway is not a usable one. Without this check every local request
-/// would run into its timeout first and only then fall back to the cloud.
+/// Being paired is a stored fact, not a live one, so it says nothing about the
+/// network the device is on right now, and nothing about whether the gateway
+/// still knows this device. Both are checked here, because a request that
+/// assumes either runs into its timeout first and only then falls back to the
+/// cloud.
 ///
-/// This answers reachability, not identity: something else answering on the same
-/// private address in a foreign network counts as reachable. Telling the two
-/// apart would need an unauthenticated endpoint that names the core, and the
-/// gateway has none.
+/// Identity is settled before the session is: the gateway advertises the cloud
+/// network it serves without needing one, so a device answering at the same
+/// private address is told apart from the real gateway even while the pairing
+/// is broken. A gateway whose cloud proxy is not signed in advertises nothing,
+/// and then only the authenticated call can vouch for identity.
 class MgwReachability {
   static const probeTimeout = Duration(milliseconds: 1500);
 
@@ -52,44 +79,130 @@ class MgwReachability {
 
   static final Map<String, _Probe> _cache = {};
 
-  /// Drops the cached results, so the next check probes again.
+  /// Probes that are running right now, so a rebuild joins the request in
+  /// flight instead of starting another one.
+  static final Map<String, Future<MgwStatus>> _pending = {};
+
+  /// Drops the cached results, so the next check probes again. Probes already
+  /// in flight are left alone - they answer for the network they started in.
   static void forget() => _cache.clear();
 
-  /// Whether the gateway at [host] answers. Cached for [cacheTtl].
-  static Future<bool> isReachable(String host) async {
-    final cached = _cache[host];
+  // The expectation belongs in the key: an answer found without one says
+  // nothing about identity, and reusing it for a call that carries one would
+  // skip the very check that call asked for.
+  @visibleForTesting
+  static String cacheKeyFor(String host, String? expectNetworkId) =>
+      "$host|${expectNetworkId ?? ''}";
+
+  /// Status of the gateway at [host]. Cached for [cacheTtl].
+  ///
+  /// [expectNetworkId] is the network the gateway was bound to; when it
+  /// advertises a different one, the answer is [MgwStatus.foreign].
+  static Future<MgwStatus> statusOf(String host,
+      {String? expectNetworkId}) async {
+    final key = cacheKeyFor(host, expectNetworkId);
+    final cached = _cache[key];
     if (cached != null && DateTime.now().difference(cached.at) < cacheTtl) {
-      return cached.reachable;
+      return cached.status;
     }
-    final reachable = await _probe(host);
-    _cache[host] = _Probe(reachable, DateTime.now());
-    return reachable;
+    return _pending.putIfAbsent(key, () async {
+      try {
+        final status = await _probe(host, expectNetworkId);
+        _cache[key] = _Probe(status, DateTime.now());
+        return status;
+      } finally {
+        _pending.remove(key);
+      }
+    });
   }
 
-  /// Probes several gateways at once and returns those that answered.
-  static Future<List<String>> reachableAmong(Iterable<String> hosts) async {
-    final checked = await Future.wait(hosts.map((host) async =>
-        MapEntry(host, await isReachable(host))));
+  /// The cached status, or null when nothing was probed yet. For a widget that
+  /// must not start a request while building.
+  static MgwStatus? cachedStatusOf(String host, {String? expectNetworkId}) {
+    final cached = _cache[cacheKeyFor(host, expectNetworkId)];
+    if (cached == null) return null;
+    if (DateTime.now().difference(cached.at) >= cacheTtl) return null;
+    return cached.status;
+  }
+
+  /// Whether the gateway at [host] can be used right now.
+  static Future<bool> isUsable(String host, {String? expectNetworkId}) async =>
+      await statusOf(host, expectNetworkId: expectNetworkId) == MgwStatus.ok;
+
+  /// Checks several gateways at once and returns the hosts that can be used.
+  ///
+  /// Takes pairs rather than a map: two gateways can share an address while
+  /// serving different networks, and a map would silently keep only one.
+  static Future<List<String>> usableAmong(
+      Iterable<MapEntry<String, String>> hostsWithNetwork) async {
+    final checked = await Future.wait(hostsWithNetwork.map((e) async =>
+        MapEntry(e.key, await isUsable(e.key, expectNetworkId: e.value))));
     return checked.where((e) => e.value).map((e) => e.key).toList();
   }
 
-  static Future<bool> _probe(String host) async {
-    // The gateway answers "/" with a redirect to its web ui, which needs no
-    // session - any answer at all is enough to show it is in reach.
-    final url = "http://${gatewayAuthority(host)}/";
+  static Future<MgwStatus> _probe(String host, String? expectNetworkId) async {
+    if (!await _answers(host)) {
+      _logger.d("$LOG_PREFIX: $host is out of reach");
+      return MgwStatus.unreachable;
+    }
+    if (expectNetworkId != null && expectNetworkId.isNotEmpty) {
+      final advertised =
+          await MgwAdvertisements.networkIdOf(host, budget: probeTimeout);
+      if (advertised.isNotEmpty && advertised != expectNetworkId) {
+        _logger.d("$LOG_PREFIX: $host serves $advertised, not $expectNetworkId");
+        return MgwStatus.foreign;
+      }
+    }
+    final status = await _authenticates(host);
+    _logger.d("$LOG_PREFIX: $host is $status");
+    return status;
+  }
+
+  /// Unauthenticated liveness check: the gateway answers "/" with a redirect to
+  /// its web ui, so any answer at all shows it is in reach.
+  static Future<bool> _answers(String host) async {
     try {
-      final response = await _dio.get(url);
-      _logger.d("$LOG_PREFIX: $host answered ${response.statusCode}");
+      await _dio.get("http://${gatewayAuthority(host)}/");
       return true;
     } catch (e) {
-      _logger.d("$LOG_PREFIX: $host is out of reach: $e");
       return false;
+    }
+  }
+
+  /// Sends one request that needs the session token the pairing produced. It is
+  /// the same path every local device call takes, so nothing is spent here that
+  /// the first real call would not spend anyway.
+  static Future<MgwStatus> _authenticates(String host) async {
+    try {
+      await MgwApiService(host, true).Get("/core-manager/endpoints", Options());
+      return MgwStatus.ok;
+    } on Failure catch (e) {
+      return classify(e.errorCode);
+    } catch (e) {
+      _logger.d("$LOG_PREFIX: $host failed the authenticated check: $e");
+      return MgwStatus.unauthorized;
+    }
+  }
+
+  /// A gateway that answered the liveness check but failed the authenticated
+  /// one is only unreachable when the second request did not get through
+  /// either; anything the gateway itself answered means it rejected us.
+  @visibleForTesting
+  static MgwStatus classify(ErrorCode code) {
+    switch (code) {
+      case ErrorCode.CONNECT_TIMEOUT:
+      case ErrorCode.RECEIVE_TIMEOUT:
+      case ErrorCode.SEND_TIMEOUT:
+      case ErrorCode.NO_INTERNET_CONNECTION:
+        return MgwStatus.unreachable;
+      default:
+        return MgwStatus.unauthorized;
     }
   }
 }
 
 class _Probe {
-  final bool reachable;
+  final MgwStatus status;
   final DateTime at;
-  _Probe(this.reachable, this.at);
+  _Probe(this.status, this.at);
 }

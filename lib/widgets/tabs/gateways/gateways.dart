@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/details.dart';
+import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
 
 import 'package:provider/provider.dart';
 
@@ -101,8 +102,15 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                     return Column(children: [
                       i > 0 ? const Divider() : const SizedBox.shrink(),
                       ListTile(
+                        leading: MgwStatusDot(
+                            host: mgw.ip, expectNetworkId: mgw.networkId),
                         title: Row(children: [
-                          Text(state.gateways[i].mDNSServiceName),
+                          Flexible(
+                            child: Text(
+                              state.gateways[i].mDNSServiceName,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ]),
                         onTap: () {
                           Navigator.push(

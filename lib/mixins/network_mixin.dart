@@ -194,13 +194,13 @@ mixin NetworkMixin on ChangeNotifier {
     await loadStoredMGWs();
   }
 
-  /// Attaches every paired gateway that is reachable right now to the network it
+  /// Attaches every paired gateway that is usable right now to the network it
   /// was bound to when it was added. A network without one keeps
   /// [Network.localGatewayHosts] null and is served from the cloud.
   ///
-  /// The reachability check is what makes a gateway in a different local network
-  /// harmless: it stays paired, but nothing is routed to it while the device
-  /// cannot see it.
+  /// The status check is what makes a gateway in a different local network - or
+  /// one that no longer knows this device - harmless: it stays paired, but
+  /// nothing is routed to it until it answers an authenticated request.
   Future<void> mergeGatewaysWithNetworks() async {
     // Serialized and assigned in one go: the probes below take up to a second,
     // and clearing the lists before them would leave every reader without a
@@ -213,13 +213,13 @@ mixin NetworkMixin on ChangeNotifier {
 
       final hostsByNetwork = <String, List<String>>{};
       if (candidates.isNotEmpty) {
-        final reachable = (await MgwReachability.reachableAmong(
-                candidates.map((mgw) => mgw.ip)))
+        final usable = (await MgwReachability.usableAmong(
+                candidates.map((mgw) => MapEntry(mgw.ip, mgw.networkId))))
             .toSet();
         for (final mgw in candidates) {
-          if (!reachable.contains(mgw.ip)) {
+          if (!usable.contains(mgw.ip)) {
             _logger.d(
-                'NetworkMixin: gateway ${mgw.ip} is not in reach, using the cloud');
+                'NetworkMixin: gateway ${mgw.ip} is not usable, using the cloud');
             continue;
           }
           final hosts = hostsByNetwork.putIfAbsent(mgw.networkId, () => []);
