@@ -30,6 +30,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -80,7 +81,8 @@ class _HomeState extends State<Home> {
       } else {
         rethrow;
       }
-    } catch (e) {
+    } catch (e, s) {
+      ErrorReporter.log("Login failed", e, s);
       Toast.showToastNoContext(e.toString());
     }
   }

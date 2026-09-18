@@ -166,10 +166,13 @@ mixin NotificationMixin on ChangeNotifier {
         notifications = await NotificationsService.loadPersisted();
         notifyListeners();
       }
+      // Recorded either way: a support dump has to show that the backend
+      // failed even when the stored set covered it up. Only worth telling the
+      // user about when the fallback came up empty too.
       if (notifications.isEmpty) {
-        // Only worth saying when the fallback came up empty too - the log above
-        // already has the cause.
         ErrorReporter.report('Could not load notifications', e, s);
+      } else {
+        ErrorReporter.log('Could not load notifications', e, s);
       }
     } finally {
       _notificationsMutex.release();

@@ -24,6 +24,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 class SmartServicesInstanceDetails extends StatefulWidget {
   final SmartServiceInstance instance;
@@ -62,8 +63,14 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                         child: const Text('Delete'),
                         onPressed: () async {
                           final f = SmartServiceService.deleteInstance(widget.instance.id);
-                          f.catchError(
-                              (_) => Toast.showToastNoContext("Could not delete Smart Service ${widget.instance.name}"));
+                          f.catchError((Object e, StackTrace s) {
+                            ErrorReporter.log(
+                                "Could not delete a smart service instance",
+                                e,
+                                s);
+                            Toast.showToastNoContext(
+                                "Could not delete Smart Service ${widget.instance.name}");
+                          });
                           await Future.any([f, Future.delayed(const Duration(milliseconds: 500))]);
                           if (!mounted) return;
                           Navigator.pop(this.context, true);

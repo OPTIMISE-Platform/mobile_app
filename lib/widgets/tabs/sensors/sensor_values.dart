@@ -40,6 +40,7 @@ import 'package:mobile_app/widgets/tabs/sensors/sensor_picker.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_sparkline.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 /// A page of user-defined tabs, each showing a freely composed set of
 /// individual sensor values as cards.
@@ -181,7 +182,8 @@ class _SensorValuesState extends State<SensorValues>
         _loading = false;
       });
       unawaited(_loadSparklines(pins));
-    } catch (e) {
+    } catch (e, s) {
+      ErrorReporter.log('Could not load sensor values', e, s);
       if (!mounted) return;
       setState(() {
         _error = 'Could not load sensor values';

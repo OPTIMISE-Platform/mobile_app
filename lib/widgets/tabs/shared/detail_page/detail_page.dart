@@ -44,6 +44,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 class DetailPage extends StatefulWidget {
   final DeviceInstance? _device;
@@ -213,7 +214,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
             try {
               await DevicesService.saveDevice(device);
               _notifyEntity();
-            } catch (e) {
+            } catch (e, s) {
+              ErrorReporter.log("Could not save the device", e, s);
               Toast.showToastNoContext("Could not update device name");
               device.setNickname(oldName);
             }
@@ -245,7 +247,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
             try {
               await DeviceGroupsService.saveDeviceGroup(deviceGroup);
               _notifyEntity();
-            } catch (e) {
+            } catch (e, s) {
+              ErrorReporter.log("Could not save the device group", e, s);
               Toast.showToastNoContext("Could not update device name");
               deviceGroup.name = oldName;
             }

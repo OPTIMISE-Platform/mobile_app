@@ -27,6 +27,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 class SmartServicesReleaseLaunch extends StatefulWidget {
   final SmartServiceRelease release;
@@ -234,8 +235,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
         try {
           parameters =
           await SmartServiceService.getReleaseParameters(widget.release.id);
-        } catch (e) {
-          _logger.e("Could not load release parameters: $e");
+        } catch (e, s) {
+          ErrorReporter.log("Could not load release parameters", e, s);
           if (mounted) Navigator.pop(context);
           Toast.showToastNoContext("Could not load smart service release");
         }
@@ -352,8 +353,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                     try {
                       await SmartServiceService.createInstance(widget.release.id, parameters!.map((e) => e.toSmartServiceParameter()).toList(),
                         nameDescription["name"], nameDescription["description"]);
-                    } catch (e) {
-                      _logger.e("Could not create smart service instance: $e");
+                    } catch (e, s) {
+                      ErrorReporter.log(
+                          "Could not create a smart service instance", e, s);
                       Toast.showToastNoContext("Could not start smart service");
                     }
                     if (!context.mounted) return;
@@ -365,8 +367,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                           parameters!.map((e) => e.toSmartServiceParameter())
                               .toList(),
                           releaseId: widget.release.id);
-                    } catch (e) {
-                      _logger.e("Could not update smart service instance: $e");
+                    } catch (e, s) {
+                      ErrorReporter.log(
+                          "Could not update a smart service instance", e, s);
                       Toast.showToastNoContext("Could not update smart service");
                     }
                   }

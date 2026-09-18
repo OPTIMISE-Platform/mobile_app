@@ -30,6 +30,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 class Chart extends StatefulWidget {
   final DeviceState _state;
@@ -87,9 +88,9 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                       ?.concept_id)
             ],
             null));
-      } catch (e) {
+      } catch (e, s) {
+        ErrorReporter.log("Could not load chart data", e, s);
         Toast.showToastNoContext("Could not load data");
-        _logger.e(e);
         if (_spots == null && context.mounted) Navigator.pop(context);
 
         setState(() {
