@@ -19,7 +19,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/models/network.dart';
@@ -198,10 +197,11 @@ class DeviceCommandsService {
     try {
       responses.addAll(
           await DeviceCommandsService.runCommands(commands, preferEventValue));
-    } on ApiUnavailableException catch (e, s) {
-      ErrorReporter.report("Currently unavailable", e, s);
-      return false;
     } catch (e, s) {
+      // One catch: ApiUnavailableException never arrives on its own, it is
+      // always wrapped in the DioException the interceptor rejects with, so a
+      // clause on it never ran. ErrorReporter recognises the wrapped one and
+      // names the missing connection instead of this message.
       ErrorReporter.report("Couldn't run command", e, s);
       return false;
     }

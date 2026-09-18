@@ -16,9 +16,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 /// The update check, on the platforms that support it at all.
@@ -37,11 +37,15 @@ List<Widget> updatesSection(BuildContext context, AppState state) {
               late final bool? updateAvailable;
               try {
                 updateAvailable = await AppUpdater.updateAvailable();
-              } on ApiUnavailableException {
-                Toast.showToastNoContext("Currently unavailable");
-                return;
-              } catch (e) {
-                Toast.showToastNoContext("Error checking for updates");
+              } catch (e, s) {
+                // updateAvailable answers a failed request with null, so what
+                // arrives here is something else entirely - and the clause on
+                // ApiUnavailableException that used to stand here could not
+                // match either, that exception only ever comes wrapped.
+                ErrorReporter.log("Error checking for updates", e, s);
+                Toast.showToastNoContext(ErrorReporter.isOffline(e)
+                    ? ErrorReporter.offlineMessage
+                    : "Error checking for updates");
                 return;
               }
               if (updateAvailable == false) {

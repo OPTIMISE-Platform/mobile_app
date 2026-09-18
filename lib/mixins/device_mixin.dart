@@ -20,7 +20,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -328,10 +327,10 @@ mixin DeviceMixin on ChangeNotifier {
       result = await DeviceCommandsService.runCommands(
         commandCallbacks.map((e) => e.command).toList(growable: false),
       );
-    } on ApiUnavailableException catch (e, s) {
-      ErrorReporter.report('failed to loadStates: currently unavailable', e, s);
-      result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     } catch (e, s) {
+      // One catch: the two used to differ only in their message, and the one
+      // on ApiUnavailableException never ran anyway - that exception only ever
+      // arrives wrapped in a DioException.
       ErrorReporter.report('failed to loadStates', e, s);
       result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     }
