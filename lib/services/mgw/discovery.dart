@@ -57,22 +57,24 @@ class DiscoveredGateway {
 
 /// Finds MGW cores via mDNS.
 ///
-/// Browsing needs a fixed service type, and the core does not have one yet: it
-/// advertises `_mgwcore_<core id>._tcp`, so the type carries the id nobody knows
-/// in advance. Until the core publishes [coreServiceType], this finds nothing
-/// and a gateway is added by address instead (SNRGY ticket for the core side).
+/// Browsing needs a fixed service type. The core advertised `_mgwcore_<core
+/// id>._tcp` until SNRGY-4733, a type carrying the id nobody knows in advance,
+/// so nothing could browse for it; a gateway had to be added by address. Cores
+/// installed from that release on publish [coreServiceType], older ones still
+/// do not, which is why adding by address stays.
 ///
 /// Enumerating the types instead, via a raw mDNS client, was tried and reverted:
 /// it works, but `RawDatagramSocket.joinMulticast` is synchronous and was
 /// measured blocking the calling isolate for over a minute, which Android ends
 /// as an ANR. The platform's own discovery does that work off the Dart isolate.
 class MgwDiscoveryService {
-  /// Service type the core is meant to advertise under.
+  /// Service type the core advertises under, from mgw-core-installer.
   ///
-  /// It has to be the same for every core: a type carrying the core id cannot be
-  /// browsed, and it also breaks RFC 6335, which allows no underscore inside the
-  /// label and at most 15 characters - `nsd` rejects such a type outright.
-  static const coreServiceType = "_mgwcore._tcp";
+  /// The same for every core, because a type carrying the core id cannot be
+  /// browsed. The name is also bounded by RFC 6335, which allows no underscore
+  /// inside the label and at most 15 characters - `nsd` rejects such a type
+  /// outright, which is why the installer shortened it.
+  static const coreServiceType = "_snrgy-mgwcore._tcp";
 
   /// TXT key holding the core id.
   static const coreIdRecord = "core_id";
