@@ -14,8 +14,7 @@
  *  limitations under the License.
  */
 
-import 'package:mobile_app/models/exception_log_element.dart';
-
-class SettingsNotInitializedException extends ExceptionLogElement {
-  SettingsNotInitializedException() : super.Log(null);
+class SettingsNotInitializedException implements Exception {
+  @override
+  String toString() => "SettingsNotInitializedException";
 }

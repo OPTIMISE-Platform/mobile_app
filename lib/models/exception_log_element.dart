@@ -34,8 +34,11 @@ class ExceptionLogElement {
 
   ExceptionLogElement(this.message, this.stack);
 
-  ExceptionLogElement.Log(this.message) {
-    stack = StackTrace.current.toString();
+  /// [from] is the trace of the site that caught the failure. Without one the
+  /// trace of this call is recorded, which says little - it is the same few
+  /// frames every time.
+  ExceptionLogElement.Log(this.message, [StackTrace? from]) {
+    stack = (from ?? StackTrace.current).toString();
     _persist();
   }
 
@@ -44,21 +47,23 @@ class ExceptionLogElement {
 
   static final _logger = Logger(printer: SimplePrinter());
 
-  /// Whether a retry is already on its way.
+  /// How many retries may be waiting at once.
   ///
-  /// The retry holds an async write transaction open, which is itself the
+  /// A retry holds an async write transaction open, which is itself the
   /// condition that pushes the next log onto that path - so without a limit an
   /// error burst queues one transaction per exception, each holding on to a
-  /// full stack trace, with nothing bounding it. One at a time rate-limits
-  /// that to what actually drains.
-  static bool _retrying = false;
+  /// full stack trace. The cap has to clear a whole burst, though: a failing
+  /// cache refresh reports three endpoints at once while its own write is
+  /// open, and a smaller limit would drop exactly the entries that explain it.
+  static const _maxPending = 32;
+
+  static int _pending = 0;
 
   /// Writes this entry away, and never throws.
   ///
-  /// The exception classes in `lib/exceptions` log from their constructors, so
-  /// anything escaping here replaces the exception the caller is about to
-  /// raise with an unrelated one - which is how a refused write used to strand
-  /// callers that only expected a DioException. Isar refuses a synchronous
+  /// Almost every entry is written from inside a catch block, through
+  /// [ErrorReporter.report], so anything escaping here would replace the error
+  /// that block was handling with an unrelated one. Isar refuses a synchronous
   /// write while an asynchronous one is open in the isolate, and the device
   /// cache holds one per chunk, so that case is retried asynchronously. What
   /// neither attempt can serve - logging from inside a transaction, a closed
@@ -76,11 +81,11 @@ class ExceptionLogElement {
             .deleteAllSync();
       });
     } catch (e) {
-      if (_retrying) {
-        _logger.w("Dropped a log entry, a retry is still pending: $message");
+      if (_pending >= _maxPending) {
+        _logger.w("Dropped a log entry, $_pending retries pending: $message");
         return;
       }
-      _retrying = true;
+      _pending++;
       unawaited(_persistAsync(db));
     }
   }
@@ -100,7 +105,7 @@ class ExceptionLogElement {
       // that says logging itself has stopped working.
       _logger.w("Could not persist a log entry: $e");
     } finally {
-      _retrying = false;
+      _pending--;
     }
   }
 

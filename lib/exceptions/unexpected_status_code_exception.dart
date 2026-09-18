@@ -14,9 +14,14 @@
  *  limitations under the License.
  */
 
-import 'package:mobile_app/models/exception_log_element.dart';
-
-class UnexpectedStatusCodeException extends ExceptionLogElement {
+class UnexpectedStatusCodeException implements Exception {
   final int? code;
-  UnexpectedStatusCodeException(this.code, String? message) : super.Log("Code $code, message: $message");
+  final String? message;
+
+  UnexpectedStatusCodeException(this.code, this.message);
+
+  @override
+  String toString() => message == null
+      ? "UnexpectedStatusCodeException: Code $code"
+      : "UnexpectedStatusCodeException: Code $code, $message";
 }

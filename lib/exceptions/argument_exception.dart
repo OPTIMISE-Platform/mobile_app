@@ -14,8 +14,12 @@
  *  limitations under the License.
  */
 
-import 'package:mobile_app/models/exception_log_element.dart';
+class ArgumentException implements Exception {
+  final String? message;
 
-class ArgumentException extends ExceptionLogElement {
-  ArgumentException([super.message]) : super.Log();
+  ArgumentException([this.message]);
+
+  @override
+  String toString() =>
+      message == null ? "ArgumentException" : "ArgumentException: $message";
 }

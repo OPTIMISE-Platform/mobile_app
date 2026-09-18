@@ -14,8 +14,12 @@
  *  limitations under the License.
  */
 
-import 'package:mobile_app/models/exception_log_element.dart';
+class AuthException implements Exception {
+  final String? message;
 
-class AuthException extends ExceptionLogElement {
-  AuthException([super.message]) : super.Log();
+  AuthException([this.message]);
+
+  @override
+  String toString() =>
+      message == null ? "AuthException" : "AuthException: $message";
 }

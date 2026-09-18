@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 /// The one place that decides whether a failure in the state layer reaches the
@@ -71,14 +72,25 @@ class ErrorReporter {
 
   /// Logs [message] with [error] and shows it unless it repeats what is
   /// already on screen.
-  static void report(String message, [Object? error]) {
-    _logger.e(error == null ? message : "$message: $error");
+  static void report(String message, [Object? error, StackTrace? stack]) {
+    final text = error == null ? message : "$message: $error";
+    _logger.e(text);
+    // The diagnostics log is written here rather than from the exception
+    // classes, which used to do it from their constructors: raising one then
+    // cost a database write, and it recorded exceptions that are ordinary
+    // control flow. What the log holds now is what actually went wrong far
+    // enough to be reported. [stack] comes from the catch site, because the
+    // one this would capture on its own is always the same three frames.
+    ExceptionLogElement.Log(text, stack);
     _show(isOffline(error) ? offlineMessage : message);
   }
 
   /// For a failure whose cause is already known to be a missing connection, or
   /// which has no exception to inspect.
-  static void reportOffline() => _show(offlineMessage);
+  static void reportOffline() {
+    ExceptionLogElement.Log(offlineMessage);
+    _show(offlineMessage);
+  }
 
   static void _show(String text) {
     final now = clock();
