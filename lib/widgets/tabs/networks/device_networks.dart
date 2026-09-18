@@ -20,10 +20,13 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
+import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/mgw.dart';
+import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
@@ -71,6 +74,72 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   void dispose() {
     _refreshSubscription?.cancel();
     super.dispose();
+  }
+
+  /// Trailing control of a network row.
+  ///
+  /// Without a bound gateway it offers to add one. With one it shows what that
+  /// gateway is currently good for - paired alone says nothing, since the
+  /// device may be elsewhere or the gateway may have forgotten it - and opens
+  /// the unpair dialog on tap.
+  Widget _gatewayControl(AppState state, Network network) {
+    final bound = state.gateways.where((mgw) => mgw.networkId == network.id);
+    if (bound.isEmpty) {
+      return IconButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddLocalNetwork()),
+          );
+          _refresh();
+        },
+        icon: const Icon(Icons.add),
+      );
+    }
+    final mgw = bound.first;
+    return IconButton(
+      onPressed: () => _showUnpairDialog(mgw),
+      icon: Row(mainAxisSize: MainAxisSize.min, children: [
+        MgwStatusDot(
+            host: mgw.ip, expectNetworkId: mgw.networkId, size: 12),
+        const SizedBox(width: 4),
+        const Icon(Icons.lan_outlined),
+      ]),
+    );
+  }
+
+  void _showUnpairDialog(MGW mgw) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => SimpleDialog(
+        title: const Text('Remove Pairing'),
+        children: <Widget>[
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            child: Text("${mgw.mDNSServiceName} - ${mgw.ip}"),
+          ),
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
+            child: ElevatedButton(
+              onPressed: () async {
+                // Awaited: it clears the stored secrets. loadStoredMGWs then
+                // has to run too - the row reads AppState.gateways, which only
+                // that call refills, so without it the removed pairing stays
+                // on screen.
+                await MgwStorage.RemovePairedMGW(mgw);
+                await AppState().loadStoredMGWs();
+                if (!context.mounted) return;
+                Navigator.pop(context, 'OK');
+                _refresh();
+              },
+              child: const Text('OK'),
+            ),
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -201,89 +270,8 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                 });
                                               });
                                             },
-                                      trailing:
-                                          state.networks[i].localGatewayHosts?.isNotEmpty != true
-                                              ? IconButton(
-                                                  onPressed: () async => {
-                                                        await Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder:
-                                                                  (context) {
-                                                                const target =
-                                                                    AddLocalNetwork();
-                                                                return target;
-                                                              },
-                                                            )
-                                                        ),
-                                                    _refresh()
-                                                      },
-                                                  icon: const Icon(Icons.add))
-                                              : IconButton(
-                                                  onPressed: () async {
-                                                    var storedMGWs =
-                                                        await MgwStorage
-                                                            .LoadPairedMGWs();
-                                                    final mgwIndex = storedMGWs
-                                                        .indexWhere((mgw) =>
-                                                            mgw.coreId ==
-                                                            state.networks[i]
-                                                                .id);
-                                                    final mgw = storedMGWs[mgwIndex];
-                                                    if (!context.mounted) {
-                                                      return;
-                                                    }
-                                                    showDialog(
-                                                        context: context,
-                                                        builder:
-                                                            (BuildContext
-                                                                    context) =>
-                                                                SimpleDialog(
-                                                                  title: const Text(
-                                                                      'Remove Pairing'),
-                                                                  children: <Widget>[
-                                                                    Padding(
-                                                                      padding: const EdgeInsets
-                                                                          .symmetric(
-                                                                          vertical:
-                                                                          16.0,
-                                                                          horizontal:
-                                                                          16.0),
-                                                                      child: Text("${mgw.mDNSServiceName} - ${mgw.ip}"),
-                                                                    ),
-                                                                    Padding(
-                                                                      padding: const EdgeInsets
-                                                                          .symmetric(
-                                                                          vertical:
-                                                                              16.0,
-                                                                          horizontal:
-                                                                              16.0),
-                                                                      child:
-                                                                          ElevatedButton(
-                                                                        onPressed:
-                                                                            () async {
-                                                                          // Awaited: it clears the
-                                                                          // stored secrets, and
-                                                                          // _refresh() re-reads the
-                                                                          // pairing right after.
-                                                                          await MgwStorage
-                                                                              .RemovePairedMGW(mgw);
-                                                                          if (!context.mounted) {
-                                                                            return;
-                                                                          }
-                                                                          Navigator.pop(
-                                                                              context,
-                                                                              'OK');
-                                                                          _refresh();
-                                                                        },
-                                                                        child: const Text(
-                                                                            'OK'),
-                                                                      ),
-                                                                    )
-                                                                  ],
-                                                                ));
-                                                  },
-                                                  icon: const Icon(Icons.lan_outlined)))
+                                      trailing: _gatewayControl(
+                                          state, state.networks[i]))
                                 ]);
                               },
                             )
