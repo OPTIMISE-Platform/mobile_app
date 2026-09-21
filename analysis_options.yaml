@@ -7,6 +7,21 @@
 
 # The following line activates a set of recommended lints for Flutter apps,
 # packages, and plugins designed to encourage good coding practices.
+analyzer:
+  errors:
+    # isar_community's generator calls its own experimental index APIs and does
+    # not list this diagnostic in the ignore header it writes, so every finding
+    # sits in a generated file and cannot be fixed at the call site. Downgraded
+    # rather than ignored: it stays in the analyzer output, but stops failing
+    # the CI gate, which runs with --no-fatal-infos.
+    experimental_member_use: info
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - windows/**
+    - macos/**
+    - linux/**
 include: package:flutter_lints/flutter.yaml
 
 linter:

@@ -28,6 +28,9 @@ IconData? sensorIcon(String? iconName) {
   if (iconName == null) return null;
   final codePoint = iconNameToCodePoints[iconName];
   if (codePoint == null) return null;
+  // Codepoint is looked up by name at runtime, so it cannot be const; this is
+  // why the builds pass --no-tree-shake-icons.
+  // ignore: non_const_argument_for_const_parameter
   return IconData(codePoint, fontFamily: 'MaterialIcons');
 }
 

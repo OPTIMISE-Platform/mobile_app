@@ -32,6 +32,9 @@ class SmSeIcon extends SmartServiceModuleWidget {
 
   @override
   Widget buildInternal(BuildContext context, bool __) {
+    // Codepoint comes from the server at runtime, so it cannot be const;
+    // this is why the builds pass --no-tree-shake-icons.
+    // ignore: non_const_argument_for_const_parameter
     return Icon(IconData(codePoint, fontFamily: 'MaterialIcons'));
   }
 

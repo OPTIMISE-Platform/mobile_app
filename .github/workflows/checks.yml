@@ -18,7 +18,7 @@ jobs:
           # Keep in sync with .fvmrc, which is what developers run locally.
           # Older versions ship a Dart below the pubspec's sdk constraint and
           # fail in `pub get` before any check runs.
-          flutter-version: '3.35.7'
+          flutter-version: '3.47.5'
       - run: git config --global url."https://".insteadOf git:// # allows dependency downloads without gpg
       - run: flutter pub get
       - name: "Prepare environment"
