@@ -160,21 +160,15 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                                     ListTile(
                                         title: Text(state.locations[i].name),
                                         leading: Container(
-                                          height: MediaQuery.of(context)
-                                                  .textScaleFactor *
-                                              48,
-                                          width: MediaQuery.of(context)
-                                                  .textScaleFactor *
-                                              48,
+                                          height: MediaQuery.textScalerOf(context).scale(48),
+                                          width: MediaQuery.textScalerOf(context).scale(48),
                                           decoration: BoxDecoration(
                                               color: const Color(0xFF6c6c6c),
                                               borderRadius:
                                                   BorderRadius.circular(50)),
                                           child: Padding(
                                             padding: EdgeInsets.all(
-                                                MediaQuery.of(context)
-                                                        .textScaleFactor *
-                                                    8),
+                                                MediaQuery.textScalerOf(context).scale(8)),
                                             child: state
                                                     .locations[i].imageWidget ??
                                                 const Icon(Icons.location_on,

@@ -59,9 +59,9 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
                 const Spacer(),
                 IconButton(
                     icon: const Icon(Icons.share),
-                    onPressed: () => Share.share(
-                        "OPTIMISE Debug Information\n$txt",
-                        subject: "OPTIMISE Debug Information"))
+                    onPressed: () => SharePlus.instance.share(ShareParams(
+                        text: "OPTIMISE Debug Information\n$txt",
+                        subject: "OPTIMISE Debug Information")))
               ]),
               content: Scrollbar(
                   child: SingleChildScrollView(

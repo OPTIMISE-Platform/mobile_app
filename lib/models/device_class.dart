@@ -27,10 +27,10 @@ const cachSubdir = "/img";
 class DeviceClass {
   String id, image, name;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Widget? imageWidget;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   List<String> deviceIds = [];
 
   Future<void> _initImage() async {

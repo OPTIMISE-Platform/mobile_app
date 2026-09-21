@@ -117,11 +117,11 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                     subtitle: Text(
                                         "${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
                                     leading: Container(
-                                      height: MediaQuery.of(context).textScaleFactor * 48,
-                                      width: MediaQuery.of(context).textScaleFactor * 48,
+                                      height: MediaQuery.textScalerOf(context).scale(48),
+                                      width: MediaQuery.textScalerOf(context).scale(48),
                                       decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
                                       child: Padding(
-                                        padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+                                        padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
                                         child: deviceClasses[i].imageWidget ?? const Icon(Icons.devices, color: Colors.white),
                                       ),
                                     ),

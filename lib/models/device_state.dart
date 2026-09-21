@@ -33,9 +33,9 @@ class DeviceState {
   String functionId;
   bool isControlling, transitioning = false;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   DeviceInstance? _deviceInstance;
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   DeviceGroup? _deviceGroup;
 
   DeviceInstance? get deviceInstance {

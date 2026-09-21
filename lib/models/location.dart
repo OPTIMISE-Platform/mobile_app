@@ -34,11 +34,11 @@ class Location {
   String description, image;
   List<String> device_ids, device_group_ids;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   Widget? imageWidget;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = -1;
 
   Future<Location> initImage() async {

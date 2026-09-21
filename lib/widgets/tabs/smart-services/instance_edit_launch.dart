@@ -253,11 +253,11 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
       ListTile(
         // header
         leading: Container(
-          height: MediaQuery.of(context).textScaleFactor * 48,
-          width: MediaQuery.of(context).textScaleFactor * 48,
+          height: MediaQuery.textScalerOf(context).scale(48),
+          width: MediaQuery.textScalerOf(context).scale(48),
           decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
           child: Padding(
-            padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
+            padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
             child: const Icon(Icons.auto_fix_high, color: Colors.white),
           ),
         ),

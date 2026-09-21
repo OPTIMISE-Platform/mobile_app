@@ -111,7 +111,7 @@ class FavorizeButton extends StatelessWidget {
           Icons.star,
           color: disabled ? Theme.of(context).disabledColor : Colors.yellow,
           size: _border && !disabled
-              ? MediaQuery.textScaleFactorOf(context) * 15
+              ? MediaQuery.textScalerOf(context).scale(15)
               : null,
         ));
       }

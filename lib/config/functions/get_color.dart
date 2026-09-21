@@ -43,7 +43,7 @@ class FunctionConfigGetColor extends FunctionConfig {
             ShaderMask(
               shaderCallback: (Rect bounds) =>
                   LinearGradient(colors: value.map((e) => _getColor(e)).toList(growable: false), begin: Alignment.topLeft, end: Alignment.bottomRight)
-                      .createShader(bounds.deflate(MediaQuery.textScaleFactorOf(context) * 8.5)),
+                      .createShader(bounds.deflate(MediaQuery.textScalerOf(context).scale(8.5))),
               blendMode: BlendMode.srcATop,
               child: const Icon(Icons.palette, color: Colors.black),
             ),

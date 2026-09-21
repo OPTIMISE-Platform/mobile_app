@@ -147,12 +147,13 @@ class SmSeBarChart extends SmSeLineChart {
   }
 
   Color getSpecialColor(int key) {
-    return MyTheme.getSomeColor(key)
-        .withRed(
-            (MyTheme.getSomeColor(key).red * specialColorMultiplier).toInt())
-        .withGreen(
-            (MyTheme.getSomeColor(key).green * specialColorMultiplier).toInt())
-        .withBlue(
-            (MyTheme.getSomeColor(key).blue * specialColorMultiplier).toInt());
+    // Color channels are 0..1 doubles; withRed/withGreen/withBlue take 0..255.
+    final c = MyTheme.getSomeColor(key);
+    int scaled(double channel) =>
+        (((channel * 255.0).round() & 0xff) * specialColorMultiplier).toInt();
+    return c
+        .withRed(scaled(c.r))
+        .withGreen(scaled(c.g))
+        .withBlue(scaled(c.b));
   }
 }

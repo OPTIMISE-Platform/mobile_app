@@ -15,8 +15,9 @@
  */
 
 
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/services/settings.dart';
 
@@ -111,7 +112,6 @@ class MyTheme {
         seedColor: const Color(0xFF32b8ba),
         brightness: Brightness.dark,
         secondary: const Color(0xFF33cca0),
-      background: const Color(0xFF303030),
     ),
     useMaterial3: true,
     primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
@@ -176,7 +176,7 @@ class MyTheme {
 
   static ThemeStyle currentTheme = themeMaterial;
 
-  static ThemeStyle currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
+  static ThemeStyle currentColor = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
 
   // Follows the system unless the user picked a colour: currentColor above is
   // already derived from the platform brightness, so a fixed light default here
@@ -198,7 +198,7 @@ class MyTheme {
   /// pinned. Returns whether it changed, so the caller knows to rebuild.
   static bool followSystemBrightness() {
     if (themeMode != ThemeMode.system) return false;
-    final next = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
+    final next = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
     if (next == currentColor) return false;
     currentColor = next;
     return true;
@@ -217,7 +217,7 @@ class MyTheme {
         break;
       default:
         await Settings.resetThemeColor();
-        currentColor = SchedulerBinding.instance.window.platformBrightness == Brightness.dark ? dark : light;
+        currentColor = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
         themeMode = ThemeMode.system;
     }
   }

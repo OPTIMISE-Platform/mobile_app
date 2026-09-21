@@ -65,9 +65,9 @@ class _DeviceListItemState extends State<DeviceListItem> {
           element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']);
       filteredStates.forEach((element) {
         trailingWidgets.add(Container(
-          width: MediaQuery.of(context).textScaleFactor * 50,
+          width: MediaQuery.textScalerOf(context).scale(50),
           margin:
-              EdgeInsets.only(left: MediaQuery.of(context).textScaleFactor * 4),
+              EdgeInsets.only(left: MediaQuery.textScalerOf(context).scale(4)),
           child: element.transitioning
               ? const Center(child: DelayedCircularProgressIndicator())
               : element.value == null

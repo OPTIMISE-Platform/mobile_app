@@ -29,14 +29,14 @@ class RGB {
     var color = _getColor(characteristic);
     void setter(Color c) => setState(() {
           color = c;
-          characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
+          characteristic.value = <String, int>{"r": _channel8(c.r), "g": _channel8(c.g), "b": _channel8(c.b)};
         });
     return Column(mainAxisSize: MainAxisSize.min, children: [
       ColorPicker(
         pickerColor: color,
         onColorChanged: (c) {
           color = c;
-          characteristic.value = <String, int>{"r": c.red, "g": c.green, "b": c.blue};
+          characteristic.value = <String, int>{"r": _channel8(c.r), "g": _channel8(c.g), "b": _channel8(c.b)};
         },
         enableAlpha: false,
         displayThumbColor: false,
@@ -53,6 +53,9 @@ class RGB {
       ])
     ]);
   }
+
+  /// Color channels are 0..1 doubles; the device protocol takes 0..255 ints.
+  static int _channel8(double channel) => (channel * 255.0).round() & 0xff;
 
   static Color _getColor(Characteristic characteristic) {
     var value = characteristic.value;

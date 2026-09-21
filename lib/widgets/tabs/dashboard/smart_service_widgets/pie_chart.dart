@@ -132,7 +132,7 @@ class SmSePieChart extends SmSeRequest {
                       child: showSum
                           ? Text(
                               "${sum.toStringAsFixed(precision)}${sumUnit != null ? " $sumUnit" : ""}",
-                              textScaleFactor: maximized ? 2 : 1,
+                              textScaler: TextScaler.linear(maximized ? 2.0 : 1.0),
                             )
                           : const SizedBox.shrink()),
                   preview ? const SizedBox.shrink() : Positioned(

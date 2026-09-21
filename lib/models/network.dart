@@ -36,16 +36,16 @@ class Network {
   @enumerated
   DeviceConnectionStatus connection_state;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = -1;
 
   /// Hosts of the paired gateways that serve this network, empty or null when
   /// none is reachable and the cloud has to answer instead.
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   List<String>? localGatewayHosts;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   final List<DeviceState> states = [];
 

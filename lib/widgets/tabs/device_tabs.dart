@@ -469,7 +469,7 @@ class DeviceTabsState extends State<DeviceTabs> {
     final backgroundColor =
     isDark ? const Color(0xFF424242) : Colors.white;
     final divider =
-    Divider(color: textColor?.withOpacity(0.3), height: 1);
+    Divider(color: textColor?.withValues(alpha: 0.3), height: 1);
 
     return SidebarX(
       controller: _sidebarController,

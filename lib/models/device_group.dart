@@ -45,26 +45,26 @@ class DeviceGroup {
   List<Attribute>? attributes;
   String? auto_generated_by_device;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   Widget? imageWidget;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   final List<DeviceState> states = [];
 
   // Per-group change signal — see DeviceInstance.stateNotifier.
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   final EntityNotifier stateNotifier = EntityNotifier();
 
   void notifyStateChanged() => stateNotifier.notifyChanged();
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   @ignore
   Network? network;
 
-  @JsonKey(ignore: true)
+  @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = -1;
 
   static final _logger = Logger(
