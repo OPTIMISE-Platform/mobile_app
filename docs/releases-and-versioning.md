@@ -1,77 +1,85 @@
 # Releases and versioning
 
 How a commit becomes a build, a tag and a GitHub release, and where the version
-number comes from. The short version: the branch decides whether the release is
-a prerelease, `pubspec.yaml` decides the tag, and nothing is triggered by
-pushing a tag.
+comes from. The short version: the branch decides the channel, the tags and
+commits decide the version, and nothing in the tree is bumped by hand.
 
 ## Scope
 
-Covers the three workflows in `.github/workflows/` and the `version:` field in
-`pubspec.yaml`. Not about the signing material itself — the keystore and
+Covers `.github/workflows/android-release.yml`, the script
+`.github/scripts/release-version.sh` it calls, and the release topics the app
+subscribes to. Not about the signing material itself — the keystore and
 `key.properties` are reconstructed from repository secrets at build time and
-exist nowhere in the tree; see the README for what a local build needs instead.
+exist nowhere in the tree.
 
-## The version lives in pubspec.yaml
+## The branch decides the channel
 
-Both build workflows read it out of the file and use it for everything
-downstream:
+| Push to | Result |
+|---|---|
+| `dev` | APK, tag `0.1.0-dev.3+412`, GitHub release with `prerelease: true` |
+| `master` | APK, tag `0.1.0+420`, GitHub release marked latest |
+| either, plus pull requests | `checks.yml`: analyzer, `flutter test`, the versioning script's tests |
 
-```bash
-v=$(grep -Po 'version: \K.*' pubspec.yaml)
-```
+A merge from `dev` to `master` builds and releases on its own, with a new build
+number, so stable users get an update. Prerelease users get it too, because its
+build number is higher than every prerelease before it.
 
-That value becomes the git tag, the release title, and a `VERSION` entry in the
-generated `.env`, so the running app knows which build it is. The tags therefore
-match the pubspec field exactly, including the build number: `0.0.391+391`.
+`workflow_dispatch` on any other branch does nothing, and a run on a commit that
+already carries a tag of its channel is skipped.
 
-## The branch decides the release kind
+## The version comes from the tags
 
-| Push to | Workflow | Result |
-|---|---|---|
-| `dev` | `android-dev.yml` | APK, tag, GitHub release with `prerelease: true` |
-| `master` | `android.yml` | APK, tag, GitHub release with `prerelease: false` |
-| either, plus pull requests | `checks.yml` | `flutter analyze --no-fatal-infos` and `flutter test` |
+`release-version.sh` computes three things:
 
-Both build workflows end by publishing a Firebase Cloud Messaging message to the
-`android` topic, so installed apps learn that a new release exists. Every push to
-either branch reaches users this way — there is no dry run.
+- **Build number**: the highest `+N` of all tags plus one. It is the Android
+  `versionCode` and what the in-app updater compares
+  (`lib/services/app_update.dart`), so it has to grow across both channels.
+  The `version` job runs one at a time and pushes the tag right away, which
+  reserves the number before the ten-minute build starts.
+- **Version**: the last stable tag, raised by the Conventional Commits since
+  then — `fix` and everything else raise the patch, `feat` the minor, `!` or a
+  `BREAKING CHANGE:` footer the major. Below 1.0 a breaking change raises the
+  minor. Without a stable tag of this scheme yet, it is `0.1.0`; the older
+  `0.0.N+N` tags are ignored as a baseline because most of them were
+  prereleases.
+- **Prerelease suffix**: `-dev.K`, counting up per target version.
 
-## Nothing is triggered by a tag
+The tag is `<version>+<build>`, and the workflow passes the parts to
+`flutter build apk --build-name --build-number` and writes the tag as `VERSION`
+into `.env`. The `version:` in `pubspec.yaml` is a placeholder for local builds
+and stays as it is.
 
-The tags are an *output* of the build, not its trigger. `marvinpinto/action-automatic-releases`
-creates them from `VERSION` after the APK is built. Pushing a tag by hand
-therefore builds nothing, and worse, takes the name the next build wants: the
-action fails when its target tag already exists.
+## When a run fails
 
-Two consequences worth knowing before touching the release path:
+The tag exists from the moment the `version` job is done, so:
 
-- **Do not create the tag manually** as part of preparing a release. The push to
-  the branch is the whole action.
-- **A merge from `dev` to `master` without a version bump collides.** The dev
-  build has already published that tag; the master build then tries to create it
-  again. Whatever the release process becomes, it has to answer whether the
-  master release reuses the dev version or gets its own.
+- **Build or notification failed**: use "Re-run failed jobs". It keeps the
+  reserved version, and the release step leaves an existing release alone.
+- **"Re-run all jobs" does nothing**: the commit already carries its tag and is
+  skipped. To start over with a new number, delete the tag first.
+- **A tag without a release** still counts. Its build number is used up, and a
+  stable one is the baseline for the next version.
 
-## Bumping is a manual step
+## Release topics
 
-The README documents a `pre-commit` hook that increments the version on every
-commit. It is not installed in every checkout, and the history does not look
-like it ran: the version moves in dedicated `chore: bump version to X` commits
-placed immediately before the release-triggering push, not once per commit.
+Both release kinds send a `release_info` message over Firebase Cloud Messaging.
+The app subscribes every Android install to `android` and, while "Get
+Pre-Releases" is on, to `android-prerelease` (`NotificationMixin.syncReleaseTopics`).
 
-Treat the explicit bump commit as the convention and the hook as optional. What
-matters is that `pubspec.yaml` carries a version no previous build has used
-before anything is pushed to `dev` or `master`.
+Stable releases go to `android`. Prereleases go to the topic in
+`PRERELEASE_TOPIC` at the top of the workflow, which is still `android`: builds
+from before the prerelease topic existed listen on nothing else. Switching it to
+`android-prerelease` stops prerelease notices from reaching stable users, and
+is safe once the installed base carries the subscription.
 
 ## Keeping the Flutter version in step
 
-The SDK version is pinned in six places, and they have drifted apart before:
+The SDK version is pinned in five places, and they have drifted apart before:
 
 - `.fvmrc`
 - `pubspec.yaml` (`environment: flutter:`)
 - `.vscode/settings.json` (`dart.flutterSdkPath`, rewritten by `fvm use`)
-- the `flutter-version` input in each of the three workflows
+- the `flutter-version` input in both workflows
 
 A CI version older than what `pubspec.yaml` requires fails in `flutter pub get`,
-which is why `android.yml` carries a comment at that input.
+which is why the workflows carry a comment at that input.

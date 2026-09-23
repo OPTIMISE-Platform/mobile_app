@@ -1,0 +1,107 @@
+name: 'Android Release'
+
+# dev publishes prereleases, master stable releases. The version comes from the
+# tags and the commits, see docs/releases-and-versioning.md.
+on:
+  push:
+    branches:
+      - dev
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Devices built before the prerelease topic existed only listen on
+  # "android". Switch this to "android-prerelease" once those have updated.
+  PRERELEASE_TOPIC: android
+
+jobs:
+  version:
+    if: github.ref_name == 'dev' || github.ref_name == 'master'
+    runs-on: ubuntu-latest
+    # The build number is the highest tag plus one, so versions are handed out
+    # one at a time and reserved by pushing the tag right away. Only this short
+    # job is serialized: GitHub keeps one pending run per group and cancels an
+    # older one, which for a whole ten-minute release could drop a master run.
+    concurrency:
+      group: android-release-version
+      cancel-in-progress: false
+    outputs:
+      name: ${{ steps.version.outputs.name }}
+      build: ${{ steps.version.outputs.build }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      skip: ${{ steps.version.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        shell: bash
+        run: |
+          channel=${{ github.ref_name == 'master' && 'stable' || 'prerelease' }}
+          .github/scripts/release-version.sh "$channel" | tee -a "$GITHUB_OUTPUT"
+      - name: "Reserve the tag"
+        if: steps.version.outputs.skip != 'true'
+        shell: bash
+        run: |
+          git tag "${{ steps.version.outputs.tag }}" "$GITHUB_SHA"
+          git push origin "refs/tags/${{ steps.version.outputs.tag }}"
+
+  release:
+    needs: version
+    if: needs.version.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    env:
+      NAME: ${{ needs.version.outputs.name }}
+      BUILD: ${{ needs.version.outputs.build }}
+      TAG: ${{ needs.version.outputs.tag }}
+      PRERELEASE: ${{ needs.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          # Keep in sync with .fvmrc: a version older than the pubspec asks for
+          # fails the release build in `pub get`, which has happened before.
+          flutter-version: '3.47.5'
+      - run: git config --global url."https://".insteadOf git:// # allows dependency downloads without gpg
+      - run: flutter pub get
+      - name: "Prepare environment"
+        run: |
+          echo '${{ secrets.SEPL_KEYSTORE }}' | base64 -d > android/sepl.keystore
+          echo '${{ secrets.KEY_PROPERTIES }}' | base64 -d > android/key.properties
+          echo '${{ secrets.DOT_ENV }}' > .env
+          echo "VERSION=$TAG" >> .env
+          echo "DISTRIBUTOR=github" >> .env
+      - name: "Build app"
+        run: flutter build apk --no-tree-shake-icons --build-name "$NAME" --build-number "$BUILD"
+      - name: "Create release"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          # A re-run of this job finds the release from the first attempt.
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            exit 0
+          fi
+          flags=(--prerelease)
+          if [[ $PRERELEASE != true ]]; then
+            # Notes from the last stable release, not from the last prerelease.
+            flags=(--latest)
+            previous=$(gh release view --json tagName -q .tagName 2>/dev/null || true)
+            [[ -n $previous ]] && flags+=(--notes-start-tag "$previous")
+          fi
+          gh release create "$TAG" --verify-tag --title "$TAG" --generate-notes "${flags[@]}" \
+            build/app/outputs/flutter-apk/app-release.apk LICENSE
+      - name: "Notify devices"
+        # Pinned to a commit: the action only publishes a moving "latest" tag.
+        uses: senergy-platform/firebase-cloud-messaging-action@de210700a2573098a52c3d0fdac4410a5ea1671b
+        with:
+          CREDENTIALS: ${{ secrets.FCM_CREDENTIALS }}
+          MESSAGE: '{"topic": "${{ needs.version.outputs.prerelease == ''true'' && env.PRERELEASE_TOPIC || ''android'' }}", "data": {"type": "release_info"}}'

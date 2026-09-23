@@ -31,3 +31,5 @@ jobs:
         run: flutter analyze --no-fatal-infos
       - name: "Test"
         run: flutter test
+      - name: "Test release versioning"
+        run: .github/scripts/release-version.test.sh
