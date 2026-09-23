@@ -28,6 +28,7 @@ import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/notifications.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/remote_message_encoder.dart';
 import 'package:mobile_app/widgets/notifications/notification_list.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -37,6 +38,8 @@ const notificationUpdateType = 'put notification';
 const notificationDeleteManyType = 'delete notifications';
 const notificationReleaseInfoType = 'release_info';
 const messageKey = 'messages';
+const releaseTopic = 'android';
+const preReleaseTopic = 'android-prerelease';
 
 mixin NotificationMixin on ChangeNotifier {
   static final _logger = Logger(printer: SimplePrinter());
@@ -62,6 +65,24 @@ mixin NotificationMixin on ChangeNotifier {
   FirebaseMessaging get messaging => FirebaseMessaging.instance;
 
   String? fcmToken;
+
+  /// Every Android install hears about stable releases; prerelease notices go
+  /// to their own topic, which follows the pre-release setting.
+  Future<void> syncReleaseTopics() async {
+    if (!Platform.isAndroid) {
+      return;
+    }
+    try {
+      await messaging.subscribeToTopic(releaseTopic);
+      if (Settings.getPreReleaseMode()) {
+        await messaging.subscribeToTopic(preReleaseTopic);
+      } else {
+        await messaging.unsubscribeFromTopic(preReleaseTopic);
+      }
+    } catch (e, s) {
+      ErrorReporter.log('Could not update release topics', e, s);
+    }
+  }
 
   static Future<void> queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
@@ -104,9 +125,7 @@ mixin NotificationMixin on ChangeNotifier {
       _logger.w(e);
       return;
     }
-    if (Platform.isAndroid) {
-      await messaging.subscribeToTopic('android');
-    }
+    await syncReleaseTopics();
     FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
     messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
 

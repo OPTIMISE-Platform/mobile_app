@@ -29,6 +29,7 @@ List<Widget> behaviourSection(BuildContext context, AppState state) => [
         onChanged: (v) async {
           await settings_service.Settings.setPreReleaseMode(v);
           state.notifyListeners();
+          await state.syncReleaseTopics();
         },
       ),
       const Divider(),
