@@ -75,12 +75,14 @@ class DeviceManagerNew {
           "${deviceManagerEndpoints.first.location}/devices");
     } catch (e) {
       //clear isar endpoints cache and try again
-      await isar!.writeTxn(() async {
-        await isar!.endpoints.clear();
-      });
+      if (isar != null) {
+        await isar!.writeTxn(() async {
+          await isar!.endpoints.clear();
+        });
+      }
       _logger.d(
           "$LOG_PREFIX - getDevices: Try to retrieve device manager endpoint");
-      var deviceManagerEndpoints = await getDeviceManagerEndpoints();
+      deviceManagerEndpoints = await getDeviceManagerEndpoints();
       if (deviceManagerEndpoints.isEmpty) {
         throw ("$LOG_PREFIX: No endpoints found for device manager");
       }

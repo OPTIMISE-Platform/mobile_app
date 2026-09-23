@@ -49,12 +49,25 @@ class DeviceCommandPath {
     mgwEndpointService = MgwEndpointService(host);
   }
 
+  static const deviceManagerModuleName =
+      "github.com/SENERGY-Platform/mgw-device-command";
+
+  Future<void> _clearCachedEndpoints() async {
+    if (isar == null) {
+      return;
+    }
+    await isar!.writeTxn(() async {
+      await isar!.endpoints
+          .where()
+          .moduleNameEqualTo(deviceManagerModuleName)
+          .deleteAll();
+    });
+  }
+
   Future<List<Endpoint>> getEndpoints() async {
     // TODO change module
     _logger.d("$LOG_PREFIX: Get deployment endpoint");
     List<Endpoint> endpoints;
-    const deviceManagerModuleName =
-        "github.com/SENERGY-Platform/mgw-device-command";
     if (isar != null) {
       endpoints = await isar!.endpoints
           .where()
@@ -80,7 +93,16 @@ class DeviceCommandPath {
     var endpoints = await getEndpoints();
     var endpoint = endpoints.first.location;
     var path = endpoint + commandUrlPrefix + preferEventValue.toString();
-    var resp = await mgwEndpointService.PostToExposedPath(path, commands);
+    final Response<dynamic> resp;
+    try {
+      resp = await mgwEndpointService.PostToExposedPath(path, commands);
+    } catch (_) {
+      // No retry here: a command is not idempotent, and the caller already
+      // falls back to the cloud. Dropping the cached location makes the next
+      // command look it up again in case the module has moved.
+      await _clearCachedEndpoints();
+      rethrow;
+    }
     List<DeviceCommandResponse> commandResponses = [];
     for (final response in resp.data) {
       commandResponses.add(DeviceCommandResponse.fromJson(response));
