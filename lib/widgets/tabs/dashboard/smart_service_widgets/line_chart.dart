@@ -24,6 +24,7 @@ import 'package:intl/intl.dart';
 import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/math_list.dart';
 import 'package:mutex/mutex.dart';
 
@@ -155,10 +156,10 @@ class SmSeLineChart extends SmSeRequest {
             alignment: Alignment.topRight,
             style: const TextStyle(fontSize: 10),
             labelResolver: (line) {
-              final d = DateTime.fromMillisecondsSinceEpoch(
+              final d = toDisplayTime(DateTime.fromMillisecondsSinceEpoch(
                 line.x.toInt(),
                 isUtc: true,
-              ).toLocal();
+              ));
               return DateFormat.E().format(d); // Mon, Tue, etc.
             },
           ),
@@ -170,7 +171,7 @@ class SmSeLineChart extends SmSeRequest {
   List<int> findDayChangeIndices(List<int> timestamps) {
     final dates = timestamps
         .map((ms) =>
-        DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal())
+        toDisplayTime(DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true)))
         .toList();
 
     final result = <int>[];
@@ -267,7 +268,7 @@ class SmSeLineChart extends SmSeRequest {
   void setDateFormat(List<String> timestamps, List<int> rawTimestamps) {
       final dates = rawTimestamps
           .map((ms) =>
-          DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true).toLocal())
+          toDisplayTime(DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true)))
           .toList();
 
       if (dates.length <= 1) {

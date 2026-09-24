@@ -23,12 +23,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/theme.dart' show MyTheme;
 import 'package:mobile_app/widgets/tabs/nav.dart';
 import 'package:provider/provider.dart';
 
+import 'fake_backend.dart';
 import 'test_helper.dart';
 
 /// Phone-sized surface at devicePixelRatio 1, so the golden PNGs stay small.
@@ -49,7 +53,50 @@ Future<void> setUpGoldenEnvironment() async {
   FlutterSecureStorage.setMockInitialValues({});
   ErrorReporter.present = (_) {};
   await _loadTestFonts();
+  _mockFluttertoast();
+  // Every golden renders display timestamps in UTC, not just the ones that
+  // also call serveGoldenBackend: a screen with no backend of its own (e.g.
+  // NotificationList, fed straight from AppState) still calls toDisplayTime,
+  // and left on .toLocal() its goldens depend on the machine's time zone.
+  useUtcForDisplayTime = true;
 }
+
+/// Several widgets call `Toast.showToastNoContext` directly, which reaches the
+/// real `fluttertoast` plugin - unhandled in a test, that throws
+/// MissingPluginException. The channel and method name are the package's own
+/// (`fluttertoast-9.1.0/lib/fluttertoast.dart`); the handler's return value is
+/// unused by the call sites.
+void _mockFluttertoast() {
+  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+      .setMockMethodCallHandler(
+          const MethodChannel('PonnamKarthik/fluttertoast'),
+          (call) async => true);
+}
+
+/// Backend seam for golden tests that fetch data: every Dio adapter reads
+/// from [backend] and `Auth().getHeaders()` is short-circuited. Call
+/// [resetGoldenBackend] in `tearDown`. (The UTC display-time switch lives in
+/// [setUpGoldenEnvironment] instead - screens with no backend of their own
+/// still need it.)
+void serveGoldenBackend(FakeBackend backend,
+    {Map<String, String> headers = const {"authorization": "Bearer t"}}) {
+  AppHttpClientAdapter.testOverride = backend;
+  Auth.headersOverride = () async => headers;
+}
+
+/// Undoes [serveGoldenBackend].
+void resetGoldenBackend() {
+  AppHttpClientAdapter.testOverride = null;
+  Auth.headersOverride = null;
+}
+
+/// `MgwStorage`'s first call opens a Hive box via path_provider, which - like
+/// the Hive writes in [pumpGolden]'s own doc comment - never resolves inside
+/// testWidgets' fake-async zone; call this once, before pumping, for any
+/// golden that reaches `AppState.init()` or `AppState.loadNetworks()`, both of
+/// which read paired gateways through it.
+Future<void> warmUpMgwStorage(WidgetTester tester) =>
+    tester.runAsync(() => MgwStorage.init());
 
 /// Registers the fonts `flutter test` does not load by default (it renders
 /// text as Ahem boxes otherwise), from the SDK the test is running under.

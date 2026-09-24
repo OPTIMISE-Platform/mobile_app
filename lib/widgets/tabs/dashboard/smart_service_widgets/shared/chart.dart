@@ -17,6 +17,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/shared/display_time.dart';
 
 class BaseChartFormatter {
   static SideTitles getBottomTitles(BuildContext context, DateFormat dtFormat,
@@ -32,9 +33,8 @@ class BaseChartFormatter {
           if (val == meta.max || val == meta.min) {
             return const SizedBox.shrink();
           }
-          final dt =
-              DateTime.fromMillisecondsSinceEpoch(val.floor(), isUtc: isUtc)
-                  .toLocal();
+          final dt = toDisplayTime(
+              DateTime.fromMillisecondsSinceEpoch(val.floor(), isUtc: isUtc));
           final formatted = dtFormat.format(dt);
           if (rotated) {
             return Container(

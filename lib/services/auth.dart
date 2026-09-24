@@ -36,6 +36,10 @@ import 'package:mobile_app/services/cache_helper.dart';
 class Auth extends ChangeNotifier {
   static final _instance = Auth._internal();
 
+  /// Set only by golden/unit tests, to skip the real OIDC client entirely.
+  @visibleForTesting
+  static Future<Map<String, String>> Function()? headersOverride;
+
   bool isInitialized = false;
   bool _listenerRegistered = false;
 
@@ -296,6 +300,7 @@ class Auth extends ChangeNotifier {
   }
 
   Future<Map<String, String>> getHeaders() async {
+    if (headersOverride != null) return headersOverride!();
     if (!loggedIn) {
       notifyListeners();
       throw AuthException("Not logged in");

@@ -26,6 +26,7 @@ import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -206,7 +207,7 @@ class AppUpdater {
                   Text("Current Build: $currentBuild"),
                   Text("Latest Build: $latestBuild"),
                   Text(
-                      "Uploaded: ${DateFormat.yMd().add_jms().format(updateDate.toLocal())}"),
+                      "Uploaded: ${DateFormat.yMd().add_jms().format(toDisplayTime(updateDate))}"),
                   Text(
                       "Download size: ${(downloadSize / 1000000.0).toStringAsFixed(1)} MB"),
                 ],

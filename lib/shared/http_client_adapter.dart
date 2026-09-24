@@ -15,12 +15,20 @@
  */
 
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 
 class AppHttpClientAdapter implements HttpClientAdapter {
+  /// Set only by golden/unit tests. Checked on every fetch, not cached at
+  /// construction, because DioFactory memoizes Dio instances (and
+  /// DevicesService/SmSeProcessToggle cache their own) for the app's whole
+  /// lifetime, so a test setting this after those instances exist still has
+  /// to reach them.
+  @visibleForTesting
+  static HttpClientAdapter? testOverride;
+
   late final HttpClientAdapter _adapter;
 
   AppHttpClientAdapter() {
@@ -43,6 +51,6 @@ class AppHttpClientAdapter implements HttpClientAdapter {
 
   @override
   Future<ResponseBody> fetch(RequestOptions options, Stream<Uint8List>? requestStream, Future? cancelFuture) {
-    return _adapter.fetch(options, requestStream, cancelFuture);
+    return (testOverride ?? _adapter).fetch(options, requestStream, cancelFuture);
   }
 }

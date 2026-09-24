@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/shared/display_time.dart';
 
 class FunctionConfigGetTimestamp extends FunctionConfig {
   FunctionConfigGetTimestamp() {
@@ -46,7 +47,7 @@ class FunctionConfigGetTimestamp extends FunctionConfig {
       }
       return children.join("\n");
     }
-    return _format.format(DateTime.parse(value).toLocal());
+    return _format.format(toDisplayTime(DateTime.parse(value)));
   }
 
   @override

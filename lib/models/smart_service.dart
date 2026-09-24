@@ -16,6 +16,7 @@
 
 import 'package:json_annotation/json_annotation.dart';
 
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/models/characteristic.dart';
 import 'package:mobile_app/models/content_variable.dart';
@@ -32,7 +33,7 @@ class SmartServiceRelease {
   SmartServiceRelease(this.created_at, this.description, this.design_id, this.id, this.name, this.error, this.usable);
 
   DateTime createdAt() {
-    return DateTime.fromMillisecondsSinceEpoch(created_at * 1000).toLocal();
+    return toDisplayTime(DateTime.fromMillisecondsSinceEpoch(created_at * 1000));
   }
 
   factory SmartServiceRelease.fromJson(Map<String, dynamic> json) => _$SmartServiceReleaseFromJson(json);

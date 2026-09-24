@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/math_list.dart';
 import 'package:mutex/mutex.dart';
 
@@ -256,9 +257,9 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                               if (val == meta.max || val == meta.min) {
                                 return const SizedBox.shrink();
                               }
-                              final dt = DateTime.fromMillisecondsSinceEpoch(
-                                      val.floor())
-                                  .toLocal();
+                              final dt = toDisplayTime(
+                                  DateTime.fromMillisecondsSinceEpoch(
+                                      val.floor()));
                               return Center(
                                   child: Text(_range < 4
                                       ? MyTheme.formatHHMM.format(dt)

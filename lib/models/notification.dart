@@ -17,6 +17,7 @@
 import 'package:flutter/material.dart';
 import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/isar.dart';
 
 part 'notification.g.dart';
@@ -39,7 +40,7 @@ class Notification {
   Id isarId = -1;
 
   DateTime createdAt() {
-    return DateTime.parse(created_at).toLocal();
+    return toDisplayTime(DateTime.parse(created_at));
   }
 
   show(BuildContext context) {
