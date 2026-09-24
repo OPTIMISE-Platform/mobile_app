@@ -4,3 +4,6 @@ tags:
     # CI runs with --run-skipped; locally tool/test-isar.sh runs these in a
     # container.
     skip: "needs glibc 2.38, run tool/test-isar.sh"
+  # Golden (screenshot) tests. Not skipped anywhere: regenerate with
+  # `fvm flutter test --update-goldens --tags golden`.
+  golden:
