@@ -315,7 +315,7 @@ class DeviceTabsState extends State<DeviceTabs> {
             data: Theme.of(context).copyWith(highlightColor: Colors.transparent),
             child: Scaffold(
               floatingActionButton:
-              showFab ? _buildFab() : null,
+              showFab ? _buildFab(context) : null,
               appBar: appBar.getAppBar(context, actions, leadingAction,
                   _buildDeviceSegmentBar(context, disabled)),
               body: _buildTabBody(),
@@ -327,10 +327,10 @@ class DeviceTabsState extends State<DeviceTabs> {
     );
   }
 
-  Widget _buildFab() => FloatingActionButton(
+  Widget _buildFab(BuildContext context) => FloatingActionButton(
     onPressed: () => _fabPressedController.add(null),
-    backgroundColor: MyTheme.appColor,
-    child: Icon(Icons.add, color: MyTheme.textColor),
+    backgroundColor: context.appColors.app,
+    child: Icon(Icons.add, color: context.appColors.text),
   );
 
   List<Widget> _buildActions(BuildContext context, AppState state) {
@@ -397,7 +397,7 @@ class DeviceTabsState extends State<DeviceTabs> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, color: MyTheme.errorColor),
+              Icon(Icons.error, color: context.appColors.error),
               SizedBox(
                 width: MediaQuery.textScalerOf(context).scale(1) * 12,
                 height: 0,

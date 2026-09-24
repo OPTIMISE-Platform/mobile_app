@@ -17,7 +17,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
-import 'package:mobile_app/restart_controller.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/settings/refresh_cache_tile.dart';
@@ -146,7 +145,6 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                         child: const Text('System Default'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(null);
-                          RestartController.restart();
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         }),
@@ -154,7 +152,6 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                         child: const Text('Dark'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(dark);
-                          RestartController.restart();
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         }),
@@ -162,7 +159,6 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                         child: const Text('Light'),
                         onPressed: () async {
                           await MyTheme.selectThemeColor(light);
-                          RestartController.restart();
                           if (!context.mounted) return;
                           Navigator.pop(context);
                         })

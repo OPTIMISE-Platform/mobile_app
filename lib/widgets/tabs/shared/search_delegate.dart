@@ -60,6 +60,8 @@ class DevicesSearchDelegate extends SearchDelegate {
 
   @override
   ThemeData appBarTheme(BuildContext context) {
-    return MyTheme.isDarkMode ? MyTheme.materialDarkTheme : MyTheme.materialTheme;
+    return Theme.of(context).brightness == Brightness.dark
+        ? MyTheme.materialDarkTheme
+        : MyTheme.materialTheme;
   }
 }

@@ -163,7 +163,7 @@ class _NotificationListState extends State<NotificationList> {
                                     background: Container(
                                       alignment: Alignment.centerRight,
                                       padding: MyTheme.inset,
-                                      color: MyTheme.warnColor,
+                                      color: context.appColors.warn,
                                       child: const Icon(
                                         Icons.delete,
                                         color: Colors.white,
@@ -195,17 +195,17 @@ class _NotificationListState extends State<NotificationList> {
                                                             .notifications[i])
                                                         ? Icons.check_circle
                                                         : Icons.circle_outlined,
-                                                    color: MyTheme.appColor,
+                                                    color: context.appColors.app,
                                                   )
                                                 ]),
                                       title: Row(
                                         children: [
                                           Text(state.notifications[i].title),
                                           Badge(
-                                            label: const Icon(
+                                            label: Icon(
                                               Icons.circle_notifications,
                                               size: 12,
-                                              color: MyTheme.warnColor,
+                                              color: context.appColors.warn,
                                             ),
                                             isLabelVisible:
                                                 !state.notifications[i].isRead,

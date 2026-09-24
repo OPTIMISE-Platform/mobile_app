@@ -22,6 +22,7 @@ import 'package:mobile_app/shared/math_list.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/shared/formats.dart';
 import 'package:mobile_app/widgets/shared/indicator.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
@@ -42,7 +43,7 @@ class SmSePieChart extends SmSeRequest {
   final List<double> nums = [];
   final List<String> titles = [];
   final List<int> _active_sections = [];
-  DateFormat dateFormat = MyTheme.formatHHMM;
+  DateFormat dateFormat = Formats.hhmm;
   int touchedIndex = -1;
   double sum = 0;
   int precision = 1;
@@ -94,7 +95,7 @@ class SmSePieChart extends SmSeRequest {
                         child: Indicator(
                           color: MyTheme.getSomeColor(i),
                           text: "${titles[i]}${_allZero ? "" : (" (${(nums[i] * 100 / sum).toStringAsFixed(1)}%)")}",
-                          textColor: MyTheme.textColor!,
+                          textColor: context.appColors.text,
                           isSquare: false,
                         )),
                     const SizedBox(

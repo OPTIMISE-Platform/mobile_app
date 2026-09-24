@@ -390,9 +390,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                   if (!mounted) return;
                   Navigator.pop(this.context);
                 },
-          backgroundColor: valid ? MyTheme.appColor : Colors.grey,
-          label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: MyTheme.textColor)),
-          icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: MyTheme.textColor),
+          backgroundColor: valid ? context.appColors.app : Colors.grey,
+          label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: context.appColors.text)),
+          icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: context.appColors.text),
         ),
         body: Scaffold(
             appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),

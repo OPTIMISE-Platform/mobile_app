@@ -158,16 +158,9 @@ Future<void> pumpGolden(
     tester.view.resetPhysicalSize();
   });
 
-  // 29 call sites read MyTheme.isDarkMode/textColor/textStyle/currentColor
-  // directly instead of Theme.of(context), so the static has to agree with
-  // the MaterialApp's theme or those widgets render the wrong-mode colours.
-  MyTheme.currentColor = dark ? "dark" : "light";
-  MyTheme.themeMode = dark ? ThemeMode.dark : ThemeMode.light;
-  addTearDown(() {
-    MyTheme.currentColor = "light";
-    MyTheme.themeMode = ThemeMode.system;
-  });
-
+  // A fresh mount per variant: switching the theme of a mounted app
+  // cross-fades it, and the fixed [settle] would capture that half done.
+  await tester.pumpWidget(const SizedBox());
   await tester.pumpWidget(
     MultiProvider(
       providers: [

@@ -102,7 +102,7 @@ class _BootstrapState extends State<_Bootstrap> {
         //
         // The cost is that the provider owns these singletons and would dispose
         // them if it were ever removed from the tree. It never is: _Bootstrap
-        // does not remount and RestartController re-keys only the Theme below.
+        // does not remount, and MyApp below switches theme mode in place.
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider(create: (_) => Auth()),
       ],

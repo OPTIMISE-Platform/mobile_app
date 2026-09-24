@@ -55,7 +55,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
                 child: Indicator(
                   color: MyTheme.getSomeColor(i),
                   text: titles[i],
-                  textColor: MyTheme.textColor!,
+                  textColor: context.appColors.text,
                   isSquare: true,
                 )),
             const SizedBox(

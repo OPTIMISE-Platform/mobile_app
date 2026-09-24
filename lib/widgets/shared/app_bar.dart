@@ -161,29 +161,28 @@ class UpdateIcon extends StatefulWidget {
 
 class _UpdateIconState extends State<UpdateIcon>
     with SingleTickerProviderStateMixin {
-  late Animation<Color?> animation;
-  late AnimationController controller;
+  late final AnimationController controller;
 
   @override
   void initState() {
     super.initState();
     controller = AnimationController(
         duration: const Duration(seconds: 1, milliseconds: 200), vsync: this);
-    animation = ColorTween(begin: MyTheme.textColor!, end: MyTheme.appColor)
-        .animate(controller)
-      ..addListener(() {
-        setState(() {
-          // The state that has changed here is the animation object’s value.
-        });
-      });
     controller.repeat(reverse: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(Icons.system_update_alt, color: animation.value),
-      onPressed: () => AppUpdater.showUpdateDialog(context),
+    final colors = context.appColors;
+    // Interpolated per frame from the current theme rather than a tween built
+    // once, so a theme switch recolours the running animation.
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) => IconButton(
+        icon: Icon(Icons.system_update_alt,
+            color: Color.lerp(colors.text, colors.app, controller.value)),
+        onPressed: () => AppUpdater.showUpdateDialog(context),
+      ),
     );
   }
 

@@ -211,7 +211,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
 
     _showFab = _tabController!.index < _dashboards.length;
     final fab = ExpandableFab(
-      icon: Icon(Icons.edit, color: MyTheme.textColor),
+      icon: Icon(Icons.edit, color: context.appColors.text),
       distance: 90.0,
       toggleStream: _toggleStream,
       children: [
@@ -220,7 +220,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             await _addWidget();
             _toggleStreamController.add(null);
           },
-          icon: Icon(Icons.add, color: MyTheme.textColor),
+          icon: Icon(Icons.add, color: context.appColors.text),
         ),
         ActionButton(
           onPressed: () async {
@@ -253,7 +253,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             Settings.setSmartServiceDashboards(_dashboards);
             if (mounted) setState(() {});
           },
-          icon: Icon(Icons.drive_file_rename_outline, color: MyTheme.textColor),
+          icon: Icon(Icons.drive_file_rename_outline, color: context.appColors.text),
         ),
         ActionButton(
           onPressed: () async {
@@ -279,8 +279,8 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             _toggleStreamController.add(null);
             if (mounted) setState(() {});
           },
-          color: MyTheme.warnColor,
-          icon: Icon(Icons.delete, color: MyTheme.textColor),
+          color: context.appColors.warn,
+          icon: Icon(Icons.delete, color: context.appColors.text),
         )
       ],
     );
@@ -332,7 +332,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                     background: Container(
                       alignment: Alignment.centerRight,
                       padding: MyTheme.inset,
-                      color: MyTheme.warnColor,
+                      color: context.appColors.warn,
                       child: const Icon(
                         Icons.delete,
                         color: Colors.white,

@@ -23,13 +23,14 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/c
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/shared/formats.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSePvForecast extends SmSeRequest {
   @override
   setPreview(bool enabled) => null;
 
-  DateFormat dateFormat = MyTheme.formatHHMM;
+  DateFormat dateFormat = Formats.hhmm;
 
   final List<LineChartBarData> _lines = [];
   final List<VerticalLine> _verticalLines = [];
@@ -150,11 +151,16 @@ class SmSePvForecast extends SmSeRequest {
   }
 
   Color _getLineColor(int i) {
+    // Stays on the static constant, not context.appColors.app: this runs
+    // during refreshInternal(), which the base class calls with no
+    // BuildContext, and the app colour does not vary by brightness anyway.
     const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
     return colors[i % colors.length];
   }
 }
 
+// Same reasoning as _getLineColor above: called from refreshInternal(),
+// which has no BuildContext to read the theme from.
 Future<SizedPicture> sunsvg() async {
   final rawSvg = """
       <svg

@@ -194,7 +194,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                     connectionStatus == DeviceConnectionStatus.offline
                         ? Icons.error
                         : Icons.lan_outlined,
-                    color: MyTheme.warnColor))
+                    color: context.appColors.warn))
             : trailingWidgets.isEmpty
                 ? null
                 : trailingWidgets.length == 1

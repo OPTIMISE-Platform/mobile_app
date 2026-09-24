@@ -29,6 +29,7 @@ import 'package:mobile_app/shared/math_list.dart';
 import 'package:mutex/mutex.dart';
 
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/shared/formats.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSeLineChart extends SmSeRequest {
@@ -38,7 +39,7 @@ class SmSeLineChart extends SmSeRequest {
   setPreview(bool enabled) => preview = enabled;
 
   final List<LineChartBarData> _lines = [];
-  DateFormat dateFormat = MyTheme.formatHHMM;
+  DateFormat dateFormat = Formats.hhmm;
   final List<String> titles = [];
 
   @override
@@ -272,7 +273,7 @@ class SmSeLineChart extends SmSeRequest {
           .toList();
 
       if (dates.length <= 1) {
-        dateFormat = MyTheme.formatEddMMy;
+        dateFormat = Formats.eddmmy;
         return;
       }
 
@@ -295,17 +296,17 @@ class SmSeLineChart extends SmSeRequest {
 
       // Now choose based on the *smallest* unit that changes
       if (minuteChanges) {
-        dateFormat = MyTheme.formatHHMM;
+        dateFormat = Formats.hhmm;
       } else if (hourChanges) {
         dateFormat = DateFormat('HH');
       } else if (dayChanges) {
-        dateFormat = MyTheme.formatDDMM;
+        dateFormat = Formats.ddmm;
       } else if (monthChanges) {
-        dateFormat = MyTheme.formatMMM;       // <-- this now works across year boundaries
+        dateFormat = Formats.mmm;       // <-- this now works across year boundaries
       } else if (yearChanges) {
-        dateFormat = MyTheme.formatY;
+        dateFormat = Formats.y;
       } else {
-        dateFormat = MyTheme.formatEddMMy;
+        dateFormat = Formats.eddmmy;
       }
     }
 

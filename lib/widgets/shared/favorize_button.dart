@@ -40,8 +40,9 @@ class FavorizeButton extends StatelessWidget {
     }
   }
 
-  bool get _border {
-    return !(MyTheme.isDarkMode && MyTheme.currentTheme == themeMaterial);
+  bool _border(BuildContext context) {
+    return !(Theme.of(context).brightness == Brightness.dark &&
+        MyTheme.currentTheme == themeMaterial);
   }
 
   // One shared id list per kind, so an unsynchronised read-modify-write would
@@ -110,13 +111,13 @@ class FavorizeButton extends StatelessWidget {
         children.add(Icon(
           Icons.star,
           color: disabled ? Theme.of(context).disabledColor : Colors.yellow,
-          size: _border && !disabled
+          size: _border(context) && !disabled
               ? MediaQuery.textScalerOf(context).scale(15)
               : null,
         ));
       }
       if ((_device != null ? !_device.favorite : !_group!.favorite) ||
-          (_border && !disabled)) {
+          (_border(context) && !disabled)) {
         children.add(Icon(Icons.star_border,
             color: disabled ? Theme.of(context).disabledColor : Colors.grey));
       }

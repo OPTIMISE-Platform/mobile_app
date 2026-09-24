@@ -132,10 +132,10 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                             : null,
                                       ),
                                       Badge(
-                                        label: const Icon(
+                                        label: Icon(
                                             Icons.error,
                                             size: 16,
-                                            color: MyTheme.warnColor),
+                                            color: context.appColors.warn),
                                         isLabelVisible:
                                             releases[i].error != null,
                                         alignment:

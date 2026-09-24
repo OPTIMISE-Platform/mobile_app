@@ -63,9 +63,9 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
               if (!context.mounted) return;
               Navigator.pop(context);
             },
-            backgroundColor: MyTheme.appColor,
-            label: Text("Save", style: TextStyle(color: MyTheme.textColor)),
-            icon: Icon(Icons.save, color: MyTheme.textColor),
+            backgroundColor: context.appColors.app,
+            label: Text("Save", style: TextStyle(color: context.appColors.text)),
+            icon: Icon(Icons.save, color: context.appColors.text),
           ),
           body: Scaffold(
               appBar: MyAppBar(location.name).getAppBar(context, MyAppBar.getDefaultActions(context)),
@@ -84,7 +84,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                         leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Icon(
                             _selected.contains(state.deviceGroups[i].id) ? Icons.check_circle : Icons.circle_outlined,
-                            color: MyTheme.appColor,
+                            color: context.appColors.app,
                           )
                         ]),
                         title: Text(state.deviceGroups[i].name),

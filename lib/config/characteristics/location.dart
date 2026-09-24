@@ -40,11 +40,21 @@ class Location extends StatefulWidget {
 class _LocationState extends State<Location> {
   FormattedLocation? initial;
   bool loading = true;
+  // Set from didChangeDependencies, not initState: InheritedWidgets (Theme
+  // among them) are not reliably available yet at that point. _initLocation
+  // only reads it after an await, by which time this has already run.
+  Color? _appColor;
 
   @override
   void initState() {
     super.initState();
     _initLocation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _appColor ??= context.appColors.app;
   }
 
   Future<void> _initLocation() async {
@@ -65,7 +75,7 @@ class _LocationState extends State<Location> {
           lon: pos.longitude,
           geojson: GeoGeometry.point(
             LatLng(pos.latitude, pos.longitude),
-            MyTheme.appColor,
+            _appColor!,
           ),
         );
       } else {
@@ -75,7 +85,7 @@ class _LocationState extends State<Location> {
           lat: lat,
           lon: lon,
           displayName: "Augustusplatz, Leipzig",
-          geojson: GeoGeometry.point(const LatLng(lat, lon), MyTheme.appColor),
+          geojson: GeoGeometry.point(const LatLng(lat, lon), _appColor!),
         );
       }
 

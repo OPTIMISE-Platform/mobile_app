@@ -100,7 +100,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
           : ListView.builder(
               padding: MyTheme.inset,
               itemCount: _candidates.length + _selected.length + (_allCandidatesLoaded ? 0 : 1),
-              itemBuilder: (_, i) {
+              itemBuilder: (context, i) {
                 if (i == _candidates.length + _selected.length - 1 && !_allCandidatesLoaded) {
                   _loadMoreDevices();
                   return const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]);
@@ -113,10 +113,10 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                     i > 0 ? const Divider() : const SizedBox.shrink(),
                     i < _selected.length
                         ? ListTile(
-                            leading: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.check_circle,
-                                color: MyTheme.appColor,
+                                color: context.appColors.app,
                               )
                             ]),
                             title: Text(_deviceCollection[_selected.elementAt(i)]?.displayName ?? "MISSING_DEVICE_NAME"),
@@ -126,10 +126,10 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                             },
                           )
                         : ListTile(
-                            leading: const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.circle_outlined,
-                                color: MyTheme.appColor,
+                                color: context.appColors.app,
                               )
                             ]),
                             title: Text(_candidates[i - _selected.length].device.displayName),
@@ -174,9 +174,9 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
         if (!mounted) return;
         Navigator.pop(context);
       },
-      backgroundColor: MyTheme.appColor,
-      label: Text("Save", style: TextStyle(color: MyTheme.textColor)),
-      icon: Icon(Icons.save, color: MyTheme.textColor),
+      backgroundColor: context.appColors.app,
+      label: Text("Save", style: TextStyle(color: context.appColors.text)),
+      icon: Icon(Icons.save, color: context.appColors.text),
     );
   }
 

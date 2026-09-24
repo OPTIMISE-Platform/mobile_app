@@ -203,10 +203,10 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                           ),
                                         ),
                                         Badge(
-                                          label: const Icon(
+                                          label: Icon(
                                               Icons.error,
                                               size: 16,
-                                              color: MyTheme.warnColor),
+                                              color: context.appColors.warn),
                                           isLabelVisible: state.networks[i]
                                                   .connection_state ==
                                               DeviceConnectionStatus.offline,

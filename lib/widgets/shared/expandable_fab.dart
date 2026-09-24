@@ -40,7 +40,7 @@ class ExpandableFab extends StatefulWidget {
     required this.distance,
     required this.children,
     required this.icon,
-    this.backgroundColor = MyTheme.appColor,
+    this.backgroundColor,
     this.angle = 90,
     this.elevation,
     this.direction = around,
@@ -51,7 +51,9 @@ class ExpandableFab extends StatefulWidget {
   final List<Widget> children;
   final Widget icon;
   final Stream? toggleStream;
-  final Color backgroundColor;
+  // Null defaults to the app colour, read from the theme in build() - a
+  // constructor default has to be a compile-time constant.
+  final Color? backgroundColor;
   final double angle;
   final double? elevation;
   final Direction direction;
@@ -129,9 +131,9 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
             child: Padding(
               padding: const EdgeInsets.all(8.0),
               child: _open
-                  ? const Icon(
+                  ? Icon(
                       Icons.close,
-                      color: MyTheme.appColor,
+                      color: context.appColors.app,
                     )
                   : null,
             ),
@@ -178,7 +180,7 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
           curve: const Interval(0.25, 1.0, curve: Curves.easeInOut),
           duration: const Duration(milliseconds: 250),
           child: FloatingActionButton(
-            backgroundColor: widget.backgroundColor,
+            backgroundColor: widget.backgroundColor ?? context.appColors.app,
             onPressed: _toggle,
             elevation: widget.elevation,
             child: widget.icon,
@@ -242,29 +244,32 @@ class ActionButton extends StatelessWidget {
   const ActionButton({
     super.key,
     this.onPressed,
-    this.color = MyTheme.appColor,
-    this.backgroundColor = MyTheme.appColor,
+    this.color,
+    this.backgroundColor,
     this.elevation = 4,
     required this.icon,
   });
 
   final VoidCallback? onPressed;
   final Widget icon;
-  final Color color;
-  final Color backgroundColor;
+  // Null defaults to the app colour, read from the theme in build() - a
+  // constructor default has to be a compile-time constant.
+  final Color? color;
+  final Color? backgroundColor;
   final double elevation;
 
   @override
   Widget build(BuildContext context) {
+    final appColor = context.appColors.app;
     return Material(
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
-      color: backgroundColor,
+      color: backgroundColor ?? appColor,
       elevation: elevation,
       child: IconButton(
         onPressed: onPressed,
         icon: icon,
-        color: color,
+        color: color ?? appColor,
       ),
     );
   }

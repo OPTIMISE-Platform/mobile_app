@@ -17,7 +17,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/home.dart';
 import 'package:mobile_app/navigator_key.dart';
-import 'package:mobile_app/restart_controller.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/theme.dart';
 
@@ -28,49 +27,28 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  // A new [UniqueKey] forces the entire subtree to rebuild, effectively
-  // restarting the app without relaunching the process.
-  Key _appKey = UniqueKey();
-
+class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     AppUpdater.cleanup();
-    RestartController.instance.addListener(_onRestartRequested);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    RestartController.instance.removeListener(_onRestartRequested);
-    super.dispose();
-  }
-
-  void _onRestartRequested() {
-    debugPrint('RESTART REQUESTED');
-    setState(() => _appKey = UniqueKey());
-  }
-
-  @override
-  void didChangePlatformBrightness() {
-    // MaterialApp follows the OS on its own; MyTheme's colour snapshot does
-    // not, and the widgets that paint with MyTheme.textColor would keep the
-    // old brightness until a restart.
-    if (MyTheme.followSystemBrightness()) setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('MyApp rebuild');
-    return MaterialApp(
-      key: _appKey,
-      navigatorKey: navigatorKey,
-      theme: MyTheme.materialTheme,
-      darkTheme: MyTheme.materialDarkTheme,
-      themeMode: MyTheme.themeMode,
-      home: const Home(),
+    // MaterialApp resolves ThemeMode.system, and reacts to the OS brightness
+    // changing, on its own - no restart or re-key needed for either that or a
+    // user-picked mode, since every colour read now comes from Theme.of(context).
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: MyTheme.themeModeNotifier,
+      builder: (context, themeMode, child) => MaterialApp(
+        navigatorKey: navigatorKey,
+        theme: MyTheme.materialTheme,
+        darkTheme: MyTheme.materialDarkTheme,
+        themeMode: themeMode,
+        home: child,
+      ),
+      child: const Home(),
     );
   }
 }

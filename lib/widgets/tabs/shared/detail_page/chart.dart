@@ -28,6 +28,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/shared/formats.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
@@ -235,7 +236,7 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                     lineBarsData: [
                       LineChartBarData(
                         spots: _spots!,
-                        color: MyTheme.appColor,
+                        color: context.appColors.app,
                       )
                     ],
                     titlesData: FlTitlesData(
@@ -262,8 +263,8 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                                       val.floor()));
                               return Center(
                                   child: Text(_range < 4
-                                      ? MyTheme.formatHHMM.format(dt)
-                                      : MyTheme.formatEHHMM.format(dt)));
+                                      ? Formats.hhmm.format(dt)
+                                      : Formats.ehhmm.format(dt)));
                             }),
                       ),
                       leftTitles: AxisTitles(

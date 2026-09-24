@@ -455,8 +455,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       final List<Widget> trailingHeader = [];
 
       if (connectionStatus == DeviceConnectionStatus.offline) {
-        trailingHeader.add(const Tooltip(
-            message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: MyTheme.warnColor)));
+        trailingHeader.add(Tooltip(
+            message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: context.appColors.warn)));
       }
       if (device != null) {
         if (device.network?.localGatewayHosts?.isNotEmpty == true) {
@@ -481,8 +481,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     if (!context.mounted) return;
                     _refresh(context);
                   },
-                  backgroundColor: MyTheme.appColor,
-                  child: Icon(Icons.list, color: MyTheme.textColor),
+                  backgroundColor: context.appColors.app,
+                  child: Icon(Icons.list, color: context.appColors.text),
                 ),
           body: Scaffold(
             appBar: appBar.getAppBar(context, appBarActions),

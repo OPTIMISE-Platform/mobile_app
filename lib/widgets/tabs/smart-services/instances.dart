@@ -162,9 +162,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                       Text(instances[i].name),
                                       Badge(
                                         label: instances[i].error != null
-                                            ? const Icon(Icons.error,
+                                            ? Icon(Icons.error,
                                                 size: 16,
-                                                color: MyTheme.warnColor)
+                                                color: context.appColors.warn)
                                             : const Icon(Icons.pending,
                                                 size: 16,
                                                 color: Colors.lightBlue),

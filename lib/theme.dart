@@ -15,10 +15,7 @@
  */
 
 
-import 'dart:ui' show PlatformDispatcher;
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:mobile_app/services/settings.dart';
 
 typedef ThemeStyle = String;
@@ -30,6 +27,52 @@ typedef ThemeColor = String;
 const ThemeColor dark = "dark";
 const ThemeColor light = "light";
 
+/// App-specific colours as a [ThemeExtension], so widgets read them off
+/// [Theme.of(context)] instead of a static snapshot that only updates on
+/// restart. [app]/[warn]/[error]/[success] do not vary by brightness today;
+/// [text] does, and mirrors the Material typography's own body color.
+@immutable
+class AppColors extends ThemeExtension<AppColors> {
+  const AppColors({
+    required this.app,
+    required this.warn,
+    required this.error,
+    required this.success,
+    required this.text,
+  });
+
+  final Color app;
+  final Color warn;
+  final Color error;
+  final Color success;
+  final Color text;
+
+  @override
+  AppColors copyWith(
+      {Color? app, Color? warn, Color? error, Color? success, Color? text}) {
+    return AppColors(
+      app: app ?? this.app,
+      warn: warn ?? this.warn,
+      error: error ?? this.error,
+      success: success ?? this.success,
+      text: text ?? this.text,
+    );
+  }
+
+  @override
+  AppColors lerp(ThemeExtension<AppColors>? other, double t) {
+    if (other is! AppColors) return this;
+    // Snaps rather than blending the individual colours: these are discrete
+    // theme choices, not an animation between them.
+    return t < 0.5 ? this : other;
+  }
+}
+
+/// Shorthand for `Theme.of(context).extension<AppColors>()!`.
+extension AppColorsContext on BuildContext {
+  AppColors get appColors => Theme.of(this).extension<AppColors>()!;
+}
+
 class MyTheme {
   static const Color appColor = Color.fromRGBO(50, 184, 186, 1);
   static const Color warnColor = Colors.deepOrange;
@@ -39,23 +82,13 @@ class MyTheme {
   static const double insetSize = 12.0;
   static const EdgeInsets inset = EdgeInsets.all(insetSize);
 
-  static final formatSS = DateFormat.s();
-  static final formatMM = DateFormat.m();
-  static final formatMMSS = DateFormat.ms();
-  static final formatHH = DateFormat.H();
-  static final formatHHMM = DateFormat.Hm();
-  static final formatE = DateFormat.E();
-  static final formatEHH = DateFormat.E().add_H();
-  static final formatEHHMM = DateFormat.E().add_Hm();
-  static final formatMMM = DateFormat.MMM();
-  static final formatDDMM = DateFormat('dd.MM');
-  static final formatY = DateFormat.y();
-  static final formatEddMMy = DateFormat('E, dd.MM.y');
-
   // Pinned to Android on every platform: the adaptive widgets and dialogs then
   // stay Material on iOS, which is what the app has always shipped there. The
   // dialog contents are Material-only and would lack their ancestor otherwise.
-  static ThemeData materialTheme = ThemeData(
+  static final ThemeData materialTheme = _buildMaterialTheme();
+
+  static ThemeData _buildMaterialTheme() {
+    final theme = ThemeData(
       platform: TargetPlatform.android,
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF32b8ba)),
@@ -104,9 +137,22 @@ class MyTheme {
         shape: BeveledRectangleBorder(
             borderRadius: BorderRadius.circular(0),
             side: const BorderSide(color: Colors.white24, width: 1)))
-  );
+    );
+    return theme.copyWith(extensions: [
+      AppColors(
+        app: appColor,
+        warn: warnColor,
+        error: errorColor,
+        success: successColor,
+        text: theme.textTheme.bodyMedium!.color!,
+      ),
+    ]);
+  }
 
-  static ThemeData materialDarkTheme = ThemeData(
+  static final ThemeData materialDarkTheme = _buildMaterialDarkTheme();
+
+  static ThemeData _buildMaterialDarkTheme() {
+    final theme = ThemeData(
     platform: TargetPlatform.android,
     primaryColor: const Color(0xFF32b8ba),
     colorScheme: ColorScheme.fromSeed(
@@ -159,68 +205,48 @@ class MyTheme {
               borderRadius: BorderRadius.circular(0),
           )
       )
-  );
-
-  static TextStyle? get textStyle {
-    if (isDarkMode) {
-      return materialDarkTheme.textTheme.bodyMedium;
-    }
-    return materialTheme.textTheme.bodyMedium;
-  }
-
-  static Color? get textColor {
-    return textStyle?.color;
-  }
-
-  static bool get isDarkMode {
-    return currentColor == dark;
+    );
+    return theme.copyWith(extensions: [
+      AppColors(
+        app: appColor,
+        warn: warnColor,
+        error: errorColor,
+        success: successColor,
+        text: theme.textTheme.bodyMedium!.color!,
+      ),
+    ]);
   }
 
   static ThemeStyle currentTheme = themeMaterial;
 
-  static ThemeStyle currentColor = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
-
-  // Follows the system unless the user picked a colour: currentColor above is
-  // already derived from the platform brightness, so a fixed light default here
-  // would have the text colours and the theme disagree on a dark system.
-  static ThemeMode themeMode = ThemeMode.system;
+  // Follows the system unless the user picked a colour. Widgets read the
+  // active mode through [MaterialApp.themeMode] and `Theme.of(context)`, not
+  // through this notifier - it only carries the persisted selection so
+  // [MyApp] can rebuild the app's themeMode without re-keying the tree.
+  static final ValueNotifier<ThemeMode> themeModeNotifier =
+      ValueNotifier(ThemeMode.system);
 
   static loadTheme() async {
     final val = Settings.getThemeColor();
     if (val == dark) {
-      themeMode = ThemeMode.dark;
-      currentColor = dark;
+      themeModeNotifier.value = ThemeMode.dark;
     } else if (val == light) {
-      themeMode = ThemeMode.light;
-      currentColor = light;
+      themeModeNotifier.value = ThemeMode.light;
     }
-  }
-
-  /// Re-reads the platform brightness into [currentColor] while no colour is
-  /// pinned. Returns whether it changed, so the caller knows to rebuild.
-  static bool followSystemBrightness() {
-    if (themeMode != ThemeMode.system) return false;
-    final next = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
-    if (next == currentColor) return false;
-    currentColor = next;
-    return true;
   }
 
   static selectThemeColor(ThemeColor? theme) async {
     switch (theme) {
       case dark:
         await Settings.setThemeColor(theme!);
-        currentColor = theme;
-        themeMode = ThemeMode.dark;
+        themeModeNotifier.value = ThemeMode.dark;
       case light:
         await Settings.setThemeColor(theme!);
-        themeMode = ThemeMode.light;
-        currentColor = theme;
+        themeModeNotifier.value = ThemeMode.light;
         break;
       default:
         await Settings.resetThemeColor();
-        currentColor = PlatformDispatcher.instance.platformBrightness == Brightness.dark ? dark : light;
-        themeMode = ThemeMode.system;
+        themeModeNotifier.value = ThemeMode.system;
     }
   }
 

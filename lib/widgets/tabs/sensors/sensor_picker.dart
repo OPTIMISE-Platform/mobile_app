@@ -352,7 +352,7 @@ Widget _buildDoneAction(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
     child: FilledButton(
       style: FilledButton.styleFrom(
-        backgroundColor: dark ? MyTheme.appColor : Colors.white,
+        backgroundColor: dark ? context.appColors.app : Colors.white,
         foregroundColor: Colors.black,
         disabledBackgroundColor: dark ? Colors.white24 : Colors.black12,
         disabledForegroundColor: dark ? Colors.white54 : Colors.black45,
@@ -497,7 +497,7 @@ class _ValuePickerState extends State<_ValuePicker> {
             // reads as "there already" rather than "just picked".
             color: existing
                 ? Theme.of(context).disabledColor
-                : (picked ? MyTheme.appColor : null),
+                : (picked ? context.appColors.app : null),
           ),
         ],
       ),
