@@ -243,8 +243,8 @@ class Settings {
     }
   }
 
-  /// The tab shown when the app starts, which also replaces Favorites as the
-  /// first entry of the bottom navigation bar. Defaults to Favorites (tab 0).
+  /// The tab (or, for a Locations/Groups/Networks/Classes value, the Devices
+  /// segment) opened when the app starts. Defaults to Favorites (tab 0).
   static int getInitialTab() {
     checkInit();
     return int.tryParse(_box!.get(_initialTabKey) ?? '') ?? 0;

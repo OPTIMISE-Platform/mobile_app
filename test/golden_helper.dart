@@ -141,14 +141,18 @@ Future<void> _loadFont(String family, List<String> paths) async {
 /// `pumpAndSettle`, which can hang: several screens under test carry a
 /// `DelayedCircularProgressIndicator` or the app bar's repeating update icon,
 /// both endless animations while nothing stops them.
+///
+/// [size] overrides the surface for a non-golden test that needs a specific
+/// width, e.g. checking layout at a narrower phone size.
 Future<void> pumpGolden(
   WidgetTester tester,
   Widget home, {
   required bool dark,
   Duration settle = const Duration(milliseconds: 300),
+  Size size = goldenSurfaceSize,
 }) async {
   tester.view.devicePixelRatio = 1.0;
-  tester.view.physicalSize = goldenSurfaceSize;
+  tester.view.physicalSize = size;
   addTearDown(() {
     tester.view.resetDevicePixelRatio();
     tester.view.resetPhysicalSize();

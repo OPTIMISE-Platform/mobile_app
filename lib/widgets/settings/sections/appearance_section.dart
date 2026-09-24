@@ -25,9 +25,11 @@ import 'package:mobile_app/widgets/settings/unit_picker.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
-/// Name of the tab currently configured as the start page.
+/// Name of the bar tab currently configured as the start page. A stored
+/// legacy sub-view (Locations/Groups/Networks/Classes) shows as "Devices",
+/// the bar tab that now opens it.
 String _initialTabName() {
-  final index = settings_service.Settings.getInitialTab();
+  final index = barTabForView(settings_service.Settings.getInitialTab());
   return navItems
       .firstWhere((n) => n.index == index, orElse: () => navItems.first)
       .name;
@@ -49,12 +51,17 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
             child: StatefulBuilder(
               builder: (_, setDialogState) => ListView(
                 shrinkWrap: true,
-                children: navItems
+                // Only the five bar tabs are offered - a stored legacy
+                // sub-view still opens Devices on that segment (see
+                // _initialTabName), it just no longer has its own entry here.
+                children: navBarTabs
+                    .map((index) => navItems
+                        .firstWhere((n) => n.index == index))
                     .map((item) => ListTile(
                           leading: Icon(item.icon),
                           title: Text(item.name),
-                          trailing: settings_service.Settings
-                                      .getInitialTab() ==
+                          trailing: barTabForView(settings_service.Settings
+                                      .getInitialTab()) ==
                                   item.index
                               ? const Icon(Icons.check)
                               : null,

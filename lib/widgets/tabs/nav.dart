@@ -45,3 +45,27 @@ class NavigationItem {
   bool disabled = false;
   NavigationItem(this.name, this.index, this.icon);
 }
+
+/// The five destinations of the main navigation bar, in display order.
+const List<int> navBarTabs = [
+  tabFavorites,
+  tabDashboard,
+  tabSensors,
+  tabDevices,
+  tabSmartServices,
+];
+
+/// The Devices bar tab's own segments, in display order. [tabDevices] is the
+/// "All" segment and also stands for the bar tab itself.
+const List<int> deviceSegmentTabs = [
+  tabDevices,
+  tabLocations,
+  tabGroups,
+  tabNetworks,
+  tabClasses,
+];
+
+/// The bar tab that shows [viewIndex]: itself for the five bar tabs, or the
+/// Devices tab for the four views folded into its segment bar.
+int barTabForView(int viewIndex) =>
+    deviceSegmentTabs.contains(viewIndex) ? tabDevices : viewIndex;

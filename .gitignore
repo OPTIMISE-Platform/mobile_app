@@ -56,3 +56,6 @@ ios/Runner.xcworkspace
 
 # FVM Version Cache
 .fvm/
+
+# Golden test diffs, written on failure
+test/failures/

@@ -85,12 +85,13 @@ class MyTheme {
           foregroundColor: Colors.black,
           scrolledUnderElevation: 0,
       ),
-      navigationBarTheme:  const NavigationBarThemeData(
+      navigationBarTheme:  NavigationBarThemeData(
         shadowColor: Colors.black,
           height: 60,
           backgroundColor: Colors.white,
           surfaceTintColor: Colors.white,
-          indicatorColor: Colors.white,
+          // Colors.white made the M3 selection indicator invisible here.
+          indicatorColor: Colors.teal.shade50,
       ),
       scaffoldBackgroundColor: Colors.white,
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -143,7 +144,8 @@ class MyTheme {
     navigationBarTheme:  const NavigationBarThemeData(
         backgroundColor: Color(0xFF424242),
         surfaceTintColor: Color(0xFF424242),
-        indicatorColor: Color(0xFF424242),
+        // Matched the background, making the M3 selection indicator invisible.
+        indicatorColor: MyTheme.appColor,
       height: 60
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(

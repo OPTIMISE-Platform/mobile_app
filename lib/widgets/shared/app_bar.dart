@@ -125,13 +125,29 @@ class MyAppBar {
   }
 
   AppBar getAppBar(BuildContext context,
-      [List<Widget>? actions, Widget? leading]) {
+      [List<Widget>? actions, Widget? leading, PreferredSizeWidget? bottomExtra]) {
     return AppBar(
       title: Text(_title, overflow: TextOverflow.fade),
-      // Local mode is shown as a bar under the title (see _localMode).
-      bottom: _localMode(context),
+      // Local mode banner and a caller-supplied bottom (e.g. the Devices
+      // segment bar) stack in one PreferredSize; most call sites pass neither.
+      bottom: _combinedBottom(context, bottomExtra),
       actions: actions,
       leading: leading,
+    );
+  }
+
+  static PreferredSizeWidget? _combinedBottom(
+      BuildContext context, PreferredSizeWidget? extra) {
+    final localMode = _localMode(context);
+    if (localMode == null && extra == null) return null;
+    final height =
+        (localMode?.preferredSize.height ?? 0) + (extra?.preferredSize.height ?? 0);
+    return PreferredSize(
+      preferredSize: Size.fromHeight(height),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        if (localMode != null) localMode,
+        if (extra != null) extra,
+      ]),
     );
   }
 }

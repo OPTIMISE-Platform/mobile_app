@@ -38,6 +38,8 @@ void main() {
   // the per-group detail fetch DeviceGroupsService issues for a non-empty
   // list, and every metadata loader AppState.init() runs is left unmatched -
   // they catch their own errors, so a 404 there is equivalent to "no data".
+  // /device-repository/locations is deliberately left unmatched for the same
+  // reason, once the Devices tab's Locations segment is opened.
   FakeBackend emptyBackend() {
     final backend = FakeBackend();
     backend.serveJson("GET", "/device-repository/device-groups", 200, []);
@@ -49,11 +51,12 @@ void main() {
   for (final dark in [false, true]) {
     final suffix = dark ? "dark" : "light";
 
-    // Both goldens for a theme are captured from the same test: DioFactory
-    // and friends memoize their setup Futures at the top level for the whole
+    // All three goldens for a theme come out of one test: DioFactory and
+    // friends memoize their setup Futures at the top level for the whole
     // process, and awaiting one of those Futures from a *different*
     // testWidgets zone than the one that created it never resolves - the
-    // shell and its drawer have to share a zone, so they share a test.
+    // shell and its later navigation have to share a zone, so they share a
+    // test.
     testWidgets("device tabs shell ($suffix)", (tester) async {
       serveGoldenBackend(emptyBackend());
       await warmUpMgwStorage(tester);
@@ -61,15 +64,24 @@ void main() {
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/device_tabs_shell_$suffix.png"));
 
-      // Golden 2: drawer opened - it holds MyTheme.isDarkMode/textColor. The
-      // untimed pump lets the tap's setState (which starts the drawer's own
-      // AnimationController) land before the timed pump advances it - a timed
-      // pump right after tap() leaves the slide-in animation at its start.
-      await tester.tap(find.byIcon(Icons.menu));
+      // Golden 2: the Devices tab, "All" segment - the segment bar appears
+      // under the app bar only for this tab. The untimed pump lets the tap's
+      // setState land before the timed pump settles the new screen.
+      await tester.tap(find.text("Devices"));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
       await expectLater(find.byType(MaterialApp),
-          matchesGoldenFile("goldens/device_tabs_shell_drawer_$suffix.png"));
+          matchesGoldenFile("goldens/device_tabs_devices_all_$suffix.png"));
+
+      // Golden 3: switching segments behaves like switching tabs today -
+      // Locations gets its own root list under the same Devices bar tab.
+      await tester.tap(find.text("Locations"));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(
+              "goldens/device_tabs_devices_locations_$suffix.png"));
     });
   }
 }
