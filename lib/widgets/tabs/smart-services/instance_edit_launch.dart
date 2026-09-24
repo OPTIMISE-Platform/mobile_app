@@ -59,6 +59,9 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     }).toList();
   }
 
+  /// The option's kind, which the backend uses to tell apart equally labelled options.
+  static String? _group(SmartServiceParameterOption o) => o.kind.isEmpty ? null : o.kind;
+
   Widget _getEditWidget(int i, {int? sub}) {
     final p = parameters![i];
     final dynamic subValue = sub != null ? (p.value as List)[sub] : null;
@@ -68,28 +71,39 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
     }
 
     if (p.multiple && p.options != null) {
+      final options = _filterOptions(p);
+      final List values = p.value ?? [];
       return ConstrainedBox(
           // minHeight, not tight: the field must be able to grow when the user
           // scales up the system font, otherwise its text is clipped.
           constraints: const BoxConstraints(minHeight: 48),
           child: MultiSelectField(
             key: ValueKey(i.toString()),
-            options: _filterOptions(p).map((e) => e.label).toList(growable: false),
-            selected: p.options!.where((element) => (p.value ?? []).contains(element.value)).map((e) => e.label).toList(),
+            options: options.map((e) => MultiSelectOption(e.label, group: _group(e))).toList(growable: false),
+            selected: [for (var j = 0; j < options.length; j++) if (values.contains(options[j].value)) j],
             emptyLabel: p.label,
             onChanged: (x) {
               setState(() {
-                p.value = p.options!.where((element) => x.contains(element.label)).map((e) => e.value).toList();
+                // Values of options hidden by _filterOptions stay selected, as before.
+                final hidden = values.where((v) => !options.any((o) => o.value == v));
+                p.value = [...hidden, ...x.map((j) => options[j].value)];
               });
             },
           ));
     } else if (p.options != null) {
-      final List<DropdownMenuItem> items = _filterOptions(p)
-          .map((e) => DropdownMenuItem(
-                value: e.value,
-                child: Text(e.label),
-              ))
-          .toList();
+      final options = _filterOptions(p);
+      final List<DropdownMenuItem> items = [];
+      for (final MapEntry(key: group, value: indices)
+          in groupOptionIndices(options.map((e) => MultiSelectOption(e.label, group: _group(e))).toList()).entries) {
+        if (group != null) {
+          // A null value never matches a selection, so the header cannot be selected or shown as selected.
+          items.add(DropdownMenuItem(enabled: false, child: Text(group, style: Theme.of(context).textTheme.titleSmall)));
+        }
+        items.addAll(indices.map((j) => DropdownMenuItem(
+              value: options[j].value,
+              child: Text(options[j].label),
+            )));
+      }
       return DropdownButtonFormField<dynamic>(
         key: ValueKey(i.toString()),
         items: items,
