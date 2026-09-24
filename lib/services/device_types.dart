@@ -18,6 +18,7 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -67,6 +68,15 @@ class DeviceTypesService {
 
   static bool _legacyCacheDropped = false;
 
+  /// Plain (uncached) dio — metadata is persisted via MetadataCache instead of
+  /// the Hive HTTP cache, whose per-read CRC32 blocked the UI isolate.
+  /// Replaceable because the real one's interceptors reach into AppState.
+  @visibleForTesting
+  static Future<Dio> Function() listDio = () => DioFactory.create(DioConfig.standard);
+
+  @visibleForTesting
+  static Future<Map<String, String>> Function() listHeaders = () => Auth().getHeaders();
+
   /// Without [ids], the device types of the devices the user can see, own or
   /// shared, not every type on the platform.
   static Future<List<DeviceType>> getDeviceTypes([List<String>? ids,
@@ -104,10 +114,8 @@ class DeviceTypesService {
       queryParameters["ids"] = ids.join(",");
     }
 
-    final headers = await Auth().getHeaders();
-    // Plain (uncached) dio — metadata is persisted via MetadataCache instead of
-    // the Hive HTTP cache, whose per-read CRC32 blocked the UI isolate.
-    final dio = await DioFactory.create(DioConfig.standard);
+    final headers = await listHeaders();
+    final dio = await listDio();
 
     final raw = <dynamic>[];
     var cont = true;
