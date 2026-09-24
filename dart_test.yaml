@@ -1,0 +1,6 @@
+tags:
+  isar:
+    # The Isar core binary needs glibc 2.38, which Debian 12 does not have.
+    # CI runs with --run-skipped; locally tool/test-isar.sh runs these in a
+    # container.
+    skip: "needs glibc 2.38, run tool/test-isar.sh"

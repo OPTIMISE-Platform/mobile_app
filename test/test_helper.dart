@@ -14,9 +14,12 @@
  *  limitations under the License.
  */
 
+import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:isar_community/isar.dart';
+import 'package:mobile_app/shared/isar.dart' as app_isar;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 /// Prepares the test process for services that touch platform channels:
@@ -46,4 +49,25 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 
   @override
   Future<List<String>?> getExternalCachePaths() async => [_root];
+}
+
+/// Opens a fresh Isar instance for [schemas] in a temp directory and makes it
+/// the app's global [isar]. Tests calling this carry the `isar` tag, see
+/// dart_test.yaml: the core binary needs glibc 2.38.
+Future<Isar> openTestIsar(List<CollectionSchema<dynamic>> schemas) async {
+  // Under .dart_tool rather than next to the test script, where the default
+  // download lands - that is the repository root.
+  final library = File('.dart_tool/isar/libisar-${Isar.version}.so');
+  library.parent.createSync(recursive: true);
+  await Isar.initializeIsarCore(
+    libraries: {Abi.current(): library.path},
+    download: true,
+  );
+  final db = await Isar.open(
+    schemas,
+    directory: Directory.systemTemp.createTempSync('mobile_app_isar').path,
+    name: 'test${DateTime.now().microsecondsSinceEpoch}',
+  );
+  app_isar.isar = db;
+  return db;
 }

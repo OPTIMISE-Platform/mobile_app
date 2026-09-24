@@ -14,68 +14,25 @@
  *  limitations under the License.
  */
 
-import 'dart:convert';
-import 'dart:typed_data';
-
-import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/services/device_types.dart';
 
-const _base = "https://api.test/device-repository";
-
-Map<String, dynamic> _type(String id) => {
-      "id": id,
-      "name": id,
-      "description": "",
-      "device_class_id": "",
-      "services": [],
-    };
-
-/// Answers by path and records every request. Dio's own status validation
-/// still runs on what it returns, so a 404 arrives as it would from a server.
-class _Backend implements HttpClientAdapter {
-  final Map<String, int> status = {};
-  final Map<String, List<Map<String, dynamic>>> types = {};
-  final List<RequestOptions> requests = [];
-
-  @override
-  Future<ResponseBody> fetch(RequestOptions options,
-      Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
-    requests.add(options);
-    final path = options.uri.path;
-    final code = status[path] ?? 200;
-    if (code != 200) return ResponseBody.fromString("", code);
-    final all = types[path] ?? [];
-    final offset = int.parse(options.uri.queryParameters["offset"] ?? "0");
-    final limit = int.parse(options.uri.queryParameters["limit"] ?? "100");
-    final page = all.skip(offset).take(limit).toList();
-    return ResponseBody.fromString(jsonEncode(page), 200, headers: {
-      Headers.contentTypeHeader: [Headers.jsonContentType],
-    });
-  }
-
-  @override
-  void close({bool force = false}) {}
-}
+import 'fake_backend.dart';
 
 void main() {
-  late _Backend backend;
+  late FakeBackend backend;
 
   setUp(() {
-    backend = _Backend();
-    final dio = Dio()..httpClientAdapter = backend;
-    DeviceTypesService.uri = "$_base/device-types";
-    DeviceTypesService.userUri = "$_base/user-device-types";
-    DeviceTypesService.listDio = () async => dio;
-    DeviceTypesService.listHeaders = () async => {"authorization": "Bearer t"};
+    backend = FakeBackend();
+    serveDeviceTypes(backend);
   });
 
   List<String> paths() => backend.requests.map((r) => r.uri.path).toList();
 
   test("loads the user's device types, not the platform list", () async {
-    backend.types["/device-repository/user-device-types"] = [_type("a")];
-    backend.types["/device-repository/device-types"] = [_type("a"), _type("b")];
+    backend.types["/device-repository/user-device-types"] = [deviceTypeJson("a")];
+    backend.types["/device-repository/device-types"] = [deviceTypeJson("a"), deviceTypeJson("b")];
 
     final result = await DeviceTypesService.getDeviceTypes(null, Duration.zero);
 
@@ -89,7 +46,7 @@ void main() {
   for (final code in [404, 403]) {
     test("falls back to the platform list on $code", () async {
       backend.status["/device-repository/user-device-types"] = code;
-      backend.types["/device-repository/device-types"] = [_type("a"), _type("b")];
+      backend.types["/device-repository/device-types"] = [deviceTypeJson("a"), deviceTypeJson("b")];
 
       final result =
           await DeviceTypesService.getDeviceTypes(null, Duration.zero);
@@ -114,7 +71,7 @@ void main() {
 
   test("pages through a list longer than one page", () async {
     backend.types["/device-repository/user-device-types"] =
-        List.generate(10000, (i) => _type("t$i"));
+        List.generate(10000, (i) => deviceTypeJson("t$i"));
 
     final result = await DeviceTypesService.getDeviceTypes(null, Duration.zero);
 
@@ -124,7 +81,7 @@ void main() {
   });
 
   test("specific ids go to the platform list", () async {
-    backend.types["/device-repository/device-types"] = [_type("x")];
+    backend.types["/device-repository/device-types"] = [deviceTypeJson("x")];
 
     final result = await DeviceTypesService.getDeviceTypes(["x", "y"]);
 

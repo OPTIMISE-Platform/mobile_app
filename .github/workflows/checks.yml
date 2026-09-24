@@ -29,7 +29,18 @@ jobs:
         # Errors and warnings gate; the remaining style infos are a separate
         # backlog and would keep this red without saying anything new.
         run: flutter analyze --no-fatal-infos
+      - name: "Cache Isar core binary"
+        # The isar-tagged tests download it otherwise on every run, which makes
+        # the test step depend on binaries.isar-community.dev being up. The file
+        # name carries the Isar version, so a restored older one is not used.
+        uses: actions/cache@v4
+        with:
+          path: .dart_tool/isar
+          key: isar-core-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: isar-core-${{ runner.os }}-
       - name: "Test"
-        run: flutter test
+        # --run-skipped includes the `isar` tag, which dart_test.yaml skips on
+        # hosts whose glibc is too old for the Isar core binary.
+        run: flutter test --run-skipped
       - name: "Test release versioning"
         run: .github/scripts/release-version.test.sh
