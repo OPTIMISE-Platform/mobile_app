@@ -34,6 +34,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mutex/mutex.dart';
 
 mixin DeviceMixin on ChangeNotifier {
@@ -117,6 +118,22 @@ mixin DeviceMixin on ChangeNotifier {
   // Device types
   // ---------------------------------------------------------------------------
 
+  /// Type ids a fresh load did not return. Without this, a device whose type
+  /// the backend does not deliver would refetch the list on every page. Kept
+  /// until [forgetUnavailableDeviceTypes] or an account change.
+  final Set<String> _unavailableDeviceTypeIds = {};
+
+  /// No fresh load before this time after one failed, so an offline start
+  /// does not retry on every page.
+  DateTime? _deviceTypesRetryAfter;
+
+  @visibleForTesting
+  Duration deviceTypesRetryDelay = const Duration(minutes: 1);
+
+  @visibleForTesting
+  Future<List<DeviceType>> Function(Duration maxAge) fetchDeviceTypes =
+      (maxAge) => DeviceTypesService.getDeviceTypes(null, maxAge);
+
   Future<bool> loadDeviceTypes() async {
     final locked = _deviceTypesMutex.isLocked;
     await _deviceTypesMutex.acquire();
@@ -125,7 +142,7 @@ mixin DeviceMixin on ChangeNotifier {
       return true;
     }
     try {
-      final fetched = await DeviceTypesService.getDeviceTypes();
+      final fetched = await fetchDeviceTypes(metadataMaxAge);
       deviceTypes.clear();
       for (final e in fetched) {
         deviceTypes[e.id] = e;
@@ -138,6 +155,49 @@ mixin DeviceMixin on ChangeNotifier {
     }
     notifyListeners();
     return true;
+  }
+
+  /// Only the types of the user's devices are loaded, so a type missing here
+  /// means the user's devices changed since the list was cached: reload it,
+  /// bypassing the cache.
+  Future<void> ensureDeviceTypes(Iterable<String> typeIds) async {
+    final ids = typeIds.toSet();
+    bool hasMissing() => ids.any(
+        (id) => !deviceTypes.containsKey(id) && !_unavailableDeviceTypeIds.contains(id));
+    if (!hasMissing()) return;
+    // Not via loadDeviceTypes: joining a load that is already running there
+    // returns without fetching, and that load may have been served from cache.
+    await _deviceTypesMutex.acquire();
+    try {
+      if (!hasMissing()) return;
+      final retryAfter = _deviceTypesRetryAfter;
+      if (retryAfter != null && DateTime.now().isBefore(retryAfter)) return;
+      final List<DeviceType> fetched;
+      try {
+        fetched = await fetchDeviceTypes(Duration.zero);
+      } catch (e, s) {
+        _deviceTypesRetryAfter = DateTime.now().add(deviceTypesRetryDelay);
+        // Logged only: the devices are on screen already, just without states.
+        ErrorReporter.log('Could not reload device types', e, s);
+        return;
+      }
+      _deviceTypesRetryAfter = null;
+      deviceTypes.clear();
+      for (final e in fetched) {
+        deviceTypes[e.id] = e;
+      }
+      _unavailableDeviceTypeIds.addAll(ids.where((id) => !deviceTypes.containsKey(id)));
+    } finally {
+      _deviceTypesMutex.release();
+    }
+    notifyListeners();
+  }
+
+  /// Lets [ensureDeviceTypes] try again for types an earlier fresh load did
+  /// not return.
+  void forgetUnavailableDeviceTypes() {
+    _unavailableDeviceTypeIds.clear();
+    _deviceTypesRetryAfter = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -228,7 +288,16 @@ mixin DeviceMixin on ChangeNotifier {
   }
 
   Future<void> _loadStatesInBackground(List<DeviceInstance> newDevices) async {
+    // After the list is on screen, since it may fetch; devices whose type was
+    // missing get their states only now.
+    final typesReady = ensureDeviceTypes(newDevices.map((d) => d.device_type_id)).then((_) {
+      for (final d in newDevices) {
+        final type = deviceTypes[d.device_type_id];
+        if (type != null) d.prepareStates(type);
+      }
+    });
     await _refreshConnectionStatuses(newDevices);
+    await typesReady;
     try {
       await loadStates(newDevices, [], [
         dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
@@ -391,6 +460,7 @@ mixin DeviceMixin on ChangeNotifier {
   void clearDeviceData() {
     deviceClasses.clear();
     deviceTypes.clear();
+    forgetUnavailableDeviceTypes();
     _deviceSearchFilter = DeviceSearchFilter.empty();
     totalDevices = 0;
     devices.clear();

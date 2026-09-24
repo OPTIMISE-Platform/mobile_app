@@ -173,6 +173,8 @@ class _TargetPickerState extends State<_TargetPicker> {
         DeviceSearchFilter(_query),
         _devices.isEmpty ? null : _devices.last,
       );
+      await AppState()
+          .ensureDeviceTypes(result.devices.map((d) => d.device_type_id));
       if (!mounted) return;
       setState(() {
         _devices.addAll(result.devices);

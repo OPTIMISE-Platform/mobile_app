@@ -162,6 +162,8 @@ class _SensorValuesState extends State<SensorValues>
           null,
         );
         devices = result.devices;
+        await AppState()
+            .ensureDeviceTypes(devices.map((d) => d.device_type_id));
         for (final device in devices) {
           final deviceType = AppState().deviceTypes[device.device_type_id];
           if (deviceType != null) device.prepareStates(deviceType);

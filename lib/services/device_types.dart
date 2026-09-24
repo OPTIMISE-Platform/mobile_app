@@ -15,8 +15,12 @@
  */
 
 
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/dio_status.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
@@ -59,18 +63,42 @@ class DeviceTypesService {
   }
 
 
+  static String userUri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/user-device-types';
+
+  static bool _legacyCacheDropped = false;
+
+  /// Without [ids], the device types of the devices the user can see, own or
+  /// shared, not every type on the platform.
   static Future<List<DeviceType>> getDeviceTypes([List<String>? ids,
       Duration maxAge = metadataMaxAge]) async {
     if (ids != null && ids.isNotEmpty) {
       // Specific ids are fetched fresh and never stored as the full-list cache.
-      return parseListChunked(await _fetchRaw(ids), DeviceType.fromJson);
+      return parseListChunked(await _fetchRaw(uri, ids), DeviceType.fromJson);
+    }
+    if (!_legacyCacheDropped) {
+      // The full platform list cached under the old key is megabytes that
+      // nothing reads any more.
+      _legacyCacheDropped = true;
+      unawaited(MetadataCache.delete('device-types'));
     }
     return loadMetadataCached(
-        'device-types', () => _fetchRaw(null), DeviceType.fromJson,
+        'user-device-types', _fetchUserTypesRaw, DeviceType.fromJson,
         maxAge: maxAge);
   }
 
-  static Future<List<dynamic>> _fetchRaw(List<String>? ids) async {
+  static Future<List<dynamic>> _fetchUserTypesRaw() async {
+    try {
+      return await _fetchRaw(userUri, null);
+    } on UnexpectedStatusCodeException catch (e) {
+      // A device-repository older than /user-device-types, or a gateway policy
+      // that does not cover the path yet.
+      if (e.code != 404 && e.code != 403) rethrow;
+      ErrorReporter.log('user-device-types unavailable, loading all device types', e);
+      return _fetchRaw(uri, null);
+    }
+  }
+
+  static Future<List<dynamic>> _fetchRaw(String url, List<String>? ids) async {
     final Map<String, String> queryParameters = {"limit": "9999"};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
@@ -87,10 +115,10 @@ class DeviceTypesService {
       queryParameters["offset"] = raw.length.toString();
       final Response<List<dynamic>?> resp;
       try {
-        resp = await dio.get<List<dynamic>?>(uri,
+        resp = await dio.get<List<dynamic>?>(url,
             queryParameters: queryParameters, options: Options(headers: headers));
       } on DioException catch (e) {
-        checkReadStatus(e, uri);
+        checkReadStatus(e, url);
         rethrow;
       }
       final l = resp.data ?? [];

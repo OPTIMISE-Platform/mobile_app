@@ -51,7 +51,10 @@ class MetadataCache {
     try {
       final entry = await db.cachedMetadatas.getByKey(key);
       if (entry == null) return null;
-      if (DateTime.now().difference(entry.updatedAt) > maxAge) return null;
+      final age = DateTime.now().difference(entry.updatedAt);
+      // A negative age is an entry written under a clock that ran ahead; it
+      // would otherwise count as current even for maxAge zero.
+      if (age > maxAge || age.isNegative) return null;
       return entry.bytes;
     } catch (_) {
       return null;
@@ -67,6 +70,16 @@ class MetadataCache {
       await db.writeTxn(() => db.cachedMetadatas.clear());
     } catch (_) {
       // best-effort cache; ignore clear failures
+    }
+  }
+
+  static Future<void> delete(String key) async {
+    final db = isar;
+    if (db == null) return;
+    try {
+      await db.writeTxn(() => db.cachedMetadatas.deleteByKey(key));
+    } catch (_) {
+      // best-effort cache; ignore delete failures
     }
   }
 

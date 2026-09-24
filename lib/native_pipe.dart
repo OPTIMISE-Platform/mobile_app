@@ -40,6 +40,9 @@ class NativePipe {
       switch (call.method) {
         case "getToggleStateless":
           final devices = await isar!.deviceInstances.where().findAll();
+          await AppState().loadDeviceTypes();
+          await AppState()
+              .ensureDeviceTypes(devices.map((d) => d.device_type_id));
           final deviceTypes = AppState().deviceTypes;
           devices.forEach((element) {
             if (deviceTypes.containsKey(element.device_type_id)) {
@@ -61,8 +64,12 @@ class NativePipe {
               .idEqualTo(state.deviceId!)
               .findFirst();
           await AppState().loadDeviceTypes();
-          await device!
-              .prepareStates(AppState().deviceTypes[device.device_type_id]!);
+          await AppState().ensureDeviceTypes([device!.device_type_id]);
+          final deviceType = AppState().deviceTypes[device.device_type_id];
+          if (deviceType == null) {
+            throw "Device type ${device.device_type_id} not available";
+          }
+          await device.prepareStates(deviceType);
           final controllingFunction =
               functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                   ?.getRelatedControllingFunction(!(state.value as bool));

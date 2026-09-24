@@ -114,6 +114,7 @@ class AppState extends ChangeNotifier
   /// [onProgress] reports the fraction of completed reload tasks (0..1).
   /// Throws when any loader failed, after all of them have finished.
   Future<void> reloadMetadata({void Function(double progress)? onProgress}) async {
+    forgetUnavailableDeviceTypes();
     final tasks = <Future<bool>>[
       loadDeviceClasses(),
       loadDeviceTypes(),
