@@ -24,7 +24,6 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/r
 
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/shared/formats.dart';
-import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 
 class SmSePvForecast extends SmSeRequest {
   @override
@@ -48,38 +47,41 @@ class SmSePvForecast extends SmSeRequest {
         ? const Center(child: Text("No Data"))
         : Column(children: [
           const Text("\nPV Prediction"),
-          Container(
-            height: 5 * heightUnit - MyTheme.insetSize,
-            padding:
-                const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
-            child: LineChart(
-              LineChartData(
-                extraLinesData: ExtraLinesData(
-                  verticalLines: _verticalLines,
-                ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: _lines,
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+          // Takes what the title and the recommendation row leave of
+          // [height]; a fixed 5 units overflowed it.
+          Expanded(
+            child: Container(
+              padding:
+                  const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+              child: LineChart(
+                LineChartData(
+                  extraLinesData: ExtraLinesData(
+                    verticalLines: _verticalLines,
                   ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: false,
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: _lines,
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: false,
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat, reservedSize: 36, interval: 6 * 60 * 60 * 1000)
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: BaseChartFormatter.getLeftTitles(context, suffix: "%")
                     ),
                   ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: BaseChartFormatter.getBottomTitles(context, dateFormat, reservedSize: 36, interval: 6 * 60 * 60 * 1000)
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: BaseChartFormatter.getLeftTitles(context, suffix: "%")
-                  ),
+                  lineTouchData: const LineTouchData(enabled: false),
                 ),
-                lineTouchData: const LineTouchData(enabled: false),
-              ),
-              duration: const Duration(milliseconds: 400),
-            )),
+                duration: const Duration(milliseconds: 400),
+              )),
+          ),
     Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text("Upcoming timeframes:   "), Text(_recommendations.join("\n"))])]);
     return parentFlexible ? Expanded(child: w) : w;
   }
@@ -126,7 +128,9 @@ class SmSePvForecast extends SmSeRequest {
           spots: e.value,
           color: _getLineColor(e.key + colorOffset),
         )));
-    _lines.forEach((line) async {
+    // Not forEach: it does not await an async callback, and refresh would
+    // return before the recommendations and sun markers exist.
+    for (final line in _lines) {
       double currentMax = line.spots.first.y;
       bool rising = false;
       double risingSince = double.nan;
@@ -147,7 +151,7 @@ class SmSePvForecast extends SmSeRequest {
           currentMax = line.spots[i].y;
         }
       }
-    });
+    }
   }
 
   Color _getLineColor(int i) {
