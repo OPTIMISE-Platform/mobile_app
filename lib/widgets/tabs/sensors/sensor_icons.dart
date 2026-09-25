@@ -131,7 +131,7 @@ class _IconPickerState extends State<_IconPicker> {
                               borderRadius: BorderRadius.circular(6),
                               border: selected
                                   ? Border.all(
-                                      color: context.appColors.app,
+                                      color: context.appColors.appInk,
                                       width: 2,
                                     )
                                   : null,

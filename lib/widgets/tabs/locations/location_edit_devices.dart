@@ -82,7 +82,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
                 leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(
                     _selected.contains(AppState().devices[i].id) ? Icons.check_circle : Icons.circle_outlined,
-                    color: context.appColors.app,
+                    color: context.appColors.appInk,
                   )
                 ]),
                 title: Text(AppState().devices[i].displayName),
@@ -114,8 +114,8 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
         Navigator.pop(context);
       },
       backgroundColor: context.appColors.app,
-      label: Text("Save", style: TextStyle(color: context.appColors.text)),
-      icon: Icon(Icons.save, color: context.appColors.text),
+      label: const Text("Save"),
+      icon: const Icon(Icons.save),
     );
   }
 

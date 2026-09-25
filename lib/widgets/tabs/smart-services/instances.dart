@@ -161,10 +161,13 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                     title: Row(children: [
                                       Text(instances[i].name),
                                       Badge(
+                                        // backgroundColor below is
+                                        // transparent, so this icon sits
+                                        // directly on the page surface.
                                         label: instances[i].error != null
                                             ? Icon(Icons.error,
                                                 size: 16,
-                                                color: context.appColors.warn)
+                                                color: context.appColors.warnInk)
                                             : const Icon(Icons.pending,
                                                 size: 16,
                                                 color: Colors.lightBlue),

@@ -174,7 +174,7 @@ class LocationPageState extends State<LocationPage>
 
       return Scaffold(
           floatingActionButton: !LocationService.isCreateEditDeleteAvailable() ? null : ExpandableFab(
-            icon: Icon(Icons.list, color: context.appColors.text),
+            icon: const Icon(Icons.list),
             distance: 55.0,
             toggleStream: _toggleStream,
             children: [
@@ -188,7 +188,7 @@ class LocationPageState extends State<LocationPage>
                               LocationEditDevices(widget._stateLocationIndex)));
                   state.searchDevices(widget.parentState.filter);
                 },
-                icon: Icon(Icons.sensors, color: context.appColors.text),
+                icon: const Icon(Icons.sensors),
               ),
               ActionButton(
                 onPressed: () {
@@ -199,7 +199,7 @@ class LocationPageState extends State<LocationPage>
                           builder: (context) =>
                               LocationEditGroups(widget._stateLocationIndex)));
                 },
-                icon: Icon(Icons.devices_other, color: context.appColors.text),
+                icon: const Icon(Icons.devices_other),
               )
             ],
           ),

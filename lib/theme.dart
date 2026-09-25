@@ -29,30 +29,43 @@ const ThemeColor light = "light";
 
 /// App-specific colours as a [ThemeExtension], so widgets read them off
 /// [Theme.of(context)] instead of a static snapshot that only updates on
-/// restart. [app]/[warn]/[error]/[success] do not vary by brightness today;
-/// [text] does, and mirrors the Material typography's own body color.
+/// restart. [app], [warn] and [success] do not vary by brightness today;
+/// [error], [appInk], [warnInk] and [text] do — [text] mirrors the Material
+/// typography's own body color.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
     required this.app,
+    required this.appInk,
     required this.warn,
+    required this.warnInk,
     required this.error,
     required this.success,
     required this.text,
   });
 
   final Color app;
+  final Color appInk;
   final Color warn;
+  final Color warnInk;
   final Color error;
   final Color success;
   final Color text;
 
   @override
   AppColors copyWith(
-      {Color? app, Color? warn, Color? error, Color? success, Color? text}) {
+      {Color? app,
+      Color? appInk,
+      Color? warn,
+      Color? warnInk,
+      Color? error,
+      Color? success,
+      Color? text}) {
     return AppColors(
       app: app ?? this.app,
+      appInk: appInk ?? this.appInk,
       warn: warn ?? this.warn,
+      warnInk: warnInk ?? this.warnInk,
       error: error ?? this.error,
       success: success ?? this.success,
       text: text ?? this.text,
@@ -75,9 +88,70 @@ extension AppColorsContext on BuildContext {
 
 class MyTheme {
   static const Color appColor = Color.fromRGBO(50, 184, 186, 1);
-  static const Color warnColor = Colors.deepOrange;
-  static const Color errorColor = Colors.redAccent;
-  static const Color successColor = Colors.greenAccent;
+  // For text and thin marks: the fill reads 2.4:1 on white, the ink 5:1.
+  // On dark surfaces the fill is its own ink.
+  static const Color appInkColorLight = Color(0xFF007c7c);
+  static const Color appInkColorDark = appColor;
+  static const Color warnColor = Color(0xFFec835a);
+  // The fill reads 2.6:1 on white, too low for a standalone icon; the ink
+  // reads 5:1. On dark surfaces the fill is already its own ink.
+  static const Color warnInkColorLight = Color(0xFFb85026);
+  static const Color warnInkColorDark = warnColor;
+  static const Color errorColorLight = Color(0xFFe7000b);
+  static const Color errorColorDark = Color(0xFFff6467);
+  static const Color successColor = Color(0xFF0ca30d);
+
+  // Hand-written so surfaces stay achromatic; fromSeed tints every role.
+  // primary is the ink because Material defaults paint it as text; the brand
+  // fill with content on top is primaryContainer.
+  static const ColorScheme _lightColorScheme = ColorScheme(
+    brightness: Brightness.light,
+    primary: appInkColorLight,
+    onPrimary: Colors.white,
+    primaryContainer: appColor,
+    onPrimaryContainer: Colors.black,
+    secondary: Color(0xFF737373),
+    onSecondary: Colors.white,
+    error: errorColorLight,
+    onError: Colors.white,
+    surface: Colors.white,
+    onSurface: Color(0xFF0a0a0a),
+    onSurfaceVariant: Color(0xFF737373),
+    // outline is the component-boundary role (switch off-state,
+    // OutlinedButton, input borders) and must clear 3:1; outlineVariant is
+    // for a merely decorative line (card border, divider) and stays faint.
+    outline: Color(0xFF8a8a8a),
+    outlineVariant: Color(0xFFe5e5e5),
+    surfaceContainerLowest: Colors.white,
+    surfaceContainerLow: Colors.white,
+    surfaceContainer: Color(0xFFf5f5f5),
+    surfaceContainerHigh: Color(0xFFf5f5f5),
+    surfaceContainerHighest: Color(0xFFf5f5f5),
+    surfaceTint: Colors.transparent,
+  );
+
+  static const ColorScheme _darkColorScheme = ColorScheme(
+    brightness: Brightness.dark,
+    primary: appColor,
+    onPrimary: Colors.black,
+    primaryContainer: appColor,
+    onPrimaryContainer: Colors.black,
+    secondary: Color(0xFFa1a1a1),
+    onSecondary: Color(0xFF0a0a0a),
+    error: errorColorDark,
+    onError: Colors.black,
+    surface: Color(0xFF0a0a0a),
+    onSurface: Color(0xFFfafafa),
+    onSurfaceVariant: Color(0xFFa1a1a1),
+    outline: Color(0xFF7a7a7a),
+    outlineVariant: Color.fromRGBO(255, 255, 255, 0.10),
+    surfaceContainerLowest: Color(0xFF171717),
+    surfaceContainerLow: Color(0xFF171717),
+    surfaceContainer: Color(0xFF262626),
+    surfaceContainerHigh: Color(0xFF262626),
+    surfaceContainerHighest: Color(0xFF262626),
+    surfaceTint: Colors.transparent,
+  );
 
   static const double insetSize = 12.0;
   static const EdgeInsets inset = EdgeInsets.all(insetSize);
@@ -91,40 +165,29 @@ class MyTheme {
     final theme = ThemeData(
       platform: TargetPlatform.android,
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF32b8ba)),
-      primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
-        50: Color.fromRGBO(50, 184, 186, 0.1),
-        100: Color.fromRGBO(50, 184, 186, 0.2),
-        200: Color.fromRGBO(50, 184, 186, 0.3),
-        300: Color.fromRGBO(50, 184, 186, 0.4),
-        400: Color.fromRGBO(50, 184, 186, 0.5),
-        500: Color.fromRGBO(50, 184, 186, 0.6),
-        600: Color.fromRGBO(50, 184, 186, 0.7),
-        700: Color.fromRGBO(50, 184, 186, 0.8),
-        800: Color.fromRGBO(50, 184, 186, 0.9),
-        900: Color.fromRGBO(50, 184, 186, 1),
-      }),
+      colorScheme: _lightColorScheme,
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
           padding: WidgetStateProperty.all(MyTheme.inset),
-          foregroundColor: WidgetStateProperty.all(const Color(0xFF32b8ba)),
+          foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorLight),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: MyTheme.appColor
-      ),
-      appBarTheme: const AppBarTheme(
-          backgroundColor: MyTheme.appColor,
-          foregroundColor: Colors.black,
+      appBarTheme: AppBarTheme(
+          backgroundColor: _lightColorScheme.surface,
+          foregroundColor: _lightColorScheme.onSurface,
           scrolledUnderElevation: 0,
       ),
-      navigationBarTheme:  NavigationBarThemeData(
+      navigationBarTheme: NavigationBarThemeData(
         shadowColor: Colors.black,
           height: 60,
-          backgroundColor: Colors.white,
-          surfaceTintColor: Colors.white,
-          // Colors.white made the M3 selection indicator invisible here.
-          indicatorColor: Colors.teal.shade50,
+          backgroundColor: _lightColorScheme.surface,
+          surfaceTintColor: Colors.transparent,
+          // The M3 default indicator is secondaryContainer, grey here.
+          indicatorColor: _lightColorScheme.primary,
+          iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+              color: states.contains(WidgetState.selected)
+                  ? _lightColorScheme.onPrimary
+                  : _lightColorScheme.onSurfaceVariant)),
       ),
       scaffoldBackgroundColor: Colors.white,
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -133,16 +196,33 @@ class MyTheme {
               foregroundColor: Colors.black,
           )
       ),
+      // FilledButton defaults to primary, the ink; it wants the brand fill.
+      filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+              backgroundColor: MyTheme.appColor,
+              foregroundColor: Colors.black,
+          )
+      ),
       cardTheme:  CardThemeData(
         shape: BeveledRectangleBorder(
             borderRadius: BorderRadius.circular(0),
-            side: const BorderSide(color: Colors.white24, width: 1)))
+            // outlineVariant, not outline: a card border is decorative and
+            // stays faint, unlike a component boundary.
+            side: BorderSide(color: _lightColorScheme.outlineVariant, width: 1))),
+      // The M3 default inactive track (surfaceContainerHighest) is ~1.1:1 on
+      // white; outline is the nearest role that is actually a boundary.
+      sliderTheme: SliderThemeData(inactiveTrackColor: _lightColorScheme.outline),
+      // Dialogs on the card surface, not the muted one, so controls drawn on
+      // the muted tone (switch track, chips) stay distinguishable inside them.
+      dialogTheme: DialogThemeData(backgroundColor: _lightColorScheme.surfaceContainerLow),
     );
     return theme.copyWith(extensions: [
       AppColors(
         app: appColor,
+        appInk: appInkColorLight,
         warn: warnColor,
-        error: errorColor,
+        warnInk: warnInkColorLight,
+        error: errorColorLight,
         success: successColor,
         text: theme.textTheme.bodyMedium!.color!,
       ),
@@ -154,44 +234,27 @@ class MyTheme {
   static ThemeData _buildMaterialDarkTheme() {
     final theme = ThemeData(
     platform: TargetPlatform.android,
-    primaryColor: const Color(0xFF32b8ba),
-    colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF32b8ba),
-        brightness: Brightness.dark,
-        secondary: const Color(0xFF33cca0),
-    ),
+    colorScheme: _darkColorScheme,
     useMaterial3: true,
-    primarySwatch: const MaterialColor(0xFF32b8ba, <int, Color>{
-      50: Color.fromRGBO(50, 184, 186, 0.1),
-      100: Color.fromRGBO(50, 184, 186, 0.2),
-      200: Color.fromRGBO(50, 184, 186, 0.3),
-      300: Color.fromRGBO(50, 184, 186, 0.4),
-      400: Color.fromRGBO(50, 184, 186, 0.5),
-      500: Color.fromRGBO(50, 184, 186, 0.6),
-      600: Color.fromRGBO(50, 184, 186, 0.7),
-      700: Color.fromRGBO(50, 184, 186, 0.8),
-      800: Color.fromRGBO(50, 184, 186, 0.9),
-      900: Color.fromRGBO(50, 184, 186, 1),
-    }),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
         padding: WidgetStateProperty.all(MyTheme.inset),
-        foregroundColor: WidgetStateProperty.all(const Color(0xFF32b8ba)),
+        foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorDark),
       ),
     ),
-    floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: MyTheme.appColor
-    ),
-    appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF424242),
-      foregroundColor: Colors.white,
+    appBarTheme: AppBarTheme(
+      backgroundColor: _darkColorScheme.surface,
+      foregroundColor: _darkColorScheme.onSurface,
       scrolledUnderElevation: 0,
     ),
-    navigationBarTheme:  const NavigationBarThemeData(
-        backgroundColor: Color(0xFF424242),
-        surfaceTintColor: Color(0xFF424242),
-        // Matched the background, making the M3 selection indicator invisible.
-        indicatorColor: MyTheme.appColor,
+    navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: _darkColorScheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: _darkColorScheme.primary,
+        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? _darkColorScheme.onPrimary
+                : _darkColorScheme.onSurfaceVariant)),
       height: 60
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
@@ -200,17 +263,27 @@ class MyTheme {
           foregroundColor: Colors.black,
         )
     ),
+    filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: MyTheme.appColor,
+          foregroundColor: Colors.black,
+        )
+    ),
       cardTheme:  CardThemeData(
           shape: BeveledRectangleBorder(
               borderRadius: BorderRadius.circular(0),
           )
-      )
+      ),
+      sliderTheme: SliderThemeData(inactiveTrackColor: _darkColorScheme.outline),
+      dialogTheme: DialogThemeData(backgroundColor: _darkColorScheme.surfaceContainerLow),
     );
     return theme.copyWith(extensions: [
       AppColors(
         app: appColor,
+        appInk: appInkColorDark,
         warn: warnColor,
-        error: errorColor,
+        warnInk: warnInkColorDark,
+        error: errorColorDark,
         success: successColor,
         text: theme.textTheme.bodyMedium!.color!,
       ),

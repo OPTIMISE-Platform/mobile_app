@@ -211,7 +211,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
 
     _showFab = _tabController!.index < _dashboards.length;
     final fab = ExpandableFab(
-      icon: Icon(Icons.edit, color: context.appColors.text),
+      icon: const Icon(Icons.edit),
       distance: 90.0,
       toggleStream: _toggleStream,
       children: [
@@ -220,7 +220,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             await _addWidget();
             _toggleStreamController.add(null);
           },
-          icon: Icon(Icons.add, color: context.appColors.text),
+          icon: const Icon(Icons.add),
         ),
         ActionButton(
           onPressed: () async {
@@ -253,7 +253,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             Settings.setSmartServiceDashboards(_dashboards);
             if (mounted) setState(() {});
           },
-          icon: Icon(Icons.drive_file_rename_outline, color: context.appColors.text),
+          icon: const Icon(Icons.drive_file_rename_outline),
         ),
         ActionButton(
           onPressed: () async {
@@ -279,8 +279,10 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             _toggleStreamController.add(null);
             if (mounted) setState(() {});
           },
-          color: context.appColors.warn,
-          icon: Icon(Icons.delete, color: context.appColors.text),
+          // No colour: the default (onPrimaryContainer, black on the fill)
+          // is what this looked like before the ActionButton icon override
+          // was removed. warn painted orange-on-turquoise here (1.1:1).
+          icon: const Icon(Icons.delete),
         )
       ],
     );
@@ -333,9 +335,11 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                       alignment: Alignment.centerRight,
                       padding: MyTheme.inset,
                       color: context.appColors.warn,
+                      // Black, not white: white on the warn fill is 2.6:1,
+                      // black is 8:1.
                       child: const Icon(
                         Icons.delete,
-                        color: Colors.white,
+                        color: Colors.black,
                       ),
                     ),
                     direction: DismissDirection.endToStart,

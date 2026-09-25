@@ -64,8 +64,8 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
               Navigator.pop(context);
             },
             backgroundColor: context.appColors.app,
-            label: Text("Save", style: TextStyle(color: context.appColors.text)),
-            icon: Icon(Icons.save, color: context.appColors.text),
+            label: const Text("Save"),
+            icon: const Icon(Icons.save),
           ),
           body: Scaffold(
               appBar: MyAppBar(location.name).getAppBar(context, MyAppBar.getDefaultActions(context)),
@@ -84,7 +84,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                         leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Icon(
                             _selected.contains(state.deviceGroups[i].id) ? Icons.check_circle : Icons.circle_outlined,
-                            color: context.appColors.app,
+                            color: context.appColors.appInk,
                           )
                         ]),
                         title: Text(state.deviceGroups[i].name),

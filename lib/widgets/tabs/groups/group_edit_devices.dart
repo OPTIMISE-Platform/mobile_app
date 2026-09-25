@@ -116,7 +116,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                             leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.check_circle,
-                                color: context.appColors.app,
+                                color: context.appColors.appInk,
                               )
                             ]),
                             title: Text(_deviceCollection[_selected.elementAt(i)]?.displayName ?? "MISSING_DEVICE_NAME"),
@@ -129,7 +129,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
                             leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                               Icon(
                                 Icons.circle_outlined,
-                                color: context.appColors.app,
+                                color: context.appColors.appInk,
                               )
                             ]),
                             title: Text(_candidates[i - _selected.length].device.displayName),
@@ -175,8 +175,8 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
         Navigator.pop(context);
       },
       backgroundColor: context.appColors.app,
-      label: Text("Save", style: TextStyle(color: context.appColors.text)),
-      icon: Icon(Icons.save, color: context.appColors.text),
+      label: const Text("Save"),
+      icon: const Icon(Icons.save),
     );
   }
 

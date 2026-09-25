@@ -132,10 +132,14 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                             : null,
                                       ),
                                       Badge(
+                                        // backgroundColor below is
+                                        // transparent, so this icon sits
+                                        // directly on the page surface - the
+                                        // ink, not the fill.
                                         label: Icon(
                                             Icons.error,
                                             size: 16,
-                                            color: context.appColors.warn),
+                                            color: context.appColors.warnInk),
                                         isLabelVisible:
                                             releases[i].error != null,
                                         alignment:

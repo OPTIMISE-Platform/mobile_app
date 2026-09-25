@@ -51,8 +51,9 @@ class ExpandableFab extends StatefulWidget {
   final List<Widget> children;
   final Widget icon;
   final Stream? toggleStream;
-  // Null defaults to the app colour, read from the theme in build() - a
-  // constructor default has to be a compile-time constant.
+  // Null defaults to the colour for content on the app-colour fill, read from
+  // the theme in build() - a constructor default has to be a compile-time
+  // constant.
   final Color? backgroundColor;
   final double angle;
   final double? elevation;
@@ -133,7 +134,7 @@ class _ExpandableFabState extends State<ExpandableFab> with SingleTickerProvider
               child: _open
                   ? Icon(
                       Icons.close,
-                      color: context.appColors.app,
+                      color: context.appColors.appInk,
                     )
                   : null,
             ),
@@ -252,8 +253,9 @@ class ActionButton extends StatelessWidget {
 
   final VoidCallback? onPressed;
   final Widget icon;
-  // Null defaults to the app colour, read from the theme in build() - a
-  // constructor default has to be a compile-time constant.
+  // Null defaults to the colour for content on the app-colour fill, read from
+  // the theme in build() - a constructor default has to be a compile-time
+  // constant.
   final Color? color;
   final Color? backgroundColor;
   final double elevation;
@@ -269,7 +271,7 @@ class ActionButton extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         icon: icon,
-        color: color ?? appColor,
+        color: color ?? Theme.of(context).colorScheme.onPrimaryContainer,
       ),
     );
   }

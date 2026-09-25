@@ -236,7 +236,7 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                     lineBarsData: [
                       LineChartBarData(
                         spots: _spots!,
-                        color: context.appColors.app,
+                        color: context.appColors.appInk,
                       )
                     ],
                     titlesData: FlTitlesData(

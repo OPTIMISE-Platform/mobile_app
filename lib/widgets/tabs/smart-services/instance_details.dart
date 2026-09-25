@@ -45,7 +45,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
 
     if (widget.instance.error != null) {
       trailingHeader.add(Tooltip(
-          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: context.appColors.warn)));
+          message: widget.instance.error, triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: context.appColors.warnInk)));
     }
 
     trailingHeader.add(IconButton(
@@ -113,7 +113,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
             }
           },
           backgroundColor: context.appColors.app,
-          child: Icon(Icons.edit, color: context.appColors.text),
+          child: const Icon(Icons.edit),
         ),
         body: Scaffold(
             appBar: appBar.getAppBar(

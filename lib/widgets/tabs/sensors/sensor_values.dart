@@ -585,7 +585,10 @@ class _SensorValuesState extends State<SensorValues>
             border: Border.all(
               color: selected
                   ? context.appColors.app
-                  : Theme.of(context).dividerColor,
+                  // Not dividerColor: that now equals colorScheme.outline,
+                  // which is deliberately more visible than a chip outline
+                  // should be.
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
           ),
           child: Row(
@@ -594,14 +597,14 @@ class _SensorValuesState extends State<SensorValues>
                 Icon(
                   icon,
                   size: 18,
-                  color: selected ? context.appColors.text : null,
+                  color: selected ? Theme.of(context).colorScheme.onPrimaryContainer : null,
                 ),
                 const SizedBox(width: 6),
               ],
               Text(
                 tab.name,
                 style: TextStyle(
-                  color: selected ? context.appColors.text : null,
+                  color: selected ? Theme.of(context).colorScheme.onPrimaryContainer : null,
                   fontWeight: selected ? FontWeight.bold : null,
                 ),
               ),
@@ -749,7 +752,7 @@ class _SensorValuesState extends State<SensorValues>
               fit: StackFit.expand,
               children: [
                 if (_sparklines[pin] != null)
-                  Sparkline(_sparklines[pin]!, color: context.appColors.app),
+                  Sparkline(_sparklines[pin]!, color: context.appColors.appInk),
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -985,7 +988,7 @@ class _SensorValuesState extends State<SensorValues>
     final offline = connectionStatus == DeviceConnectionStatus.offline;
     final warning = Icon(
       offline ? Icons.error : Icons.lan_outlined,
-      color: context.appColors.warn,
+      color: context.appColors.warnInk,
     );
     if (state.isControlling || state.value == null) return warning;
     final display = _buildValueDisplay(state);

@@ -203,10 +203,13 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                           ),
                                         ),
                                         Badge(
+                                          // backgroundColor below is
+                                          // transparent, so this icon sits
+                                          // directly on the page surface.
                                           label: Icon(
                                               Icons.error,
                                               size: 16,
-                                              color: context.appColors.warn),
+                                              color: context.appColors.warnInk),
                                           isLabelVisible: state.networks[i]
                                                   .connection_state ==
                                               DeviceConnectionStatus.offline,

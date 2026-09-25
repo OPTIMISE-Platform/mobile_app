@@ -164,9 +164,11 @@ class _NotificationListState extends State<NotificationList> {
                                       alignment: Alignment.centerRight,
                                       padding: MyTheme.inset,
                                       color: context.appColors.warn,
+                                      // Black, not white: white on the warn
+                                      // fill is 2.6:1, black is 8:1.
                                       child: const Icon(
                                         Icons.delete,
-                                        color: Colors.white,
+                                        color: Colors.black,
                                       ),
                                     ),
                                     confirmDismiss: (_) {
@@ -195,17 +197,20 @@ class _NotificationListState extends State<NotificationList> {
                                                             .notifications[i])
                                                         ? Icons.check_circle
                                                         : Icons.circle_outlined,
-                                                    color: context.appColors.app,
+                                                    color: context.appColors.appInk,
                                                   )
                                                 ]),
                                       title: Row(
                                         children: [
                                           Text(state.notifications[i].title),
                                           Badge(
+                                            // backgroundColor below is
+                                            // transparent, so this icon sits
+                                            // directly on the page surface.
                                             label: Icon(
                                               Icons.circle_notifications,
                                               size: 12,
-                                              color: context.appColors.warn,
+                                              color: context.appColors.warnInk,
                                             ),
                                             isLabelVisible:
                                                 !state.notifications[i].isRead,

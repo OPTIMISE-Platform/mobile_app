@@ -391,8 +391,8 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
                   Navigator.pop(this.context);
                 },
           backgroundColor: valid ? context.appColors.app : Colors.grey,
-          label: Text(widget.instance != null ? "Save" : "Launch", style: TextStyle(color: context.appColors.text)),
-          icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow, color: context.appColors.text),
+          label: Text(widget.instance != null ? "Save" : "Launch"),
+          icon: Icon(widget.instance != null ? Icons.save : Icons.play_arrow),
         ),
         body: Scaffold(
             appBar: appBar.getAppBar(context, MyAppBar.getDefaultActions(context)),

@@ -180,7 +180,7 @@ class _UpdateIconState extends State<UpdateIcon>
       animation: controller,
       builder: (context, _) => IconButton(
         icon: Icon(Icons.system_update_alt,
-            color: Color.lerp(colors.text, colors.app, controller.value)),
+            color: Color.lerp(colors.text, colors.appInk, controller.value)),
         onPressed: () => AppUpdater.showUpdateDialog(context),
       ),
     );

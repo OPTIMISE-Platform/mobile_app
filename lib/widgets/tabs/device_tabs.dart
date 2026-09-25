@@ -330,7 +330,7 @@ class DeviceTabsState extends State<DeviceTabs> {
   Widget _buildFab(BuildContext context) => FloatingActionButton(
     onPressed: () => _fabPressedController.add(null),
     backgroundColor: context.appColors.app,
-    child: Icon(Icons.add, color: context.appColors.text),
+    child: const Icon(Icons.add),
   );
 
   List<Widget> _buildActions(BuildContext context, AppState state) {
