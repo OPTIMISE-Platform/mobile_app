@@ -545,19 +545,27 @@ class _SensorValuesState extends State<SensorValues>
   }
 
   Widget _buildTabStrip() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
-          children: [
-            for (var i = 0; i < _tabs.length; i++) _buildTabChip(i),
-            IconButton(
-              tooltip: 'New tab',
-              icon: const Icon(Icons.add),
-              onPressed: _addTab,
-            ),
-          ],
+    // This strip is body content, not an AppBar.bottom, so it does not pick
+    // up AppBarTheme on its own - width: double.infinity so the card tone
+    // fills the row instead of just the (possibly narrower) scrollable
+    // content, which would leave a patchy edge.
+    return Container(
+      width: double.infinity,
+      color: Theme.of(context).appBarTheme.backgroundColor,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            children: [
+              for (var i = 0; i < _tabs.length; i++) _buildTabChip(i),
+              IconButton(
+                tooltip: 'New tab',
+                icon: const Icon(Icons.add),
+                onPressed: _addTab,
+              ),
+            ],
+          ),
         ),
       ),
     );

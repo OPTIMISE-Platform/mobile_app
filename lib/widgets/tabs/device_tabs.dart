@@ -177,21 +177,31 @@ class DeviceTabsState extends State<DeviceTabs> {
   Widget _buildNavigationBar(BuildContext context, List<bool> disabled) {
     final selected = navBarTabs.indexOf(barTabForView(_navigationIndex));
     final disabledColor = Theme.of(context).disabledColor;
-    return NavigationBar(
-      selectedIndex: selected < 0 ? 0 : selected,
-      // enabled stays true even when disabled: NavigationDestination(enabled:
-      // false) drops its onTap, which would also swallow the tap before
-      // _onBarTap's own disabled check ever runs and can toast about it.
-      destinations: navBarTabs.map((tabIndex) {
-        final navItem = navItems.firstWhere((n) => n.index == tabIndex);
-        return NavigationDestination(
-          icon: Icon(navItem.icon,
-              color: navItem.disabled ? disabledColor : null),
-          label: navItem.name,
-          tooltip: navItem.disabled ? "Currently unavailable" : null,
-        );
-      }).toList(),
-      onDestinationSelected: (position) => _onBarTap(position, disabled),
+    // NavigationBar has no border property of its own, unlike AppBar's
+    // shape: the top hairline is a separate 1px sliver above it, not a
+    // border behind it - NavigationBar's own opaque background fills its
+    // bounds edge to edge and would paint over a border drawn there.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+        NavigationBar(
+          selectedIndex: selected < 0 ? 0 : selected,
+          // enabled stays true even when disabled: NavigationDestination(enabled:
+          // false) drops its onTap, which would also swallow the tap before
+          // _onBarTap's own disabled check ever runs and can toast about it.
+          destinations: navBarTabs.map((tabIndex) {
+            final navItem = navItems.firstWhere((n) => n.index == tabIndex);
+            return NavigationDestination(
+              icon: Icon(navItem.icon,
+                  color: navItem.disabled ? disabledColor : null),
+              label: navItem.name,
+              tooltip: navItem.disabled ? "Currently unavailable" : null,
+            );
+          }).toList(),
+          onDestinationSelected: (position) => _onBarTap(position, disabled),
+        ),
+      ],
     );
   }
 

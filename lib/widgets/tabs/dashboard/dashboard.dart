@@ -286,12 +286,26 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
         )
       ],
     );
+    final tabBar = TabBar(
+      isScrollable: true,
+      tabs: tabHeaders,
+      controller: _tabController,
+    );
     return Scaffold(
       floatingActionButton: !_showFab ? null : fab,
-      appBar: TabBar(
-        isScrollable: true,
-        tabs: tabHeaders,
-        controller: _tabController,
+      // A bare TabBar as Scaffold.appBar doesn't read AppBarTheme (that only
+      // styles the AppBar widget), so the card tone and the header hairline
+      // are given to it directly here.
+      appBar: PreferredSize(
+        preferredSize: tabBar.preferredSize,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Theme.of(context).appBarTheme.backgroundColor,
+            border: Border(
+                bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+          ),
+          child: tabBar,
+        ),
       ),
       body: TabBarView(
         controller: _tabController,

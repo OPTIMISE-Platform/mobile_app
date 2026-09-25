@@ -126,19 +126,27 @@ class MyTheme {
     onSecondary: Colors.white,
     error: errorColorLight,
     onError: Colors.white,
-    surface: Colors.white,
+    // surface is the page tone, not the card tone: app bar, nav bar, cards
+    // and dialogs sit on surfaceContainerLow instead, so they read as a
+    // layer above the page rather than the same flat sheet.
+    surface: Color(0xFFf5f5f5),
     onSurface: Color(0xFF0a0a0a),
-    onSurfaceVariant: Color(0xFF737373),
+    // #737373 read 4.35:1 on the new page tone, under the 4.5:1 text needs;
+    // this reaches 4.89:1.
+    onSurfaceVariant: Color(0xFF6b6b6b),
     // outline is the component-boundary role (switch off-state,
     // OutlinedButton, input borders) and must clear 3:1; outlineVariant is
-    // for a merely decorative line (card border, divider) and stays faint.
+    // for a merely decorative line (card border, divider, header hairline)
+    // and stays faint.
     outline: Color(0xFF8a8a8a),
     outlineVariant: Color(0xFFe5e5e5),
     surfaceContainerLowest: Colors.white,
     surfaceContainerLow: Colors.white,
     surfaceContainer: Color(0xFFf5f5f5),
-    surfaceContainerHigh: Color(0xFFf5f5f5),
-    surfaceContainerHighest: Color(0xFFf5f5f5),
+    // Muted containers (switch track, chips, input fill) one step darker
+    // than the page, so they stay visible sitting on it.
+    surfaceContainerHigh: Color(0xFFebebeb),
+    surfaceContainerHighest: Color(0xFFebebeb),
     surfaceTint: Colors.transparent,
   );
 
@@ -192,14 +200,17 @@ class MyTheme {
         ),
       ),
       appBarTheme: AppBarTheme(
-          backgroundColor: _lightColorScheme.surface,
+          backgroundColor: _lightColorScheme.surfaceContainerLow,
           foregroundColor: _lightColorScheme.onSurface,
           scrolledUnderElevation: 0,
+          // Under the whole header - the toolbar and any bottom slot (the
+          // Devices segment bar, a screen's own local-mode banner) together,
+          // not a line between them.
+          shape: Border(bottom: BorderSide(color: _lightColorScheme.outlineVariant)),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        shadowColor: Colors.black,
           height: 60,
-          backgroundColor: _lightColorScheme.surface,
+          backgroundColor: _lightColorScheme.surfaceContainerLow,
           surfaceTintColor: Colors.transparent,
           // The M3 default indicator is secondaryContainer, grey here.
           indicatorColor: _lightColorScheme.primary,
@@ -208,7 +219,7 @@ class MyTheme {
                   ? _lightColorScheme.onPrimary
                   : _lightColorScheme.onSurfaceVariant)),
       ),
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: _lightColorScheme.surface,
       elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
               backgroundColor: MyTheme.appColor,
@@ -294,9 +305,10 @@ class MyTheme {
       ),
     ),
     appBarTheme: AppBarTheme(
-      backgroundColor: _darkColorScheme.surface,
+      backgroundColor: _darkColorScheme.surfaceContainerLow,
       foregroundColor: _darkColorScheme.onSurface,
       scrolledUnderElevation: 0,
+      shape: Border(bottom: BorderSide(color: _darkColorScheme.outlineVariant)),
     ),
     navigationBarTheme: NavigationBarThemeData(
         backgroundColor: _darkColorScheme.surfaceContainerLow,
