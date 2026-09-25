@@ -96,6 +96,10 @@ abstract final class Spacing {
   static const double xl = 24;
 
   static const EdgeInsets inset = EdgeInsets.all(md);
+
+  // A grouped list draws its own horizontal margin per row (GroupedListTile),
+  // so a list of them uses this instead of [inset] to avoid doubling it.
+  static const EdgeInsets insetVertical = EdgeInsets.symmetric(vertical: md);
 }
 
 class MyTheme {

@@ -29,15 +29,20 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
+  final SlicePosition _position;
   final GlobalKey _keyFavButton = GlobalKey();
 
-  DeviceListItem(this._device, this._poppedCallback, {super.key});
+  DeviceListItem(this._device, this._poppedCallback,
+      {required SlicePosition position, super.key})
+      : _position = position;
 
   @override
   State<StatefulWidget> createState() => _DeviceListItemState();
@@ -217,13 +222,15 @@ class _DeviceListItemState extends State<DeviceListItem> {
         );
       }
 
-      return AnimatedSize(
-          duration: const Duration(milliseconds: 75),
-          alignment: Alignment.topLeft,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: columnWidgets,
-          ));
+      return GroupedListTile(
+          position: widget._position,
+          child: AnimatedSize(
+              duration: const Duration(milliseconds: 75),
+              alignment: Alignment.topLeft,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: columnWidgets,
+              )));
     });
   }
 

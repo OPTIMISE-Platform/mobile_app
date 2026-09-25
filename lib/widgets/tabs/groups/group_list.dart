@@ -28,6 +28,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
@@ -134,18 +135,28 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
                   : Scrollbar(
                       child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: Spacing.inset,
+                      padding: Spacing.insetVertical,
                       itemCount: state.deviceGroups.length + 1,
                       itemBuilder: (context, i) {
-                        return i < state.deviceGroups.length
-                            ? Column(children: [
-                          i > 0 ? const Divider() : const SizedBox.shrink(),
-                                GroupListItem(state.deviceGroups[i], null),
-                              ])
-                            : const Column(children: [
-                                Divider(),
-                                ListTile(),
-                              ]);
+                        if (i >= state.deviceGroups.length) {
+                          // Trailing spacer, sized like the row+divider it
+                          // replaces, so the last group isn't hidden behind
+                          // the "new group" FAB.
+                          return const SizedBox(height: 72);
+                        }
+                        final group = state.deviceGroups[i];
+                        return GroupListItem(group, null,
+                            key: ValueKey(group.id),
+                            position: SlicePosition.forIndex(
+                                i, state.deviceGroups.length));
+                      },
+                      // Keeps a row tied to its group when groups are
+                      // inserted/removed ahead of it, not to list position.
+                      findChildIndexCallback: (key) {
+                        final id = (key as ValueKey<String>).value;
+                        final index = state.deviceGroups
+                            .indexWhere((g) => g.id == id);
+                        return index == -1 ? null : index;
                       },
                     )));
     });

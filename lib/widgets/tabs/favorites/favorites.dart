@@ -25,6 +25,8 @@ import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/section_list_header.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
@@ -135,36 +137,62 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
   Widget _buildList(AppState state,
       List<DeviceInstance> devices,
       List<DeviceGroup> groups,) {
-    return ListView.builder(
-      padding: Spacing.inset,
-      itemCount: devices.length + groups.length,
-      itemBuilder: (_, i) {
-        if (i < devices.length) {
-          return Column(
-            children: [
-              if (i > 0) const Divider(),
-              DeviceListItem(devices[i], null),
-            ],
-          );
-        }
+    // Both kinds get their own section header only when both are present -
+    // a favorites list of just devices (the common case) stays one section.
+    final sectioned = devices.isNotEmpty && groups.isNotEmpty;
+    final headerCount = sectioned ? 2 : 0;
 
-        final group = groups[i - devices.length];
-
-        return Column(
-          children: [
-            const Divider(),
-            GroupListItem(group, (_) {
-              final parent = context
-                  .findAncestorStateOfType<State<DeviceTabs>>()
+    GroupListItem groupItem(int i) => GroupListItem(groups[i], (_) {
+          final parent = context.findAncestorStateOfType<State<DeviceTabs>>()
               as DeviceTabsState?;
 
-              if (parent == null) return;
+          if (parent == null) return;
 
-              parent.filter.deviceGroupIds = null;
-              state.searchDevices(parent.filter);
-            }),
-          ],
-        );
+          parent.filter.deviceGroupIds = null;
+          state.searchDevices(parent.filter);
+        },
+            key: ValueKey("group-${groups[i].id}"),
+            position: SlicePosition.forIndex(i, groups.length));
+
+    return ListView.builder(
+      padding: Spacing.insetVertical,
+      itemCount: devices.length + groups.length + headerCount,
+      itemBuilder: (_, i) {
+        if (sectioned) {
+          if (i == 0) return const SectionListHeader("Devices");
+          i -= 1;
+          if (i < devices.length) {
+            return DeviceListItem(devices[i], null,
+                key: ValueKey("device-${devices[i].id}"),
+                position: SlicePosition.forIndex(i, devices.length));
+          }
+          i -= devices.length;
+          if (i == 0) return const SectionListHeader("Groups");
+          return groupItem(i - 1);
+        }
+
+        if (i < devices.length) {
+          return DeviceListItem(devices[i], null,
+              key: ValueKey("device-${devices[i].id}"),
+              position: SlicePosition.forIndex(i, devices.length));
+        }
+        return groupItem(i - devices.length);
+      },
+      // A row's key always names its device/group, so its State (an
+      // expanded/transitioning DeviceListItem) stays with it when the
+      // section headers appear or disappear and shift every index after.
+      findChildIndexCallback: (key) {
+        final id = (key as ValueKey<String>).value;
+        if (id.startsWith("device-")) {
+          final deviceId = id.substring("device-".length);
+          final index = devices.indexWhere((d) => d.id == deviceId);
+          if (index == -1) return null;
+          return sectioned ? index + 1 : index;
+        }
+        final groupId = id.substring("group-".length);
+        final index = groups.indexWhere((g) => g.id == groupId);
+        if (index == -1) return null;
+        return sectioned ? devices.length + 2 + index : devices.length + index;
       },
     );
   }

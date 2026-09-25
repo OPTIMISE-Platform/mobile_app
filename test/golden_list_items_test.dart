@@ -23,6 +23,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
@@ -75,7 +76,8 @@ void main() {
     testWidgets("device list item, on ($suffix)", (tester) async {
       await pumpGolden(
         tester,
-        listItemScreen(DeviceListItem(device("device-1", "Living room lamp", true), null)),
+        listItemScreen(DeviceListItem(device("device-1", "Living room lamp", true), null,
+            position: SlicePosition.only)),
         dark: dark,
       );
       await expectLater(find.byType(MaterialApp),
@@ -85,7 +87,8 @@ void main() {
     testWidgets("device list item, off ($suffix)", (tester) async {
       await pumpGolden(
         tester,
-        listItemScreen(DeviceListItem(device("device-2", "Heat pump", false), null)),
+        listItemScreen(DeviceListItem(device("device-2", "Heat pump", false), null,
+            position: SlicePosition.only)),
         dark: dark,
       );
       await expectLater(find.byType(MaterialApp),
@@ -103,7 +106,7 @@ void main() {
       );
       await pumpGolden(
         tester,
-        listItemScreen(GroupListItem(group, null)),
+        listItemScreen(GroupListItem(group, null, position: SlicePosition.only)),
         dark: dark,
       );
       await expectLater(find.byType(MaterialApp),

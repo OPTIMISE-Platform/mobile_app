@@ -25,6 +25,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
@@ -107,12 +109,14 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.inset,
+                            padding: Spacing.insetVertical,
                             itemCount: deviceClasses.length,
                             itemBuilder: (context, i) {
-                              return Column(children: [
-                                i > 0 ? const Divider() : const SizedBox.shrink(),
-                                ListTile(
+                              return GroupedListTile(
+                                key: ValueKey(deviceClasses[i].id),
+                                position: SlicePosition.forIndex(
+                                    i, deviceClasses.length),
+                                child: ListTile(
                                     title: Text(deviceClasses[i].name),
                                     subtitle: Text(
                                         "${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
@@ -145,8 +149,14 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                           _selected = i;
                                         });
                                       });
-                                    })
-                              ]);
+                                    }),
+                              );
+                            },
+                            findChildIndexCallback: (key) {
+                              final id = (key as ValueKey<String>).value;
+                              final index = deviceClasses
+                                  .indexWhere((c) => c.id == id);
+                              return index == -1 ? null : index;
                             },
                           ))
                 : RefreshIndicator(
@@ -155,21 +165,24 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
                     child: ListView.builder(
-                      padding: Spacing.inset,
+                      padding: Spacing.insetVertical,
                       itemCount: state.totalDevices,
                       itemBuilder: (_, i) {
                         if (i >= state.devices.length) {
                           state.loadDevices();
                           return const SizedBox.shrink();
                         }
-                        final List<Widget> children = [];
-                        if (i>0) {
-                          children.add(const Divider());
-                        }
-                        children.add(DeviceListItem(state.devices[i], null));
-                        return Column(
-                          children: children,
-                        );
+                        final device = state.devices[i];
+                        return DeviceListItem(device, null,
+                            key: ValueKey(device.id),
+                            position: SlicePosition.forIndex(
+                                i, state.devices.length));
+                      },
+                      findChildIndexCallback: (key) {
+                        final id = (key as ValueKey<String>).value;
+                        final index =
+                            state.devices.indexWhere((d) => d.id == id);
+                        return index == -1 ? null : index;
                       },
                     )),
       );

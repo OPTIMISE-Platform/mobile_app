@@ -30,6 +30,8 @@ import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
@@ -184,14 +186,15 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                             )
                           : ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: Spacing.inset,
+                              padding: Spacing.insetVertical,
                               itemCount: state.networks.length,
                               itemBuilder: (context, i) {
-                                return Column(children: [
-                                  i > 0
-                                      ? const Divider()
-                                      : const SizedBox.shrink(),
-                                  ListTile(
+                                return GroupedListTile(
+                                  key: ValueKey(state.networks[i].id),
+                                  position: SlicePosition.forIndex(
+                                      i, state.networks.length),
+                                  hairlineInset: GroupedListTile.insetNoLeading,
+                                  child: ListTile(
                                       title: Row(children: [
                                         // Flexible with an ellipsis: a network
                                         // name is free text and overflows the
@@ -286,8 +289,14 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                               });
                                             },
                                       trailing: _gatewayControl(
-                                          state, state.networks[i]))
-                                ]);
+                                          state, state.networks[i])),
+                                );
+                              },
+                              findChildIndexCallback: (key) {
+                                final id = (key as ValueKey<String>).value;
+                                final index = state.networks
+                                    .indexWhere((n) => n.id == id);
+                                return index == -1 ? null : index;
                               },
                             )
                       : state.devices.isEmpty
@@ -297,20 +306,23 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 )
                               : const Center(child: Text("No Devices"))
                           : ListView.builder(
-                              padding: Spacing.inset,
+                              padding: Spacing.insetVertical,
                               itemCount: state.totalDevices,
                               itemBuilder: (_, i) {
                                 if (i > state.devices.length - 1) {
                                   return const SizedBox.shrink();
                                 }
-                                return Column(
-                                  children: [
-                                    i > 0
-                                        ? const Divider()
-                                        : const SizedBox.shrink(),
-                                    DeviceListItem(state.devices[i], null),
-                                  ],
-                                );
+                                final device = state.devices[i];
+                                return DeviceListItem(device, null,
+                                    key: ValueKey(device.id),
+                                    position: SlicePosition.forIndex(
+                                        i, state.devices.length));
+                              },
+                              findChildIndexCallback: (key) {
+                                final id = (key as ValueKey<String>).value;
+                                final index = state.devices
+                                    .indexWhere((d) => d.id == id);
+                                return index == -1 ? null : index;
                               },
                             )));
     });

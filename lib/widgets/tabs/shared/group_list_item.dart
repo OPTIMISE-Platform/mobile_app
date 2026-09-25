@@ -23,25 +23,32 @@ import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 
 class GroupListItem extends StatelessWidget {
   final DeviceGroup _group;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
+  final SlicePosition _position;
 
-  const GroupListItem(this._group, this._poppedCallback, {super.key});
+  const GroupListItem(this._group, this._poppedCallback,
+      {required SlicePosition position, super.key})
+      : _position = position;
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
         listenable: _group.stateNotifier,
         builder: (context, child) {
-      return ListTile(
-          title: SizedBox(
-              width: MediaQuery.of(context).size.width - 192,
-              child: Text(_group.name),
-          ),
-          subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
-          /*
+      return GroupedListTile(
+          position: _position,
+          child: ListTile(
+              title: SizedBox(
+                width: MediaQuery.of(context).size.width - 192,
+                child: Text(_group.name),
+              ),
+              subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
+              /*
           trailing: Container(
             height: MediaQuery.of(context).textScaleFactor * 48,
             width: MediaQuery.of(context).textScaleFactor * 48,
@@ -51,21 +58,21 @@ class GroupListItem extends StatelessWidget {
                 child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
           ),
            */
-          leading: FavorizeButton(null, _group),
-          onTap: () {
-            AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]));
-            final future = Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) {
-                    final target = DetailPage(null, _group);
-                    return target;
-                  },
-                ));
-            if (_poppedCallback != null) {
-              future.then(_poppedCallback);
-            }
-          });
+              leading: FavorizeButton(null, _group),
+              onTap: () {
+                AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]));
+                final future = Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) {
+                        final target = DetailPage(null, _group);
+                        return target;
+                      },
+                    ));
+                if (_poppedCallback != null) {
+                  future.then(_poppedCallback);
+                }
+              }));
     });
   }
 }

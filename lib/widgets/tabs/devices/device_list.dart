@@ -24,6 +24,7 @@ import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
 class DeviceList extends StatefulWidget {
@@ -93,7 +94,7 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.inset,
+                            padding: Spacing.insetVertical,
                             itemCount: AppState().totalDevices,
                             itemBuilder: (context, i) {
                               if (i >= AppState().devices.length) {
@@ -102,10 +103,21 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
                               if (i > AppState().devices.length - 1) {
                                 return const SizedBox.shrink();
                               }
-                              return Column(children: [
-                                i > 0 ? const Divider() : const SizedBox.shrink(),
-                                DeviceListItem(AppState().devices[i], null),
-                              ]);
+                              final device = AppState().devices[i];
+                              return DeviceListItem(device, null,
+                                  key: ValueKey(device.id),
+                                  position: SlicePosition.forIndex(
+                                      i, AppState().devices.length));
+                            },
+                            // Keeps a row's expanded/transitioning State tied
+                            // to its device when devices are inserted/removed
+                            // ahead of it, not to its position in the list.
+                            findChildIndexCallback: (key) {
+                              final id = (key as ValueKey<String>).value;
+                              final index = AppState()
+                                  .devices
+                                  .indexWhere((d) => d.id == id);
+                              return index == -1 ? null : index;
                             }),
               ),
             ));
