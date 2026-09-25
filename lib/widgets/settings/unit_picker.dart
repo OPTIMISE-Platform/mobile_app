@@ -85,9 +85,9 @@ class _UnitPickerListState extends State<UnitPickerList> {
           Container(
               padding: MyTheme.inset,
               child: TextFormField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.search),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  prefixIcon: const Icon(Icons.search),
                   labelText: 'Search',
                 ),
                 onChanged: (filter) => setState(() => _functionSearch = filter),

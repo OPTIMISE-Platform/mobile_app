@@ -170,6 +170,15 @@ class MyTheme {
         style: ButtonStyle(
           padding: WidgetStateProperty.all(MyTheme.inset),
           foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorLight),
+          side: WidgetStateProperty.all(BorderSide(color: _lightColorScheme.outline)),
+          shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -194,6 +203,7 @@ class MyTheme {
           style: ElevatedButton.styleFrom(
               backgroundColor: MyTheme.appColor,
               foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           )
       ),
       // FilledButton defaults to primary, the ink; it wants the brand fill.
@@ -201,20 +211,42 @@ class MyTheme {
           style: FilledButton.styleFrom(
               backgroundColor: MyTheme.appColor,
               foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           )
       ),
-      cardTheme:  CardThemeData(
-        shape: BeveledRectangleBorder(
-            borderRadius: BorderRadius.circular(0),
+      // Flat with a border instead of a shadow: elevation would need the
+      // (deliberately transparent) surfaceTint to read as anything.
+      cardTheme: CardThemeData(
+        color: _lightColorScheme.surfaceContainerLow,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        // Content drawn to the edge (the sensor sparkline) would poke past
+        // the rounded corners otherwise.
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
             // outlineVariant, not outline: a card border is decorative and
             // stays faint, unlike a component boundary.
-            side: BorderSide(color: _lightColorScheme.outlineVariant, width: 1))),
+            side: BorderSide(color: _lightColorScheme.outlineVariant, width: 1)),
+      ),
       // The M3 default inactive track (surfaceContainerHighest) is ~1.1:1 on
       // white; outline is the nearest role that is actually a boundary.
       sliderTheme: SliderThemeData(inactiveTrackColor: _lightColorScheme.outline),
       // Dialogs on the card surface, not the muted one, so controls drawn on
       // the muted tone (switch track, chips) stay distinguishable inside them.
-      dialogTheme: DialogThemeData(backgroundColor: _lightColorScheme.surfaceContainerLow),
+      dialogTheme: DialogThemeData(
+        backgroundColor: _lightColorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        ),
+      ),
     );
     return theme.copyWith(extensions: [
       AppColors(
@@ -240,6 +272,15 @@ class MyTheme {
       style: ButtonStyle(
         padding: WidgetStateProperty.all(MyTheme.inset),
         foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorDark),
+        side: WidgetStateProperty.all(BorderSide(color: _darkColorScheme.outline)),
+        shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: ButtonStyle(
+        shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
       ),
     ),
     appBarTheme: AppBarTheme(
@@ -261,21 +302,39 @@ class MyTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: MyTheme.appColor,
           foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         )
     ),
     filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: MyTheme.appColor,
           foregroundColor: Colors.black,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         )
     ),
-      cardTheme:  CardThemeData(
-          shape: BeveledRectangleBorder(
-              borderRadius: BorderRadius.circular(0),
-          )
+      cardTheme: CardThemeData(
+        color: _darkColorScheme.surfaceContainerLow,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: _darkColorScheme.outlineVariant, width: 1)),
       ),
       sliderTheme: SliderThemeData(inactiveTrackColor: _darkColorScheme.outline),
-      dialogTheme: DialogThemeData(backgroundColor: _darkColorScheme.surfaceContainerLow),
+      dialogTheme: DialogThemeData(
+        backgroundColor: _darkColorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      chipTheme: ChipThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: WidgetStateProperty.all(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+        ),
+      ),
     );
     return theme.copyWith(extensions: [
       AppColors(
