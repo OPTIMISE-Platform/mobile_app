@@ -637,7 +637,7 @@ class _SensorValuesState extends State<SensorValues>
       return _buildFullHeightMessage(const DelayedCircularProgressIndicator());
     }
     return GridView.builder(
-      padding: Spacing.inset,
+      padding: Spacing.listPadding(context, horizontal: Spacing.md),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 1.05,

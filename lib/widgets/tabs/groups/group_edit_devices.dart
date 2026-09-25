@@ -107,7 +107,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
       _reloading
           ? const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
           : ListView.builder(
-              padding: Spacing.insetVertical,
+              padding: Spacing.listPadding(context),
               itemCount: selectedCount +
                   candidateCount +
                   headerCount +

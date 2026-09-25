@@ -147,7 +147,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                       )
                     : ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: Spacing.insetVertical,
+                        padding: Spacing.listPadding(context),
                         itemCount: instances.length + 1,
                         itemBuilder: (context, i) {
                           if (i == instances.length - 1 &&

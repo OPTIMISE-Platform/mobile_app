@@ -186,7 +186,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                             )
                           : ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: Spacing.insetVertical,
+                              padding: Spacing.listPadding(context),
                               itemCount: state.networks.length,
                               itemBuilder: (context, i) {
                                 return GroupedListTile(
@@ -306,7 +306,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 )
                               : const Center(child: Text("No Devices"))
                           : ListView.builder(
-                              padding: Spacing.insetVertical,
+                              padding: Spacing.listPadding(context),
                               itemCount: state.totalDevices,
                               itemBuilder: (_, i) {
                                 if (i > state.devices.length - 1) {

@@ -144,7 +144,7 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
       body: _items.length < 2
           ? const Center(child: Text('Nothing to reorder'))
           : ReorderableListView.builder(
-              padding: Spacing.insetVertical,
+              padding: Spacing.listPadding(context),
               itemCount: _items.length,
               proxyDecorator: _proxyDecorator,
               onReorderItem: (oldIndex, newIndex) {

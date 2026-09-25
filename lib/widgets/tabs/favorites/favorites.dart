@@ -155,7 +155,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
             position: SlicePosition.forIndex(i, groups.length));
 
     return ListView.builder(
-      padding: Spacing.insetVertical,
+      padding: Spacing.listPadding(context),
       itemCount: devices.length + groups.length + headerCount,
       itemBuilder: (_, i) {
         if (sectioned) {

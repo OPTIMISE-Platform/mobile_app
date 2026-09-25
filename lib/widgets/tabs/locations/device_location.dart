@@ -149,7 +149,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                         )
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: Spacing.inset,
+                          padding: Spacing.listPadding(context, horizontal: Spacing.md),
                           itemCount: state.locations.length + 1,
                           itemBuilder: (context, i) {
                             return i < state.locations.length

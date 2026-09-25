@@ -100,6 +100,16 @@ abstract final class Spacing {
   // A grouped list draws its own horizontal margin per row (GroupedListTile),
   // so a list of them uses this instead of [inset] to avoid doubling it.
   static const EdgeInsets insetVertical = EdgeInsets.symmetric(vertical: md);
+
+  /// Padding for a scrollable list/grid that sets its own [padding], which
+  /// otherwise disables ListView's automatic bottom inset for the system
+  /// navigation bar (edge-to-edge). [horizontal] keeps a side inset for a
+  /// list without its own row margin; a Scaffold with a bottomNavigationBar
+  /// already removes the bottom inset from its body, so this stays at [md]
+  /// there.
+  static EdgeInsets listPadding(BuildContext context, {double horizontal = 0}) =>
+      EdgeInsets.fromLTRB(horizontal, md, horizontal,
+          md + MediaQuery.viewPaddingOf(context).bottom);
 }
 
 class MyTheme {

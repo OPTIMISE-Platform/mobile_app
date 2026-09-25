@@ -109,7 +109,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.insetVertical,
+                            padding: Spacing.listPadding(context),
                             itemCount: deviceClasses.length,
                             itemBuilder: (context, i) {
                               return GroupedListTile(
@@ -165,7 +165,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
                     child: ListView.builder(
-                      padding: Spacing.insetVertical,
+                      padding: Spacing.listPadding(context),
                       itemCount: state.totalDevices,
                       itemBuilder: (_, i) {
                         if (i >= state.devices.length) {

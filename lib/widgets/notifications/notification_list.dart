@@ -153,7 +153,7 @@ class _NotificationListState extends State<NotificationList> {
                       ? const Center(child: Text("No Notifications"))
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: Spacing.insetVertical,
+                          padding: Spacing.listPadding(context),
                           itemCount: state.notifications.length,
                           itemBuilder: (BuildContext context, int i) {
                             return GroupedListTile(

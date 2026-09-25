@@ -113,7 +113,7 @@ class _IconPickerState extends State<_IconPicker> {
                 ? const Center(child: Text('No icons found'))
                 : Scrollbar(
                     child: GridView.builder(
-                      padding: Spacing.inset,
+                      padding: Spacing.listPadding(context, horizontal: Spacing.md),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 5,

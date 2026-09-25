@@ -259,7 +259,7 @@ class _AddLocalNetworkState extends State<AddLocalNetwork> {
     return Material(
         child: ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: Spacing.inset,
+            padding: Spacing.listPadding(context, horizontal: Spacing.md),
             itemCount: mgws.length,
             itemBuilder: (BuildContext context, int index) {
               var mgw = mgws.elementAt(index);

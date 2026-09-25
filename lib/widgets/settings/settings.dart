@@ -49,7 +49,7 @@ class Settings extends StatelessWidget {
       return Scaffold(
         appBar: appBar.getAppBar(context),
         body: ListView(
-          padding: Spacing.insetVertical,
+          padding: Spacing.listPadding(context),
           children: [
             for (final section in sections)
               if (section.rows.isNotEmpty) ...[

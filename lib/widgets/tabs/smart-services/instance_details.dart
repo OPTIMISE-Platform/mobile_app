@@ -171,7 +171,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                       final hasParameters = parameters.isNotEmpty;
                       return ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: Spacing.insetVertical,
+                        padding: Spacing.listPadding(context),
                         itemCount:
                             1 + (hasParameters ? 1 : 0) + parameters.length + 1,
                         itemBuilder: (context, i) {

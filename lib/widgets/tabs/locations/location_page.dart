@@ -246,7 +246,7 @@ class LocationPageState extends State<LocationPage>
                                 matchingGroups.isNotEmpty;
                             final headerCount = sectioned ? 2 : 0;
                             return ListView.builder(
-                              padding: Spacing.insetVertical,
+                              padding: Spacing.listPadding(context),
                               itemCount: location.device_ids.length +
                                   matchingGroups.length +
                                   1 +

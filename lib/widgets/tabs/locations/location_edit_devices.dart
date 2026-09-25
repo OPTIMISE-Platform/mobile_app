@@ -68,7 +68,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
   Widget _buildListWidget() {
     return Stack(children: [
       ListView.builder(
-        padding: Spacing.insetVertical,
+        padding: Spacing.listPadding(context),
         itemCount: AppState().totalDevices,
         itemBuilder: (_, i) {
           if (i >= AppState().devices.length) {

@@ -279,7 +279,7 @@ class _TargetPickerState extends State<_TargetPicker> {
       controller: _scrollController,
       child: ListView.builder(
         controller: _scrollController,
-        padding: Spacing.insetVertical,
+        padding: Spacing.listPadding(context),
         // One extra row carries the "loading more" indicator - outside the
         // surface, so the last real device still closes it with round
         // corners while more load.
@@ -321,7 +321,7 @@ class _TargetPickerState extends State<_TargetPicker> {
     }
     return Scrollbar(
       child: ListView.builder(
-        padding: Spacing.insetVertical,
+        padding: Spacing.listPadding(context),
         itemCount: groups.length,
         itemBuilder: (_, i) {
           final group = groups[i];
@@ -484,7 +484,7 @@ class _ValuePickerState extends State<_ValuePicker> {
           ? const Center(child: Text('No values available'))
           : Scrollbar(
               child: ListView.builder(
-                padding: Spacing.insetVertical,
+                padding: Spacing.listPadding(context),
                 itemCount: _selectable.length,
                 itemBuilder: (_, i) => GroupedListTile(
                   position: SlicePosition.forIndex(i, _selectable.length),

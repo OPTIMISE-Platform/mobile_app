@@ -48,7 +48,7 @@ class _UnitPickerListState extends State<UnitPickerList> {
         .toList();
     final list = ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: Spacing.insetVertical,
+        padding: Spacing.listPadding(context),
         itemCount: functions.length,
         itemBuilder: (context, i) {
           final f = functions[i];

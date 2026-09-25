@@ -108,26 +108,32 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
             ))
         .toList();
 
+    // LayoutBuilder, not MediaQuery.size, so the tab body gets the height
+    // TabBarView actually gives it (below the app bar and tab strip), not
+    // the whole window's; a SingleChildScrollView here would hand the child
+    // unbounded height instead.
     final tabs = List<Widget>.generate(
         _dashboards.length,
-        (index) => SingleChildScrollView(
-            scrollDirection: Axis.vertical, child: SizedBox(width: MediaQuery.of(context).size.width, child: _tabBody(index))));
+        (index) => LayoutBuilder(
+            builder: (context, constraints) => SizedBox(
+                width: constraints.maxWidth,
+                height: constraints.maxHeight,
+                child: _tabBody(index))));
 
     // Add dashboard with all widgets
     tabHeaders.add(const Tab(
       icon: Text("All"),
     ));
     final items = _smartServiceWidgets?.values.toList() ?? [];
-    tabs.add(SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: RefreshIndicator(
-            onRefresh: () async {
-              HapticFeedbackProxy.lightImpact();
-              _refresh();
-            },
-            child: SizedBox(
-                height: MediaQuery.of(context).size.height - 192,
-                width: MediaQuery.of(context).size.width,
+    tabs.add(LayoutBuilder(
+        builder: (context, constraints) => SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: RefreshIndicator(
+                onRefresh: () async {
+                  HapticFeedbackProxy.lightImpact();
+                  _refresh();
+                },
                 child: ListView.builder(
                     itemCount: items.length,
                     itemBuilder: (context, idx) {
@@ -334,78 +340,77 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
           HapticFeedbackProxy.lightImpact();
           _refresh();
         },
-        child: SizedBox(
-            //SizedBox does not work here
-            height: MediaQuery.of(context).size.height - 192,
-            child: ReorderableListView.builder(
-              buildDefaultDragHandles: false,
-              itemCount: items.length,
-              itemBuilder: (context, idx) {
-                final item = items[idx]!;
-                return Dismissible(
-                    key: ValueKey("${_dashboards[tabIdx].widgetAndInstanceIds}_$idx"),
-                    // key needs to stay the same while dragging but change when deleting
-                    background: Container(
-                      alignment: Alignment.centerRight,
-                      padding: Spacing.inset,
-                      color: context.appColors.warn,
-                      // Black, not white: white on the warn fill is 2.6:1,
-                      // black is 8:1.
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.black,
-                      ),
+        // Bounded by the LayoutBuilder/SizedBox around _tabBody's caller, so
+        // this needs no height of its own.
+        child: ReorderableListView.builder(
+            buildDefaultDragHandles: false,
+            itemCount: items.length,
+            itemBuilder: (context, idx) {
+              final item = items[idx]!;
+              return Dismissible(
+                  key: ValueKey("${_dashboards[tabIdx].widgetAndInstanceIds}_$idx"),
+                  // key needs to stay the same while dragging but change when deleting
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: Spacing.inset,
+                    color: context.appColors.warn,
+                    // Black, not white: white on the warn fill is 2.6:1,
+                    // black is 8:1.
+                    child: const Icon(
+                      Icons.delete,
+                      color: Colors.black,
                     ),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (_) {
-                      items.removeAt(idx);
-                      _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
-                      Settings.setSmartServiceDashboards(_dashboards);
-                      if (mounted) setState(() {});
-                    },
-                    child: RepaintBoundary(
-                        child: Card(
-                            // Card's own default (4 all round) sits well
-                            // inside where every grouped list surface starts
-                            // (16); matched horizontally, with a smaller
-                            // vertical gap between cards.
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: Spacing.lg, vertical: Spacing.sm),
-                            child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                              // Its own row above the content, not a corner
-                              // overlay: a small value or icon widget can fill
-                              // the card corner to corner, so only a
-                              // dedicated strip keeps the handle off it.
-                              if (_dashboards[tabIdx].widgetAndInstanceIds.length > 1)
-                                Align(
-                                  alignment: Alignment.topRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(right: Spacing.sm, top: Spacing.xxs),
-                                    child: ReorderableDragStartListener(
-                                      index: idx,
-                                      child: const Icon(Icons.reorder, color: Colors.grey),
-                                    ),
+                  ),
+                  direction: DismissDirection.endToStart,
+                  onDismissed: (_) {
+                    items.removeAt(idx);
+                    _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
+                    Settings.setSmartServiceDashboards(_dashboards);
+                    if (mounted) setState(() {});
+                  },
+                  child: RepaintBoundary(
+                      child: Card(
+                          // Card's own default (4 all round) sits well
+                          // inside where every grouped list surface starts
+                          // (16); matched horizontally, with a smaller
+                          // vertical gap between cards.
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: Spacing.lg, vertical: Spacing.sm),
+                          child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                            // Its own row above the content, not a corner
+                            // overlay: a small value or icon widget can fill
+                            // the card corner to corner, so only a
+                            // dedicated strip keeps the handle off it.
+                            if (_dashboards[tabIdx].widgetAndInstanceIds.length > 1)
+                              Align(
+                                alignment: Alignment.topRight,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: Spacing.sm, top: Spacing.xxs),
+                                  child: ReorderableDragStartListener(
+                                    index: idx,
+                                    child: const Icon(Icons.reorder, color: Colors.grey),
                                   ),
                                 ),
-                              Padding(
-                                padding: const EdgeInsets.all(Spacing.md),
-                                child: item.build(context, false),
                               ),
-                            ]))));
-              },
-              // Unlike onReorder, onReorderItem's newIndex is already
-              // adjusted for the removal at oldIndex.
-              onReorderItem: (int oldIndex, int newIndex) async {
-                final tmp = items[oldIndex];
-                items.removeAt(oldIndex);
-                items.insert(newIndex, tmp);
-                _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
-                await Settings.setSmartServiceDashboards(_dashboards);
-              },
-            )));
+                            Padding(
+                              padding: const EdgeInsets.all(Spacing.md),
+                              child: item.build(context, false),
+                            ),
+                          ]))));
+            },
+            // Unlike onReorder, onReorderItem's newIndex is already
+            // adjusted for the removal at oldIndex.
+            onReorderItem: (int oldIndex, int newIndex) async {
+              final tmp = items[oldIndex];
+              items.removeAt(oldIndex);
+              items.insert(newIndex, tmp);
+              _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
+              await Settings.setSmartServiceDashboards(_dashboards);
+            },
+        ));
   }
 
   Future<void> _addWidget() async {
