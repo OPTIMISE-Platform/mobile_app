@@ -3,6 +3,8 @@ import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_module.dart';
 import 'package:mobile_app/services/mgw/module_manager.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 
 const double TOP_PADDING = 100;
 const textStyle = TextStyle(color: Colors.white, fontSize: 35);
@@ -62,21 +64,29 @@ class _MGWDetailState extends State<MGWDetail> {
             ),
             body: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: Spacing.inset,
+                padding: Spacing.insetVertical,
                 itemCount: modules.length,
                 itemBuilder: (BuildContext context, int index) {
                   final module = modules.elementAt(index);
-                  return Padding(
-                      padding: const EdgeInsets.only(top: 30),
-                      child: ListTile(
-                        title: Text(module.name),
-                        subtitle: Text(module.version),
-                        leading: Icon(
-                          Icons.fiber_manual_record,
-                          color: _stateColor(module),
-                          size: 18,
-                        ),
-                      ));
+                  return GroupedListTile(
+                    key: ValueKey(module.id),
+                    position: SlicePosition.forIndex(index, modules.length),
+                    hairlineInset: GroupedListTile.insetIconLeading,
+                    child: ListTile(
+                      title: Text(module.name),
+                      subtitle: Text(module.version),
+                      leading: Icon(
+                        Icons.fiber_manual_record,
+                        color: _stateColor(module),
+                        size: 18,
+                      ),
+                    ),
+                  );
+                },
+                findChildIndexCallback: (key) {
+                  final id = (key as ValueKey<String>).value;
+                  final index = modules.indexWhere((m) => m.id == id);
+                  return index == -1 ? null : index;
                 })));
   }
 

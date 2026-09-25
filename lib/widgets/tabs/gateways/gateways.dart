@@ -27,6 +27,8 @@ import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
 class Gateways extends StatefulWidget {
@@ -94,14 +96,20 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                 )
               : ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: Spacing.inset,
+                  padding: Spacing.insetVertical,
                   itemCount: state.gateways.length,
                   itemBuilder: (context, i) {
                     var mgw = state.gateways[i];
 
-                    return Column(children: [
-                      i > 0 ? const Divider() : const SizedBox.shrink(),
-                      ListTile(
+                    return GroupedListTile(
+                      // hostname, not coreId: a manually-added gateway (see
+                      // mgw_page.dart's _addManually) always has coreId "",
+                      // and RemovePairedMGW already keys pairings by hostname.
+                      key: ValueKey(mgw.hostname),
+                      position:
+                          SlicePosition.forIndex(i, state.gateways.length),
+                      hairlineInset: GroupedListTile.insetIconLeading,
+                      child: ListTile(
                         leading: MgwStatusDot(
                             host: mgw.ip, expectNetworkId: mgw.networkId),
                         title: Row(children: [
@@ -124,8 +132,14 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                               await MgwStorage.RemovePairedMGW(mgw);
                               await state.loadStoredMGWs();
                             }),
-                      )
-                    ]);
+                      ),
+                    );
+                  },
+                  findChildIndexCallback: (key) {
+                    final id = (key as ValueKey<String>).value;
+                    final index =
+                        state.gateways.indexWhere((g) => g.hostname == id);
+                    return index == -1 ? null : index;
                   },
                 ));
     });

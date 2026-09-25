@@ -19,6 +19,8 @@ import 'package:intl/intl.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:provider/provider.dart';
 
@@ -151,15 +153,18 @@ class _NotificationListState extends State<NotificationList> {
                       ? const Center(child: Text("No Notifications"))
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: Spacing.inset,
+                          padding: Spacing.insetVertical,
                           itemCount: state.notifications.length,
                           itemBuilder: (BuildContext context, int i) {
-                            return Column(
-                              children: [
-                                i > 0
-                                    ? const Divider()
-                                    : const SizedBox.shrink(),
-                                Dismissible(
+                            return GroupedListTile(
+                                key: ValueKey<String>(
+                                    state.notifications[i].id),
+                                position: SlicePosition.forIndex(
+                                    i, state.notifications.length),
+                                hairlineInset: _selectionMode
+                                    ? GroupedListTile.insetIconLeading
+                                    : GroupedListTile.insetNoLeading,
+                                child: Dismissible(
                                     background: Container(
                                       alignment: Alignment.centerRight,
                                       padding: Spacing.inset,
@@ -180,9 +185,28 @@ class _NotificationListState extends State<NotificationList> {
                                           b);
                                     },
                                     direction: DismissDirection.endToStart,
-                                    onDismissed: (_) => state
-                                        .deleteNotifications(
-                                            [state.notifications[i].id]),
+                                    onDismissed: (_) {
+                                      final id = state.notifications[i].id;
+                                      // Drop it from the list synchronously -
+                                      // deleteNotifications only sends the
+                                      // request, and the list otherwise waits
+                                      // for the delete-many push to remove
+                                      // it, leaving this now-gone Dismissible
+                                      // in the tree with its neighbours still
+                                      // sliced for its old position. A push
+                                      // that arrives afterwards removing the
+                                      // same id is then a no-op (removeWhere
+                                      // on an absent id matches nothing). A
+                                      // failed delete is reported by
+                                      // deleteNotifications itself (a toast
+                                      // via ErrorReporter), and the next
+                                      // successful loadNotifications brings
+                                      // the row back.
+                                      state.notifications
+                                          .removeWhere((n) => n.id == id);
+                                      state.notifyListeners();
+                                      state.deleteNotifications([id]);
+                                    },
                                     key: ValueKey<String>(
                                         state.notifications[i].id),
                                     child: ListTile(
@@ -255,9 +279,13 @@ class _NotificationListState extends State<NotificationList> {
                                                     state.notifications[i]);
                                               });
                                             },
-                                    ))
-                              ],
-                            );
+                                    )));
+                          },
+                          findChildIndexCallback: (key) {
+                            final id = (key as ValueKey<String>).value;
+                            final index = state.notifications
+                                .indexWhere((n) => n.id == id);
+                            return index == -1 ? null : index;
                           },
                         ))));
     });

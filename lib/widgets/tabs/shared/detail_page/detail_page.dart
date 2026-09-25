@@ -43,6 +43,8 @@ import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
@@ -135,6 +137,20 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
     }
     return subtitle;
   }
+
+  /// Identifies a row across rebuilds, independent of its position in the
+  /// (re-)sorted list. Both `prepareStates` implementations that build
+  /// `states` (device_state.dart for a device, device_group.dart for a
+  /// group) already refuse to add a state whose functionId, serviceGroupKey,
+  /// aspectId, deviceClassId and isControlling all match an existing one, so
+  /// that combination is exactly the invariant already unique per row here.
+  String _rowKey(DeviceState element) => [
+        element.functionId,
+        element.serviceGroupKey,
+        element.aspectId,
+        element.deviceClassId,
+        element.isControlling,
+      ].join("|");
 
   Aspect? _findAspect(Iterable<Aspect> aspects, String? id) {
     if (id == null) {
@@ -288,7 +304,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
-      KeyedList<String, Widget> functionWidgets = KeyedList();
+      KeyedList<String, ({Widget tile, Key rowKey})> functionWidgets = KeyedList();
       final List<DeviceState> markedControllingStates = [];
 
       for (var element in states.where((element) => !element.isControlling)) {
@@ -318,7 +334,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
           functionWidgets.insert(
             element.functionId,
-            ListTile(
+            (
+              rowKey: ValueKey(_rowKey(element)),
+              tile: ListTile(
                 onLongPress: () => _displayTimestamp(element, states, context),
                 onTap: device == null || element.value is! num
                     ? null
@@ -336,13 +354,17 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                       ? const DelayedCircularProgressIndicator()
                       : functionConfig.displayValue(element.value, context) ??
                           Text("${formatValue(element.value)} $unit", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                )),
+                ),
+              ),
+            ),
           );
         } else {
           markedControllingStates.addAll(controllingStates);
           functionWidgets.insert(
             element.functionId,
-            ListTile(
+            (
+              rowKey: ValueKey(_rowKey(element)),
+              tile: ListTile(
                 onLongPress: () => _displayTimestamp(element, states, context),
                 onTap: device == null || element.value is! num
                     ? null
@@ -382,7 +404,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                             child: functionConfig.displayValue(element.value, context) ??
                                 Text(
                                     "${formatValue(element.value)}${unit != "" ? " $unit" : ""}"),
-                          )),
+                          ),
+              ),
+            ),
           );
         }
       }
@@ -393,30 +417,33 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
         functionWidgets.insert(
           element.functionId,
-          ListTile(
-            title: Text(_getTitle(element)),
-            onTap: device == null || element.value is! num
-                ? null
-                : () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Chart(element),
-                    )),
-            subtitle: subtitle.isEmpty ? null : Text(subtitle),
-            trailing: element.transitioning
-                ? Container(padding: const EdgeInsets.only(right: 12), child: const DelayedCircularProgressIndicator())
-                : IconButton(
-                    splashRadius: 25,
-                    icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
-                    onPressed: connectionStatus == DeviceConnectionStatus.offline
-                        ? null
-                        : () => _performAction(
-                              connectionStatus,
-                              context,
-                              element,
-                              states,
-                            ),
-                  ),
+          (
+            rowKey: ValueKey(_rowKey(element)),
+            tile: ListTile(
+              title: Text(_getTitle(element)),
+              onTap: device == null || element.value is! num
+                  ? null
+                  : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Chart(element),
+                      )),
+              subtitle: subtitle.isEmpty ? null : Text(subtitle),
+              trailing: element.transitioning
+                  ? Container(padding: const EdgeInsets.only(right: 12), child: const DelayedCircularProgressIndicator())
+                  : IconButton(
+                      splashRadius: 25,
+                      icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
+                      onPressed: connectionStatus == DeviceConnectionStatus.offline
+                          ? null
+                          : () => _performAction(
+                                connectionStatus,
+                                context,
+                                element,
+                                states,
+                              ),
+                    ),
+            ),
           ),
         );
       }
@@ -441,15 +468,18 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         }
         return a.k.compareTo(b.k);
       });
-      for (var element in list) {
-        widgets.add(const Divider());
-        widgets.add(element.t);
+      for (var i = 0; i < list.length; i++) {
+        widgets.add(GroupedListTile(
+          key: list[i].t.rowKey,
+          position: SlicePosition.forIndex(i, list.length),
+          hairlineInset: GroupedListTile.insetNoLeading,
+          child: list[i].t.tile,
+        ));
       }
       if (deviceGroup != null) {
-        // prevent fab overlap
-        widgets.add(const Column(
-          children: [Divider(), ListTile()],
-        ));
+        // Prevents FAB overlap; also drawn when isCreateEditDeleteAvailable()
+        // hides that FAB, same as before this became a grouped surface.
+        widgets.add(const SizedBox(height: 72));
       }
 
       final List<Widget> trailingHeader = [];
@@ -494,7 +524,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               child: Scrollbar(
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: Spacing.inset,
+                  padding: Spacing.insetVertical,
                   children: [
                     ListTile(
                       // header
@@ -519,11 +549,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
                       trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                     ),
-                    Container(
-                      padding: const EdgeInsets.only(left: 6, right: 6),
-                      child: const Divider(thickness: 2),
-                    ),
-                    ...widgets.skip(1), // skip first divider
+                    if (widgets.isNotEmpty) const SizedBox(height: Spacing.lg),
+                    ...widgets,
                   ],
                 ),
               ),

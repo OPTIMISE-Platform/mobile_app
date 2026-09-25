@@ -19,6 +19,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:numberpicker/numberpicker.dart';
 
 /// The unit picker: every function whose concept offers more than one
@@ -46,10 +48,15 @@ class _UnitPickerListState extends State<UnitPickerList> {
         .toList();
     final list = ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
+        padding: Spacing.insetVertical,
         itemCount: functions.length,
         itemBuilder: (context, i) {
           final f = functions[i];
-          return ListTile(
+          return GroupedListTile(
+              key: ValueKey(f.id),
+              position: SlicePosition.forIndex(i, functions.length),
+              hairlineInset: GroupedListTile.insetNoLeading,
+              child: ListTile(
               title: PopupMenuButton<String?>(
             initialValue: settings_service.Settings
                     .getFunctionPreferredCharacteristicId(f.id) ??
@@ -76,7 +83,12 @@ class _UnitPickerListState extends State<UnitPickerList> {
               setState(() {});
             },
             child: Text(f.name),
-          ));
+          )));
+        },
+        findChildIndexCallback: (key) {
+          final id = (key as ValueKey<String>).value;
+          final index = functions.indexWhere((f) => f.id == id);
+          return index == -1 ? null : index;
         });
     final column = SizedBox(
         width: double.maxFinite,

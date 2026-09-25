@@ -26,6 +26,8 @@ import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 
 /// Lets the user pick devices or device groups and check off as many of their
@@ -275,11 +277,13 @@ class _TargetPickerState extends State<_TargetPicker> {
     }
     return Scrollbar(
       controller: _scrollController,
-      child: ListView.separated(
+      child: ListView.builder(
         controller: _scrollController,
-        // One extra row carries the "loading more" indicator.
+        padding: Spacing.insetVertical,
+        // One extra row carries the "loading more" indicator - outside the
+        // surface, so the last real device still closes it with round
+        // corners while more load.
         itemCount: _devices.length + (_allLoaded ? 0 : 1),
-        separatorBuilder: (_, __) => const Divider(),
         itemBuilder: (_, i) {
           if (i >= _devices.length) {
             return const Padding(
@@ -289,12 +293,22 @@ class _TargetPickerState extends State<_TargetPicker> {
           }
           final device = _devices[i];
           final picked = _selection.countForDevice(device.id);
-          return ListTile(
-            title: Text(device.displayName),
-            subtitle: picked == 0 ? null : Text('$picked selected'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openValuePicker(_DeviceTarget(device)),
+          return GroupedListTile(
+            key: ValueKey(device.id),
+            position: SlicePosition.forIndex(i, _devices.length),
+            hairlineInset: GroupedListTile.insetNoLeading,
+            child: ListTile(
+              title: Text(device.displayName),
+              subtitle: picked == 0 ? null : Text('$picked selected'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openValuePicker(_DeviceTarget(device)),
+            ),
           );
+        },
+        findChildIndexCallback: (key) {
+          final id = (key as ValueKey<String>).value;
+          final index = _devices.indexWhere((d) => d.id == id);
+          return index == -1 ? null : index;
         },
       ),
     );
@@ -306,19 +320,29 @@ class _TargetPickerState extends State<_TargetPicker> {
       return const Center(child: Text('No device groups'));
     }
     return Scrollbar(
-      child: ListView.separated(
+      child: ListView.builder(
+        padding: Spacing.insetVertical,
         itemCount: groups.length,
-        separatorBuilder: (_, __) => const Divider(),
         itemBuilder: (_, i) {
           final group = groups[i];
           final picked = _selection.countForGroup(group.id);
-          return ListTile(
-            leading: const Icon(Icons.devices_other),
-            title: Text(group.name),
-            subtitle: picked == 0 ? null : Text('$picked selected'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _openValuePicker(_GroupTarget(group)),
+          return GroupedListTile(
+            key: ValueKey(group.id),
+            position: SlicePosition.forIndex(i, groups.length),
+            hairlineInset: GroupedListTile.insetIconLeading,
+            child: ListTile(
+              leading: const Icon(Icons.devices_other),
+              title: Text(group.name),
+              subtitle: picked == 0 ? null : Text('$picked selected'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _openValuePicker(_GroupTarget(group)),
+            ),
           );
+        },
+        findChildIndexCallback: (key) {
+          final id = (key as ValueKey<String>).value;
+          final index = groups.indexWhere((g) => g.id == id);
+          return index == -1 ? null : index;
         },
       ),
     );
@@ -459,10 +483,14 @@ class _ValuePickerState extends State<_ValuePicker> {
       body: _selectable.isEmpty
           ? const Center(child: Text('No values available'))
           : Scrollbar(
-              child: ListView.separated(
+              child: ListView.builder(
+                padding: Spacing.insetVertical,
                 itemCount: _selectable.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (_, i) => _buildTile(_selectable[i]),
+                itemBuilder: (_, i) => GroupedListTile(
+                  position: SlicePosition.forIndex(i, _selectable.length),
+                  hairlineInset: GroupedListTile.insetIconLeading,
+                  child: _buildTile(_selectable[i]),
+                ),
               ),
             ),
     );

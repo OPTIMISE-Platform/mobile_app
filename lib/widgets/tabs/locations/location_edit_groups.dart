@@ -23,6 +23,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 
 class LocationEditGroups extends StatefulWidget {
   final int _stateLocationIndex;
@@ -74,26 +76,32 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                 child: DelayedCircularProgressIndicator(),
               )
                   : ListView.builder(
-                padding: Spacing.inset,
+                padding: Spacing.insetVertical,
                 itemCount: state.deviceGroups.length,
                 itemBuilder: (_, i) {
-                  return Column(
-                    children: [
-                      i > 0 ? const Divider() : const SizedBox.shrink(),
-                      ListTile(
-                        leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Icon(
-                            _selected.contains(state.deviceGroups[i].id) ? Icons.check_circle : Icons.circle_outlined,
-                            color: context.appColors.appInk,
-                          )
-                        ]),
-                        title: Text(state.deviceGroups[i].name),
-                        onTap: () => setState(() => _selected.contains(state.deviceGroups[i].id)
-                            ? _selected.remove(state.deviceGroups[i].id)
-                            : _selected.add(state.deviceGroups[i].id)),
-                      )
-                    ],
+                  final group = state.deviceGroups[i];
+                  return GroupedListTile(
+                    key: ValueKey(group.id),
+                    position: SlicePosition.forIndex(i, state.deviceGroups.length),
+                    hairlineInset: GroupedListTile.insetIconLeading,
+                    child: ListTile(
+                      leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(
+                          _selected.contains(group.id) ? Icons.check_circle : Icons.circle_outlined,
+                          color: context.appColors.appInk,
+                        )
+                      ]),
+                      title: Text(group.name),
+                      onTap: () => setState(() => _selected.contains(group.id)
+                          ? _selected.remove(group.id)
+                          : _selected.add(group.id)),
+                    ),
                   );
+                },
+                findChildIndexCallback: (key) {
+                  final id = (key as ValueKey<String>).value;
+                  final index = state.deviceGroups.indexWhere((g) => g.id == id);
+                  return index == -1 ? null : index;
                 },
               )),
         );

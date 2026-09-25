@@ -27,6 +27,9 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/section_list_header.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class GroupEditDevices extends StatefulWidget {
@@ -94,63 +97,106 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
   }
 
   Widget _buildListWidget() {
+    final selectedCount = _selected.length;
+    final candidateCount = _candidates.length;
+    // Each section's header only shows while it has a row - a fresh group's
+    // "Selected" section is empty, and never gets an empty surface.
+    final headerCount = (selectedCount > 0 ? 1 : 0) + (candidateCount > 0 ? 1 : 0);
+
     return Stack(children: [
       _reloading
           ? const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
           : ListView.builder(
-              padding: Spacing.inset,
-              itemCount: _candidates.length + _selected.length + (_allCandidatesLoaded ? 0 : 1),
+              padding: Spacing.insetVertical,
+              itemCount: selectedCount +
+                  candidateCount +
+                  headerCount +
+                  (_allCandidatesLoaded ? 0 : 1),
               itemBuilder: (context, i) {
-                if (i == _candidates.length + _selected.length - 1 && !_allCandidatesLoaded) {
-                  _loadMoreDevices();
-                  return const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]);
+                if (selectedCount > 0) {
+                  if (i == 0) return const SectionListHeader("Selected");
+                  i -= 1;
                 }
-                if (i > _candidates.length + _selected.length - 1) {
+                if (i < selectedCount) {
+                  final id = _selected.elementAt(i);
+                  return GroupedListTile(
+                    key: ValueKey("selected-$id"),
+                    position: SlicePosition.forIndex(i, selectedCount),
+                    hairlineInset: GroupedListTile.insetIconLeading,
+                    child: ListTile(
+                      leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: context.appColors.appInk,
+                        )
+                      ]),
+                      title: Text(_deviceCollection[id]?.displayName ?? "MISSING_DEVICE_NAME"),
+                      onTap: () {
+                        _selected.remove(id);
+                        _searchChanged(_query, true);
+                      },
+                    ),
+                  );
+                }
+                i -= selectedCount;
+                if (candidateCount > 0) {
+                  if (i == 0) return const SectionListHeader("Candidates");
+                  i -= 1;
+                }
+                if (i == candidateCount - 1 && !_allCandidatesLoaded) {
+                  _loadMoreDevices();
+                  return GroupedListTile(
+                    position: SlicePosition.forIndex(i, candidateCount),
+                    child: const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]),
+                  );
+                }
+                if (i > candidateCount - 1) {
                   return const SizedBox.shrink();
                 }
-                return Column(
-                  children: [
-                    i > 0 ? const Divider() : const SizedBox.shrink(),
-                    i < _selected.length
-                        ? ListTile(
-                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: context.appColors.appInk,
-                              )
-                            ]),
-                            title: Text(_deviceCollection[_selected.elementAt(i)]?.displayName ?? "MISSING_DEVICE_NAME"),
-                            onTap: () {
-                              _selected.remove(_selected.elementAt(i));
-                              _searchChanged(_query, true);
-                            },
-                          )
-                        : ListTile(
-                            leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                              Icon(
-                                Icons.circle_outlined,
-                                color: context.appColors.appInk,
-                              )
-                            ]),
-                            title: Text(_candidates[i - _selected.length].device.displayName),
-                            onTap: () async {
-                              if (_candidates[i - _selected.length].removesCriteria || _criteria.isEmpty) {
-                                setState(() => _reloading = true);
-                                _selected.add(_candidates[i - _selected.length].device.id);
-                                _searchChanged(_query, true);
-                                await _m.protect(() async {});
-                                setState(() => _reloading = false);
-                                AppState().notifyListeners(); // redraws SearchDelegate
-                              } else {
-                                _selected.add(_candidates[i - _selected.length].device.id);
-                                _candidates.removeAt(i - _selected.length + 1); // +1 because already added the element to _selected
-                                setState(() {});
-                                AppState().notifyListeners(); // redraws SearchDelegate
-                              }
-                            },
-                          ),
-                  ],
+                final candidate = _candidates[i];
+                return GroupedListTile(
+                  key: ValueKey("candidate-${candidate.device.id}"),
+                  position: SlicePosition.forIndex(i, candidateCount),
+                  hairlineInset: GroupedListTile.insetIconLeading,
+                  child: ListTile(
+                    leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(
+                        Icons.circle_outlined,
+                        color: context.appColors.appInk,
+                      )
+                    ]),
+                    title: Text(candidate.device.displayName),
+                    onTap: () async {
+                      if (candidate.removesCriteria || _criteria.isEmpty) {
+                        setState(() => _reloading = true);
+                        _selected.add(candidate.device.id);
+                        _searchChanged(_query, true);
+                        await _m.protect(() async {});
+                        setState(() => _reloading = false);
+                        AppState().notifyListeners(); // redraws SearchDelegate
+                      } else {
+                        _selected.add(candidate.device.id);
+                        _candidates.removeAt(i);
+                        setState(() {});
+                        AppState().notifyListeners(); // redraws SearchDelegate
+                      }
+                    },
+                  ),
                 );
+              },
+              findChildIndexCallback: (key) {
+                final id = (key as ValueKey<String>).value;
+                final selectedHeader = selectedCount > 0 ? 1 : 0;
+                if (id.startsWith("selected-")) {
+                  final deviceId = id.substring("selected-".length);
+                  final idx = _selected.toList().indexOf(deviceId);
+                  return idx == -1 ? null : selectedHeader + idx;
+                }
+                final deviceId = id.substring("candidate-".length);
+                final idx = _candidates.indexWhere((c) => c.device.id == deviceId);
+                if (idx == -1) return null;
+                final candidateHeader = candidateCount > 0 ? 1 : 0;
+                return selectedHeader + selectedCount + candidateHeader + idx;
               },
             ),
       Positioned(

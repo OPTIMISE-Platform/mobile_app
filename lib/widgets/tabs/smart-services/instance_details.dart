@@ -23,6 +23,8 @@ import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
@@ -164,42 +166,54 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
             body: Scrollbar(
               child: widget.instance.parameters == null
                   ? const Center(child: DelayedCircularProgressIndicator())
-                  : ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: Spacing.inset,
-                      itemCount: widget.instance.parameters!.length + 2,
-                      itemBuilder: (context, i) {
-                        if (i == 0) {
-                          return ListTile(
-                            // header
-                            leading: Container(
-                              height: MediaQuery.textScalerOf(context).scale(48),
-                              width: MediaQuery.textScalerOf(context).scale(48),
-                              decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                              child: Padding(
-                                padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
-                                child: const Icon(Icons.auto_fix_high, color: Colors.white),
+                  : Builder(builder: (context) {
+                      final parameters = widget.instance.parameters!;
+                      final hasParameters = parameters.isNotEmpty;
+                      return ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: Spacing.insetVertical,
+                        itemCount:
+                            1 + (hasParameters ? 1 : 0) + parameters.length + 1,
+                        itemBuilder: (context, i) {
+                          if (i == 0) {
+                            return ListTile(
+                              // header
+                              leading: Container(
+                                height: MediaQuery.textScalerOf(context).scale(48),
+                                width: MediaQuery.textScalerOf(context).scale(48),
+                                decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
+                                child: Padding(
+                                  padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
+                                  child: const Icon(Icons.auto_fix_high, color: Colors.white),
+                                ),
                               ),
+                              title: Text(widget.instance.name),
+                              subtitle: ExpandableText(widget.instance.description, 3),
+                              trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
+                            );
+                          }
+                          i -= 1;
+                          if (hasParameters) {
+                            if (i == 0) return const SizedBox(height: Spacing.lg);
+                            i -= 1;
+                          }
+                          if (i >= parameters.length) {
+                            return const SizedBox(height: 72); // prevent FAB overlap
+                          }
+                          final parameter = parameters[i];
+                          return GroupedListTile(
+                            position: SlicePosition.forIndex(i, parameters.length),
+                            hairlineInset: GroupedListTile.insetNoLeading,
+                            child: ListTile(
+                              title: Text(parameter.label),
+                              trailing: Container(
+                                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
+                                  child: Text(parameter.value_label ?? parameter.value.toString())),
                             ),
-                            title: Text(widget.instance.name),
-                            subtitle: ExpandableText(widget.instance.description, 3),
-                            trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                           );
-                        }
-                        if (i == widget.instance.parameters!.length + 1) {
-                          return const SizedBox(height: 72); // prevent FAB overlap
-                        }
-                        return Column(children: [
-                          const Divider(),
-                          ListTile(
-                            title: Text(widget.instance.parameters![i - 1].label),
-                            trailing: Container(
-                                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
-                                child: Text(widget.instance.parameters![i - 1].value_label ?? widget.instance.parameters![i - 1].value.toString())),
-                          )
-                        ]);
-                      },
-                    ),
+                        },
+                      );
+                    }),
             )));
   }
 }

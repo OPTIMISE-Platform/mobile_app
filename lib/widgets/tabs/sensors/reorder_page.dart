@@ -15,6 +15,9 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 
 /// Drag-and-drop reordering of [items] on a dedicated page.
 ///
@@ -63,6 +66,69 @@ class _ReorderPage<T> extends StatefulWidget {
 class _ReorderPageState<T> extends State<_ReorderPage<T>> {
   late final List<T> _items = [...widget.items];
 
+  // theme.dart's CardThemeData - matches GroupedListTile's own corner radius,
+  // so the dragged row's shadow follows the same rounded shape it draws in.
+  static const _cardRadius = BorderRadius.all(Radius.circular(14));
+
+  /// One row, keyed by item rather than index so an index key does not make
+  /// the list rebuild in place and defeat the reorder animation. [position]
+  /// is passed separately from the row's own index so the row being dragged
+  /// can be forced to [SlicePosition.only] regardless of where it rests.
+  /// [horizontalMargin] is 0 for the proxy decorator, which draws its own
+  /// margin outside the elevated Material instead (see [_proxyDecorator]).
+  Widget _buildRow(int i, SlicePosition position,
+      {double horizontalMargin = Spacing.lg}) {
+    final item = _items[i];
+    final iconData = widget.icon?.call(item);
+    final sub = widget.subtitle?.call(item);
+    return GroupedListTile(
+      key: ObjectKey(item),
+      position: position,
+      horizontalMargin: horizontalMargin,
+      hairlineInset: iconData == null
+          ? GroupedListTile.insetNoLeading
+          : GroupedListTile.insetIconLeading,
+      child: ListTile(
+        leading: iconData == null ? null : Icon(iconData),
+        title: Text(widget.label(item)),
+        subtitle: (sub == null || sub.isEmpty) ? null : Text(sub),
+        trailing: ReorderableDragStartListener(
+          index: i,
+          child: const Icon(Icons.drag_handle),
+        ),
+      ),
+    );
+  }
+
+  /// The row being dragged detaches from its neighbours, so it always shows
+  /// as a complete, fully rounded card - not whatever slice its resting
+  /// position happens to be - with the lift/shadow Flutter's own default
+  /// decorator would otherwise draw as a plain rectangle around it.
+  ///
+  /// The margin sits outside the elevated Material, not inside it: giving it
+  /// to the row itself (like every resting row draws its own) would elevate
+  /// the margin's width too, casting the shadow around a rectangle wider
+  /// than - and offset from - the visible card.
+  Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final elevation = Tween<double>(begin: 0, end: 6).evaluate(
+            CurvedAnimation(parent: animation, curve: Curves.easeInOut));
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          child: Material(
+            elevation: elevation,
+            color: Colors.transparent,
+            shadowColor: Theme.of(context).shadowColor,
+            borderRadius: _cardRadius,
+            child: _buildRow(index, SlicePosition.only, horizontalMargin: 0),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -78,7 +144,9 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
       body: _items.length < 2
           ? const Center(child: Text('Nothing to reorder'))
           : ReorderableListView.builder(
+              padding: Spacing.insetVertical,
               itemCount: _items.length,
+              proxyDecorator: _proxyDecorator,
               onReorderItem: (oldIndex, newIndex) {
                 // Unlike onReorder, onReorderItem's newIndex is already
                 // adjusted for the removal at oldIndex.
@@ -86,23 +154,8 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
                   _items.insert(newIndex, _items.removeAt(oldIndex));
                 });
               },
-              itemBuilder: (_, i) {
-                final item = _items[i];
-                final iconData = widget.icon?.call(item);
-                final sub = widget.subtitle?.call(item);
-                return ListTile(
-                  // Keyed by item, not index — an index key would make the
-                  // list rebuild in place and defeat the reorder animation.
-                  key: ObjectKey(item),
-                  leading: iconData == null ? null : Icon(iconData),
-                  title: Text(widget.label(item)),
-                  subtitle: (sub == null || sub.isEmpty) ? null : Text(sub),
-                  trailing: ReorderableDragStartListener(
-                    index: i,
-                    child: const Icon(Icons.drag_handle),
-                  ),
-                );
-              },
+              itemBuilder: (_, i) =>
+                  _buildRow(i, SlicePosition.forIndex(i, _items.length)),
             ),
     );
   }

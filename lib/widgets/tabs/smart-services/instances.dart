@@ -28,6 +28,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_details.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
@@ -145,7 +147,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                       )
                     : ListView.builder(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: Spacing.inset,
+                        padding: Spacing.insetVertical,
                         itemCount: instances.length + 1,
                         itemBuilder: (context, i) {
                           if (i == instances.length - 1 &&
@@ -153,11 +155,13 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                             _loadInstances();
                           }
                           return i < instances.length
-                              ? Column(children: [
-                                  i > 0
-                                      ? const Divider()
-                                      : const SizedBox.shrink(),
-                                  ListTile(
+                              ? GroupedListTile(
+                                  key: ValueKey(instances[i].id),
+                                  position: SlicePosition.forIndex(
+                                      i, instances.length),
+                                  hairlineInset:
+                                      GroupedListTile.insetNoLeading,
+                                  child: ListTile(
                                     title: Row(children: [
                                       Text(instances[i].name),
                                       Badge(
@@ -261,12 +265,17 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                                   }
                                                 },
                                               ),
-                                  )
-                                ])
-                              : const Column(children: [
-                                  Divider(),
-                                  ListTile(),
-                                ]);
+                                  ))
+                              // Trailing spacer, sized like the row+divider
+                              // it replaces, so the last instance isn't
+                              // hidden behind the FAB.
+                              : const SizedBox(height: 72);
+                        },
+                        findChildIndexCallback: (key) {
+                          final id = (key as ValueKey<String>).value;
+                          final index =
+                              instances.indexWhere((e) => e.id == id);
+                          return index == -1 ? null : index;
                         },
                       )));
   }

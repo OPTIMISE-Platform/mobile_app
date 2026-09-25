@@ -26,6 +26,8 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class LocationEditDevices extends StatefulWidget {
@@ -66,7 +68,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
   Widget _buildListWidget() {
     return Stack(children: [
       ListView.builder(
-        padding: Spacing.inset,
+        padding: Spacing.insetVertical,
         itemCount: AppState().totalDevices,
         itemBuilder: (_, i) {
           if (i >= AppState().devices.length) {
@@ -75,24 +77,30 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
           if (i > AppState().devices.length - 1) {
             return const SizedBox.shrink();
           }
-          return Column(
-            children: [
-              i > 0 ? const Divider() : const SizedBox.shrink(),
-              ListTile(
-                leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(
-                    _selected.contains(AppState().devices[i].id) ? Icons.check_circle : Icons.circle_outlined,
-                    color: context.appColors.appInk,
-                  )
-                ]),
-                title: Text(AppState().devices[i].displayName),
-                onTap: () => setState(() {
-                  _selected.contains(AppState().devices[i].id) ? _selected.remove(AppState().devices[i].id) : _selected.add(AppState().devices[i].id);
-                  AppState().notifyListeners();
-                }),
-              ),
-            ],
+          final device = AppState().devices[i];
+          return GroupedListTile(
+            key: ValueKey(device.id),
+            position: SlicePosition.forIndex(i, AppState().devices.length),
+            hairlineInset: GroupedListTile.insetIconLeading,
+            child: ListTile(
+              leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(
+                  _selected.contains(device.id) ? Icons.check_circle : Icons.circle_outlined,
+                  color: context.appColors.appInk,
+                )
+              ]),
+              title: Text(device.displayName),
+              onTap: () => setState(() {
+                _selected.contains(device.id) ? _selected.remove(device.id) : _selected.add(device.id);
+                AppState().notifyListeners();
+              }),
+            ),
           );
+        },
+        findChildIndexCallback: (key) {
+          final id = (key as ValueKey<String>).value;
+          final index = AppState().devices.indexWhere((d) => d.id == id);
+          return index == -1 ? null : index;
         },
       ),
       Positioned(

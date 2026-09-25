@@ -26,6 +26,8 @@ import 'package:mutex/mutex.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
@@ -111,18 +113,19 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.inset,
+                            padding: Spacing.insetVertical,
                             itemCount: releases.length,
                             itemBuilder: (context, i) {
                               if (i == releases.length - 1 &&
                                   !allInstancesLoaded) {
                                 _loadInstances();
                               }
-                              return Column(children: [
-                                i > 0
-                                    ? const Divider()
-                                    : const SizedBox.shrink(),
-                                ListTile(
+                              return GroupedListTile(
+                                key: ValueKey(releases[i].id),
+                                position:
+                                    SlicePosition.forIndex(i, releases.length),
+                                hairlineInset: GroupedListTile.insetNoLeading,
+                                child: ListTile(
                                     title: Row(children: [
                                       Text(
                                         releases[i].name,
@@ -162,7 +165,13 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                                                 builder: (context) =>
                                                     SmartServicesReleaseLaunch(
                                                         releases[i])))),
-                              ]);
+                              );
+                            },
+                            findChildIndexCallback: (key) {
+                              final id = (key as ValueKey<String>).value;
+                              final index =
+                                  releases.indexWhere((e) => e.id == id);
+                              return index == -1 ? null : index;
                             },
                           ))));
   }
