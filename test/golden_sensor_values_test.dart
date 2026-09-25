@@ -28,10 +28,13 @@ import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/models/sensor_tab.dart';
 import 'package:mobile_app/models/service.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/widgets/tabs/sensors/sensor_sparkline.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_values.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
+
+final _fixedNow = DateTime.utc(2026, 1, 1, 12);
 
 // Matches state_helper_test.dart's fixture: one service, one output, one
 // state - functionId/aspectId/serviceGroupKey/path below all come from it.
@@ -52,6 +55,7 @@ void main() {
   tearDown(() {
     resetAppStateForGolden();
     resetGoldenBackend();
+    sparklineClock = DateTime.now;
   });
 
   // Both themes in one test - see golden_device_tabs_shell_test.dart for why.
@@ -64,13 +68,18 @@ void main() {
           [deviceJson("device-1", "Living room lamp", deviceTypeId: "device-type-1")]);
       backend.serveJson("POST", "/device-command/commands/batch", 200,
           [{"status_code": 200, "message": 22.5}]);
-      // /db/v3/queries (the sparkline history) is deliberately left
-      // unserved (404): loadSparklineValues catches every error and just
-      // skips the sparkline, and its x axis is real DateTime.now() at fetch
-      // time - any fixture "now" recorded here is a few real milliseconds
-      // older by then, which shifts the fill's antialiased edge by a
-      // sub-pixel amount that flips its rounding from run to run. A 404
-      // here is exactly what an offline history query looks like anyway.
+      // A fixed "now", so the points sit at the same x on every run.
+      sparklineClock = () => _fixedNow;
+      // 5m buckets over the 2h window, as the real query returns them.
+      backend.serveJson("POST", "/db/v3/queries", 200, [
+        [
+          for (var i = 23; i >= 0; i--)
+            [
+              _fixedNow.subtract(Duration(minutes: 5 * i)).toIso8601String(),
+              21.0 + (i % 6 - 3).abs() * 0.3 + (23 - i) * 0.05,
+            ],
+        ],
+      ]);
       serveGoldenBackend(backend);
       await warmUpMgwStorage(tester);
 

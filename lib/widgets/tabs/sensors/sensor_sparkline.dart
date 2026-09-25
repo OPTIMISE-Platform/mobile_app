@@ -64,6 +64,11 @@ class SparkSeries {
 /// The window the sparkline covers.
 const sparklineWindow = Duration(hours: 2);
 
+/// Injectable so a test can fix the 2h window instead of depending on
+/// wall-clock time at fetch time.
+@visibleForTesting
+DateTime Function() sparklineClock = DateTime.now;
+
 /// Loads the last two hours of [state].
 ///
 /// Uses the same query the detail page's chart issues for its 2h range (5m
@@ -71,7 +76,7 @@ const sparklineWindow = Duration(hours: 2);
 /// null when there is nothing usable to draw.
 Future<SparkSeries?> loadSparklineValues(DeviceState state) async {
   if (!canShowSparkline(state)) return null;
-  final end = DateTime.now();
+  final end = sparklineClock();
   try {
     final data = await _sparklineLimiter.withResource(
       () => DbQueryService.query(

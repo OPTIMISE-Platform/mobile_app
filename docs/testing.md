@@ -90,6 +90,7 @@ All are `@visibleForTesting` and never set by production code.
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
 | `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
+| `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
 
 Rendered times go through `toDisplayTime()`. A new widget that shows a local
 time and calls `.toLocal()` directly produces goldens that differ between a
@@ -101,13 +102,11 @@ developer machine and CI.
   `testOverride` does not reach them and a test there would go to the real
   network: `lib/services/app_update.dart` and, under `lib/services/mgw/`,
   `advertisements.dart`, `auth.dart`, `reachability.dart` and `restricted.dart`.
-- No goldens for `pv_forecast` (overflows its fixed height when rendered
-  outside a scrollable), `pv_flow` (a ticker that never stops) and
-  `bar_chart_estimate`, and none for the app bar's default actions, which start
-  network calls for notifications and updates.
-- The sensor values golden is served no sparkline data: points generated
-  relative to `DateTime.now()` shift the sparkline's fill edge by a sub-pixel
-  amount between runs.
-- The shell, dashboard and line-chart goldens show sparse states (an empty
-  dashboard widget, axis labels from points within one hour); they check the
-  frame, not the content.
+  The app bar golden with default actions is not affected, because the update
+  check returns before its request on any platform but Android.
+- Text painted directly on a canvas without a font family renders as boxes,
+  because the test binding's default font is not Roboto. Affects the value
+  labels in `smart_service_pv_flow`; the golden still checks layout and colours.
+- The shell golden (`device_tabs_shell`) shows an empty-lists state, and the
+  `stacked_bar_chart` and `pie_chart` fixtures are two points one hour apart;
+  they check the frame, not the content.

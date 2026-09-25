@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/widgets/shared/multi_select_field.dart';
 import 'package:mobile_app/widgets/tabs/sensors/name_icon_dialog.dart';
 
@@ -90,6 +91,20 @@ void main() {
       );
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/multi_select_dialog_$suffix.png"));
+    });
+
+    testWidgets("update dialog ($suffix)", (tester) async {
+      AppUpdater.currentBuild = 120;
+      AppUpdater.latestBuild = 123;
+      AppUpdater.downloadSize = 18500000;
+      AppUpdater.updateDate = DateTime.utc(2026, 3, 4, 9, 30);
+      await openDialog(
+        tester,
+        dark,
+        (context) => AppUpdater.showUpdateDialog(context),
+      );
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/update_dialog_$suffix.png"));
     });
   }
 }
