@@ -16,18 +16,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/settings/sections/account_section.dart';
 import 'package:mobile_app/widgets/settings/sections/appearance_section.dart';
 import 'package:mobile_app/widgets/settings/sections/behaviour_section.dart';
 import 'package:mobile_app/widgets/settings/sections/diagnostics_section.dart';
 import 'package:mobile_app/widgets/settings/sections/updates_section.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
+import 'package:mobile_app/widgets/shared/section_list_header.dart';
 import 'package:provider/provider.dart';
 
 /// The settings page is a flat list of rows, so it is assembled from sections
 /// rather than built in one place: it used to be a single 430-line build
-/// method. Each section returns its rows including its leading divider, in the
-/// order they appear.
+/// method. Each section builds its own rows and wraps them into one grouped
+/// surface; a section with nothing to show (no update check, logged out)
+/// contributes neither a header nor a surface.
 class Settings extends StatelessWidget {
   const Settings({super.key});
 
@@ -36,15 +39,23 @@ class Settings extends StatelessWidget {
     const appBar = MyAppBar("Settings");
 
     return Consumer<AppState>(builder: (context, state, _) {
+      final sections = [
+        appearanceSection(context, state),
+        updatesSection(context, state),
+        behaviourSection(context, state),
+        diagnosticsSection(context, state),
+        accountSection(context, state),
+      ];
       return Scaffold(
         appBar: appBar.getAppBar(context),
         body: ListView(
+          padding: Spacing.insetVertical,
           children: [
-            ...appearanceSection(context, state),
-            ...updatesSection(context, state),
-            ...behaviourSection(context, state),
-            ...diagnosticsSection(context, state),
-            ...accountSection(context, state),
+            for (final section in sections)
+              if (section.rows.isNotEmpty) ...[
+                SectionListHeader(section.title),
+                ...section.rows,
+              ],
           ],
         ),
       );

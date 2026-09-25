@@ -19,46 +19,50 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/widgets/settings/settings_section.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 /// The update check, on the platforms that support it at all.
-List<Widget> updatesSection(BuildContext context, AppState state) {
-  if (!AppUpdater.updateSupported) return const [];
-  return [
-    const Divider(),
-    ListTile(
-      title: Text("Check Updates",
-          style: settings_service.Settings.getLocalMode()
-              ? TextStyle(color: Theme.of(context).disabledColor)
-              : null),
-      onTap: settings_service.Settings.getLocalMode()
-          ? null
-          : () async {
-              late final bool? updateAvailable;
-              try {
-                updateAvailable = await AppUpdater.updateAvailable();
-              } catch (e, s) {
-                // updateAvailable answers a failed request with null, so what
-                // arrives here is something else entirely - and the clause on
-                // ApiUnavailableException that used to stand here could not
-                // match either, that exception only ever comes wrapped.
-                ErrorReporter.log("Error checking for updates", e, s);
-                Toast.showToastNoContext(ErrorReporter.isOffline(e)
-                    ? ErrorReporter.offlineMessage
-                    : "Error checking for updates");
-                return;
-              }
-              if (updateAvailable == false) {
-                Toast.showToastNoContext("Already up to date!");
-                return;
-              } else if (updateAvailable == null) {
-                Toast.showToastNoContext("Please check again later");
-                return;
-              } else {
-                if (!context.mounted) return;
-                AppUpdater.showUpdateDialog(context);
-              }
-            },
+SettingsSection updatesSection(BuildContext context, AppState state) {
+  if (!AppUpdater.updateSupported) return const SettingsSection("Updates", []);
+  return SettingsSection.of("Updates", [
+    (
+      ListTile(
+        title: Text("Check Updates",
+            style: settings_service.Settings.getLocalMode()
+                ? TextStyle(color: Theme.of(context).disabledColor)
+                : null),
+        onTap: settings_service.Settings.getLocalMode()
+            ? null
+            : () async {
+                late final bool? updateAvailable;
+                try {
+                  updateAvailable = await AppUpdater.updateAvailable();
+                } catch (e, s) {
+                  // updateAvailable answers a failed request with null, so what
+                  // arrives here is something else entirely - and the clause on
+                  // ApiUnavailableException that used to stand here could not
+                  // match either, that exception only ever comes wrapped.
+                  ErrorReporter.log("Error checking for updates", e, s);
+                  Toast.showToastNoContext(ErrorReporter.isOffline(e)
+                      ? ErrorReporter.offlineMessage
+                      : "Error checking for updates");
+                  return;
+                }
+                if (updateAvailable == false) {
+                  Toast.showToastNoContext("Already up to date!");
+                  return;
+                } else if (updateAvailable == null) {
+                  Toast.showToastNoContext("Please check again later");
+                  return;
+                } else {
+                  if (!context.mounted) return;
+                  AppUpdater.showUpdateDialog(context);
+                }
+              },
+      ),
+      GroupedListTile.insetNoLeading
     ),
-  ];
+  ]);
 }

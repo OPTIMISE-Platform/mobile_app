@@ -17,31 +17,35 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/widgets/settings/settings_section.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/page_spinner.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:provider/provider.dart';
 
 /// Logout, only while someone is signed in.
-List<Widget> accountSection(BuildContext context, AppState state) {
-  if (!state.loggedIn) return const [];
-  return [
-    const Divider(),
-    Consumer<AppState>(
-      builder: (context, state, child) => ListTile(
-        title: const Text("Logout"),
-        onTap: () async {
-          Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const PageSpinner("Logout"),
-              ));
-          try {
-            await Auth().logout(context);
-          } catch (e) {
-            Toast.showToastNoContext("Can't logout");
-          }
-        },
+SettingsSection accountSection(BuildContext context, AppState state) {
+  if (!state.loggedIn) return const SettingsSection("Account", []);
+  return SettingsSection.of("Account", [
+    (
+      Consumer<AppState>(
+        builder: (context, state, child) => ListTile(
+          title: const Text("Logout"),
+          onTap: () async {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PageSpinner("Logout"),
+                ));
+            try {
+              await Auth().logout(context);
+            } catch (e) {
+              Toast.showToastNoContext("Can't logout");
+            }
+          },
+        ),
       ),
+      GroupedListTile.insetNoLeading
     )
-  ];
+  ]);
 }

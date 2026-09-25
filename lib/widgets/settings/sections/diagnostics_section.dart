@@ -26,13 +26,15 @@ import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/widgets/settings/settings_section.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Debug information, the exception log, and the server endpoints.
-List<Widget> diagnosticsSection(BuildContext context, AppState state) {
-  final children = <Widget>[
-    const Divider(),
+SettingsSection diagnosticsSection(BuildContext context, AppState state) {
+  final children = <(Widget, double)>[
+    (
     ListTile(
         title: const Text("Show Debug Information"),
         onTap: () async {
@@ -88,12 +90,12 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
               ],
             ),
           );
-        })
+        }),
+    GroupedListTile.insetNoLeading)
   ];
 
   if (kDebugMode) {
-    children.addAll([
-      const Divider(),
+    children.add((
       ListTile(
         leading: const Icon(Icons.bug_report),
         title: const Text("Delete FCM Token"),
@@ -104,11 +106,11 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
           Toast.showToastNoContext("OK");
         },
       ),
-    ]);
+      GroupedListTile.insetIconLeading
+    ));
   }
 
-  children.addAll([
-    const Divider(),
+  children.add((
     ListTile(
       title: const Text("Server Settings"),
       onTap: () async {
@@ -179,7 +181,8 @@ List<Widget> diagnosticsSection(BuildContext context, AppState state) {
         );
       },
     ),
-  ]);
+    GroupedListTile.insetNoLeading
+  ));
 
-  return children;
+  return SettingsSection.of("Diagnostics", children);
 }

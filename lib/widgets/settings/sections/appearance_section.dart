@@ -20,7 +20,9 @@ import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/settings/refresh_cache_tile.dart';
+import 'package:mobile_app/widgets/settings/settings_section.dart';
 import 'package:mobile_app/widgets/settings/unit_picker.dart';
+import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
@@ -35,9 +37,9 @@ String _initialTabName() {
 }
 
 /// Start page, number formatting, units, cache refresh and the colour theme.
-/// The first section of the page, so it does not lead with a divider.
-List<Widget> appearanceSection(BuildContext context, AppState state) {
-  final children = <Widget>[
+SettingsSection appearanceSection(BuildContext context, AppState state) {
+  final children = <(Widget, double)>[
+    (
     ListTile(
       title: const Text("Start Page"),
       subtitle: Text(_initialTabName()),
@@ -86,14 +88,16 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
         ),
       ),
     ),
-    const Divider(),
+    GroupedListTile.insetNoLeading),
+    (
     ListTile(
         title: const Text("Set Displayed Fraction Digits"),
         onTap: () => showAdaptiveDialog(
               context: context,
               builder: getDisplayedFractionsDigitSelectDialog(state),
             )),
-    const Divider(),
+    GroupedListTile.insetNoLeading),
+    (
     ListTile(
         title: const Text("Edit Units"),
         onTap: () {
@@ -123,13 +127,12 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
             ),
           );
         }),
-    const Divider(),
-    const RefreshCacheTile(),
+    GroupedListTile.insetNoLeading),
+    (const RefreshCacheTile(), GroupedListTile.insetNoLeading),
   ];
 
   if (MyTheme.canChangeColorTheme) {
-    children.addAll([
-      const Divider(),
+    children.add((
       ListTile(
         title: const Text("Choose Color"),
         onTap: () => showAdaptiveDialog(
@@ -164,9 +167,10 @@ List<Widget> appearanceSection(BuildContext context, AppState state) {
                         })
                   ],
                 )),
-      )
-    ]);
+      ),
+      GroupedListTile.insetNoLeading
+    ));
   }
 
-  return children;
+  return SettingsSection.of("Appearance", children);
 }
