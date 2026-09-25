@@ -365,18 +365,36 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                     },
                     child: RepaintBoundary(
                         child: Card(
-                            child: Stack(children: [
-                      item.build(context, false),
-                      Positioned(
-                          right: 8,
-                          top: 4,
-                          child: ReorderableDragStartListener(
-                            index: idx,
-                            child: _dashboards[tabIdx].widgetAndInstanceIds.length > 1
-                                ? const Icon(Icons.reorder, color: Colors.grey)
-                                : const SizedBox.shrink(),
-                          ))
-                    ]))));
+                            // Card's own default (4 all round) sits well
+                            // inside where every grouped list surface starts
+                            // (16); matched horizontally, with a smaller
+                            // vertical gap between cards.
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: Spacing.lg, vertical: Spacing.sm),
+                            child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                              // Its own row above the content, not a corner
+                              // overlay: a small value or icon widget can fill
+                              // the card corner to corner, so only a
+                              // dedicated strip keeps the handle off it.
+                              if (_dashboards[tabIdx].widgetAndInstanceIds.length > 1)
+                                Align(
+                                  alignment: Alignment.topRight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: Spacing.sm, top: Spacing.xxs),
+                                    child: ReorderableDragStartListener(
+                                      index: idx,
+                                      child: const Icon(Icons.reorder, color: Colors.grey),
+                                    ),
+                                  ),
+                                ),
+                              Padding(
+                                padding: const EdgeInsets.all(Spacing.md),
+                                child: item.build(context, false),
+                              ),
+                            ]))));
               },
               // Unlike onReorder, onReorderItem's newIndex is already
               // adjusted for the removal at oldIndex.
