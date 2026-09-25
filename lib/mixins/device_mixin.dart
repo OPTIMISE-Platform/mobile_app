@@ -52,6 +52,16 @@ mixin DeviceMixin on ChangeNotifier {
   bool _devicesLoadedOnce = false;
   int _deviceOffset = 0;
 
+  /// Set when a page load failed. List placeholder rows call [loadDevices] on
+  /// every build, so retrying from there would request once per frame; only
+  /// the next [searchDevices] clears it.
+  bool _devicesLoadFailed = false;
+
+  /// Bumped by every [searchDevices] and [clearDeviceData]. A page load that
+  /// started under an older value discards its result instead of mixing it
+  /// into the new search's list.
+  int _devicesGeneration = 0;
+
   final List<DeviceGroup> deviceGroups = [];
   final _deviceGroupsMutex = Mutex();
   bool _deviceGroupsLoadedOnce = false;
@@ -63,6 +73,17 @@ mixin DeviceMixin on ChangeNotifier {
 
   bool get loadingDevices => _totalDevicesMutex.isLocked || _devicesMutex.isLocked;
   bool get allDevicesLoaded => _allDevicesLoaded;
+
+  /// True after the last page load failed; see [devicesListEnded].
+  bool get devicesLoadFailed => _devicesLoadFailed;
+
+  /// No further page arrives without a new search: all pages are in, or the
+  /// last one failed. Lists show their end state (e.g. "No Devices") then.
+  bool get devicesListEnded => _allDevicesLoaded || _devicesLoadFailed;
+
+  /// Whether the current search includes inactive devices, for code that
+  /// starts a narrower search (a group's members) and must keep the toggle.
+  bool get showsInactiveDevices => _deviceSearchFilter.showInactive;
 
   /// Raw pages fetched so far (before hiding inactive devices). Unlike
   /// [devices].length, this advances even on a page that filters down to
@@ -76,7 +97,7 @@ mixin DeviceMixin on ChangeNotifier {
   /// branch covers tests that fill [devices] directly to match [totalDevices]
   /// without ever driving [_allDevicesLoaded] true through a real fetch.
   int get devicesListItemCount =>
-      (_allDevicesLoaded || devices.length >= totalDevices)
+      (devicesListEnded || devices.length >= totalDevices)
           ? devices.length
           : devices.length + 1;
 
@@ -224,8 +245,12 @@ mixin DeviceMixin on ChangeNotifier {
       DeviceSearchFilter filter, [
         bool force = false,
       ]) async {
-    if (!force && _deviceSearchFilter == filter) return;
+    // An unchanged filter still searches after a failed load: repeating a
+    // search is how a list retries.
+    if (!force && !_devicesLoadFailed && _deviceSearchFilter == filter) return;
+    _devicesGeneration++;
     _allDevicesLoaded = false;
+    _devicesLoadFailed = false;
     notifyListeners();
     _deviceSearchFilter = filter.clone();
     _deviceOffset = 0;
@@ -241,10 +266,14 @@ mixin DeviceMixin on ChangeNotifier {
       ]) async {
     debugPrint("loadDevices");
     if (_allDevicesLoaded) return;
+    if (_devicesLoadFailed && !clear) return;
 
+    final generation = _devicesGeneration;
     final locked = _devicesMutex.isLocked;
     await _devicesMutex.acquire();
-    if (locked) {
+    // A next-page request joins the load in flight. A search (clear) waits for
+    // it instead: that load is stale by now and discards its page below.
+    if (locked && !clear) {
       _devicesMutex.release();
       return;
     }
@@ -253,6 +282,8 @@ mixin DeviceMixin on ChangeNotifier {
     // mutex, so any path out of here that skips the release leaves the list
     // spinning for the rest of the process.
     try {
+      // A newer search queued behind this call runs its own load.
+      if (generation != _devicesGeneration) return;
       if (_allDevicesLoaded || (offset != null && offset < devices.length)) {
         notifyListeners();
         return;
@@ -260,23 +291,27 @@ mixin DeviceMixin on ChangeNotifier {
       if (clear) devices.clear();
 
       await ensureInitialized();
+      if (generation != _devicesGeneration) return;
 
       const limit = 50;
-      late final List<DeviceInstance> newDevices;
+      late final DeviceInstanceWithTotal page;
       try {
-        final d = await DevicesService.getDevices(
+        page = await DevicesService.getDevices(
           limit,
           _deviceOffset,
           _deviceSearchFilter,
           devices.isNotEmpty ? devices.last : null,
         );
-        newDevices = d.devices;
-        totalDevices = d.total;
       } catch (e, s) {
+        if (generation != _devicesGeneration) return;
+        _devicesLoadFailed = true;
         ErrorReporter.report('Could not load devices', e, s);
         notifyListeners();
         return;
       }
+      if (generation != _devicesGeneration) return;
+      final newDevices = page.devices;
+      totalDevices = page.total;
 
       _devicesLoadedOnce = true;
       // Raw, unfiltered page size and offset: hiding happens below, on this
@@ -284,11 +319,13 @@ mixin DeviceMixin on ChangeNotifier {
       _allDevicesLoaded = newDevices.length < limit;
       _deviceOffset += newDevices.length;
 
-      final showInactive =
-          _deviceSearchFilter.showInactive || _deviceSearchFilter.favorites == true;
-      final visibleDevices = showInactive
+      // Favourites are never hidden, whatever the filter: the Favorites screen
+      // shows the favourites among whatever search ran last.
+      final visibleDevices = _deviceSearchFilter.showInactive
           ? newDevices
-          : newDevices.where((d) => !d.isInactive).toList(growable: false);
+          : newDevices
+              .where((d) => !d.isInactive || d.favorite)
+              .toList(growable: false);
 
       if (visibleDevices.isNotEmpty) {
         for (final d in visibleDevices) {
@@ -483,6 +520,8 @@ mixin DeviceMixin on ChangeNotifier {
   // ---------------------------------------------------------------------------
 
   void clearDeviceData() {
+    _devicesGeneration++;
+    _devicesLoadFailed = false;
     deviceClasses.clear();
     deviceTypes.clear();
     forgetUnavailableDeviceTypes();

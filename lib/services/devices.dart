@@ -15,6 +15,7 @@
  */
 
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:mobile_app/shared/dio_status.dart';
@@ -148,6 +149,20 @@ class DevicesService {
       });
     }
     return DeviceInstanceWithTotal(devices, total);
+  }
+
+  /// The devices with the given [ids], fetched in requests of at most 50 ids
+  /// each so the query string stays bounded. Ids the backend does not know are
+  /// missing from the result.
+  static Future<List<DeviceInstance>> getDevicesByIds(List<String> ids) async {
+    const chunk = 50;
+    final result = <DeviceInstance>[];
+    for (var i = 0; i < ids.length; i += chunk) {
+      final part = ids.sublist(i, min(i + chunk, ids.length));
+      final filter = DeviceSearchFilter('')..deviceIds = part;
+      result.addAll((await getDevices(part.length, 0, filter, null)).devices);
+    }
+    return result;
   }
 
   static Future<void> saveDevice(DeviceInstance device) async {

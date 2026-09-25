@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -48,15 +49,25 @@ class FakeBackend implements HttpClientAdapter {
         _Route(statusCode, body, contentType);
   }
 
+  /// Removes a route registered with [serveJson].
+  void stopServing(String method, String path) {
+    _routes.remove('${method.toUpperCase()} $path');
+  }
+
   /// Serves `/device-repository/extended-devices` as a real paginated
   /// endpoint would: each request gets the slice of [allDevices] its
-  /// offset/limit ask for, with `X-Total-Count` set to the full,
-  /// unfiltered count - which is what DevicesService.getDevices reads as
-  /// [DeviceInstanceWithTotal.total]. Use this over [serveJson] whenever a
-  /// test needs more than one page.
+  /// `ids` and offset/limit ask for, with `X-Total-Count` set to the count
+  /// before hiding anything client-side - which is what
+  /// DevicesService.getDevices reads as [DeviceInstanceWithTotal.total].
+  /// Use this over [serveJson] whenever a test needs more than one page. A
+  /// [serveJson] route for the same path takes precedence.
   void serveDevicesPaged(List<Map<String, dynamic>> allDevices) {
     _devicesPage = allDevices;
   }
+
+  /// While set, [serveDevicesPaged] responses wait for it, so a test can issue
+  /// something else while a page load is in flight.
+  Completer<void>? holdDevices;
 
   @override
   Future<ResponseBody> fetch(RequestOptions options,
@@ -72,7 +83,17 @@ class FakeBackend implements HttpClientAdapter {
 
     if (_devicesPage != null &&
         key == 'GET /device-repository/extended-devices') {
-      final all = _devicesPage!;
+      // `ids` narrows like the real endpoint; the client may send a leading
+      // empty entry (DeviceSearchFilter.toQueryParams).
+      final ids = (options.uri.queryParameters["ids"] ?? "")
+          .split(",")
+          .where((id) => id.isNotEmpty)
+          .toSet();
+      final all = options.uri.queryParameters.containsKey("ids")
+          ? _devicesPage!.where((d) => ids.contains(d["id"])).toList()
+          : _devicesPage!;
+      final hold = holdDevices;
+      if (hold != null) await hold.future;
       final offset = int.parse(options.uri.queryParameters["offset"] ?? "0");
       final limit = int.parse(options.uri.queryParameters["limit"] ?? "50");
       final page = all.skip(offset).take(limit).toList();

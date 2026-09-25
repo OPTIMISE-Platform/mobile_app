@@ -63,7 +63,7 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
     // avoid rebuilding the whole ListView/RefreshIndicator on every notify.
     return Selector<AppState, String>(
         selector: (_, state) =>
-            '${state.loadingDevices}|${state.devices.length}|${state.rawDevicesFetched}',
+            '${state.loadingDevices}|${state.devices.length}|${state.rawDevicesFetched}|${state.devicesListEnded}',
         builder: (_, __, ___) => RefreshIndicator(
               onRefresh: () async {
                 HapticFeedbackProxy.lightImpact();
@@ -72,10 +72,10 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
               child: Scrollbar(
                 child: AppState().loadingDevices
                     ? const Center(child: DelayedCircularProgressIndicator())
-                    // allDevicesLoaded, not just an empty list: an all-hidden
+                    // devicesListEnded, not just an empty list: an all-hidden
                     // page must still fall through to the ListView below, or
                     // its own row never fetches the next page.
-                    : AppState().devices.isEmpty && AppState().allDevicesLoaded
+                    : AppState().devices.isEmpty && AppState().devicesListEnded
                         ? LayoutBuilder(
                             builder: (context, constraint) {
                               return SingleChildScrollView(

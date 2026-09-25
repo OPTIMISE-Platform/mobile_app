@@ -31,6 +31,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_fab.dart';
+import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
 import 'package:mobile_app/widgets/shared/section_list_header.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
@@ -84,7 +85,7 @@ class LocationPageState extends State<LocationPage>
               state.devices.length !=
                   state.locations[widget._stateLocationIndex].device_ids
                       .length) &&
-          !state.allDevicesLoaded) {
+          !state.devicesListEnded) {
         if (!state.loadingDevices) {
           state.loadDevices(); //ensure all devices get loaded
         }
@@ -239,7 +240,11 @@ class LocationPageState extends State<LocationPage>
                               );
                             },
                           )
-                        : Builder(builder: (_) {
+                        : state.devices.isEmpty &&
+                                matchingGroups.isEmpty &&
+                                state.devicesListEnded
+                            ? const ScrollableEmptyState("No Devices")
+                            : Builder(builder: (_) {
                             // Devices and groups each get their own section
                             // header only when both are present.
                             final sectioned = state.devices.isNotEmpty &&

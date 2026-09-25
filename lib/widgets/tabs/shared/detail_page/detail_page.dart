@@ -182,7 +182,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         builder: (context, child) {
       final state = AppState();
       if ((state.loadingDevices || (widget._group != null && (state.devices.length != widget._group!.device_ids.length))) &&
-          !state.allDevicesLoaded) {
+          !state.devicesListEnded) {
         if (!state.loadingDevices) {
           state.loadDevices(); //ensure all devices get loaded
         }
@@ -506,7 +506,10 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               : FloatingActionButton(
                   onPressed: () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => GroupEditDevices(widget._group!)));
-                    await state.searchDevices(DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null), true);
+                    await state.searchDevices(
+                        DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null)
+                          ..showInactive = state.showsInactiveDevices,
+                        true);
                     deviceGroup.prepareStates(true);
                     if (!context.mounted) return;
                     _refresh(context);

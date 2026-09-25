@@ -60,7 +60,11 @@ class GroupListItem extends StatelessWidget {
            */
               leading: FavorizeButton(null, _group),
               onTap: () {
-                AppState().searchDevices(DeviceSearchFilter("", null, null, null, [_group.id]));
+                // The list this row sits in was searched with the parent
+                // filter, so its toggle carries over to the group's members.
+                AppState().searchDevices(
+                    DeviceSearchFilter("", null, null, null, [_group.id])
+                      ..showInactive = AppState().showsInactiveDevices);
                 final future = Navigator.push(
                     context,
                     MaterialPageRoute(

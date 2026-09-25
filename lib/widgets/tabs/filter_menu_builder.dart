@@ -52,6 +52,12 @@ class FilterMenuBuilder {
 
   bool get _isVisible => !_hiddenTabs.contains(navigationIndex);
 
+  /// The Sensors tab loads its devices by id and never hides one, and
+  /// Favorites never hides a favourite, so the toggle would do nothing there.
+  bool get _showInactiveApplies =>
+      navigationIndex != tabSensors &&
+      !(tabConfigs[navigationIndex]?.ownsFavorites() ?? false);
+
   /// Appends the filter icon button to [actions] when appropriate.
   void appendTo(List<Widget> actions, BuildContext context) {
     if (!_isVisible) return;
@@ -100,7 +106,7 @@ class FilterMenuBuilder {
     if (!(config?.ownsFavorites() ?? false)) {
       options.add(_favoritesToggleOption());
     }
-    options.add(_showInactiveToggleOption());
+    if (_showInactiveApplies) options.add(_showInactiveToggleOption());
     return options;
   }
 
@@ -221,7 +227,7 @@ class FilterMenuBuilder {
     if (!(config?.ownsNetwork() ?? false)) filter.networkIds = null;
     if (!(config?.ownsDeviceClass() ?? false)) filter.deviceClassIds = null;
     if (!(config?.ownsFavorites() ?? false)) filter.favorites = null;
-    filter.showInactive = false;
+    if (_showInactiveApplies) filter.showInactive = false;
     onFilterApplied();
   }
 
@@ -282,7 +288,7 @@ class FilterMenuBuilder {
     if (filter.favorites == true && !(config?.ownsFavorites() ?? false)) {
       count++;
     }
-    if (filter.showInactive) count++;
+    if (filter.showInactive && _showInactiveApplies) count++;
     return count;
   }
 }

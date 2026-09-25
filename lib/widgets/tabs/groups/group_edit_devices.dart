@@ -19,6 +19,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:provider/provider.dart';
 
@@ -94,6 +96,20 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
       setState(() {});
       AppState().notifyListeners(); // redraws SearchDelegate
     });
+  }
+
+  /// Members missing from AppState().devices, such as inactive ones the
+  /// device search hides, would otherwise be listed without a name.
+  Future<void> _resolveSelectedNames() async {
+    final missing = _selected.where((id) => !_deviceCollection.containsKey(id)).toList(growable: false);
+    if (missing.isEmpty) return;
+    try {
+      for (final d in await DevicesService.getDevicesByIds(missing)) {
+        _deviceCollection.putIfAbsent(d.id, () => d);
+      }
+    } catch (e, s) {
+      ErrorReporter.log('Could not load group member names', e, s);
+    }
   }
 
   Widget _buildListWidget() {
@@ -246,7 +262,8 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
         AppState().devices.forEach((element) => _deviceCollection[element.id] = element);
         _selected.addAll(deviceGroup.device_ids);
         WidgetsBinding.instance.addPostFrameCallback((_) async {
-          await _loadMoreDevices();
+          await Future.wait<dynamic>([_loadMoreDevices(), _resolveSelectedNames()]);
+          if (!mounted) return;
           setState(() {
             _reloading = false;
           });

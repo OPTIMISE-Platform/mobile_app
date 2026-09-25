@@ -26,6 +26,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
@@ -164,7 +165,9 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                       HapticFeedbackProxy.lightImpact();
                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
-                    child: ListView.builder(
+                    child: state.devices.isEmpty && state.devicesListEnded
+                        ? const ScrollableEmptyState("No Devices")
+                        : ListView.builder(
                       padding: Spacing.listPadding(context),
                       itemCount: state.devicesListItemCount,
                       itemBuilder: (_, i) {

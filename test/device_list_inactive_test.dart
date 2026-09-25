@@ -14,12 +14,17 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
+import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
@@ -196,7 +201,212 @@ void main() {
       await _settleBackgroundWork();
     });
   });
+
+  group("a failed page load", () {
+    test(
+        "is not retried by the list's own next-page calls, only by a new "
+        "search", () async {
+      final backend = backendWithoutMetadata();
+      backend.serveJson(
+          "GET", "/device-repository/extended-devices", 500, "boom");
+      serveGoldenBackend(backend);
+
+      await AppState().searchDevices(DeviceSearchFilter.empty(), true);
+      expect(_pageRequests(backend), 1);
+      expect(AppState().devicesListEnded, isTrue);
+      // No placeholder row left to call loadDevices() again.
+      expect(AppState().devicesListItemCount, 0);
+
+      // What a placeholder row does on every rebuild.
+      for (var i = 0; i < 20; i++) {
+        await AppState().loadDevices();
+      }
+      expect(_pageRequests(backend), 1);
+
+      // Repeating the same search is a retry, not a no-op, after a failure.
+      await AppState().searchDevices(DeviceSearchFilter.empty());
+      expect(_pageRequests(backend), 2);
+
+      backend.stopServing("GET", "/device-repository/extended-devices");
+      backend.serveDevicesPaged([deviceJson("active-1", "Active 1")]);
+      await AppState().refreshDevices();
+
+      expect(_pageRequests(backend), 3);
+      expect(AppState().devicesLoadFailed, isFalse);
+      expect(AppState().devices.map((d) => d.id).toList(), ["active-1"]);
+      await _settleBackgroundWork();
+    });
+
+  });
+
+  group("a search issued while a page load is in flight", () {
+    test("replaces that page instead of mixing it into its own result",
+        () async {
+      final backend = backendWithoutMetadata();
+      // Inactive devices on both raw pages, so a page filtered under the old
+      // filter and one under the new one differ.
+      final all = [
+        for (var i = 0; i < 50; i++)
+          deviceJson("a-${i.toString().padLeft(2, '0')}", "A $i",
+              inactive: i.isEven),
+        for (var i = 0; i < 10; i++)
+          deviceJson("b-$i", "B $i", inactive: i.isEven),
+      ];
+      backend.serveDevicesPaged(all);
+      serveGoldenBackend(backend);
+
+      await AppState().searchDevices(DeviceSearchFilter.empty(), true);
+      expect(AppState().devices, hasLength(25));
+
+      backend.holdDevices = Completer<void>();
+      final nextPage = AppState().loadDevices();
+      while (!backend.requests.any((r) =>
+          r.uri.path == "/device-repository/extended-devices" &&
+          r.uri.queryParameters["offset"] == "50")) {
+        await Future<void>.delayed(Duration.zero);
+      }
+      // The "Show inactive" toggle, pressed while page 2 is on its way.
+      final toggled = AppState()
+          .searchDevices(DeviceSearchFilter.empty()..showInactive = true);
+      backend.holdDevices!.complete();
+      backend.holdDevices = null;
+      await Future.wait([nextPage, toggled]);
+
+      expect(AppState().devices.map((d) => d.id).toList(),
+          all.take(50).map((d) => d["id"]).toList());
+      expect(AppState().allDevicesLoaded, isFalse);
+      await AppState().loadDevices();
+      expect(AppState().devices.map((d) => d.id).toList(),
+          all.map((d) => d["id"]).toList());
+      await _settleBackgroundWork();
+    });
+  });
+
+  test("a page that lands after clearDeviceData() is discarded", () async {
+    final backend = backendWithoutMetadata();
+    backend.serveDevicesPaged([deviceJson("active-1", "Active 1")]);
+    serveGoldenBackend(backend);
+    // Initialises AppState, so the held request below is the device page.
+    await AppState().ensureInitialized();
+
+    backend.holdDevices = Completer<void>();
+    final load = AppState().searchDevices(DeviceSearchFilter.empty(), true);
+    while (_pageRequests(backend) == 0) {
+      await Future<void>.delayed(Duration.zero);
+    }
+    // What a logout does while the list is loading.
+    AppState().clearDeviceData();
+    backend.holdDevices!.complete();
+    backend.holdDevices = null;
+    await load;
+
+    expect(AppState().devices, isEmpty);
+    expect(AppState().devicesLoadedOnce, isFalse);
+  });
+
+  group("a favourite", () {
+    test("stays visible when inactive, also in a search without the "
+        "favorites flag", () async {
+      await Settings.setAccount("test-account");
+      await Settings.setFavoriteDeviceIds({"inactive-fav"});
+      final backend = backendWithoutMetadata();
+      backend.serveDevicesPaged([
+        deviceJson("active-1", "Active 1"),
+        deviceJson("inactive-fav", "Inactive favourite", inactive: true),
+        deviceJson("inactive-2", "Inactive 2", inactive: true),
+      ]);
+      serveGoldenBackend(backend);
+
+      // What returning from a favourite group does: parent.filter, whose
+      // favorites flag DeviceTabsState only sets for the tab's own search.
+      await AppState().searchDevices(DeviceSearchFilter.empty(), true);
+
+      expect(AppState().devices.map((d) => d.id).toList(),
+          ["active-1", "inactive-fav"]);
+      await _settleBackgroundWork();
+    });
+  });
+
+  group("the \"Show inactive\" toggle's scope", () {
+    testWidgets("is not offered or counted on Favorites and Sensors",
+        (tester) async {
+      await tester.runAsync(() => Settings.setFilterMode(true));
+      final backend = backendWithoutMetadata();
+      backend.serveDevicesPaged([deviceJson("active-1", "Active device")]);
+      serveGoldenBackend(backend);
+      await warmUpMgwStorage(tester);
+      await pumpGolden(tester, const DeviceTabs(),
+          dark: false, size: goldenSurfaceSize);
+
+      bool badgeVisible() => tester
+          .widget<Badge>(find.ancestor(
+              of: find.byIcon(Icons.filter_alt),
+              matching: find.byType(Badge)))
+          .isLabelVisible;
+
+      await tester.tap(find.text("Devices"));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byIcon(Icons.filter_alt));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("Show inactive"));
+      await tester.pumpAndSettle();
+      expect(badgeVisible(), isTrue);
+
+      for (final tab in ["Favorites", "Sensors"]) {
+        await tester.tap(find.text(tab).last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(badgeVisible(), isFalse, reason: tab);
+        // Not pumpAndSettle: Favorites may show a progress indicator.
+        await tester.tap(find.byIcon(Icons.filter_alt));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.textContaining("Show inactive"), findsNothing,
+            reason: tab);
+        // Closes the menu.
+        await tester.tapAt(const Offset(5, 5));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      await _settleWidgetBackgroundWork(tester);
+    });
+
+    testWidgets("carries over into a group's member search", (tester) async {
+      final backend = backendWithoutMetadata();
+      backend.serveDevicesPaged([
+        deviceJson("inactive-1", "Inactive member", inactive: true),
+      ]);
+      serveGoldenBackend(backend);
+      await warmUpMgwStorage(tester);
+      unawaited(AppState()
+          .searchDevices(DeviceSearchFilter.empty()..showInactive = true, true));
+      await _settleWidgetBackgroundWork(tester);
+      expect(AppState().showsInactiveDevices, isTrue);
+
+      final group =
+          DeviceGroup("group-1", "Ground floor", null, "", ["inactive-1"], null);
+      await pumpGolden(
+          tester,
+          Scaffold(
+              body: GroupListItem(group, null,
+                  position: SlicePosition.forIndex(0, 1))),
+          dark: false);
+      await tester.tap(find.text("Ground floor"));
+      await tester.pump();
+
+      expect(AppState().showsInactiveDevices, isTrue);
+      await _settleWidgetBackgroundWork(tester);
+    });
+  });
 }
+
+/// Device page requests, not the by-id status refreshes that follow a page.
+int _pageRequests(FakeBackend backend) => backend.requests
+    .where((r) =>
+        r.uri.path == "/device-repository/extended-devices" &&
+        !r.uri.queryParameters.containsKey("ids"))
+    .length;
 
 /// loadDevices() kicks off a background states/connection-status refresh it
 /// does not await (see DeviceMixin._loadStatesInBackground); left running,

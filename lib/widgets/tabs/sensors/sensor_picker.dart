@@ -171,10 +171,7 @@ class _TargetPickerState extends State<_TargetPicker> {
   Future<void> _loadNextPage() async {
     if (_loadingPage || _allLoaded) return;
     _loadingPage = true;
-    // Set when a page hid every device it had: the recursive call below then
-    // runs after `finally` clears _loadingPage, since nothing else would
-    // trigger a next page whose predecessor added no rows.
-    var fetchedOnlyHidden = false;
+    var landed = false;
     try {
       await AppState().ensureInitialized();
       final result = await DevicesService.getDevices(
@@ -197,7 +194,7 @@ class _TargetPickerState extends State<_TargetPicker> {
         _allLoaded = allLoaded;
         _initialLoadDone = true;
       });
-      fetchedOnlyHidden = visibleDevices.isEmpty && !allLoaded;
+      landed = true;
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -207,7 +204,22 @@ class _TargetPickerState extends State<_TargetPicker> {
     } finally {
       _loadingPage = false;
     }
-    if (fetchedOnlyHidden) await _loadNextPage();
+    // Only after a page that landed: continuing after a failure would retry
+    // without end. Each continuation fetches a new raw page, so the chain
+    // ends with the data at the latest.
+    if (landed) await _continueUntilViewportFilled();
+  }
+
+  /// Paging otherwise runs only from [_onScroll], which never fires while the
+  /// rows left after hiding inactive devices do not fill the viewport.
+  Future<void> _continueUntilViewportFilled() async {
+    if (!mounted || _allLoaded) return;
+    // No rows means no ListView and so no scroll position to measure.
+    if (_devices.isEmpty) return _loadNextPage();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _onScroll();
+    });
   }
 
   @override
@@ -289,7 +301,10 @@ class _TargetPickerState extends State<_TargetPicker> {
       return const Center(child: DelayedCircularProgressIndicator());
     }
     if (_devices.isEmpty) {
-      return const Center(child: Text('No devices found'));
+      // Not yet "none found" while pages of only hidden devices are skipped.
+      return _allLoaded
+          ? const Center(child: Text('No devices found'))
+          : const Center(child: DelayedCircularProgressIndicator());
     }
     return Scrollbar(
       controller: _scrollController,
