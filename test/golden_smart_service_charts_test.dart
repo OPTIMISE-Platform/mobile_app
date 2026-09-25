@@ -18,6 +18,7 @@
 library;
 
 import 'package:dio/dio.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
@@ -182,6 +183,57 @@ void main() {
           "batteryLevelRequest": request("/widget-data/pv-flow/battery"),
         },
       }, dark: dark);
+
+      resetAppStateForGolden();
+      resetGoldenBackend();
+    }
+  });
+
+  // fl_chart only counts a tap "interesting" for its built-in tooltip while
+  // the pointer is still down (an up event both dismisses and would show
+  // it): a plain tester.tapAt releases before the next pump, so the tooltip
+  // never paints. Holding the gesture through the pump, then releasing
+  // after the golden capture, is what actually opens it.
+  //
+  // A tap's exact touched spot doesn't matter here (fl_chart finds the
+  // nearest one), only that the tooltip fl_chart shows on top of it uses the
+  // themed colours - stacked_bar_chart and pie_chart don't show a fl_chart
+  // tooltip at all (touch there only drives their own legend highlight), and
+  // bar_chart_estimate renders through bar_chart's own buildInternal, so its
+  // tooltip is the one covered here already.
+  testWidgets("smart service chart tooltips", (tester) async {
+    for (final dark in [false, true]) {
+      final backend = FakeBackend();
+      backend.serveJson("GET", "/widget-data/line", 200, hourlySeries(diurnalCurve));
+      backend.serveJson("GET", "/widget-data/bar", 200, hourlySeries(diurnalCurve));
+      serveGoldenBackend(backend);
+
+      Future<void> renderTooltip(
+          String name, Type chartType, Map<String, dynamic> widgetData) async {
+        final w = (await SmartServiceModuleWidget.fromWidgetInfo(
+            name, WidgetInfo.fromJson(widgetData)))!;
+        await tester.runAsync(() => w.refresh());
+        await pumpGolden(
+            tester, Scaffold(body: Builder(builder: (c) => w.build(c, false))),
+            dark: dark);
+        final gesture =
+            await tester.startGesture(tester.getCenter(find.byType(chartType)));
+        await tester.pump(const Duration(milliseconds: 100));
+        final suffix = dark ? "dark" : "light";
+        await expectLater(find.byType(MaterialApp),
+            matchesGoldenFile("goldens/smart_service_${name}_tooltip_$suffix.png"));
+        await gesture.up();
+      }
+
+      await renderTooltip("line_chart", LineChart, {
+        "widget_type": "line_chart",
+        "widget_data": {"request": request("/widget-data/line"), "titles": ["Power"]},
+      });
+
+      await renderTooltip("bar_chart", BarChart, {
+        "widget_type": "bar_chart",
+        "widget_data": {"request": request("/widget-data/bar"), "titles": ["Power"]},
+      });
 
       resetAppStateForGolden();
       resetGoldenBackend();

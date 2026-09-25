@@ -75,6 +75,7 @@ class SmSeLineChart extends SmSeRequest {
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
+    final colorScheme = Theme.of(context).colorScheme;
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -124,12 +125,16 @@ class SmSeLineChart extends SmSeRequest {
                         touchTooltipData: LineTouchTooltipData(
                             fitInsideVertically: true,
                             fitInsideHorizontally: true,
+                            tooltipRoundedRadius: 8,
+                            getTooltipColor: (_) => colorScheme.inverseSurface,
                             getTooltipItems: (spots) => spots
                                 .map((e) => LineTooltipItem(
-                                    "${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}",
-                                    TextStyle(
-                                        color:
-                                            MyTheme.getSomeColor(e.barIndex))))
+                                    "",
+                                    const TextStyle(fontSize: 14),
+                                    children: BaseChartFormatter.tooltipContent(
+                                        MyTheme.getSomeColor(e.barIndex),
+                                        colorScheme.onInverseSurface,
+                                        "${e.barIndex < titles.length ? "${titles[e.barIndex]}\n" : ""}${e.y}")))
                                 .toList())),
                   ),
                   duration: Duration.zero,

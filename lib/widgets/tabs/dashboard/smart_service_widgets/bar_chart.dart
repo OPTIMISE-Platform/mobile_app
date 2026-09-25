@@ -43,6 +43,7 @@ class SmSeBarChart extends SmSeLineChart {
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
+    final colorScheme = Theme.of(context).colorScheme;
     final Widget w = barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
@@ -93,11 +94,17 @@ class SmSeBarChart extends SmSeLineChart {
                           touchTooltipData: BarTouchTooltipData(
                               fitInsideHorizontally: true,
                               fitInsideVertically: true,
+                              tooltipRoundedRadius: 8,
+                              getTooltipColor: (_) => colorScheme.inverseSurface,
                               getTooltipItem: (group, groupIndex, rod,
                                       rodIndex) =>
                                   BarTooltipItem(
-                                      "${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}",
-                                      TextStyle(color: rod.color))))),
+                                      "",
+                                      const TextStyle(fontSize: 14),
+                                      children: BaseChartFormatter.tooltipContent(
+                                          rod.color ?? MyTheme.getSomeColor(rodIndex),
+                                          colorScheme.onInverseSurface,
+                                          "${rodIndex < titles.length ? "${titles[rodIndex]}\n" : ""}${rod.toY}"))))),
                   swapAnimationDuration: Duration.zero,
                 )));
     return parentFlexible ? Expanded(child: w) : w;

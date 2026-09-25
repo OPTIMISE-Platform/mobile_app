@@ -180,6 +180,7 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
       _initialized = true;
       _refresh(context, _range);
     }
+    final colorScheme = Theme.of(context).colorScheme;
     final List<Widget> appBarActions = [
       PopupMenuButton<String>(
         icon: const Icon(Icons.show_chart),
@@ -279,10 +280,41 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                             }),
                       ),
                     ),
-                    lineTouchData: const LineTouchData(
+                    lineTouchData: LineTouchData(
                         touchTooltipData: LineTouchTooltipData(
                             fitInsideVertically: true,
-                            fitInsideHorizontally: true)),
+                            fitInsideHorizontally: true,
+                            tooltipRoundedRadius: 8,
+                            getTooltipColor: (_) => colorScheme.inverseSurface,
+                            // A single, unnamed series: the marker alone (in
+                            // the line's own colour) carries its identity.
+                            // Both spans go in children, not textStyle/text,
+                            // so the value doesn't inherit the marker's
+                            // MaterialIcons family and render as blank.
+                            getTooltipItems: (spots) => spots
+                                .map((e) => LineTooltipItem(
+                                    "",
+                                    const TextStyle(fontSize: 14),
+                                    children: [
+                                      TextSpan(
+                                          // Icons.circle's code point, not a
+                                          // Unicode bullet: the latter has no
+                                          // fallback in the bundled Roboto.
+                                          text:
+                                              "${String.fromCharCode(0xe163)} ",
+                                          style: TextStyle(
+                                              color: context.appColors.appInk,
+                                              fontFamily: 'MaterialIcons',
+                                              fontSize: 12)),
+                                      TextSpan(
+                                          text: e.y.toString(),
+                                          style: TextStyle(
+                                              color: colorScheme
+                                                  .onInverseSurface,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14)),
+                                    ]))
+                                .toList())),
                   ),
                   duration: const Duration(milliseconds: 400),
                 )));

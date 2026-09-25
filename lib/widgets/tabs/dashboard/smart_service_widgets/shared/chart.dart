@@ -72,4 +72,26 @@ class BaseChartFormatter {
                   fontSize: MediaQuery.textScalerOf(context).scale(12)));
         });
   }
+
+  // Icons.circle's code point (material/icons.dart) - not imported here to
+  // keep this file off the full Material dependency; a Unicode bullet has no
+  // fallback glyph in the bundled Roboto font, so a plain "●" tofus instead.
+  static const _circleMarkerCodePoint = 0xe163;
+
+  /// A tooltip line identifying its series by a leading coloured marker
+  /// instead of colouring [text] itself, which would otherwise repeat
+  /// whichever series colour fl_chart's tooltip happens to render text in -
+  /// several series colours read under 3:1 against a themed tooltip fill.
+  static List<TextSpan> tooltipContent(
+      Color seriesColor, Color onInverseSurface, String text) {
+    final style = TextStyle(
+        color: onInverseSurface, fontWeight: FontWeight.bold, fontSize: 14);
+    return [
+      TextSpan(
+          text: "${String.fromCharCode(_circleMarkerCodePoint)} ",
+          style: style.copyWith(
+              color: seriesColor, fontFamily: 'MaterialIcons', fontSize: 12)),
+      TextSpan(text: text, style: style),
+    ];
+  }
 }

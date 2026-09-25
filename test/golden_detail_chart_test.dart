@@ -17,6 +17,7 @@
 @Tags(['golden'])
 library;
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -61,6 +62,25 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/detail_chart_$suffix.png"));
+
+      // fl_chart's built-in tooltip only counts a tap as "interesting" while
+      // the pointer is down (its own up event dismisses it too), so this
+      // holds the gesture through the golden capture instead of tapAt - same
+      // mount and backend as above, a fresh testWidgets' Dio may not resolve
+      // a request served by this file's own zone (see this test's own note).
+      // The plot area starts 42px in (the left axis labels' reservedSize),
+      // not at the chart box's own left edge; the mid x of the 3 evenly
+      // spaced fixture points is the mid x of what's left after that, not
+      // of the whole box - getCenter() lands far enough from every spot's
+      // pixel x (fl_chart only matches touch by x) to miss the threshold.
+      final chartBox = tester.getRect(find.byType(LineChart));
+      final middleSpot = Offset(
+          chartBox.left + 42 + (chartBox.width - 42) / 2, chartBox.center.dy);
+      final gesture = await tester.startGesture(middleSpot);
+      await tester.pump(const Duration(milliseconds: 100));
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/detail_chart_tooltip_$suffix.png"));
+      await gesture.up();
 
       resetAppStateForGolden();
       resetGoldenBackend();
