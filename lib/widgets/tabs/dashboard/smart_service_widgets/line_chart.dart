@@ -78,13 +78,13 @@ class SmSeLineChart extends SmSeRequest {
     final Widget w = _lines.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
-            height: height * heightUnit - MyTheme.insetSize,
+            height: height * heightUnit - Spacing.md,
             //width: MediaQuery.of(context).size.width,
             padding: const EdgeInsets.only(
-                top: MyTheme.insetSize,
-                right: MyTheme.insetSize,
-                left: MyTheme.insetSize / 2,
-                bottom: MyTheme.insetSize / 2),
+                top: Spacing.md,
+                right: Spacing.md,
+                left: Spacing.xs,
+                bottom: Spacing.xs),
             child: gestureDetector(
                 context,
                 LineChart(

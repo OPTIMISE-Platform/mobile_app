@@ -79,9 +79,9 @@ class SmSePieChart extends SmSeRequest {
     final Widget w = _sections.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
-            height: height * heightUnit - MyTheme.insetSize,
+            height: height * heightUnit - Spacing.md,
             padding:
-                const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+                const EdgeInsets.only(top: Spacing.md, right: Spacing.md, left: Spacing.xs, bottom: Spacing.xs),
             child: StatefulBuilder(builder: (context, setState) {
               _buildSections();
               final List<Widget> legendWidgets = [];

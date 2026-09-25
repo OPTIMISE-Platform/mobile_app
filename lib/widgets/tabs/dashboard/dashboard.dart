@@ -333,7 +333,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                     // key needs to stay the same while dragging but change when deleting
                     background: Container(
                       alignment: Alignment.centerRight,
-                      padding: MyTheme.inset,
+                      padding: Spacing.inset,
                       color: context.appColors.warn,
                       // Black, not white: white on the warn fill is 2.6:1,
                       // black is 8:1.

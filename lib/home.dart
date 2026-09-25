@@ -140,7 +140,7 @@ class _HomeState extends State<Home> {
         return Scaffold(
             appBar: appBar.getAppBar(context, [MyAppBar.settings(context)]),
             body: Container(
-              padding: MyTheme.inset * 3,
+              padding: Spacing.inset * 3,
               child: SingleChildScrollView(
                   child: Column(children: [
                     Image.asset("assets/icon/icon.png", width: MediaQuery.of(context).size.width * 0.4),

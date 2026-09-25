@@ -74,7 +74,7 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                 child: DelayedCircularProgressIndicator(),
               )
                   : ListView.builder(
-                padding: MyTheme.inset,
+                padding: Spacing.inset,
                 itemCount: state.deviceGroups.length,
                 itemBuilder: (_, i) {
                   return Column(

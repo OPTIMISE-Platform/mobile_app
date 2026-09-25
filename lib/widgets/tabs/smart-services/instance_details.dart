@@ -166,7 +166,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
                   ? const Center(child: DelayedCircularProgressIndicator())
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: MyTheme.inset,
+                      padding: Spacing.inset,
                       itemCount: widget.instance.parameters!.length + 2,
                       itemBuilder: (context, i) {
                         if (i == 0) {

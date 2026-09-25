@@ -86,6 +86,18 @@ extension AppColorsContext on BuildContext {
   AppColors get appColors => Theme.of(this).extension<AppColors>()!;
 }
 
+/// Spacing scale in logical pixels. Use a step from here instead of a literal.
+abstract final class Spacing {
+  static const double xxs = 4;
+  static const double xs = 6;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+
+  static const EdgeInsets inset = EdgeInsets.all(md);
+}
+
 class MyTheme {
   static const Color appColor = Color.fromRGBO(50, 184, 186, 1);
   // For text and thin marks: the fill reads 2.4:1 on white, the ink 5:1.
@@ -153,8 +165,6 @@ class MyTheme {
     surfaceTint: Colors.transparent,
   );
 
-  static const double insetSize = 12.0;
-  static const EdgeInsets inset = EdgeInsets.all(insetSize);
 
   // Pinned to Android on every platform: the adaptive widgets and dialogs then
   // stay Material on iOS, which is what the app has always shipped there. The
@@ -168,7 +178,7 @@ class MyTheme {
       colorScheme: _lightColorScheme,
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
-          padding: WidgetStateProperty.all(MyTheme.inset),
+          padding: WidgetStateProperty.all(Spacing.inset),
           foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorLight),
           side: WidgetStateProperty.all(BorderSide(color: _lightColorScheme.outline)),
           shape: WidgetStateProperty.all(
@@ -270,7 +280,7 @@ class MyTheme {
     useMaterial3: true,
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
-        padding: WidgetStateProperty.all(MyTheme.inset),
+        padding: WidgetStateProperty.all(Spacing.inset),
         foregroundColor: WidgetStateProperty.all(MyTheme.appInkColorDark),
         side: WidgetStateProperty.all(BorderSide(color: _darkColorScheme.outline)),
         shape: WidgetStateProperty.all(

@@ -184,7 +184,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                             )
                           : ListView.builder(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: MyTheme.inset,
+                              padding: Spacing.inset,
                               itemCount: state.networks.length,
                               itemBuilder: (context, i) {
                                 return Column(children: [
@@ -297,7 +297,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 )
                               : const Center(child: Text("No Devices"))
                           : ListView.builder(
-                              padding: MyTheme.inset,
+                              padding: Spacing.inset,
                               itemCount: state.totalDevices,
                               itemBuilder: (_, i) {
                                 if (i > state.devices.length - 1) {

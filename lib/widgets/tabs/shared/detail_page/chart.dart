@@ -219,9 +219,9 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
             ? const Center(child: DelayedCircularProgressIndicator())
             : Container(
                 padding: const EdgeInsets.only(
-                    left: MyTheme.insetSize,
-                    right: MyTheme.insetSize,
-                    top: MyTheme.insetSize),
+                    left: Spacing.md,
+                    right: Spacing.md,
+                    top: Spacing.md),
                 child: _spots!.isEmpty 
                     ? const Center(child: Text("no data"))
                     : LineChart(

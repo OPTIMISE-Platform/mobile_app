@@ -94,7 +94,7 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                 )
               : ListView.builder(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: MyTheme.inset,
+                  padding: Spacing.inset,
                   itemCount: state.gateways.length,
                   itemBuilder: (context, i) {
                     var mgw = state.gateways[i];

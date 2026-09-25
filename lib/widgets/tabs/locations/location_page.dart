@@ -238,7 +238,7 @@ class LocationPageState extends State<LocationPage>
                             },
                           )
                         : ListView.builder(
-                            padding: MyTheme.inset,
+                            padding: Spacing.inset,
                             itemCount: location.device_ids.length +
                                 matchingGroups.length +
                                 1,

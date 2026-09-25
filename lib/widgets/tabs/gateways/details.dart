@@ -62,7 +62,7 @@ class _MGWDetailState extends State<MGWDetail> {
             ),
             body: ListView.builder(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: MyTheme.inset,
+                padding: Spacing.inset,
                 itemCount: modules.length,
                 itemBuilder: (BuildContext context, int index) {
                   final module = modules.elementAt(index);

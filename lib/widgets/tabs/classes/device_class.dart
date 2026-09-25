@@ -107,7 +107,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: MyTheme.inset,
+                            padding: Spacing.inset,
                             itemCount: deviceClasses.length,
                             itemBuilder: (context, i) {
                               return Column(children: [
@@ -155,7 +155,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
                     child: ListView.builder(
-                      padding: MyTheme.inset,
+                      padding: Spacing.inset,
                       itemCount: state.totalDevices,
                       itemBuilder: (_, i) {
                         if (i >= state.devices.length) {

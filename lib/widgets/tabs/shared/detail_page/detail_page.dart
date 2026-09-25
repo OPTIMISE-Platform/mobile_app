@@ -494,7 +494,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               child: Scrollbar(
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: MyTheme.inset,
+                  padding: Spacing.inset,
                   children: [
                     ListTile(
                       // header

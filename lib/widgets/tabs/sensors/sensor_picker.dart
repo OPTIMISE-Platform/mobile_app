@@ -215,7 +215,7 @@ class _TargetPickerState extends State<_TargetPicker> {
         body: Column(
           children: [
             Padding(
-              padding: MyTheme.inset,
+              padding: Spacing.inset,
               child: SegmentedButton<bool>(
                 segments: const [
                   ButtonSegment(value: false, label: Text('Devices')),
@@ -228,7 +228,7 @@ class _TargetPickerState extends State<_TargetPicker> {
             ),
             if (!_showGroups)
               Padding(
-                padding: MyTheme.inset,
+                padding: Spacing.inset,
                 child: TextFormField(
                   controller: _searchController,
                   decoration: const InputDecoration(hintText: 'Search devices'),

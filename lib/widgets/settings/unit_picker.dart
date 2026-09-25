@@ -83,7 +83,7 @@ class _UnitPickerListState extends State<UnitPickerList> {
         height: MediaQuery.of(context).size.height,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
-              padding: MyTheme.inset,
+              padding: Spacing.inset,
               child: TextFormField(
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

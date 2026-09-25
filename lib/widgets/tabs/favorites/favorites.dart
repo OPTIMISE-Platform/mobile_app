@@ -136,7 +136,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
       List<DeviceInstance> devices,
       List<DeviceGroup> groups,) {
     return ListView.builder(
-      padding: MyTheme.inset,
+      padding: Spacing.inset,
       itemCount: devices.length + groups.length,
       itemBuilder: (_, i) {
         if (i < devices.length) {

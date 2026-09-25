@@ -629,7 +629,7 @@ class _SensorValuesState extends State<SensorValues>
       return _buildFullHeightMessage(const DelayedCircularProgressIndicator());
     }
     return GridView.builder(
-      padding: MyTheme.inset,
+      padding: Spacing.inset,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 1.05,
@@ -644,7 +644,7 @@ class _SensorValuesState extends State<SensorValues>
   Widget _buildNoTabsState() {
     return Center(
       child: Padding(
-        padding: MyTheme.inset,
+        padding: Spacing.inset,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -676,7 +676,7 @@ class _SensorValuesState extends State<SensorValues>
           constraints: BoxConstraints(minHeight: constraint.maxHeight),
           child: Center(
             child: Padding(
-              padding: MyTheme.inset,
+              padding: Spacing.inset,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

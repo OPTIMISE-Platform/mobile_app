@@ -225,10 +225,10 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
         height: s,
         width: s * 4,
         padding: const EdgeInsets.only(
-            top: MyTheme.insetSize,
-            right: MyTheme.insetSize,
-            left: MyTheme.insetSize / 2,
-            bottom: MyTheme.insetSize / 2),
+            top: Spacing.md,
+            right: Spacing.md,
+            left: Spacing.xs,
+            bottom: Spacing.xs),
         child: Stack(children: [
           Column(children: [
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [

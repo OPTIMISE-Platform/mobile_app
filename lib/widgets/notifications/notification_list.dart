@@ -151,7 +151,7 @@ class _NotificationListState extends State<NotificationList> {
                       ? const Center(child: Text("No Notifications"))
                       : ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: MyTheme.inset,
+                          padding: Spacing.inset,
                           itemCount: state.notifications.length,
                           itemBuilder: (BuildContext context, int i) {
                             return Column(
@@ -162,7 +162,7 @@ class _NotificationListState extends State<NotificationList> {
                                 Dismissible(
                                     background: Container(
                                       alignment: Alignment.centerRight,
-                                      padding: MyTheme.inset,
+                                      padding: Spacing.inset,
                                       color: context.appColors.warn,
                                       // Black, not white: white on the warn
                                       // fill is 2.6:1, black is 8:1.

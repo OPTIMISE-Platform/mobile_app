@@ -134,7 +134,7 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
                   : Scrollbar(
                       child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: MyTheme.inset,
+                      padding: Spacing.inset,
                       itemCount: state.deviceGroups.length + 1,
                       itemBuilder: (context, i) {
                         return i < state.deviceGroups.length

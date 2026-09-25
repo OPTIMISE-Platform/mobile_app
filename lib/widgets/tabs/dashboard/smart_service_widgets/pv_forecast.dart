@@ -52,7 +52,7 @@ class SmSePvForecast extends SmSeRequest {
           Expanded(
             child: Container(
               padding:
-                  const EdgeInsets.only(top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+                  const EdgeInsets.only(top: Spacing.md, right: Spacing.md, left: Spacing.xs, bottom: Spacing.xs),
               child: LineChart(
                 LineChartData(
                   extraLinesData: ExtraLinesData(

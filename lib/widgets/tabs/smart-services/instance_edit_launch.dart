@@ -214,7 +214,7 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
         );
       case ContentVariable.boolean:
         return Row(children: [
-          Container(padding: const EdgeInsets.only(right: MyTheme.insetSize), child: Text(p.label)),
+          Container(padding: const EdgeInsets.only(right: Spacing.md), child: Text(p.label)),
           Switch.adaptive(
             key: ValueKey(i.toString() + sub.toString()),
             onChanged: (bool newValue) {

@@ -111,7 +111,7 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: MyTheme.inset,
+                            padding: Spacing.inset,
                             itemCount: releases.length,
                             itemBuilder: (context, i) {
                               if (i == releases.length - 1 &&

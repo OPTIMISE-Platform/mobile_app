@@ -101,7 +101,7 @@ class _IconPickerState extends State<_IconPicker> {
       body: Column(
         children: [
           Padding(
-            padding: MyTheme.inset,
+            padding: Spacing.inset,
             child: TextFormField(
               controller: _searchController,
               decoration: const InputDecoration(hintText: 'Search icons'),
@@ -113,7 +113,7 @@ class _IconPickerState extends State<_IconPicker> {
                 ? const Center(child: Text('No icons found'))
                 : Scrollbar(
                     child: GridView.builder(
-                      padding: MyTheme.inset,
+                      padding: Spacing.inset,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 5,

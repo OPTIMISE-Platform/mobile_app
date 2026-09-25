@@ -46,12 +46,12 @@ class SmSeBarChart extends SmSeLineChart {
     final Widget w = barGroups.isEmpty
         ? const Center(child: Text("No Data"))
         : Container(
-            height: height * heightUnit - MyTheme.insetSize,
+            height: height * heightUnit - Spacing.md,
             padding: const EdgeInsets.only(
-                top: MyTheme.insetSize,
-                right: MyTheme.insetSize,
-                left: MyTheme.insetSize / 2,
-                bottom: MyTheme.insetSize / 2),
+                top: Spacing.md,
+                right: Spacing.md,
+                left: Spacing.xs,
+                bottom: Spacing.xs),
             child: gestureDetector(
                 context,
                 BarChart(

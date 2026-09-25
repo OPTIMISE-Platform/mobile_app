@@ -71,9 +71,9 @@ class SmSeStackedBarChart extends SmSeBarChart {
           ? const Center(child: Text("No Data"))
           : Column(children: [
               Container(
-                  height: 8 * heightUnit - MyTheme.insetSize,
+                  height: 8 * heightUnit - Spacing.md,
                   padding: const EdgeInsets.only(
-                      top: MyTheme.insetSize, right: MyTheme.insetSize, left: MyTheme.insetSize / 2, bottom: MyTheme.insetSize / 2),
+                      top: Spacing.md, right: Spacing.md, left: Spacing.xs, bottom: Spacing.xs),
                   child: gestureDetector(
                     context,
                     BarChart(

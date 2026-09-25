@@ -93,7 +93,7 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
                           )
                         : ListView.builder(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: MyTheme.inset,
+                            padding: Spacing.inset,
                             itemCount: AppState().totalDevices,
                             itemBuilder: (context, i) {
                               if (i >= AppState().devices.length) {
