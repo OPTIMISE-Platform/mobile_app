@@ -396,16 +396,20 @@ class MyTheme {
     return currentTheme == themeMaterial;
   }
 
-  /// Retrieve a nice color. Colors are rotated based on i
+  /// Colour of chart series [i], rotating through six hues.
+  ///
+  /// The set is checked for colour-vision deficiency. Green, gold and pink
+  /// stay under 3:1 on white, so a series needs its name next to it, not the
+  /// colour alone. One set for both themes: colours are assigned while data
+  /// loads, where no theme is at hand.
   static Color getSomeColor(int i) {
     const List<Color> colors = [
-      MyTheme.appColor,
-      Colors.indigo,
-      Colors.redAccent,
-      Colors.blueAccent,
-      Colors.teal,
-      Colors.deepOrangeAccent,
-      Colors.blueGrey
+      Color(0xFF2a78d6),
+      Color(0xFFeb6834),
+      Color(0xFF1baf7a),
+      Color(0xFFeda100),
+      Color(0xFFe87ba4),
+      Color(0xFF008300),
     ];
     return colors[i % colors.length];
   }

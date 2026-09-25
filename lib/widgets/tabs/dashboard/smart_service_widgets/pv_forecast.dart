@@ -154,13 +154,7 @@ class SmSePvForecast extends SmSeRequest {
     }
   }
 
-  Color _getLineColor(int i) {
-    // Stays on the static constant, not context.appColors.app: this runs
-    // during refreshInternal(), which the base class calls with no
-    // BuildContext, and the app colour does not vary by brightness anyway.
-    const List<Color> colors = [MyTheme.appColor, Colors.amber, Colors.redAccent, Colors.blueAccent];
-    return colors[i % colors.length];
-  }
+  Color _getLineColor(int i) => MyTheme.getSomeColor(i);
 }
 
 // Same reasoning as _getLineColor above: called from refreshInternal(),
