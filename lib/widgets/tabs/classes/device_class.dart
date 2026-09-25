@@ -166,7 +166,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                     },
                     child: ListView.builder(
                       padding: Spacing.listPadding(context),
-                      itemCount: state.totalDevices,
+                      itemCount: state.devicesListItemCount,
                       itemBuilder: (_, i) {
                         if (i >= state.devices.length) {
                           state.loadDevices();

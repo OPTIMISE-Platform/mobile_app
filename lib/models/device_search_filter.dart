@@ -29,6 +29,10 @@ class DeviceSearchFilter {
   List<String>? networkIds;
   bool? favorites;
 
+  /// Whether devices carrying the `inactive` attribute are included. Off by
+  /// default; not persisted, the same as the other filter fields here.
+  bool showInactive = false;
+
   DeviceSearchFilter(this.query, [this.deviceClassIds, this.deviceIds, this.networkIds, this.deviceGroupIds, this.locationIds, this.favorites]);
 
   static DeviceSearchFilter empty() {
@@ -36,7 +40,8 @@ class DeviceSearchFilter {
   }
 
   DeviceSearchFilter clone() {
-    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds, favorites);
+    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds, favorites)
+      ..showInactive = showInactive;
   }
 
   List<String> _add(List<String>? l, String id) {
@@ -178,7 +183,8 @@ class DeviceSearchFilter {
         networkIds.toString() +
         deviceGroupIds.toString() +
         favorites.toString() +
-        locationIds.toString());
+        locationIds.toString() +
+        showInactive.toString());
   }
 
   @override

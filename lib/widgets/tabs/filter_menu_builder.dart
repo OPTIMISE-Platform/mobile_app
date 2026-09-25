@@ -100,6 +100,7 @@ class FilterMenuBuilder {
     if (!(config?.ownsFavorites() ?? false)) {
       options.add(_favoritesToggleOption());
     }
+    options.add(_showInactiveToggleOption());
     return options;
   }
 
@@ -205,6 +206,14 @@ class FilterMenuBuilder {
     },
   );
 
+  _FilterOption _showInactiveToggleOption() => _FilterOption(
+    label: '${filter.showInactive ? '✓ ' : ''}Show inactive',
+    onTap: () {
+      filter.showInactive = !filter.showInactive;
+      onFilterApplied();
+    },
+  );
+
   void _reset() {
     final config = tabConfigs[navigationIndex];
     if (!(config?.ownsLocation() ?? false)) filter.locationIds = null;
@@ -212,6 +221,7 @@ class FilterMenuBuilder {
     if (!(config?.ownsNetwork() ?? false)) filter.networkIds = null;
     if (!(config?.ownsDeviceClass() ?? false)) filter.deviceClassIds = null;
     if (!(config?.ownsFavorites() ?? false)) filter.favorites = null;
+    filter.showInactive = false;
     onFilterApplied();
   }
 
@@ -272,6 +282,7 @@ class FilterMenuBuilder {
     if (filter.favorites == true && !(config?.ownsFavorites() ?? false)) {
       count++;
     }
+    if (filter.showInactive) count++;
     return count;
   }
 }

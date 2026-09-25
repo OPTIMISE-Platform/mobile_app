@@ -64,6 +64,22 @@ mixin DeviceMixin on ChangeNotifier {
   bool get loadingDevices => _totalDevicesMutex.isLocked || _devicesMutex.isLocked;
   bool get allDevicesLoaded => _allDevicesLoaded;
 
+  /// Raw pages fetched so far (before hiding inactive devices). Unlike
+  /// [devices].length, this advances even on a page that filters down to
+  /// nothing, so a rebuild gated on it (DeviceList's Selector) still notices.
+  int get rawDevicesFetched => _deviceOffset;
+
+  /// Upper bound for a list's itemCount while paginating. Not [totalDevices]
+  /// (the server's raw, unfiltered count): hidden devices can leave
+  /// devices.length permanently below it, which would add trailing blank
+  /// rows instead of ending the list. The devices.length >= totalDevices
+  /// branch covers tests that fill [devices] directly to match [totalDevices]
+  /// without ever driving [_allDevicesLoaded] true through a real fetch.
+  int get devicesListItemCount =>
+      (_allDevicesLoaded || devices.length >= totalDevices)
+          ? devices.length
+          : devices.length + 1;
+
   /// True once an initial device load has completed. Callers that rely on the
   /// device list being populated must force their search until then, since
   /// [searchDevices] skips an unchanged filter — which on a fresh start matches
@@ -263,25 +279,34 @@ mixin DeviceMixin on ChangeNotifier {
       }
 
       _devicesLoadedOnce = true;
+      // Raw, unfiltered page size and offset: hiding happens below, on this
+      // page's contents, and must not change whether pagination continues.
       _allDevicesLoaded = newDevices.length < limit;
       _deviceOffset += newDevices.length;
 
-      if (newDevices.isNotEmpty) {
-        for (final d in newDevices) {
+      final showInactive =
+          _deviceSearchFilter.showInactive || _deviceSearchFilter.favorites == true;
+      final visibleDevices = showInactive
+          ? newDevices
+          : newDevices.where((d) => !d.isInactive).toList(growable: false);
+
+      if (visibleDevices.isNotEmpty) {
+        for (final d in visibleDevices) {
           if (deviceTypes[d.device_type_id] != null) {
             d.prepareStates(deviceTypes[d.device_type_id]!);
           }
         }
-        devices.addAll(newDevices);
-        notifyListeners(); // <-- show devices immediately, before states load
+        devices.addAll(visibleDevices);
+      }
+      // Notified even when the page filtered down to nothing: devices.length
+      // may be unchanged, but rawDevicesFetched always moved.
+      notifyListeners();
 
+      if (visibleDevices.isNotEmpty) {
         // Started, not awaited - it suspends on its first await, so the
         // release below still happens right after the list is on screen.
-        unawaited(_loadStatesInBackground(newDevices));
-        return;
+        unawaited(_loadStatesInBackground(visibleDevices));
       }
-
-      notifyListeners();
     } finally {
       _devicesMutex.release();
     }

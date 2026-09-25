@@ -39,6 +39,10 @@ enum DeviceConnectionStatus {
 
 const attributeNickname = "$sharedOrigin/nickname";
 
+/// Marks a device inactive; such devices are hidden from device lists by
+/// default (DeviceSearchFilter.showInactive, see filter_menu_builder.dart).
+const attributeInactive = "inactive";
+
 @JsonSerializable()
 @collection
 class DeviceInstance {
@@ -129,6 +133,18 @@ class DeviceInstance {
 
   @ignore
   String get displayName => display_name ?? name;
+
+  /// Whether the `inactive` attribute is present and set to "true" (matched
+  /// case-insensitively and trimmed); any other value or a missing attribute
+  /// means active.
+  @ignore
+  bool get isInactive {
+    final i = attributes?.indexWhere((element) => element.key == attributeInactive);
+    if (i != null && i != -1) {
+      return attributes![i].value.trim().toLowerCase() == 'true';
+    }
+    return false;
+  }
 
   setNickname(String val) {
     final i = attributes?.indexWhere((element) => element.key == attributeNickname);

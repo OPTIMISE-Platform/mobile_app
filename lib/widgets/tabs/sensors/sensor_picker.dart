@@ -104,6 +104,9 @@ class _TargetPickerState extends State<_TargetPicker> {
   bool _showGroups = false;
 
   final List<DeviceInstance> _devices = [];
+  // Raw devices fetched so far, before hiding inactive ones - the next
+  // request's offset, since _devices.length would duplicate already-shown rows.
+  int _rawFetched = 0;
   String _query = '';
   bool _initialLoadDone = false;
   bool _loadingPage = false;
@@ -152,6 +155,7 @@ class _TargetPickerState extends State<_TargetPicker> {
   Future<void> _reload() async {
     setState(() {
       _devices.clear();
+      _rawFetched = 0;
       _initialLoadDone = false;
       _allLoaded = false;
       _error = null;
@@ -167,22 +171,33 @@ class _TargetPickerState extends State<_TargetPicker> {
   Future<void> _loadNextPage() async {
     if (_loadingPage || _allLoaded) return;
     _loadingPage = true;
+    // Set when a page hid every device it had: the recursive call below then
+    // runs after `finally` clears _loadingPage, since nothing else would
+    // trigger a next page whose predecessor added no rows.
+    var fetchedOnlyHidden = false;
     try {
       await AppState().ensureInitialized();
       final result = await DevicesService.getDevices(
         _pageSize,
-        _devices.length,
+        _rawFetched,
         DeviceSearchFilter(_query),
         _devices.isEmpty ? null : _devices.last,
       );
+      // Raw page size, before hiding inactive devices below: an all-inactive
+      // page must not read as "no more devices" and stop paginating early.
+      final allLoaded = result.devices.length < _pageSize;
+      final visibleDevices =
+          result.devices.where((d) => !d.isInactive).toList(growable: false);
       await AppState()
           .ensureDeviceTypes(result.devices.map((d) => d.device_type_id));
       if (!mounted) return;
       setState(() {
-        _devices.addAll(result.devices);
-        _allLoaded = result.devices.length < _pageSize;
+        _devices.addAll(visibleDevices);
+        _rawFetched += result.devices.length;
+        _allLoaded = allLoaded;
         _initialLoadDone = true;
       });
+      fetchedOnlyHidden = visibleDevices.isEmpty && !allLoaded;
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -192,6 +207,7 @@ class _TargetPickerState extends State<_TargetPicker> {
     } finally {
       _loadingPage = false;
     }
+    if (fetchedOnlyHidden) await _loadNextPage();
   }
 
   @override

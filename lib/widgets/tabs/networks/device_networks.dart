@@ -299,17 +299,21 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 return index == -1 ? null : index;
                               },
                             )
-                      : state.devices.isEmpty
-                          ? state.loadingDevices || _loading
-                              ? const Center(
-                                  child: DelayedCircularProgressIndicator(),
-                                )
-                              : const Center(child: Text("No Devices"))
-                          : ListView.builder(
+                      : state.devices.isEmpty && (state.loadingDevices || _loading)
+                          ? const Center(
+                              child: DelayedCircularProgressIndicator(),
+                            )
+                          // allDevicesLoaded, not just an empty list: an
+                          // all-hidden page must still reach the ListView
+                          // below, or its own row never fetches the next page.
+                          : state.devices.isEmpty && state.allDevicesLoaded
+                              ? const Center(child: Text("No Devices"))
+                              : ListView.builder(
                               padding: Spacing.listPadding(context),
-                              itemCount: state.totalDevices,
+                              itemCount: state.devicesListItemCount,
                               itemBuilder: (_, i) {
-                                if (i > state.devices.length - 1) {
+                                if (i >= state.devices.length) {
+                                  state.loadDevices();
                                   return const SizedBox.shrink();
                                 }
                                 final device = state.devices[i];

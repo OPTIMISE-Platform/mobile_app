@@ -36,12 +36,26 @@ class FakeBackend implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
   final List<String> unmatchedRequests = [];
 
+  /// Backing list for [serveDevicesPaged], sliced by each request's
+  /// offset/limit like the real `/device-repository/extended-devices` does.
+  List<Map<String, dynamic>>? _devicesPage;
+
   /// Serves [statusCode] with [body] (JSON-encoded unless [contentType] says
   /// otherwise) for every request matching [method] and [path].
   void serveJson(String method, String path, int statusCode, dynamic body,
       {String contentType = Headers.jsonContentType}) {
     _routes['${method.toUpperCase()} $path'] =
         _Route(statusCode, body, contentType);
+  }
+
+  /// Serves `/device-repository/extended-devices` as a real paginated
+  /// endpoint would: each request gets the slice of [allDevices] its
+  /// offset/limit ask for, with `X-Total-Count` set to the full,
+  /// unfiltered count - which is what DevicesService.getDevices reads as
+  /// [DeviceInstanceWithTotal.total]. Use this over [serveJson] whenever a
+  /// test needs more than one page.
+  void serveDevicesPaged(List<Map<String, dynamic>> allDevices) {
+    _devicesPage = allDevices;
   }
 
   @override
@@ -54,6 +68,16 @@ class FakeBackend implements HttpClientAdapter {
     final route = _routes[key];
     if (route != null) {
       return _respond(route.status, route.body, route.contentType);
+    }
+
+    if (_devicesPage != null &&
+        key == 'GET /device-repository/extended-devices') {
+      final all = _devicesPage!;
+      final offset = int.parse(options.uri.queryParameters["offset"] ?? "0");
+      final limit = int.parse(options.uri.queryParameters["limit"] ?? "50");
+      final page = all.skip(offset).take(limit).toList();
+      return _respond(200, page, Headers.jsonContentType,
+          headers: {'X-Total-Count': all.length.toString()});
     }
 
     // Legacy paginated-list behaviour, for the device-types tests.
@@ -71,11 +95,14 @@ class FakeBackend implements HttpClientAdapter {
     return ResponseBody.fromString("", 404);
   }
 
-  ResponseBody _respond(int statusCode, dynamic body, String contentType) {
+  ResponseBody _respond(int statusCode, dynamic body, String contentType,
+      {Map<String, String>? headers}) {
     final content =
         body == null ? "" : (body is String ? body : jsonEncode(body));
     return ResponseBody.fromString(content, statusCode, headers: {
       Headers.contentTypeHeader: [contentType],
+      if (headers != null)
+        for (final entry in headers.entries) entry.key: [entry.value],
     });
   }
 
@@ -114,7 +141,8 @@ Map<String, dynamic> deviceTypeJson(String id) => {
 /// back from the backend (extended-devices, the group helper, ...).
 Map<String, dynamic> deviceJson(String id, String name,
         {String deviceTypeId = "device-type-1",
-        String connectionState = "online"}) =>
+        String connectionState = "online",
+        bool inactive = false}) =>
     {
       "id": id,
       "local_id": "$id-local",
@@ -123,6 +151,10 @@ Map<String, dynamic> deviceJson(String id, String name,
       "shared": false,
       "owner_id": "owner-1",
       "display_name": name,
-      "attributes": null,
+      "attributes": inactive
+          ? [
+              {"key": "inactive", "value": "true", "origin": null}
+            ]
+          : null,
       "connection_state": connectionState,
     };
