@@ -200,7 +200,7 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
 
   @override
   void didChangeDependencies() {
-    _ticker.muted = !TickerMode.of(context);
+    _ticker.muted = !TickerMode.valuesOf(context).enabled;
     super.didChangeDependencies();
   }
 

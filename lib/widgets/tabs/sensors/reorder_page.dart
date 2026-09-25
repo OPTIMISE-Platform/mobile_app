@@ -79,10 +79,10 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
           ? const Center(child: Text('Nothing to reorder'))
           : ReorderableListView.builder(
               itemCount: _items.length,
-              onReorder: (oldIndex, newIndex) {
+              onReorderItem: (oldIndex, newIndex) {
+                // Unlike onReorder, onReorderItem's newIndex is already
+                // adjusted for the removal at oldIndex.
                 setState(() {
-                  // ReorderableListView reports the target index before removal.
-                  if (newIndex > oldIndex) newIndex -= 1;
                   _items.insert(newIndex, _items.removeAt(oldIndex));
                 });
               },

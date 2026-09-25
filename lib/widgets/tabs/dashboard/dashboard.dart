@@ -364,10 +364,12 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
                           ))
                     ]))));
               },
-              onReorder: (int oldIndex, int newIndex) async {
+              // Unlike onReorder, onReorderItem's newIndex is already
+              // adjusted for the removal at oldIndex.
+              onReorderItem: (int oldIndex, int newIndex) async {
                 final tmp = items[oldIndex];
                 items.removeAt(oldIndex);
-                items.insert(newIndex - (oldIndex < newIndex ? 1 : 0), tmp);
+                items.insert(newIndex, tmp);
                 _dashboards[tabIdx].widgetAndInstanceIds = items.map((e) => Pair(e!.id, e.instance_id)).toList();
                 await Settings.setSmartServiceDashboards(_dashboards);
               },
