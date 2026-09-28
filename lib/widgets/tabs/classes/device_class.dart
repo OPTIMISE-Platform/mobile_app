@@ -26,7 +26,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_icon.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
@@ -124,7 +124,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                         title: Text(deviceClass.name),
                                         subtitle: Text(
                                             "${deviceClass.deviceIds.length} Device${deviceClass.deviceIds.length > 1 || deviceClass.deviceIds.isEmpty ? "s" : ""}"),
-                                        leading: EntityLeadingCircle(
+                                        leading: EntityLeadingIcon(
                                             size: 48,
                                             fallbackIcon: Icons.devices,
                                             image: deviceClass.imageWidget),

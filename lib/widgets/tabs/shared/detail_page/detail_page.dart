@@ -41,7 +41,7 @@ import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_icon.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
@@ -531,7 +531,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   leading: [
                     ListTile(
                       // header
-                      leading: EntityLeadingCircle(
+                      leading: EntityLeadingIcon(
                         size: 48,
                         fallbackIcon: device != null ? Icons.devices : Icons.devices_other,
                         image: entityImage,

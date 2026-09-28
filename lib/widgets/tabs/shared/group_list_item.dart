@@ -27,7 +27,7 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_icon.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
@@ -80,7 +80,7 @@ class GroupListItem extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
-              leading: EntityLeadingCircle(
+              leading: EntityLeadingIcon(
                   size: 40,
                   fallbackIcon: Icons.devices_other,
                   image: _group.imageWidget),

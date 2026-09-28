@@ -16,9 +16,9 @@
 
 import 'package:flutter/material.dart';
 
-/// A row's leading avatar: a tonal circle in [colorScheme.primaryContainer]
-/// with [image] or [fallbackIcon] tinted [colorScheme.onPrimaryContainer] on
-/// top. Used for a device's class icon, a group's icon and the class-list
+/// A row's leading icon: a rounded square in a faint tint of
+/// [colorScheme.primary] with [image] or [fallbackIcon] in [colorScheme.primary]
+/// on top. Used for a device's class icon, a group's icon and the class-list
 /// screen, so all three read as the same control.
 ///
 /// [image] is assumed to be a single-colour glyph on a transparent
@@ -27,11 +27,11 @@ import 'package:flutter/material.dart';
 /// right for a glyph, not a photo.
 ///
 /// While [image] is a network-backed [Image] whose first frame has not
-/// decoded yet, the circle shows [fallbackIcon] instead of sitting empty -
+/// decoded yet, the square shows [fallbackIcon] instead of sitting empty -
 /// tracked by resolving its [ImageProvider] directly, since a bare [Widget]
 /// gives no "has a frame" signal of its own.
-class EntityLeadingCircle extends StatefulWidget {
-  const EntityLeadingCircle({
+class EntityLeadingIcon extends StatefulWidget {
+  const EntityLeadingIcon({
     required this.size,
     required this.fallbackIcon,
     this.image,
@@ -43,10 +43,10 @@ class EntityLeadingCircle extends StatefulWidget {
   final Widget? image;
 
   @override
-  State<EntityLeadingCircle> createState() => _EntityLeadingCircleState();
+  State<EntityLeadingIcon> createState() => _EntityLeadingIconState();
 }
 
-class _EntityLeadingCircleState extends State<EntityLeadingCircle> {
+class _EntityLeadingIconState extends State<EntityLeadingIcon> {
   ImageStream? _stream;
   ImageStreamListener? _listener;
   bool _hasFrame = false;
@@ -63,7 +63,7 @@ class _EntityLeadingCircleState extends State<EntityLeadingCircle> {
   }
 
   @override
-  void didUpdateWidget(covariant EntityLeadingCircle oldWidget) {
+  void didUpdateWidget(covariant EntityLeadingIcon oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.image != oldWidget.image) {
       _hasFrame = false;
@@ -113,20 +113,24 @@ class _EntityLeadingCircleState extends State<EntityLeadingCircle> {
     // No image, or one we can't track (not an Image - show it right away),
     // or an Image whose first frame has already landed.
     final showImage = widget.image != null && (_provider == null || _hasFrame);
+    final size = scaler.scale(widget.size);
+    // A faint tint of the ink behind the ink itself, the same colour the
+    // navigation bar marks its selection with.
+    final background = scheme.primary.withValues(
+        alpha: Theme.of(context).brightness == Brightness.dark ? 0.18 : 0.10);
     return Container(
-      height: scaler.scale(widget.size),
-      width: scaler.scale(widget.size),
-      decoration:
-          BoxDecoration(color: scheme.primaryContainer, shape: BoxShape.circle),
+      height: size,
+      width: size,
+      decoration: BoxDecoration(
+          color: background, borderRadius: BorderRadius.circular(size * 0.3)),
       child: Padding(
-        padding: EdgeInsets.all(scaler.scale(widget.size / 6)),
+        padding: EdgeInsets.all(scaler.scale(widget.size / 5)),
         child: showImage
             ? ColorFiltered(
-                colorFilter:
-                    ColorFilter.mode(scheme.onPrimaryContainer, BlendMode.srcIn),
+                colorFilter: ColorFilter.mode(scheme.primary, BlendMode.srcIn),
                 child: widget.image,
               )
-            : Icon(widget.fallbackIcon, color: scheme.onPrimaryContainer),
+            : Icon(widget.fallbackIcon, color: scheme.primary, size: size * 0.55),
       ),
     );
   }

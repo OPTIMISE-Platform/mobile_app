@@ -30,7 +30,7 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_icon.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
@@ -262,7 +262,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: subtitle,
-        leading: EntityLeadingCircle(
+        leading: EntityLeadingIcon(
             size: 40, fallbackIcon: Icons.devices, image: deviceClass?.imageWidget),
         trailing: trailingContent,
         // Tighter than the default 16 on both counts: the title now competes

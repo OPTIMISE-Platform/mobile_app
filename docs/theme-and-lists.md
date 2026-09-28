@@ -91,7 +91,7 @@ positions, headers, keys and index lookup; do not compute them by hand.
   gap that keeps the last row clear of a FAB.
 - The row builder wraps its content in `GroupedListTile(position: position, ...)`
   and picks the hairline inset so it starts at the title: `insetNoLeading` (16),
-  `insetIconLeading` (56, 24px icon), `insetIconLeading40` (64, the 40px circle of
+  `insetIconLeading` (56, 24px icon), `insetIconLeading40` (64, the 40px leading icon of
   device and group rows), `insetButtonLeading` (80, 48px interactive leading).
 - Padding defaults to `Spacing.listPadding(context)`. An explicit `padding`
   switches off ListView's own system-inset padding, and the app draws edge to
