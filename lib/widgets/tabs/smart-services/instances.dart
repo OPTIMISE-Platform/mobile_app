@@ -20,7 +20,6 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/smart_service.dart';
-import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/releases.dart';
 import 'package:mutex/mutex.dart';
 
@@ -47,7 +46,9 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
     with ResumeRefreshMixin {
   bool allInstancesLoaded = false;
   final List<SmartServiceInstance> instances = [];
-  List<bool> upgradingInstances = [];
+  // Keyed by instance id, not position: a refresh while an upgrade runs
+  // reorders or drops rows, and the spinner must stay with its instance.
+  final Set<String> _upgradingIds = {};
   Mutex instancesMutex = Mutex();
   StreamSubscription? _fabSubscription;
   StreamSubscription? _refreshSubscription;
@@ -88,7 +89,6 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
 
   _refresh() async {
     instances.clear();
-    upgradingInstances.clear();
     allInstancesLoaded = false;
     final f = _loadInstances();
     setState(() {});
@@ -104,12 +104,42 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
       final newInstances =
           await SmartServiceService.getInstances(limit, instances.length);
       instances.addAll(newInstances);
-      while (instances.length > upgradingInstances.length) {
-        upgradingInstances.add(false);
-      }
       allInstancesLoaded = newInstances.length < limit;
     });
     setState(() {});
+  }
+
+  /// Upgrades [instance], the object of the tapped row: an index taken at tap
+  /// time names another instance once a refresh has reordered the list.
+  Future<void> _upgrade(BuildContext context, SmartServiceInstance instance) async {
+    final id = instance.id;
+    setState(() => _upgradingIds.add(id));
+    try {
+      final p = await SmartServiceService.prepareUpgrade(instance);
+      if (!p.t) {
+        await SmartServiceService.updateInstanceParameters(
+            id, p.k.map((e) => e.toSmartServiceParameter()).toList(),
+            releaseId: instance.new_release_id);
+      } else {
+        final release =
+            await SmartServiceService.getRelease(instance.new_release_id!);
+        if (context.mounted) {
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => SmartServicesReleaseLaunch(
+                        release,
+                        instance: instance,
+                        parameters: p.k,
+                      )));
+        }
+      }
+    } catch (e) {
+      Toast.showToastNoContext("Upgrade was not possible: $e");
+    }
+    if (!mounted) return;
+    setState(() => _upgradingIds.remove(id));
+    if (_upgradingIds.isEmpty) _refresh();
   }
 
   @override
@@ -119,7 +149,7 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
             ? const Center(child: DelayedCircularProgressIndicator())
             : RefreshIndicator(
                 onRefresh: () async {
-                  if (upgradingInstances.contains(true)) return;
+                  if (_upgradingIds.isNotEmpty) return;
                   HapticFeedbackProxy.lightImpact();
                   await _refresh();
                 },
@@ -153,9 +183,6 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                             items: instances,
                             keyOf: (instance) => instance.id,
                             itemBuilder: (context, instance, position) {
-                              // Index as of this build: upgradingInstances runs
-                              // parallel to instances.
-                              final i = instances.indexOf(instance);
                               if (position.roundsBottom && !allInstancesLoaded) {
                                 _loadInstances();
                               }
@@ -165,12 +192,12 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                     GroupedListTile.insetNoLeading,
                                 child: ListTile(
                                   title: Row(children: [
-                                    Text(instances[i].name),
+                                    Text(instance.name),
                                     Badge(
                                       // backgroundColor below is
                                       // transparent, so this icon sits
                                       // directly on the page surface.
-                                      label: instances[i].error != null
+                                      label: instance.error != null
                                           ? Icon(Icons.error,
                                               size: 16,
                                               color: context.appColors.warnInk)
@@ -178,16 +205,16 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                               size: 16,
                                               color: Colors.lightBlue),
                                       isLabelVisible:
-                                          instances[i].error != null ||
-                                              !instances[i].ready ||
-                                              instances[i].deleting == true,
+                                          instance.error != null ||
+                                              !instance.ready ||
+                                              instance.deleting == true,
                                       alignment:
                                           AlignmentDirectional.topCenter,
                                       largeSize: 16,
                                       backgroundColor: Colors.transparent,
-                                      child: instances[i].error != null ||
-                                              !instances[i].ready ||
-                                              instances[i].deleting == true
+                                      child: instance.error != null ||
+                                              !instance.ready ||
+                                              instance.deleting == true
                                           ? const Text("")
                                           : null,
                                     )
@@ -198,74 +225,19 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               SmartServicesInstanceDetails(
-                                                  instances[i],
+                                                  instance,
                                                   parentState?.context),
                                         ));
                                           _refresh();
                                         },
-                                        trailing: instances[i].new_release_id ==
+                                        trailing: instance.new_release_id ==
                                                 null
                                             ? null
-                                            : upgradingInstances[i]
+                                            : _upgradingIds.contains(instance.id)
                                                 ? const DelayedCircularProgressIndicator()
                                                 : IconButton(
                                                     icon: const Icon(Icons.upgrade),
-                                                    onPressed: () async {
-                                                      setState(() {
-                                                        upgradingInstances[i] =
-                                                            true;
-                                                      });
-                                                      final Pair<List<SmartServiceExtendedParameter>, bool> p;
-                                                      try {
-                                                        p = await SmartServiceService
-                                                            .prepareUpgrade(
-                                                            instances[i]);
-                                                        if (!p.t) {
-                                                          await SmartServiceService
-                                                              .updateInstanceParameters(
-                                                              instances[i].id,
-                                                              p.k
-                                                                  .map((e) => e
-                                                                  .toSmartServiceParameter())
-                                                                  .toList(),
-                                                              releaseId: instances[
-                                                              i]
-                                                                  .new_release_id);
-                                                        } else {
-                                                          final release =
-                                                          await SmartServiceService
-                                                              .getRelease(instances[
-                                                          i]
-                                                              .new_release_id!);
-                                                          if (context.mounted) {
-                                                            await Navigator.push(
-                                                                context,
-                                                                MaterialPageRoute(
-                                                                    builder: (context) =>
-                                                                        SmartServicesReleaseLaunch(
-                                                                          release,
-                                                                          instance:
-                                                                          instances[
-                                                                          i],
-                                                                          parameters:
-                                                                          p.k,
-                                                                        )));
-                                                          }
-                                                        }
-                                                      } catch (e) {
-                                                        setState(() {
-                                                          upgradingInstances[i] =
-                                                              false;
-                                                        });
-                                                        Toast.showToastNoContext(
-                                                            "Upgrade was not possible: $e");
-                                                      }
-                                                      upgradingInstances[i] = false;
-                                                      if (!upgradingInstances
-                                                          .contains(true)) {
-                                                        _refresh();
-                                                      }
-                                                    },
+                                                    onPressed: () => _upgrade(context, instance),
                                                   ),
                                       ));
                             },

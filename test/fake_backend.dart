@@ -70,6 +70,10 @@ class FakeBackend implements HttpClientAdapter {
   /// something else while a page load is in flight.
   Completer<void>? holdDevices;
 
+  /// Requests to a `"METHOD path"` key listed here wait for its completer
+  /// before being answered, for routes registered with [serveJson].
+  final Map<String, Completer<void>> holds = {};
+
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
@@ -77,6 +81,8 @@ class FakeBackend implements HttpClientAdapter {
     final path = options.uri.path;
     final key = '${options.method.toUpperCase()} $path';
 
+    final routeHold = holds[key];
+    if (routeHold != null) await routeHold.future;
     final route = _routes[key];
     if (route != null) {
       return _respond(route.status, route.body, route.contentType);
