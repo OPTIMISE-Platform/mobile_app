@@ -71,30 +71,45 @@ literal. `Spacing.inset` is 12 all round; scrollables use
 
 Rows that belong together sit on one rounded surface on the page, separated by an
 inset hairline. A long list must stay lazily built, so the surface is not one
-widget around all rows: each row draws its slice.
+widget around all rows: each row draws its slice (`GroupedListTile` with a
+`SlicePosition`). Build lists through `SectionedListView`, which computes the
+positions, headers, keys and index lookup; do not compute them by hand.
 
-- Wrap the row in `GroupedListTile(position: SlicePosition.forIndex(i, count), child: ...)`.
-  `count` is the number of rows **in that section as shown**, not the builder's
-  `itemCount` (which may include headers, fillers or a loading row).
-- Pick the hairline inset so it starts at the title: `insetNoLeading` (16),
-  `insetIconLeading` (56, 24px icon), `insetButtonLeading` (80, 48px interactive
-  leading such as the favourite star; the default).
-- Give the `ListView` `padding: Spacing.listPadding(context)`; `GroupedListTile`
-  adds the 16px side margin. An explicit `padding` switches off ListView's own
-  system-inset padding, and the app draws edge to edge (target SDK 36), so the
-  helper adds the bottom system inset; on the main tabs the Scaffold has already
-  removed it and the helper yields 12.
-- `SectionListHeader(title)` goes above a section's first row.
-- Settings sections build their rows through `SettingsSection.of(title, rows)`,
-  which computes positions from the rows actually produced, so a conditionally
-  hidden last row keeps the surface's rounded bottom.
+- `SectionedListView(sections: [ListSection<T>(id: ..., title: ..., items: ...,
+  keyOf: ..., itemBuilder: (context, item, position) => ...)])`. Write the type
+  argument on `ListSection`, or the closures are inferred as `Object?`.
+- `id` must be unique among the sections and stable: rows are keyed by
+  `(section id, item key)`, so an id taken from the index or the title would
+  re-key every later row when a section comes or goes.
+- `keyOf` must be unique within its section and name the item, not its index.
+  Gateways use the hostname because `coreId` is empty for manually added ones.
+  A debug build throws on a duplicate row key or section id.
+- A header is shown only for a section with a `title` that has rows; positions
+  count the rows actually shown, so a hidden last row keeps the rounded bottom.
+- `leading` and `trailing` take unkeyed extras such as a page header or the 72px
+  gap that keeps the last row clear of a FAB.
+- The row builder wraps its content in `GroupedListTile(position: position, ...)`
+  and picks the hairline inset so it starts at the title: `insetNoLeading` (16),
+  `insetIconLeading` (56, 24px icon), `insetIconLeading40` (64, the 40px circle of
+  device and group rows), `insetButtonLeading` (80, 48px interactive leading).
+- Padding defaults to `Spacing.listPadding(context)`. An explicit `padding`
+  switches off ListView's own system-inset padding, and the app draws edge to
+  edge (target SDK 36), so the helper adds the bottom system inset; on the main
+  tabs the Scaffold has already removed it and the helper yields 12.
+- Settings sections build their rows through `SettingsSection.of(title, rows)`
+  and hand them over with `toListSection()`.
+- The reorder page is the exception: `ReorderableListView` needs its own keyed
+  children.
 
-### Keys
+### Paged device lists
 
-Any list whose rows can be added, removed, reordered or shifted by a header must
-key each row by its item's id and pass a `findChildIndexCallback` that returns
-the index in the current build. Without it, `ListView.builder` matches rows by
-position and hands a row's state (expanded, transitioning, probing) to the item
-that moved into its slot. The key must be unique among siblings: gateways are
-keyed by hostname because `coreId` is empty for manually added ones, and an
-index suffix is no identity because it changes below every insertion.
+Device lists that page through the device search use `PagedDeviceList` with a
+`DeviceSearchPages(AppState())` source instead of calling `loadDevices()` from
+the item builder. It shows the spinner while loading, `emptyText` only once the
+source has ended, and otherwise the sections plus an invisible next-page row that
+requests one page when it is created. The row is keyed by a token the device
+mixin advances after every load, so a page that adds no visible row (all devices
+inactive) still leads to the next request, rebuilds of the same state do not, and
+a failed page ends the list until the next search. `untilEnded: true` keeps asking
+until the source reports the end, for the location page. The sensor picker and
+group editing keep their own paging.
