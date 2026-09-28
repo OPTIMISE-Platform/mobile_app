@@ -54,6 +54,12 @@ class GroupedListTile extends StatelessWidget {
   /// on both sides of it.
   static const double insetIconLeading = Spacing.lg + 24 + Spacing.lg;
 
+  /// A row with a 40px leading avatar (the device class or group icon
+  /// circle). These rows set `horizontalTitleGap: Spacing.sm` themselves
+  /// (default 16 is too wide once the title also has to share the row with
+  /// a trailing toggle), so this is `+ Spacing.sm`, not the usual `+ lg`.
+  static const double insetIconLeading40 = Spacing.lg + 40 + Spacing.sm;
+
   /// A row with a tappable leading control sized to the platform's minimum
   /// touch target (48, `kMinInteractiveDimension`) - a [FavorizeButton]'s
   /// `IconButton` or a class/network avatar of the same size - plus the

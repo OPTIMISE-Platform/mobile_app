@@ -149,7 +149,14 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
     return FloatingActionButton.extended(
       onPressed: () async {
         AppState().locations[widget._stateLocationIndex].device_ids = _selected.toList();
-        await LocationService.saveLocation(AppState().locations[widget._stateLocationIndex]);
+        // In a finally: device_ids above is already the in-memory model
+        // saveLocation might then fail to persist, and the cache has to
+        // match that model either way, not just the success path.
+        try {
+          await LocationService.saveLocation(AppState().locations[widget._stateLocationIndex]);
+        } finally {
+          AppState().invalidateLocationsCache();
+        }
         AppState().notifyListeners();
         if (!mounted) return;
         if (_delegateOpen) Navigator.pop(context, true);

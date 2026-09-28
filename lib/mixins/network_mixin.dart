@@ -46,6 +46,11 @@ mixin NetworkMixin on ChangeNotifier {
   final List<Location> locations = [];
   final _locationsMutex = Mutex();
 
+  /// Memoized device id -> containing-locations lookup, rebuilt lazily after
+  /// [locations] change. Avoids scanning every location's device_ids per row
+  /// on every list build.
+  Map<String, List<Location>>? _locationsByDeviceId;
+
   final List<MGW> gateways = [];
   final _gatewaysMutex = Mutex();
   final _mergeMutex = Mutex();
@@ -125,16 +130,38 @@ mixin NetworkMixin on ChangeNotifier {
       return;
     }
     locations.clear();
+    _locationsByDeviceId = null;
     notifyListeners();
     try {
       locations.addAll(await Future.wait(await LocationService.getLocations()));
     } catch (e, s) {
       ErrorReporter.report('Could not load locations', e, s);
     } finally {
+      _locationsByDeviceId = null;
       _locationsMutex.release();
     }
     notifyListeners();
   }
+
+  /// Locations containing [deviceId], backed by [_locationsByDeviceId].
+  List<Location> locationsForDevice(String deviceId) =>
+      (_locationsByDeviceId ??= _buildLocationsByDeviceId())[deviceId] ??
+      const [];
+
+  Map<String, List<Location>> _buildLocationsByDeviceId() {
+    final map = <String, List<Location>>{};
+    for (final location in locations) {
+      for (final id in location.device_ids) {
+        map.putIfAbsent(id, () => []).add(location);
+      }
+    }
+    return map;
+  }
+
+  /// Call after mutating [locations] or a location's `device_ids` directly
+  /// (an edit or delete outside [loadLocations]), so the next
+  /// [locationsForDevice] rebuilds instead of serving a stale map.
+  void invalidateLocationsCache() => _locationsByDeviceId = null;
 
   Future<void> loadStoredMGWs() async {
     _logger.d('NetworkMixin: loading stored MGWs');
@@ -247,6 +274,7 @@ mixin NetworkMixin on ChangeNotifier {
     networks.clear();
     _networkByLocalId = null;
     locations.clear();
+    _locationsByDeviceId = null;
     gateways.clear();
   }
 }

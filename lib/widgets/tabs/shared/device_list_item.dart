@@ -25,9 +25,12 @@ import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
@@ -38,11 +41,16 @@ class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;
   final FutureOr<dynamic> Function(dynamic)? _poppedCallback;
   final SlicePosition _position;
-  final GlobalKey _keyFavButton = GlobalKey();
 
-  DeviceListItem(this._device, this._poppedCallback,
-      {required SlicePosition position, super.key})
-      : _position = position;
+  /// The location page's own location, omitted from the subtitle there - a
+  /// row would otherwise repeat the location the whole page is already
+  /// filtered to.
+  final String? _currentLocationId;
+
+  const DeviceListItem(this._device, this._poppedCallback,
+      {required SlicePosition position, String? currentLocationId, super.key})
+      : _position = position,
+        _currentLocationId = currentLocationId;
 
   @override
   State<StatefulWidget> createState() => _DeviceListItemState();
@@ -188,28 +196,83 @@ class _DeviceListItemState extends State<DeviceListItem> {
       final connectionStatus = device.connection_state;
       final unavailable = connectionStatus == DeviceConnectionStatus.offline ||
           device.network?.localGatewayHosts?.isNotEmpty != true && Settings.getLocalMode();
+
+      final deviceType = AppState().deviceTypes[device.device_type_id];
+      final deviceClass = deviceType == null
+          ? null
+          : AppState().deviceClasses[deviceType.device_class_id];
+
+      final locationNames = AppState()
+          .locationsForDevice(device.id)
+          .where((l) => l.id != widget._currentLocationId)
+          .map((l) => l.name)
+          .toList()
+        ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+      final statusChipLabel = !unavailable
+          ? null
+          : connectionStatus == DeviceConnectionStatus.offline
+              ? "Offline"
+              : "Not local";
+      Widget? subtitle;
+      if (locationNames.isNotEmpty || statusChipLabel != null) {
+        // Wrap, not Row: at a narrow width and a large text scale, a location
+        // name plus the chip no longer fit on one line - this drops to a
+        // second line instead of overflowing.
+        subtitle = Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: Spacing.xxs,
+          runSpacing: 2,
+          children: [
+            if (locationNames.isNotEmpty) Text(locationNames.join(", ")),
+            if (locationNames.isNotEmpty && statusChipLabel != null)
+              const Text("·"),
+            if (statusChipLabel != null) _StatusChip(statusChipLabel),
+          ],
+        );
+      }
+
+      Widget? trailingContent;
+      if (!unavailable) {
+        if (trailingWidgets.length == 1) {
+          trailingContent = trailingWidgets[0];
+        } else if (trailingWidgets.isNotEmpty) {
+          trailingContent = IconButton(
+              splashRadius: 25,
+              icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+              onPressed: () => setState(() => _expanded = !_expanded));
+        }
+      }
+
       final List<Widget> columnWidgets = [];
       columnWidgets.add(ListTile(
-        title: Text(device.displayName),
-        leading: FavorizeButton(device, null, key: widget._keyFavButton),
-        trailing: unavailable
-            ? IconButton(
-                onPressed: null,
-                icon: Icon(
-                    connectionStatus == DeviceConnectionStatus.offline
-                        ? Icons.error
-                        : Icons.lan_outlined,
-                    color: context.appColors.warnInk))
-            : trailingWidgets.isEmpty
-                ? null
-                : trailingWidgets.length == 1
-                    ? trailingWidgets[0]
-                    : IconButton(
-                        splashRadius: 25,
-                        icon: Icon(
-                            _expanded ? Icons.expand_less : Icons.expand_more),
-                        onPressed: () => setState(() => _expanded = !_expanded)),
+        title: Text.rich(
+          key: const Key('deviceListItemTitle'),
+          TextSpan(text: device.displayName, children: [
+            if (device.favorite)
+              const WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: EdgeInsets.only(left: Spacing.xxs),
+                  child: Icon(Icons.star,
+                      size: 16, color: Colors.yellow, semanticLabel: "Favorite"),
+                ),
+              ),
+          ]),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: subtitle,
+        leading: EntityLeadingCircle(
+            size: 40, fallbackIcon: Icons.devices, image: deviceClass?.imageWidget),
+        trailing: trailingContent,
+        // Tighter than the default 16 on both counts: the title now competes
+        // with a trailing toggle for a narrow row's width, and the left edge
+        // has to stay Spacing.lg for the hairline (GroupedListTile.
+        // insetIconLeading40) to still start under the title.
+        contentPadding: const EdgeInsets.only(left: Spacing.lg, right: Spacing.sm),
+        horizontalTitleGap: Spacing.sm,
         onTap: () => _onTap(context),
+        onLongPress: () => _toggleFavorite(device),
       ));
 
       if (_expanded) {
@@ -224,6 +287,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
 
       return GroupedListTile(
           position: widget._position,
+          hairlineInset: GroupedListTile.insetIconLeading40,
           child: AnimatedSize(
               duration: const Duration(milliseconds: 75),
               alignment: Alignment.topLeft,
@@ -246,5 +310,42 @@ class _DeviceListItemState extends State<DeviceListItem> {
     if (widget._poppedCallback != null) {
       future.then(widget._poppedCallback!);
     }
+  }
+
+  /// Same code path as [FavorizeButton] itself (the mutex, the persistence,
+  /// the Isar mirror), invoked without building the button widget - the star
+  /// in the title is a display-only indicator now, the row's long-press is
+  /// what toggles it.
+  Future<void> _toggleFavorite(DeviceInstance device) async {
+    if (!DevicesService.isSaveAvailable()) return; // matches the button's disabled state
+    // click() itself toasts "Could not save favorite" and bails out without
+    // an account - checked here too so that path doesn't also get our own
+    // (wrong) success toast.
+    final willSave = Settings.getAccount() != null;
+    final adding = !device.favorite;
+    await FavorizeButton(device, null).click();
+    if (!willSave) return;
+    HapticFeedbackProxy.mediumImpact();
+    Toast.showToastNoContext(adding ? "Added to favorites" : "Removed from favorites");
+  }
+}
+
+/// The device's unavailability reason, shown in the subtitle line instead of
+/// the old trailing icon.
+class _StatusChip extends StatelessWidget {
+  const _StatusChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.appColors.warnInk;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.xs, vertical: 1),
+      decoration:
+          BoxDecoration(border: Border.all(color: color), borderRadius: BorderRadius.circular(8)),
+      child: Text(label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color)),
+    );
   }
 }

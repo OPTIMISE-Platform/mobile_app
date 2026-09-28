@@ -125,6 +125,7 @@ class LocationPageState extends State<LocationPage>
             location.name = newName;
             final newLocation = await LocationService.saveLocation(location);
             state.locations[widget._stateLocationIndex] = newLocation;
+            state.invalidateLocationsCache();
             state.notifyListeners();
           },
           icon: const Icon(Icons.edit),
@@ -150,6 +151,7 @@ class LocationPageState extends State<LocationPage>
                               await LocationService.deleteLocation(location.id);
                               state.locations
                                   .removeAt(widget._stateLocationIndex);
+                              state.invalidateLocationsCache();
                               if (!context.mounted) return;
                               Navigator.pop(context, true);
                             })
@@ -271,7 +273,8 @@ class LocationPageState extends State<LocationPage>
                                   return DeviceListItem(device, null,
                                       key: ValueKey("device-${device.id}"),
                                       position: SlicePosition.forIndex(
-                                          i, state.devices.length));
+                                          i, state.devices.length),
+                                      currentLocationId: location.id);
                                 }
                                 i -= state.devices.length;
                                 if (sectioned) {

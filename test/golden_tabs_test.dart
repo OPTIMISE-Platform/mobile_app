@@ -23,6 +23,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/widgets/tabs/classes/device_class.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
@@ -95,6 +96,9 @@ void main() {
       ];
       AppState().devices.addAll(devices);
       AppState().totalDevices = devices.length;
+      AppState()
+          .locations
+          .add(Location("location-1", "Ground floor", "", "", ["device-1"], []));
       await pumpGolden(tester, tabScreen(const DeviceList()), dark: dark);
       await expectLater(
           find.byType(MaterialApp), matchesGoldenFile("goldens/device_list_$suffix.png"));

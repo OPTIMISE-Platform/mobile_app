@@ -20,9 +20,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
+import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
@@ -38,17 +40,19 @@ void main() {
     resetAppStateForGolden();
   });
 
-  DeviceInstance device(String id, String name, bool? on) {
+  DeviceInstance device(String id, String name, bool? on,
+      {String deviceTypeId = "device-type-1",
+      DeviceConnectionStatus status = DeviceConnectionStatus.online}) {
     final d = DeviceInstance(
       id,
       "$id-local",
       name,
       null,
-      "device-type-1",
+      deviceTypeId,
       false,
       "owner-1",
       name,
-      DeviceConnectionStatus.online,
+      status,
     );
     if (on != null) {
       d.states.add(DeviceState(
@@ -74,6 +78,12 @@ void main() {
     final suffix = dark ? "dark" : "light";
 
     testWidgets("device list item, on ($suffix)", (tester) async {
+      // No device type/class registered: exercises the fallback icon,
+      // together with the location subtitle.
+      AppState()
+          .locations
+          .add(Location("location-1", "Living room", "", "", ["device-1"], []));
+
       await pumpGolden(
         tester,
         listItemScreen(DeviceListItem(device("device-1", "Living room lamp", true), null,
@@ -85,6 +95,8 @@ void main() {
     });
 
     testWidgets("device list item, off ($suffix)", (tester) async {
+      // No device type/class registered and no location: exercises the
+      // fallback icon and the plain (no subtitle) row.
       await pumpGolden(
         tester,
         listItemScreen(DeviceListItem(device("device-2", "Heat pump", false), null,
@@ -93,6 +105,22 @@ void main() {
       );
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/device_list_item_off_$suffix.png"));
+    });
+
+    testWidgets("device list item, offline ($suffix)", (tester) async {
+      // Exercises the "Offline" chip, alone in the subtitle line since the
+      // device is in no location.
+      await pumpGolden(
+        tester,
+        listItemScreen(DeviceListItem(
+            device("device-3", "Garage door", null,
+                status: DeviceConnectionStatus.offline),
+            null,
+            position: SlicePosition.only)),
+        dark: dark,
+      );
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/device_list_item_offline_$suffix.png"));
     });
 
     testWidgets("group list item ($suffix)", (tester) async {

@@ -784,11 +784,13 @@ class _SensorValuesState extends State<SensorValues>
                                 _subtitleOf(pin),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                // Not textTheme.bodySmall: its M3 height (16px
+                                // line) is taller than this literal's natural
+                                // one and, stacked with the figure role below,
+                                // overflowed the card at a large text scale.
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(
-                                    context,
-                                  ).textTheme.bodySmall?.color,
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
                                 ),
                               ),
                             ),
@@ -951,7 +953,10 @@ class _SensorValuesState extends State<SensorValues>
     );
   }
 
-  static const _placeholder = Text('—', style: TextStyle(fontSize: 24));
+  // Same slot as the value it stands in for (_buildValueDisplay's Text), so
+  // it uses the same figure role - a fixed size here would visibly mismatch
+  // the value that replaces it once one arrives.
+  Widget get _placeholder => Text('—', style: Theme.of(context).textTheme.headlineMedium);
 
   Widget _buildValue(
     DeviceState? state,
@@ -1035,7 +1040,7 @@ class _SensorValuesState extends State<SensorValues>
       child: Text(
         '${formatValue(state.value)}${unit.isEmpty ? '' : ' $unit'}',
         maxLines: 1,
-        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+        style: Theme.of(context).textTheme.headlineMedium,
       ),
     );
   }

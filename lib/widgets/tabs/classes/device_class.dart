@@ -25,6 +25,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
@@ -121,15 +122,10 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                     title: Text(deviceClasses[i].name),
                                     subtitle: Text(
                                         "${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
-                                    leading: Container(
-                                      height: MediaQuery.textScalerOf(context).scale(48),
-                                      width: MediaQuery.textScalerOf(context).scale(48),
-                                      decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                                      child: Padding(
-                                        padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
-                                        child: deviceClasses[i].imageWidget ?? const Icon(Icons.devices, color: Colors.white),
-                                      ),
-                                    ),
+                                    leading: EntityLeadingCircle(
+                                        size: 48,
+                                        fallbackIcon: Icons.devices,
+                                        image: deviceClasses[i].imageWidget),
                                     onTap: () {
                                       parentState?.filter.deviceClassIds = [deviceClasses[i].id];
                                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), true);

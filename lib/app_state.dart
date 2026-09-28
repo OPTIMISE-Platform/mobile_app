@@ -72,6 +72,15 @@ class AppState extends ChangeNotifier
 
     try {
       unawaited(initMessaging());
+      // Not in the Future.wait below: a row wants its device's location on
+      // the very first render, but nothing else needs to block init on it -
+      // loadLocations() reports its own errors via ErrorReporter. Only when
+      // nothing is loaded yet (the real cold-start/post-login case, since
+      // locations only ever gets entries from this same loader or
+      // clearNetworkData() empties it again on logout): loadLocations()
+      // itself always clears first, so calling it whenever init() runs would
+      // instead race and drop a load already served another way.
+      if (locations.isEmpty) unawaited(loadLocations());
       await Future.wait([
         loadDeviceClasses(),
         loadDeviceTypes(),

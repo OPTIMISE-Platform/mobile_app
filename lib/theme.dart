@@ -283,18 +283,35 @@ class MyTheme {
         ),
       ),
     );
-    return theme.copyWith(extensions: [
-      AppColors(
-        app: appColor,
-        appInk: appInkColorLight,
-        warn: warnColor,
-        warnInk: warnInkColorLight,
-        error: errorColorLight,
-        success: successColor,
-        text: theme.textTheme.bodyMedium!.color!,
-      ),
-    ]);
+    return theme.copyWith(
+      textTheme: _appTextTheme(theme.textTheme),
+      extensions: [
+        AppColors(
+          app: appColor,
+          appInk: appInkColorLight,
+          warn: warnColor,
+          warnInk: warnInkColorLight,
+          error: errorColorLight,
+          success: successColor,
+          text: theme.textTheme.bodyMedium!.color!,
+        ),
+      ],
+    );
   }
+
+  /// Overrides the two roles the type scale (12 caption, 14 body, 16
+  /// widget/row title, 20 page title, 30 figure) does not already get from
+  /// the M3 defaults (bodySmall 12, bodyMedium/titleMedium/bodyLarge 14/16/16
+  /// already line up). [titleLarge] is the app bar title role (M3 dialogs use
+  /// headlineSmall instead, untouched here), default 22; [headlineMedium]
+  /// carries the one large reading (the sensor value), default 28 and not
+  /// bold - its height is also tightened, or the extra 2px plus the bold
+  /// weight's own metrics overflow the sensor card at a large text scale.
+  static TextTheme _appTextTheme(TextTheme base) => base.copyWith(
+        titleLarge: base.titleLarge?.copyWith(fontSize: 20),
+        headlineMedium: base.headlineMedium
+            ?.copyWith(fontSize: 30, fontWeight: FontWeight.bold, height: 1.1),
+      );
 
   static final ThemeData materialDarkTheme = _buildMaterialDarkTheme();
 
@@ -372,17 +389,20 @@ class MyTheme {
         ),
       ),
     );
-    return theme.copyWith(extensions: [
-      AppColors(
-        app: appColor,
-        appInk: appInkColorDark,
-        warn: warnColor,
-        warnInk: warnInkColorDark,
-        error: errorColorDark,
-        success: successColor,
-        text: theme.textTheme.bodyMedium!.color!,
-      ),
-    ]);
+    return theme.copyWith(
+      textTheme: _appTextTheme(theme.textTheme),
+      extensions: [
+        AppColors(
+          app: appColor,
+          appInk: appInkColorDark,
+          warn: warnColor,
+          warnInk: warnInkColorDark,
+          error: errorColorDark,
+          success: successColor,
+          text: theme.textTheme.bodyMedium!.color!,
+        ),
+      ],
+    );
   }
 
   static ThemeStyle currentTheme = themeMaterial;

@@ -19,9 +19,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/device_groups.dart';
+import 'package:mobile_app/services/haptic_feedback_proxy.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
@@ -35,6 +41,20 @@ class GroupListItem extends StatelessWidget {
       {required SlicePosition position, super.key})
       : _position = position;
 
+  /// Same code path as [FavorizeButton] itself (the mutex, the persistence,
+  /// the Isar mirror), invoked without building the button widget - the star
+  /// in the title is a display-only indicator now, the row's long-press is
+  /// what toggles it.
+  Future<void> _toggleFavorite() async {
+    if (!DeviceGroupsService.isCreateEditDeleteAvailable()) return; // matches the button's disabled state
+    final willSave = Settings.getAccount() != null;
+    final adding = !_group.favorite;
+    await FavorizeButton(null, _group).click();
+    if (!willSave) return;
+    HapticFeedbackProxy.mediumImpact();
+    Toast.showToastNoContext(adding ? "Added to favorites" : "Removed from favorites");
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -42,23 +62,31 @@ class GroupListItem extends StatelessWidget {
         builder: (context, child) {
       return GroupedListTile(
           position: _position,
+          hairlineInset: GroupedListTile.insetIconLeading40,
           child: ListTile(
-              title: SizedBox(
-                width: MediaQuery.of(context).size.width - 192,
-                child: Text(_group.name),
+              title: Text.rich(
+                TextSpan(text: _group.name, children: [
+                  if (_group.favorite)
+                    const WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: Padding(
+                        padding: EdgeInsets.only(left: Spacing.xxs),
+                        child: Icon(Icons.star,
+                            size: 16, color: Colors.yellow, semanticLabel: "Favorite"),
+                      ),
+                    ),
+                ]),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
-              /*
-          trailing: Container(
-            height: MediaQuery.of(context).textScaleFactor * 48,
-            width: MediaQuery.of(context).textScaleFactor * 48,
-            decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-            child: Padding(
-                padding: EdgeInsets.all(MediaQuery.of(context).textScaleFactor * 8),
-                child: state.deviceGroups[_stateGroupIndex].imageWidget ?? const Icon(Icons.devices_other, color: Colors.white)),
-          ),
-           */
-              leading: FavorizeButton(null, _group),
+              leading: EntityLeadingCircle(
+                  size: 40,
+                  fallbackIcon: Icons.devices_other,
+                  image: _group.imageWidget),
+              contentPadding: const EdgeInsets.only(left: Spacing.lg, right: Spacing.sm),
+              horizontalTitleGap: Spacing.sm,
+              onLongPress: _toggleFavorite,
               onTap: () {
                 // The list this row sits in was searched with the parent
                 // filter, so its toggle carries over to the group's members.
