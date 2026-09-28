@@ -52,9 +52,8 @@ mixin DeviceMixin on ChangeNotifier {
   bool _devicesLoadedOnce = false;
   int _deviceOffset = 0;
 
-  /// Set when a page load failed. List placeholder rows call [loadDevices] on
-  /// every build, so retrying from there would request once per frame; only
-  /// the next [searchDevices] clears it.
+  /// Set when a page load failed; lists then show their end state instead of
+  /// asking for the next page, and only the next [searchDevices] clears it.
   bool _devicesLoadFailed = false;
 
   int _devicePageLoads = 0;

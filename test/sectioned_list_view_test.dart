@@ -148,15 +148,28 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets("rejects two rows with the same key in one section",
+    testWidgets("renders rows that share a key instead of failing",
         (tester) async {
       await tester.pumpWidget(host(SectionedListView(sections: [
         section("devices", ["d1", "d2", "d1"]),
       ])));
 
-      final error = tester.takeException();
-      expect(error, isA<FlutterError>());
-      expect(error.toString(), contains('two rows keyed "d1"'));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey(("devices", "d1"))), findsOneWidget);
+      expect(find.byKey(const ValueKey(("devices", "d1#1"))), findsOneWidget);
+    });
+
+    testWidgets("builds an empty row when the list shrank since the build",
+        (tester) async {
+      final items = List.generate(40, (i) => "d$i");
+      await tester.pumpWidget(host(SectionedListView(sections: [
+        section("devices", items),
+      ])));
+      items.clear();
+      await tester.drag(find.byType(ListView), const Offset(0, -2000));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets("rejects two sections with the same id", (tester) async {

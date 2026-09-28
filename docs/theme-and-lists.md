@@ -83,7 +83,8 @@ positions, headers, keys and index lookup; do not compute them by hand.
   re-key every later row when a section comes or goes.
 - `keyOf` must be unique within its section and name the item, not its index.
   Gateways use the hostname because `coreId` is empty for manually added ones.
-  A debug build throws on a duplicate row key or section id.
+  A repeated row key from real data (a gateway paired twice) is told apart by
+  its occurrence and logged; a duplicate section id is a bug and throws in debug.
 - A header is shown only for a section with a `title` that has rows; positions
   count the rows actually shown, so a hidden last row keeps the rounded bottom.
 - `leading` and `trailing` take unkeyed extras such as a page header or the 72px

@@ -44,7 +44,8 @@ class ListSection<T> {
 
   final List<T> items;
 
-  /// The item's identity, unique within this section.
+  /// The item's identity, meant to be unique within this section. Repeats
+  /// from real data (a gateway paired twice) are told apart by occurrence.
   final String Function(T item) keyOf;
 
   final SectionRowBuilder<T> itemBuilder;
@@ -53,8 +54,11 @@ class ListSection<T> {
   // keyOf or itemBuilder, get no covariance check against the caller's T.
   String _keyAt(int i) => keyOf(items[i]);
 
-  Widget _buildAt(BuildContext context, int i, int count) =>
-      itemBuilder(context, items[i], SlicePosition.forIndex(i, count));
+  // The caller's list can shrink between this build and a lazily built row
+  // (a search clears it before the next frame); such a row stays empty.
+  Widget _buildAt(BuildContext context, int i, int count) => i < items.length
+      ? itemBuilder(context, items[i], SlicePosition.forIndex(i, count))
+      : const SizedBox.shrink();
 }
 
 /// A lazily built grouped list: [leading] widgets, then each non-empty
@@ -93,7 +97,7 @@ class SectionedListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final layout = _Layout(sections, leading.length);
-    assert(layout.debugCheckUniqueKeys());
+    assert(layout.debugCheckUniqueSectionIds());
     final sectionsEnd = layout.end;
     // Built on first use per build: the list asks only while rows are keyed
     // and on screen, and the map is valid for this build's layout only.
@@ -130,6 +134,24 @@ class _Placed {
   /// caller's list changes before a row is built lazily.
   final int count;
 
+  /// Row keys as of this build, with repeats suffixed by their occurrence.
+  late final List<String> keys = _uniqueKeys();
+
+  List<String> _uniqueKeys() {
+    final seen = <String, int>{};
+    return [
+      for (var row = 0; row < count; row++)
+        () {
+          final key = section._keyAt(row);
+          final n = seen.update(key, (v) => v + 1, ifAbsent: () => 0);
+          if (n == 0) return key;
+          debugPrint('SectionedListView: section "${section.id}" has more '
+              'than one row keyed "$key"');
+          return "$key#$n";
+        }(),
+    ];
+  }
+
   final bool hasHeader;
 
   int get firstRow => start + (hasHeader ? 1 : 0);
@@ -160,7 +182,7 @@ class _Layout {
       if (p.hasHeader && i == p.start) return SectionListHeader(p.section.title!);
       final row = i - p.firstRow;
       return KeyedSubtree(
-        key: ValueKey((p.section.id, p.section._keyAt(row))),
+        key: ValueKey((p.section.id, p.keys[row])),
         child: p.section._buildAt(context, row, p.count),
       );
     }
@@ -170,26 +192,15 @@ class _Layout {
   Map<(String, String), int> indexByKey() => {
         for (final p in placed)
           for (var row = 0; row < p.count; row++)
-            (p.section.id, p.section._keyAt(row)): p.firstRow + row,
+            (p.section.id, p.keys[row]): p.firstRow + row,
       };
 
-  bool debugCheckUniqueKeys() {
+  bool debugCheckUniqueSectionIds() {
     final ids = <String>{};
     for (final section in sections) {
       if (!ids.add(section.id)) {
         throw FlutterError(
             'SectionedListView: two sections share the id "${section.id}".');
-      }
-    }
-    for (final p in placed) {
-      final keys = <String>{};
-      for (var row = 0; row < p.count; row++) {
-        final key = p.section._keyAt(row);
-        if (!keys.add(key)) {
-          throw FlutterError('SectionedListView: section "${p.section.id}" '
-              'has two rows keyed "$key". Rows are matched to their State by '
-              'key, so a duplicate hands one row\'s State to the other.');
-        }
       }
     }
     return true;
