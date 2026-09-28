@@ -95,7 +95,7 @@ dev_dependencies:
   isar_community_generator: ^3.3.0
 
 dependency_overrides:
-  # Vendored copy, see THIRD-PARTY.md.
+  # Fork that never creates StrongBox-backed keys, see THIRD-PARTY.md.
   openidconnect_android:
     path: third_party/openidconnect_android
 

@@ -1,6 +1,9 @@
+// Modified for mobile_app: adds isStrongBoxBacked() so StrongBox keys can be migrated to TEE keys.
 package io.concerti.openidconnect_android
 
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyInfo
 import android.security.keystore.KeyProperties
 import java.io.File
 import java.nio.charset.Charset
@@ -9,6 +12,7 @@ import java.security.KeyStoreException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
 
 interface CryptographyManager {
@@ -21,6 +25,9 @@ interface CryptographyManager {
     fun decryptData(ciphertext: ByteArray, cipher: Cipher): String
 
     fun deleteKey(keyName: String)
+
+    // Always false below API 31, where KeyInfo cannot tell StrongBox from TEE.
+    fun isStrongBoxBacked(keyName: String): Boolean
 }
 
 fun CryptographyManager(
@@ -99,6 +106,19 @@ private class CryptographyManagerImpl(
         try {
             keyStore.deleteEntry(KEY_PREFIX + keyName)
         } catch (_: KeyStoreException) {}
+    }
+
+    override fun isStrongBoxBacked(keyName: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return false
+        }
+        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
+        keyStore.load(null)
+        val key = keyStore.getKey(KEY_PREFIX + keyName, null) as? SecretKey ?: return false
+        val keyInfo =
+                SecretKeyFactory.getInstance(key.algorithm, ANDROID_KEYSTORE)
+                        .getKeySpec(key, KeyInfo::class.java) as KeyInfo
+        return keyInfo.securityLevel == KeyProperties.SECURITY_LEVEL_STRONGBOX
     }
 
     private fun getCipher(): Cipher {

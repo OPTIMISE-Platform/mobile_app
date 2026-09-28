@@ -1,8 +1,10 @@
+// Modified for mobile_app: keys are created without StrongBox (reads cost ~350 ms each there), and existing StrongBox keys are moved to TEE keys on read.
 package io.concerti.openidconnect_android
 
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import java.io.File
 import java.security.ProviderException
 
@@ -14,6 +16,7 @@ internal class AndroidSecureStorage(
         private const val FILE_SUFFIX = ".bin"
         private const val ENCODED_FILE_NAME_PREFIX = "_encoded_"
         private const val MASTER_KEY_SUFFIX = "_master_key"
+        private const val TAG = "OpenIdSecureStorage"
     }
 
     private val appContext = context.applicationContext
@@ -29,7 +32,9 @@ internal class AndroidSecureStorage(
                             PackageManager.FEATURE_STRONGBOX_KEYSTORE,
                     )
 
-    private var useStrongBoxBackedKeystore = strongBoxSupported
+    // Never create StrongBox keys; strongBoxSupported only gates the migration of old ones.
+    private var useStrongBoxBackedKeystore = false
+    private var loggedStuckMigration = false
     private var cryptographyManager = createCryptographyManager()
 
     fun initialize() {
@@ -61,7 +66,33 @@ internal class AndroidSecureStorage(
                 retryWithoutStrongBoxIfNeeded(key) {
                     cryptographyManager.getInitializedCipherForDecryption(masterKeyName(key), file)
                 }
-        return cryptographyManager.decryptData(file.readBytes(), cipher)
+        val value = cryptographyManager.decryptData(file.readBytes(), cipher)
+        migrateOffStrongBoxIfNeeded(key, value)
+        return value
+    }
+
+    // Deleting the key before the rewrite is unavoidable (same alias); if the rewrite
+    // then fails, the next read cannot decrypt and OpenIdIdentity.load() clears the identity.
+    private fun migrateOffStrongBoxIfNeeded(key: String, value: String) {
+        if (!strongBoxSupported) {
+            return
+        }
+        try {
+            if (!cryptographyManager.isStrongBoxBacked(masterKeyName(key))) {
+                return
+            }
+            cryptographyManager.deleteKey(masterKeyName(key))
+            write(key, value)
+            // deleteKey swallows KeyStoreException, so a failed delete shows only here:
+            // the value was rewritten with the old key and every start would repeat this.
+            if (!loggedStuckMigration && cryptographyManager.isStrongBoxBacked(masterKeyName(key))) {
+                loggedStuckMigration = true
+                Log.w(TAG, "A StrongBox key could not be deleted; stored values stay on StrongBox")
+            }
+        } catch (error: Exception) {
+            // Class name only: keystore messages can carry the key alias.
+            Log.w(TAG, "Moving a stored value off StrongBox failed: ${error.javaClass.name}")
+        }
     }
 
     fun delete(key: String) {

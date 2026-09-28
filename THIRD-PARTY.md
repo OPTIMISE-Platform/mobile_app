@@ -21,3 +21,21 @@ it. A StrongBox read costs about 350 ms, the identity has six values, and the ap
 reads it twice at start, which held the login screen and the first backend call
 for more than four seconds on a StrongBox device. No published version offers a
 way to turn this off.
+
+### Changes
+
+Modified files carry a notice line at the top.
+
+- `AndroidSecureStorage.kt`: new keys are never StrongBox-backed (TEE only).
+  On API 31+, a read whose key is StrongBox-backed deletes that key after
+  decrypting, re-encrypts the value with a new TEE key and rewrites the file;
+  each value migrates once. Below API 31 `KeyInfo` cannot tell StrongBox from
+  TEE, so old keys stay until the next logout or login replaces them.
+- `CryptographyManager.kt`: adds `isStrongBoxBacked()`, based on
+  `KeyInfo.getSecurityLevel()`.
+
+Failure mode: the key has to be deleted before the rewrite, because the new key
+uses the same alias. If the rewrite then fails, the current read still returns
+the value, but the next start cannot decrypt it; `OpenIdIdentity.load()` clears
+the identity and the user logs in again. A token refresh in between rewrites the
+value and avoids that.
