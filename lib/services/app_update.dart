@@ -127,7 +127,7 @@ class AppUpdater {
           "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases/latest";
       if (Settings.getPreReleaseMode()){
         url =
-        "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=1";
+        "https://api.github.com/repos/${dotenv.env["GITHUB_REPO"]!}/releases?per_page=30";
       }
 
       //TODO: switch to factory
@@ -149,7 +149,12 @@ class AppUpdater {
               "Update check failed: $url ${e.message} (status ${e.response?.statusCode})");
           return null; // couldn't determine — surface as "check again later"
         }
-        decoded = (resp.data?[0] ?? {}) as Map<String, dynamic>;
+        final newest = newestRelease(resp.data ?? const []);
+        if (newest == null) {
+          _foundUpdateAt = DateTime.now();
+          return _foundUpdate = false;
+        }
+        decoded = newest;
       } else {
         final Response<dynamic> resp;
         try {
@@ -161,7 +166,8 @@ class AppUpdater {
         }
         decoded = (resp.data ?? {}) as Map<dynamic, dynamic>;
       }
-      latestBuild = int.parse((decoded["tag_name"] as String).split("+")[1]);
+      latestBuild = _buildOf(decoded["tag_name"]) ??
+          (throw FormatException("No build number in ${decoded["tag_name"]}"));
       currentBuild = int.parse(dotenv.env["VERSION"]!.split("+")[1]);
 
       _foundUpdateAt = DateTime.now();
@@ -177,6 +183,30 @@ class AppUpdater {
       return _foundUpdate = false;
     });
   }
+
+  /// The release with the highest build number that ships an APK. GitHub does
+  /// not list releases newest first: `0.2.0-dev.9` comes before `dev.14`.
+  @visibleForTesting
+  static Map<String, dynamic>? newestRelease(List<dynamic> releases) {
+    Map<String, dynamic>? newest;
+    int? newestBuild;
+    for (final release in releases.whereType<Map<String, dynamic>>()) {
+      final build = _buildOf(release["tag_name"]);
+      final assets = release["assets"];
+      final hasApk = assets is List &&
+          assets.any((a) => a is Map && a["name"] == "app-release.apk");
+      if (build == null || !hasApk) continue;
+      if (newestBuild == null || build > newestBuild) {
+        newest = release;
+        newestBuild = build;
+      }
+    }
+    return newest;
+  }
+
+  static int? _buildOf(Object? tag) => tag is String && tag.contains("+")
+      ? int.tryParse(tag.split("+")[1])
+      : null;
 
   static Future<Stream<double>> downloadUpdate() async {
     final dio = await DioFactory.create(DioConfig.standard);
