@@ -74,6 +74,16 @@ Golden diffs of a failed run land in `test/failures/`, which is ignored.
 registered answers 404 and is recorded in `requests`, which also documents what
 a screen fetches.
 
+- `stopServing(method, path)` removes a route again, for a test that lets a
+  second load fail after a first one succeeded.
+- `holds["METHOD path"] = Completer()` delays the answer of a `serveJson` route
+  until the completer finishes; `holdDevices` does the same for
+  `serveDevicesPaged`. Both let a test act while a request is in flight, for
+  example a second search or an upgrade tap during a reload.
+- `serveDevicesPaged(devices)` slices by offset/limit and honours `ids` and
+  `search` (substring of the name) like the real endpoint, with `X-Total-Count`
+  set to the count before client-side hiding.
+
 Light and dark captures of one screen stay in one `testWidgets`: Dio instances
 are memoized for the process, and a memoized future created in an earlier test
 may not resolve in a later one.
@@ -110,6 +120,7 @@ All are `@visibleForTesting` and never set by production code.
 | `useUtcForDisplayTime` (`lib/shared/display_time.dart`) | Makes `toDisplayTime()` return UTC instead of local time, so rendered times are the same on every host |
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
 | `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP |
+| `DeviceMixin.readCachedInactiveDeviceIds` (`lib/mixins/device_mixin.dart`) | Replaces the Isar query that seeds the inactive-device index, so the counters can be tested without the Isar container |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
 
