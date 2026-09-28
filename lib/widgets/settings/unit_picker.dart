@@ -17,10 +17,11 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:numberpicker/numberpicker.dart';
 
 /// The unit picker: every function whose concept offers more than one
@@ -46,50 +47,48 @@ class _UnitPickerListState extends State<UnitPickerList> {
             (AppState().concepts[f.concept_id]?.characteristics ?? []).length > 1 &&
             f.name.toLowerCase().contains(_functionSearch.toLowerCase()))
         .toList();
-    final list = ListView.builder(
+    final list = SectionedListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: Spacing.listPadding(context),
-        itemCount: functions.length,
-        itemBuilder: (context, i) {
-          final f = functions[i];
-          return GroupedListTile(
-              key: ValueKey(f.id),
-              position: SlicePosition.forIndex(i, functions.length),
-              hairlineInset: GroupedListTile.insetNoLeading,
-              child: ListTile(
-              title: PopupMenuButton<String?>(
-            initialValue: settings_service.Settings
-                    .getFunctionPreferredCharacteristicId(f.id) ??
-                AppState().concepts[f.concept_id]?.base_characteristic_id,
-            itemBuilder: (_) => (AppState().concepts[f.concept_id]?.characteristics ?? [])
-                .map(
-                  (e) => PopupMenuItem<String?>(
-                      value: e.id,
-                      child: Text(e.name)),
-                )
-                .toList()
-              ..add(const PopupMenuItem<String?>(
-                  value: null,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [Divider(), Text("Reset")],
-                  ))),
-            onSelected: (v) {
-              settings_service.Settings
-                  .setFunctionPreferredCharacteristicId(f.id, v);
-              reinit();
-              AppState().notifyListeners();
-              AppState().pushRefresh();
-              setState(() {});
+        sections: [
+          ListSection<PlatformFunction>(
+            id: "functions",
+            items: functions,
+            keyOf: (f) => f.id,
+            itemBuilder: (context, f, position) {
+              return GroupedListTile(
+                  position: position,
+                  hairlineInset: GroupedListTile.insetNoLeading,
+                  child: ListTile(
+                  title: PopupMenuButton<String?>(
+                initialValue: settings_service.Settings
+                        .getFunctionPreferredCharacteristicId(f.id) ??
+                    AppState().concepts[f.concept_id]?.base_characteristic_id,
+                itemBuilder: (_) => (AppState().concepts[f.concept_id]?.characteristics ?? [])
+                    .map(
+                      (e) => PopupMenuItem<String?>(
+                          value: e.id,
+                          child: Text(e.name)),
+                    )
+                    .toList()
+                  ..add(const PopupMenuItem<String?>(
+                      value: null,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [Divider(), Text("Reset")],
+                      ))),
+                onSelected: (v) {
+                  settings_service.Settings
+                      .setFunctionPreferredCharacteristicId(f.id, v);
+                  reinit();
+                  AppState().notifyListeners();
+                  AppState().pushRefresh();
+                  setState(() {});
+                },
+                child: Text(f.name),
+              )));
             },
-            child: Text(f.name),
-          )));
-        },
-        findChildIndexCallback: (key) {
-          final id = (key as ValueKey<String>).value;
-          final index = functions.indexWhere((f) => f.id == id);
-          return index == -1 ? null : index;
-        });
+          ),
+        ]);
     final column = SizedBox(
         width: double.maxFinite,
         height: MediaQuery.of(context).size.height,

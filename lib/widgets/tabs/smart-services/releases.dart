@@ -27,7 +27,7 @@ import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 class SmartServicesReleases extends StatefulWidget {
@@ -111,68 +111,66 @@ class _SmartServicesReleasesState extends State<SmartServicesReleases>
                               );
                             },
                           )
-                        : ListView.builder(
+                        : SectionedListView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.listPadding(context),
-                            itemCount: releases.length,
-                            itemBuilder: (context, i) {
-                              if (i == releases.length - 1 &&
-                                  !allInstancesLoaded) {
-                                _loadInstances();
-                              }
-                              return GroupedListTile(
-                                key: ValueKey(releases[i].id),
-                                position:
-                                    SlicePosition.forIndex(i, releases.length),
-                                hairlineInset: GroupedListTile.insetNoLeading,
-                                child: ListTile(
-                                    title: Row(children: [
-                                      Text(
-                                        releases[i].name,
-                                        style: releases[i].usable == false
-                                            ? const TextStyle(
-                                                color: Colors.grey)
-                                            : null,
-                                      ),
-                                      Badge(
-                                        // backgroundColor below is
-                                        // transparent, so this icon sits
-                                        // directly on the page surface - the
-                                        // ink, not the fill.
-                                        label: Icon(
-                                            Icons.error,
-                                            size: 16,
-                                            color: context.appColors.warnInk),
-                                        isLabelVisible:
-                                            releases[i].error != null,
-                                        alignment:
-                                            AlignmentDirectional.topCenter,
-                                        largeSize: 16,
-                                        backgroundColor: Colors.transparent,
-                                        child: releases[i].error != null
-                                            ? const Text("")
-                                            : null,
-                                      )
-                                    ]),
-                                    subtitle: Text(_format
-                                        .format(releases[i].createdAt())),
-                                    onTap: releases[i].error != null ||
-                                            releases[i].usable == false
-                                        ? () => Toast.showToastNoContext("Missing devices for this service")
-                                        : () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    SmartServicesReleaseLaunch(
-                                                        releases[i])))),
-                              );
-                            },
-                            findChildIndexCallback: (key) {
-                              final id = (key as ValueKey<String>).value;
-                              final index =
-                                  releases.indexWhere((e) => e.id == id);
-                              return index == -1 ? null : index;
-                            },
+                            sections: [
+                              ListSection<SmartServiceRelease>(
+                                id: "releases",
+                                items: releases,
+                                keyOf: (release) => release.id,
+                                itemBuilder: (context, release, position) {
+                                  final i = releases.indexOf(release);
+                                  if (position.roundsBottom &&
+                                      !allInstancesLoaded) {
+                                    _loadInstances();
+                                  }
+                                  return GroupedListTile(
+                                    position: position,
+                                    hairlineInset: GroupedListTile.insetNoLeading,
+                                    child: ListTile(
+                                        title: Row(children: [
+                                          Text(
+                                            releases[i].name,
+                                            style: releases[i].usable == false
+                                                ? const TextStyle(
+                                                    color: Colors.grey)
+                                                : null,
+                                          ),
+                                          Badge(
+                                            // backgroundColor below is
+                                            // transparent, so this icon sits
+                                            // directly on the page surface - the
+                                            // ink, not the fill.
+                                            label: Icon(
+                                                Icons.error,
+                                                size: 16,
+                                                color: context.appColors.warnInk),
+                                            isLabelVisible:
+                                                releases[i].error != null,
+                                            alignment:
+                                                AlignmentDirectional.topCenter,
+                                            largeSize: 16,
+                                            backgroundColor: Colors.transparent,
+                                            child: releases[i].error != null
+                                                ? const Text("")
+                                                : null,
+                                          )
+                                        ]),
+                                        subtitle: Text(_format
+                                            .format(releases[i].createdAt())),
+                                        onTap: releases[i].error != null ||
+                                                releases[i].usable == false
+                                            ? () => Toast.showToastNoContext("Missing devices for this service")
+                                            : () => Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                    builder: (context) =>
+                                                        SmartServicesReleaseLaunch(
+                                                            releases[i])))),
+                                  );
+                                },
+                              ),
+                            ],
                           ))));
   }
 }

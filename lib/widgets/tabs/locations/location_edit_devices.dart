@@ -30,6 +30,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
@@ -86,10 +87,9 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
     }
   }
 
-  Widget _deviceTile(DeviceInstance device, int index, int count) {
+  Widget _deviceTile(DeviceInstance device, SlicePosition position) {
     return GroupedListTile(
-      key: ValueKey(device.id),
-      position: SlicePosition.forIndex(index, count),
+      position: position,
       hairlineInset: GroupedListTile.insetIconLeading,
       child: ListTile(
         leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -115,27 +115,23 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
     final extra = _inactiveMembers
         .where((d) => !listed.contains(d.id) && d.displayName.toLowerCase().contains(query))
         .toList(growable: false);
-    final shownCount = extra.length + AppState().devices.length;
     return Stack(children: [
-      ListView.builder(
-        padding: Spacing.listPadding(context),
-        itemCount: extra.length + AppState().devicesListItemCount,
-        itemBuilder: (_, i) {
-          if (i < extra.length) return _deviceTile(extra[i], i, shownCount);
-          final j = i - extra.length;
-          if (j >= AppState().devices.length) {
-            AppState().loadDevices();
-            return const SizedBox.shrink();
-          }
-          return _deviceTile(AppState().devices[j], i, shownCount);
-        },
-        findChildIndexCallback: (key) {
-          final id = (key as ValueKey<String>).value;
-          final e = extra.indexWhere((d) => d.id == id);
-          if (e != -1) return e;
-          final index = AppState().devices.indexWhere((d) => d.id == id);
-          return index == -1 ? null : extra.length + index;
-        },
+      SectionedListView(
+        sections: [
+          ListSection<DeviceInstance>(
+            id: "devices",
+            items: [...extra, ...AppState().devices],
+            keyOf: (device) => device.id,
+            itemBuilder: (_, device, position) => _deviceTile(device, position),
+          ),
+        ],
+        trailing: [
+          if (AppState().devicesListItemCount > AppState().devices.length)
+            Builder(builder: (_) {
+              AppState().loadDevices();
+              return const SizedBox.shrink();
+            }),
+        ],
       ),
       Positioned(
         right: 15,

@@ -20,7 +20,7 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:provider/provider.dart';
 
@@ -151,142 +151,141 @@ class _NotificationListState extends State<NotificationList> {
               child: Scrollbar(
                   child: state.notifications.isEmpty
                       ? const Center(child: Text("No Notifications"))
-                      : ListView.builder(
+                      : SectionedListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: Spacing.listPadding(context),
-                          itemCount: state.notifications.length,
-                          itemBuilder: (BuildContext context, int i) {
-                            return GroupedListTile(
-                                key: ValueKey<String>(
-                                    state.notifications[i].id),
-                                position: SlicePosition.forIndex(
-                                    i, state.notifications.length),
-                                hairlineInset: _selectionMode
-                                    ? GroupedListTile.insetIconLeading
-                                    : GroupedListTile.insetNoLeading,
-                                child: Dismissible(
-                                    background: Container(
-                                      alignment: Alignment.centerRight,
-                                      padding: Spacing.inset,
-                                      color: context.appColors.warn,
-                                      // Black, not white: white on the warn
-                                      // fill is 2.6:1, black is 8:1.
-                                      child: const Icon(
-                                        Icons.delete,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    confirmDismiss: (_) {
-                                      final b = NotificationsService.isAvailable();
-                                      if (!b) {
-                                        Toast.showToastNoContext("Currently unavailable");
-                                      }
-                                      return Future.value(
-                                          b);
-                                    },
-                                    direction: DismissDirection.endToStart,
-                                    onDismissed: (_) {
-                                      final id = state.notifications[i].id;
-                                      // Drop it from the list synchronously -
-                                      // deleteNotifications only sends the
-                                      // request, and the list otherwise waits
-                                      // for the delete-many push to remove
-                                      // it, leaving this now-gone Dismissible
-                                      // in the tree with its neighbours still
-                                      // sliced for its old position. A push
-                                      // that arrives afterwards removing the
-                                      // same id is then a no-op (removeWhere
-                                      // on an absent id matches nothing). A
-                                      // failed delete is reported by
-                                      // deleteNotifications itself (a toast
-                                      // via ErrorReporter), and the next
-                                      // successful loadNotifications brings
-                                      // the row back.
-                                      state.notifications
-                                          .removeWhere((n) => n.id == id);
-                                      state.notifyListeners();
-                                      state.deleteNotifications([id]);
-                                    },
-                                    key: ValueKey<String>(
-                                        state.notifications[i].id),
-                                    child: ListTile(
-                                      leading: !_selectionMode
-                                          ? null
-                                          : Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                  Icon(
-                                                    _selected.contains(state
-                                                            .notifications[i])
-                                                        ? Icons.check_circle
-                                                        : Icons.circle_outlined,
-                                                    color: context.appColors.appInk,
-                                                  )
-                                                ]),
-                                      title: Row(
-                                        children: [
-                                          Text(state.notifications[i].title),
-                                          Badge(
-                                            // backgroundColor below is
-                                            // transparent, so this icon sits
-                                            // directly on the page surface.
-                                            label: Icon(
-                                              Icons.circle_notifications,
-                                              size: 12,
-                                              color: context.appColors.warnInk,
-                                            ),
-                                            isLabelVisible:
-                                                !state.notifications[i].isRead,
-                                            alignment:
-                                                AlignmentDirectional.topCenter,
-                                            largeSize: 16,
-                                            backgroundColor: Colors.transparent,
-                                            child: state.notifications[i].isRead
-                                                ? null
-                                                : const Text(""),
-                                          )
-                                        ],
-                                      ),
-                                      subtitle: Text(_format.format(
-                                          state.notifications[i].createdAt())),
-                                      onTap: () {
-                                        if (_selectionMode) {
-                                          setState(() {
-                                            _selected.contains(
-                                                    state.notifications[i])
-                                                ? _selected.remove(
-                                                    state.notifications[i])
-                                                : _selected.add(
-                                                    state.notifications[i]);
-                                          });
-                                        } else {
-                                          if (!state.notifications[i].isRead) {
-                                            state.notifications[i].isRead =
-                                                true;
-                                            state.updateNotifications(
-                                                context, i);
+                          sections: [
+                            ListSection<app.Notification>(
+                              id: "notifications",
+                              items: state.notifications,
+                              keyOf: (notification) => notification.id,
+                              itemBuilder: (context, notification, position) {
+                                // Index as of this build, which the callbacks
+                                // below address the notification by.
+                                final i = state.notifications.indexOf(notification);
+                                return GroupedListTile(
+                                    position: position,
+                                    hairlineInset: _selectionMode
+                                        ? GroupedListTile.insetIconLeading
+                                        : GroupedListTile.insetNoLeading,
+                                    child: Dismissible(
+                                        background: Container(
+                                          alignment: Alignment.centerRight,
+                                          padding: Spacing.inset,
+                                          color: context.appColors.warn,
+                                          // Black, not white: white on the warn
+                                          // fill is 2.6:1, black is 8:1.
+                                          child: const Icon(
+                                            Icons.delete,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        confirmDismiss: (_) {
+                                          final b = NotificationsService.isAvailable();
+                                          if (!b) {
+                                            Toast.showToastNoContext("Currently unavailable");
                                           }
-                                          state.notifications[i].show(context);
-                                        }
-                                      },
-                                      onLongPress: _selectionMode
-                                          ? null
-                                          : () {
+                                          return Future.value(
+                                              b);
+                                        },
+                                        direction: DismissDirection.endToStart,
+                                        onDismissed: (_) {
+                                          final id = state.notifications[i].id;
+                                          // Drop it from the list synchronously -
+                                          // deleteNotifications only sends the
+                                          // request, and the list otherwise waits
+                                          // for the delete-many push to remove
+                                          // it, leaving this now-gone Dismissible
+                                          // in the tree with its neighbours still
+                                          // sliced for its old position. A push
+                                          // that arrives afterwards removing the
+                                          // same id is then a no-op (removeWhere
+                                          // on an absent id matches nothing). A
+                                          // failed delete is reported by
+                                          // deleteNotifications itself (a toast
+                                          // via ErrorReporter), and the next
+                                          // successful loadNotifications brings
+                                          // the row back.
+                                          state.notifications
+                                              .removeWhere((n) => n.id == id);
+                                          state.notifyListeners();
+                                          state.deleteNotifications([id]);
+                                        },
+                                        key: ValueKey<String>(
+                                            state.notifications[i].id),
+                                        child: ListTile(
+                                          leading: !_selectionMode
+                                              ? null
+                                              : Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                      Icon(
+                                                        _selected.contains(state
+                                                                .notifications[i])
+                                                            ? Icons.check_circle
+                                                            : Icons.circle_outlined,
+                                                        color: context.appColors.appInk,
+                                                      )
+                                                    ]),
+                                          title: Row(
+                                            children: [
+                                              Text(state.notifications[i].title),
+                                              Badge(
+                                                // backgroundColor below is
+                                                // transparent, so this icon sits
+                                                // directly on the page surface.
+                                                label: Icon(
+                                                  Icons.circle_notifications,
+                                                  size: 12,
+                                                  color: context.appColors.warnInk,
+                                                ),
+                                                isLabelVisible:
+                                                    !state.notifications[i].isRead,
+                                                alignment:
+                                                    AlignmentDirectional.topCenter,
+                                                largeSize: 16,
+                                                backgroundColor: Colors.transparent,
+                                                child: state.notifications[i].isRead
+                                                    ? null
+                                                    : const Text(""),
+                                              )
+                                            ],
+                                          ),
+                                          subtitle: Text(_format.format(
+                                              state.notifications[i].createdAt())),
+                                          onTap: () {
+                                            if (_selectionMode) {
                                               setState(() {
-                                                _selectionMode = true;
-                                                _selected.add(
-                                                    state.notifications[i]);
+                                                _selected.contains(
+                                                        state.notifications[i])
+                                                    ? _selected.remove(
+                                                        state.notifications[i])
+                                                    : _selected.add(
+                                                        state.notifications[i]);
                                               });
-                                            },
-                                    )));
-                          },
-                          findChildIndexCallback: (key) {
-                            final id = (key as ValueKey<String>).value;
-                            final index = state.notifications
-                                .indexWhere((n) => n.id == id);
-                            return index == -1 ? null : index;
-                          },
+                                            } else {
+                                              if (!state.notifications[i].isRead) {
+                                                state.notifications[i].isRead =
+                                                    true;
+                                                state.updateNotifications(
+                                                    context, i);
+                                              }
+                                              state.notifications[i].show(context);
+                                            }
+                                          },
+                                          onLongPress: _selectionMode
+                                              ? null
+                                              : () {
+                                                  setState(() {
+                                                    _selectionMode = true;
+                                                    _selected.add(
+                                                        state.notifications[i]);
+                                                  });
+                                                },
+                                        )));
+                              },
+                            ),
+                          ],
                         ))));
     });
   }

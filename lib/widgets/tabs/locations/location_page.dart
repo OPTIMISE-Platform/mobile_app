@@ -27,13 +27,12 @@ import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_fab.dart';
 import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
-import 'package:mobile_app/widgets/shared/section_list_header.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
@@ -251,80 +250,46 @@ class LocationPageState extends State<LocationPage>
                             // header only when both are present.
                             final sectioned = state.devices.isNotEmpty &&
                                 matchingGroups.isNotEmpty;
-                            final headerCount = sectioned ? 2 : 0;
-                            return ListView.builder(
-                              padding: Spacing.listPadding(context),
-                              // state.devices.length, not
-                              // location.device_ids.length: hidden devices
-                              // make the raw id count leave trailing blanks.
-                              itemCount: state.devices.length +
-                                  matchingGroups.length +
-                                  1 +
-                                  headerCount,
-                              itemBuilder: (_, i) {
-                                if (sectioned) {
-                                  if (i == 0) {
-                                    return const SectionListHeader("Devices");
-                                  }
-                                  i -= 1;
-                                }
-                                if (i < state.devices.length) {
-                                  final device = state.devices[i];
-                                  return DeviceListItem(device, null,
-                                      key: ValueKey("device-${device.id}"),
-                                      position: SlicePosition.forIndex(
-                                          i, state.devices.length),
-                                      currentLocationId: location.id);
-                                }
-                                i -= state.devices.length;
-                                if (sectioned) {
-                                  if (i == 0) {
-                                    return const SectionListHeader("Groups");
-                                  }
-                                  i -= 1;
-                                }
-                                if (i < matchingGroups.length) {
-                                  final group = matchingGroups.elementAt(i);
-                                  return GroupListItem(group, (_) {
+                            return SectionedListView(
+                              sections: [
+                                // state.devices, not location.device_ids:
+                                // hidden devices make the raw id count leave
+                                // trailing blanks.
+                                ListSection<DeviceInstance>(
+                                  id: "devices",
+                                  title: sectioned ? "Devices" : null,
+                                  items: state.devices,
+                                  keyOf: (device) => device.id,
+                                  itemBuilder: (_, device, position) =>
+                                      DeviceListItem(device, null,
+                                          position: position,
+                                          currentLocationId: location.id),
+                                ),
+                                ListSection<DeviceGroup>(
+                                  id: "groups",
+                                  title: sectioned ? "Groups" : null,
+                                  items: matchingGroups,
+                                  keyOf: (group) => group.id,
+                                  itemBuilder: (_, group, position) =>
+                                      GroupListItem(group, (_) {
                                     widget.parentState.filter.locationIds = [
                                       location.id
                                     ];
                                     state.searchDevices(
                                         widget.parentState.filter);
-                                  },
-                                      key: ValueKey("group-${group.id}"),
-                                      position: SlicePosition.forIndex(
-                                          i, matchingGroups.length));
-                                }
+                                  }, position: position),
+                                ),
+                              ],
+                              trailing: [
                                 // Not all of the location's devices have
                                 // loaded yet; also doubles as the bottom
                                 // clearance so the last row isn't hidden
                                 // behind the FAB.
-                                state.loadDevices();
-                                return const SizedBox(height: 72);
-                              },
-                              // A row's key always names its device/group, so
-                              // its State stays with it when the section
-                              // headers appear or disappear and shift every
-                              // index after.
-                              findChildIndexCallback: (key) {
-                                final id = (key as ValueKey<String>).value;
-                                if (id.startsWith("device-")) {
-                                  final deviceId =
-                                      id.substring("device-".length);
-                                  final index = state.devices
-                                      .indexWhere((d) => d.id == deviceId);
-                                  if (index == -1) return null;
-                                  return sectioned ? index + 1 : index;
-                                }
-                                final groupId = id.substring("group-".length);
-                                final index = matchingGroups
-                                    .indexWhere((g) => g.id == groupId);
-                                if (index == -1) return null;
-                                return sectioned
-                                    ? state.devices.length + 2 + index
-                                    : state.devices.length + index;
-                              },
+                                Builder(builder: (_) {
+                                  state.loadDevices();
+                                  return const SizedBox(height: 72);
+                                }),
+                              ],
                             );
                           }),
           )));

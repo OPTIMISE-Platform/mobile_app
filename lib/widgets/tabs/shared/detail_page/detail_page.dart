@@ -44,7 +44,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
@@ -304,7 +304,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
-      KeyedList<String, ({Widget tile, Key rowKey})> functionWidgets = KeyedList();
+      KeyedList<String, ({Widget tile, String rowKey})> functionWidgets = KeyedList();
       final List<DeviceState> markedControllingStates = [];
 
       for (var element in states.where((element) => !element.isControlling)) {
@@ -335,7 +335,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
           functionWidgets.insert(
             element.functionId,
             (
-              rowKey: ValueKey(_rowKey(element)),
+              rowKey: _rowKey(element),
               tile: ListTile(
                 onLongPress: () => _displayTimestamp(element, states, context),
                 onTap: device == null || element.value is! num
@@ -363,7 +363,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
           functionWidgets.insert(
             element.functionId,
             (
-              rowKey: ValueKey(_rowKey(element)),
+              rowKey: _rowKey(element),
               tile: ListTile(
                 onLongPress: () => _displayTimestamp(element, states, context),
                 onTap: device == null || element.value is! num
@@ -418,7 +418,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         functionWidgets.insert(
           element.functionId,
           (
-            rowKey: ValueKey(_rowKey(element)),
+            rowKey: _rowKey(element),
             tile: ListTile(
               title: Text(_getTitle(element)),
               onTap: device == null || element.value is! num
@@ -448,7 +448,6 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         );
       }
 
-      final List<Widget> widgets = [];
       final list = functionWidgets.list();
       list.sort((a, b) {
         if (a.k == b.k) {
@@ -468,19 +467,6 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         }
         return a.k.compareTo(b.k);
       });
-      for (var i = 0; i < list.length; i++) {
-        widgets.add(GroupedListTile(
-          key: list[i].t.rowKey,
-          position: SlicePosition.forIndex(i, list.length),
-          hairlineInset: GroupedListTile.insetNoLeading,
-          child: list[i].t.tile,
-        ));
-      }
-      if (deviceGroup != null) {
-        // Prevents FAB overlap; also drawn when isCreateEditDeleteAvailable()
-        // hides that FAB, same as before this became a grouped surface.
-        widgets.add(const SizedBox(height: 72));
-      }
 
       final List<Widget> trailingHeader = [];
 
@@ -525,10 +511,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                 _refresh(context);
               },
               child: Scrollbar(
-                child: ListView(
+                child: SectionedListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: Spacing.listPadding(context),
-                  children: [
+                  leading: [
                     ListTile(
                       // header
                       leading: Container(
@@ -552,8 +537,25 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
                       trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                     ),
-                    if (widgets.isNotEmpty) const SizedBox(height: Spacing.lg),
-                    ...widgets,
+                    if (list.isNotEmpty || deviceGroup != null) const SizedBox(height: Spacing.lg),
+                  ],
+                  sections: [
+                    ListSection<Pair<String, ({Widget tile, String rowKey})>>(
+                      id: "states",
+                      items: list,
+                      keyOf: (row) => row.t.rowKey,
+                      itemBuilder: (_, row, position) => GroupedListTile(
+                        position: position,
+                        hairlineInset: GroupedListTile.insetNoLeading,
+                        child: row.t.tile,
+                      ),
+                    ),
+                  ],
+                  trailing: [
+                    // Prevents FAB overlap; also drawn when
+                    // isCreateEditDeleteAvailable() hides that FAB, same as
+                    // before this became a grouped surface.
+                    if (deviceGroup != null) const SizedBox(height: 72),
                   ],
                 ),
               ),

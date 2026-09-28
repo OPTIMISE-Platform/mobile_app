@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_module.dart';
 import 'package:mobile_app/services/mgw/module_manager.dart';
-import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 
 const double TOP_PADDING = 100;
 const textStyle = TextStyle(color: Colors.white, fontSize: 35);
@@ -62,32 +61,28 @@ class _MGWDetailState extends State<MGWDetail> {
             appBar: AppBar(
               title: Text(widget.mgw.mDNSServiceName),
             ),
-            body: ListView.builder(
+            body: SectionedListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: Spacing.listPadding(context),
-                itemCount: modules.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final module = modules.elementAt(index);
-                  return GroupedListTile(
-                    key: ValueKey(module.id),
-                    position: SlicePosition.forIndex(index, modules.length),
-                    hairlineInset: GroupedListTile.insetIconLeading,
-                    child: ListTile(
-                      title: Text(module.name),
-                      subtitle: Text(module.version),
-                      leading: Icon(
-                        Icons.fiber_manual_record,
-                        color: _stateColor(module),
-                        size: 18,
+                sections: [
+                  ListSection<Module>(
+                    id: "modules",
+                    items: modules,
+                    keyOf: (module) => module.id,
+                    itemBuilder: (context, module, position) => GroupedListTile(
+                        position: position,
+                        hairlineInset: GroupedListTile.insetIconLeading,
+                        child: ListTile(
+                          title: Text(module.name),
+                          subtitle: Text(module.version),
+                          leading: Icon(
+                            Icons.fiber_manual_record,
+                            color: _stateColor(module),
+                            size: 18,
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                },
-                findChildIndexCallback: (key) {
-                  final id = (key as ValueKey<String>).value;
-                  final index = modules.indexWhere((m) => m.id == id);
-                  return index == -1 ? null : index;
-                })));
+                  ),
+                ])));
   }
 
   Widget handlError(error) {

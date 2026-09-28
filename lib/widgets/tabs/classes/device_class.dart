@@ -23,12 +23,13 @@ import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
@@ -109,52 +110,49 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                               );
                             },
                           )
-                        : ListView.builder(
+                        : SectionedListView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.listPadding(context),
-                            itemCount: deviceClasses.length,
-                            itemBuilder: (context, i) {
-                              return GroupedListTile(
-                                key: ValueKey(deviceClasses[i].id),
-                                position: SlicePosition.forIndex(
-                                    i, deviceClasses.length),
-                                child: ListTile(
-                                    title: Text(deviceClasses[i].name),
-                                    subtitle: Text(
-                                        "${deviceClasses[i].deviceIds.length} Device${deviceClasses[i].deviceIds.length > 1 || deviceClasses[i].deviceIds.isEmpty ? "s" : ""}"),
-                                    leading: EntityLeadingCircle(
-                                        size: 48,
-                                        fallbackIcon: Icons.devices,
-                                        image: deviceClasses[i].imageWidget),
-                                    onTap: () {
-                                      parentState?.filter.deviceClassIds = [deviceClasses[i].id];
-                                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[i].id]), true);
-                                      parentState?.setState(() {
-                                        parentState.setHideSearchOverride(false);
-                                        parentState.onBackCallback = () {
-                                          parentState.setState(() {
-                                            parentState.filter.deviceClassIds = null;
-                                            parentState.customAppBarTitle = null;
-                                            parentState.onBackCallback = null;
-                                            parentState.setHideSearchOverride(null);
-                                          });
-                                          setState(() => _selected = null);
-                                        };
-                                        parentState.customAppBarTitle = deviceClasses[i].name;
+                            sections: [
+                              ListSection<DeviceClass>(
+                                id: "classes",
+                                items: deviceClasses,
+                                keyOf: (deviceClass) => deviceClass.id,
+                                itemBuilder: (_, deviceClass, position) {
+                                  return GroupedListTile(
+                                    position: position,
+                                    child: ListTile(
+                                        title: Text(deviceClass.name),
+                                        subtitle: Text(
+                                            "${deviceClass.deviceIds.length} Device${deviceClass.deviceIds.length > 1 || deviceClass.deviceIds.isEmpty ? "s" : ""}"),
+                                        leading: EntityLeadingCircle(
+                                            size: 48,
+                                            fallbackIcon: Icons.devices,
+                                            image: deviceClass.imageWidget),
+                                        onTap: () {
+                                          parentState?.filter.deviceClassIds = [deviceClass.id];
+                                          state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClass.id]), true);
+                                          parentState?.setState(() {
+                                            parentState.setHideSearchOverride(false);
+                                            parentState.onBackCallback = () {
+                                              parentState.setState(() {
+                                                parentState.filter.deviceClassIds = null;
+                                                parentState.customAppBarTitle = null;
+                                                parentState.onBackCallback = null;
+                                                parentState.setHideSearchOverride(null);
+                                              });
+                                              setState(() => _selected = null);
+                                            };
+                                            parentState.customAppBarTitle = deviceClass.name;
 
-                                        setState(() {
-                                          _selected = i;
-                                        });
-                                      });
-                                    }),
-                              );
-                            },
-                            findChildIndexCallback: (key) {
-                              final id = (key as ValueKey<String>).value;
-                              final index = deviceClasses
-                                  .indexWhere((c) => c.id == id);
-                              return index == -1 ? null : index;
-                            },
+                                            setState(() {
+                                              _selected = deviceClasses.indexOf(deviceClass);
+                                            });
+                                          });
+                                        }),
+                                  );
+                                },
+                              ),
+                            ],
                           ))
                 : RefreshIndicator(
                     onRefresh: () async {
@@ -163,26 +161,25 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                     },
                     child: state.devices.isEmpty && state.devicesListEnded
                         ? const ScrollableEmptyState("No Devices")
-                        : ListView.builder(
-                      padding: Spacing.listPadding(context),
-                      itemCount: state.devicesListItemCount,
-                      itemBuilder: (_, i) {
-                        if (i >= state.devices.length) {
-                          state.loadDevices();
-                          return const SizedBox.shrink();
-                        }
-                        final device = state.devices[i];
-                        return DeviceListItem(device, null,
-                            key: ValueKey(device.id),
-                            position: SlicePosition.forIndex(
-                                i, state.devices.length));
-                      },
-                      findChildIndexCallback: (key) {
-                        final id = (key as ValueKey<String>).value;
-                        final index =
-                            state.devices.indexWhere((d) => d.id == id);
-                        return index == -1 ? null : index;
-                      },
+                        : SectionedListView(
+                            sections: [
+                              ListSection<DeviceInstance>(
+                                id: "devices",
+                                items: state.devices,
+                                keyOf: (device) => device.id,
+                                itemBuilder: (_, device, position) =>
+                                    DeviceListItem(device, null,
+                                        position: position),
+                              ),
+                            ],
+                            trailing: [
+                              if (state.devicesListItemCount >
+                                  state.devices.length)
+                                Builder(builder: (_) {
+                                  state.loadDevices();
+                                  return const SizedBox.shrink();
+                                }),
+                            ],
                     )),
       );
     });

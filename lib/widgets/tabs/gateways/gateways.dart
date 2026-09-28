@@ -26,9 +26,9 @@ import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
 class Gateways extends StatefulWidget {
@@ -94,53 +94,48 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                     );
                   },
                 )
-              : ListView.builder(
+              : SectionedListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: Spacing.listPadding(context),
-                  itemCount: state.gateways.length,
-                  itemBuilder: (context, i) {
-                    var mgw = state.gateways[i];
-
-                    return GroupedListTile(
+                  sections: [
+                    ListSection<MGW>(
+                      id: "gateways",
+                      items: state.gateways,
                       // hostname, not coreId: a manually-added gateway (see
                       // mgw_page.dart's _addManually) always has coreId "",
                       // and RemovePairedMGW already keys pairings by hostname.
-                      key: ValueKey(mgw.hostname),
-                      position:
-                          SlicePosition.forIndex(i, state.gateways.length),
-                      hairlineInset: GroupedListTile.insetIconLeading,
-                      child: ListTile(
-                        leading: MgwStatusDot(
-                            host: mgw.ip, expectNetworkId: mgw.networkId),
-                        title: Row(children: [
-                          Flexible(
-                            child: Text(
-                              state.gateways[i].mDNSServiceName,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      keyOf: (mgw) => mgw.hostname,
+                      itemBuilder: (context, mgw, position) {
+                        return GroupedListTile(
+                          position: position,
+                          hairlineInset: GroupedListTile.insetIconLeading,
+                          child: ListTile(
+                            leading: MgwStatusDot(
+                                host: mgw.ip, expectNetworkId: mgw.networkId),
+                            title: Row(children: [
+                              Flexible(
+                                child: Text(
+                                  mgw.mDNSServiceName,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ]),
+                            onTap: () {
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => MGWDetail(mgw: mgw)));
+                            },
+                            trailing: MaterialButton(
+                                child: const Icon(Icons.delete),
+                                onPressed: () async {
+                                  await MgwStorage.RemovePairedMGW(mgw);
+                                  await state.loadStoredMGWs();
+                                }),
                           ),
-                        ]),
-                        onTap: () {
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (context) => MGWDetail(mgw: mgw)));
-                        },
-                        trailing: MaterialButton(
-                            child: const Icon(Icons.delete),
-                            onPressed: () async {
-                              await MgwStorage.RemovePairedMGW(mgw);
-                              await state.loadStoredMGWs();
-                            }),
-                      ),
-                    );
-                  },
-                  findChildIndexCallback: (key) {
-                    final id = (key as ValueKey<String>).value;
-                    final index =
-                        state.gateways.indexWhere((g) => g.hostname == id);
-                    return index == -1 ? null : index;
-                  },
+                        );
+                      },
+                    ),
+                  ],
                 ));
     });
   }

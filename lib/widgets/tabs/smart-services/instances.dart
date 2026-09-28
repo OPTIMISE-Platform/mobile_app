@@ -29,7 +29,7 @@ import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_details.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
@@ -145,138 +145,135 @@ class _SmartServicesInstancesState extends State<SmartServicesInstances>
                           );
                         },
                       )
-                    : ListView.builder(
+                    : SectionedListView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: Spacing.listPadding(context),
-                        itemCount: instances.length + 1,
-                        itemBuilder: (context, i) {
-                          if (i == instances.length - 1 &&
-                              !allInstancesLoaded) {
-                            _loadInstances();
-                          }
-                          return i < instances.length
-                              ? GroupedListTile(
-                                  key: ValueKey(instances[i].id),
-                                  position: SlicePosition.forIndex(
-                                      i, instances.length),
-                                  hairlineInset:
-                                      GroupedListTile.insetNoLeading,
-                                  child: ListTile(
-                                    title: Row(children: [
-                                      Text(instances[i].name),
-                                      Badge(
-                                        // backgroundColor below is
-                                        // transparent, so this icon sits
-                                        // directly on the page surface.
-                                        label: instances[i].error != null
-                                            ? Icon(Icons.error,
-                                                size: 16,
-                                                color: context.appColors.warnInk)
-                                            : const Icon(Icons.pending,
-                                                size: 16,
-                                                color: Colors.lightBlue),
-                                        isLabelVisible:
-                                            instances[i].error != null ||
-                                                !instances[i].ready ||
-                                                instances[i].deleting == true,
-                                        alignment:
-                                            AlignmentDirectional.topCenter,
-                                        largeSize: 16,
-                                        backgroundColor: Colors.transparent,
-                                        child: instances[i].error != null ||
-                                                !instances[i].ready ||
-                                                instances[i].deleting == true
-                                            ? const Text("")
-                                            : null,
-                                      )
-                                    ]),
-                                    onTap: () async {
-                                      await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                SmartServicesInstanceDetails(
-                                                    instances[i],
-                                                    parentState?.context),
-                                          ));
-                                      _refresh();
-                                    },
-                                    trailing: instances[i].new_release_id ==
-                                            null
-                                        ? null
-                                        : upgradingInstances[i]
-                                            ? const DelayedCircularProgressIndicator()
-                                            : IconButton(
-                                                icon: const Icon(Icons.upgrade),
-                                                onPressed: () async {
-                                                  setState(() {
-                                                    upgradingInstances[i] =
-                                                        true;
-                                                  });
-                                                  final Pair<List<SmartServiceExtendedParameter>, bool> p;
-                                                  try {
-                                                    p = await SmartServiceService
-                                                        .prepareUpgrade(
-                                                        instances[i]);
-                                                    if (!p.t) {
-                                                      await SmartServiceService
-                                                          .updateInstanceParameters(
-                                                          instances[i].id,
-                                                          p.k
-                                                              .map((e) => e
-                                                              .toSmartServiceParameter())
-                                                              .toList(),
-                                                          releaseId: instances[
+                        sections: [
+                          ListSection<SmartServiceInstance>(
+                            id: "instances",
+                            items: instances,
+                            keyOf: (instance) => instance.id,
+                            itemBuilder: (context, instance, position) {
+                              // Index as of this build: upgradingInstances runs
+                              // parallel to instances.
+                              final i = instances.indexOf(instance);
+                              if (position.roundsBottom && !allInstancesLoaded) {
+                                _loadInstances();
+                              }
+                              return GroupedListTile(
+                                position: position,
+                                hairlineInset:
+                                    GroupedListTile.insetNoLeading,
+                                child: ListTile(
+                                  title: Row(children: [
+                                    Text(instances[i].name),
+                                    Badge(
+                                      // backgroundColor below is
+                                      // transparent, so this icon sits
+                                      // directly on the page surface.
+                                      label: instances[i].error != null
+                                          ? Icon(Icons.error,
+                                              size: 16,
+                                              color: context.appColors.warnInk)
+                                          : const Icon(Icons.pending,
+                                              size: 16,
+                                              color: Colors.lightBlue),
+                                      isLabelVisible:
+                                          instances[i].error != null ||
+                                              !instances[i].ready ||
+                                              instances[i].deleting == true,
+                                      alignment:
+                                          AlignmentDirectional.topCenter,
+                                      largeSize: 16,
+                                      backgroundColor: Colors.transparent,
+                                      child: instances[i].error != null ||
+                                              !instances[i].ready ||
+                                              instances[i].deleting == true
+                                          ? const Text("")
+                                          : null,
+                                    )
+                                  ]),
+                                  onTap: () async {
+                                    await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              SmartServicesInstanceDetails(
+                                                  instances[i],
+                                                  parentState?.context),
+                                        ));
+                                          _refresh();
+                                        },
+                                        trailing: instances[i].new_release_id ==
+                                                null
+                                            ? null
+                                            : upgradingInstances[i]
+                                                ? const DelayedCircularProgressIndicator()
+                                                : IconButton(
+                                                    icon: const Icon(Icons.upgrade),
+                                                    onPressed: () async {
+                                                      setState(() {
+                                                        upgradingInstances[i] =
+                                                            true;
+                                                      });
+                                                      final Pair<List<SmartServiceExtendedParameter>, bool> p;
+                                                      try {
+                                                        p = await SmartServiceService
+                                                            .prepareUpgrade(
+                                                            instances[i]);
+                                                        if (!p.t) {
+                                                          await SmartServiceService
+                                                              .updateInstanceParameters(
+                                                              instances[i].id,
+                                                              p.k
+                                                                  .map((e) => e
+                                                                  .toSmartServiceParameter())
+                                                                  .toList(),
+                                                              releaseId: instances[
+                                                              i]
+                                                                  .new_release_id);
+                                                        } else {
+                                                          final release =
+                                                          await SmartServiceService
+                                                              .getRelease(instances[
                                                           i]
-                                                              .new_release_id);
-                                                    } else {
-                                                      final release =
-                                                      await SmartServiceService
-                                                          .getRelease(instances[
-                                                      i]
-                                                          .new_release_id!);
-                                                      if (context.mounted) {
-                                                        await Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                                builder: (context) =>
-                                                                    SmartServicesReleaseLaunch(
-                                                                      release,
-                                                                      instance:
-                                                                      instances[
-                                                                      i],
-                                                                      parameters:
-                                                                      p.k,
-                                                                    )));
+                                                              .new_release_id!);
+                                                          if (context.mounted) {
+                                                            await Navigator.push(
+                                                                context,
+                                                                MaterialPageRoute(
+                                                                    builder: (context) =>
+                                                                        SmartServicesReleaseLaunch(
+                                                                          release,
+                                                                          instance:
+                                                                          instances[
+                                                                          i],
+                                                                          parameters:
+                                                                          p.k,
+                                                                        )));
+                                                          }
+                                                        }
+                                                      } catch (e) {
+                                                        setState(() {
+                                                          upgradingInstances[i] =
+                                                              false;
+                                                        });
+                                                        Toast.showToastNoContext(
+                                                            "Upgrade was not possible: $e");
                                                       }
-                                                    }
-                                                  } catch (e) {
-                                                    setState(() {
-                                                      upgradingInstances[i] =
-                                                          false;
-                                                    });
-                                                    Toast.showToastNoContext(
-                                                        "Upgrade was not possible: $e");
-                                                  }
-                                                  upgradingInstances[i] = false;
-                                                  if (!upgradingInstances
-                                                      .contains(true)) {
-                                                    _refresh();
-                                                  }
-                                                },
-                                              ),
-                                  ))
-                              // Trailing spacer, sized like the row+divider
-                              // it replaces, so the last instance isn't
-                              // hidden behind the FAB.
-                              : const SizedBox(height: 72);
-                        },
-                        findChildIndexCallback: (key) {
-                          final id = (key as ValueKey<String>).value;
-                          final index =
-                              instances.indexWhere((e) => e.id == id);
-                          return index == -1 ? null : index;
-                        },
+                                                      upgradingInstances[i] = false;
+                                                      if (!upgradingInstances
+                                                          .contains(true)) {
+                                                        _refresh();
+                                                      }
+                                                    },
+                                                  ),
+                                      ));
+                            },
+                          ),
+                        ],
+                        // Sized like the row+divider it replaces, so the last
+                        // instance isn't hidden behind the FAB.
+                        trailing: const [SizedBox(height: 72)],
                       )));
   }
 }

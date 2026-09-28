@@ -32,7 +32,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
@@ -185,120 +185,118 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 );
                               },
                             )
-                          : ListView.builder(
+                          : SectionedListView(
                               physics: const AlwaysScrollableScrollPhysics(),
-                              padding: Spacing.listPadding(context),
-                              itemCount: state.networks.length,
-                              itemBuilder: (context, i) {
-                                return GroupedListTile(
-                                  key: ValueKey(state.networks[i].id),
-                                  position: SlicePosition.forIndex(
-                                      i, state.networks.length),
-                                  hairlineInset: GroupedListTile.insetNoLeading,
-                                  child: ListTile(
-                                      title: Row(children: [
-                                        // Flexible with an ellipsis: a network
-                                        // name is free text and overflows the
-                                        // row as soon as it is long.
-                                        Flexible(
-                                          child: Text(
-                                            state.networks[i].name,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        Badge(
-                                          // backgroundColor below is
-                                          // transparent, so this icon sits
-                                          // directly on the page surface.
-                                          label: Icon(
-                                              Icons.error,
-                                              size: 16,
-                                              color: context.appColors.warnInk),
-                                          isLabelVisible: state.networks[i]
-                                                  .connection_state ==
-                                              DeviceConnectionStatus.offline,
-                                          alignment:
-                                              AlignmentDirectional.topCenter,
-                                          largeSize: 16,
-                                          backgroundColor: Colors.transparent,
-                                          child: state.networks[i]
+                              sections: [
+                                ListSection<Network>(
+                                  id: "networks",
+                                  items: state.networks,
+                                  keyOf: (network) => network.id,
+                                  itemBuilder: (_, network, position) {
+                                    final i = state.networks.indexOf(network);
+                                    return GroupedListTile(
+                                      position: position,
+                                      hairlineInset: GroupedListTile.insetNoLeading,
+                                      child: ListTile(
+                                          title: Row(children: [
+                                            // Flexible with an ellipsis: a network
+                                            // name is free text and overflows the
+                                            // row as soon as it is long.
+                                            Flexible(
+                                              child: Text(
+                                                state.networks[i].name,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Badge(
+                                              // backgroundColor below is
+                                              // transparent, so this icon sits
+                                              // directly on the page surface.
+                                              label: Icon(
+                                                  Icons.error,
+                                                  size: 16,
+                                                  color: context.appColors.warnInk),
+                                              isLabelVisible: state.networks[i]
                                                       .connection_state ==
-                                                  DeviceConnectionStatus.offline
-                                              ? const Text("")
-                                              : null,
-                                        )
-                                      ]),
-                                      subtitle: Text(
-                                          "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
-                                      onTap: (state.networks[i]
-                                                      .device_local_ids ??
-                                                  [])
-                                              .isEmpty
-                                          ? null
-                                          : () {
-                                              _loading = true;
-                                              parentState?.filter.addNetwork(
-                                                  state.networks[i].id);
-                                              state
-                                                  .searchDevices(
-                                                      parentState?.filter ??
-                                                          DeviceSearchFilter(
-                                                              "", null, null, [
-                                                            state.networks[i].id
-                                                          ]), true)
-                                                  .then((_) {
-                                                // Guarded: the search is a
-                                                // network call, and leaving the
-                                                // tab before it answers used to
-                                                // land here on a disposed
-                                                // state.
-                                                if (!mounted) return;
-                                                setState(() => _loading = false);
-                                              });
-                                              parentState?.setState(() {
-                                                parentState
-                                                    .setHideSearchOverride(
-                                                    false);
-                                                parentState.onBackCallback =
-                                                    () {
-                                                  parentState.setState(() {
-                                                    parentState.filter
-                                                        .networkIds = null;
-                                                    parentState
-                                                            .customAppBarTitle =
-                                                        null;
-                                                    parentState.onBackCallback =
-                                                        null;
+                                                  DeviceConnectionStatus.offline,
+                                              alignment:
+                                                  AlignmentDirectional.topCenter,
+                                              largeSize: 16,
+                                              backgroundColor: Colors.transparent,
+                                              child: state.networks[i]
+                                                          .connection_state ==
+                                                      DeviceConnectionStatus.offline
+                                                  ? const Text("")
+                                                  : null,
+                                            )
+                                          ]),
+                                          subtitle: Text(
+                                              "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
+                                          onTap: (state.networks[i]
+                                                          .device_local_ids ??
+                                                      [])
+                                                  .isEmpty
+                                              ? null
+                                              : () {
+                                                  _loading = true;
+                                                  parentState?.filter.addNetwork(
+                                                      state.networks[i].id);
+                                                  state
+                                                      .searchDevices(
+                                                          parentState?.filter ??
+                                                              DeviceSearchFilter(
+                                                                  "", null, null, [
+                                                                state.networks[i].id
+                                                              ]), true)
+                                                      .then((_) {
+                                                    // Guarded: the search is a
+                                                    // network call, and leaving the
+                                                    // tab before it answers used to
+                                                    // land here on a disposed
+                                                    // state.
+                                                    if (!mounted) return;
+                                                    setState(() => _loading = false);
+                                                  });
+                                                  parentState?.setState(() {
                                                     parentState
                                                         .setHideSearchOverride(
-                                                        null);
-                                                  });
-                                                  // The callback lives on the
-                                                  // parent state and therefore
-                                                  // outlives this widget.
-                                                  if (mounted) {
-                                                    setState(
-                                                        () => _selected = null);
-                                                  }
-                                                };
-                                                parentState.customAppBarTitle =
-                                                    state.networks[i].name;
+                                                        false);
+                                                    parentState.onBackCallback =
+                                                        () {
+                                                      parentState.setState(() {
+                                                        parentState.filter
+                                                            .networkIds = null;
+                                                        parentState
+                                                                .customAppBarTitle =
+                                                            null;
+                                                        parentState.onBackCallback =
+                                                            null;
+                                                        parentState
+                                                            .setHideSearchOverride(
+                                                            null);
+                                                      });
+                                                      // The callback lives on the
+                                                      // parent state and therefore
+                                                      // outlives this widget.
+                                                      if (mounted) {
+                                                        setState(
+                                                            () => _selected = null);
+                                                      }
+                                                    };
+                                                    parentState.customAppBarTitle =
+                                                        state.networks[i].name;
 
-                                                setState(() {
-                                                  _selected = i;
-                                                });
-                                              });
-                                            },
-                                      trailing: _gatewayControl(
-                                          state, state.networks[i])),
-                                );
-                              },
-                              findChildIndexCallback: (key) {
-                                final id = (key as ValueKey<String>).value;
-                                final index = state.networks
-                                    .indexWhere((n) => n.id == id);
-                                return index == -1 ? null : index;
-                              },
+                                                    setState(() {
+                                                      _selected = i;
+                                                    });
+                                                  });
+                                                },
+                                          trailing: _gatewayControl(
+                                              state, state.networks[i])),
+                                    );
+                                  },
+                                ),
+                              ],
                             )
                       : state.devices.isEmpty && (state.loadingDevices || _loading)
                           ? const Center(
@@ -309,26 +307,25 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                           // below, or its own row never fetches the next page.
                           : state.devices.isEmpty && state.devicesListEnded
                               ? const ScrollableEmptyState("No Devices")
-                              : ListView.builder(
-                              padding: Spacing.listPadding(context),
-                              itemCount: state.devicesListItemCount,
-                              itemBuilder: (_, i) {
-                                if (i >= state.devices.length) {
-                                  state.loadDevices();
-                                  return const SizedBox.shrink();
-                                }
-                                final device = state.devices[i];
-                                return DeviceListItem(device, null,
-                                    key: ValueKey(device.id),
-                                    position: SlicePosition.forIndex(
-                                        i, state.devices.length));
-                              },
-                              findChildIndexCallback: (key) {
-                                final id = (key as ValueKey<String>).value;
-                                final index = state.devices
-                                    .indexWhere((d) => d.id == id);
-                                return index == -1 ? null : index;
-                              },
+                              : SectionedListView(
+                                  sections: [
+                                    ListSection<DeviceInstance>(
+                                      id: "devices",
+                                      items: state.devices,
+                                      keyOf: (device) => device.id,
+                                      itemBuilder: (_, device, position) =>
+                                          DeviceListItem(device, null,
+                                              position: position),
+                                    ),
+                                  ],
+                                  trailing: [
+                                    if (state.devicesListItemCount >
+                                        state.devices.length)
+                                      Builder(builder: (_) {
+                                        state.loadDevices();
+                                        return const SizedBox.shrink();
+                                      }),
+                                  ],
                             )));
     });
   }

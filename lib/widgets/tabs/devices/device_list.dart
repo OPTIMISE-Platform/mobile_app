@@ -22,9 +22,9 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
 class DeviceList extends StatefulWidget {
@@ -95,33 +95,26 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
                               );
                             },
                           )
-                        : ListView.builder(
+                        : SectionedListView(
                             physics: const AlwaysScrollableScrollPhysics(),
-                            padding: Spacing.listPadding(context),
-                            itemCount: AppState().devicesListItemCount,
-                            itemBuilder: (context, i) {
-                              if (i >= AppState().devices.length) {
-                                AppState().loadDevices();
-                              }
-                              if (i > AppState().devices.length - 1) {
-                                return const SizedBox.shrink();
-                              }
-                              final device = AppState().devices[i];
-                              return DeviceListItem(device, null,
-                                  key: ValueKey(device.id),
-                                  position: SlicePosition.forIndex(
-                                      i, AppState().devices.length));
-                            },
-                            // Keeps a row's expanded/transitioning State tied
-                            // to its device when devices are inserted/removed
-                            // ahead of it, not to its position in the list.
-                            findChildIndexCallback: (key) {
-                              final id = (key as ValueKey<String>).value;
-                              final index = AppState()
-                                  .devices
-                                  .indexWhere((d) => d.id == id);
-                              return index == -1 ? null : index;
-                            }),
+                            sections: [
+                              ListSection<DeviceInstance>(
+                                id: "devices",
+                                items: AppState().devices,
+                                keyOf: (device) => device.id,
+                                itemBuilder: (_, device, position) =>
+                                    DeviceListItem(device, null,
+                                        position: position),
+                              ),
+                            ],
+                            trailing: [
+                              if (AppState().devicesListItemCount >
+                                  AppState().devices.length)
+                                Builder(builder: (_) {
+                                  AppState().loadDevices();
+                                  return const SizedBox.shrink();
+                                }),
+                            ]),
               ),
             ));
   }

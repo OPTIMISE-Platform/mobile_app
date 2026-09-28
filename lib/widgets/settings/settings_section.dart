@@ -16,33 +16,36 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 
-/// One settings section: a title and the rows it currently shows. A section
-/// builder computes [rows] after its own conditionals (debug mode, logged
-/// in, ...), so its length is always what will actually be on screen -
-/// [Settings] slices rows into a surface from that, never from a fixed count
-/// that could include a row that ends up hidden.
+/// One settings section: a title and the rows it currently shows, each paired
+/// with the hairline inset its own content wants (e.g.
+/// [GroupedListTile.insetIconLeading] for a row with a leading icon). A
+/// section builder computes [rows] after its own conditionals (debug mode,
+/// logged in, ...), and [toListSection] slices exactly those into a surface,
+/// so a row hidden this build never leaves a square corner on the one that
+/// ends up last.
 class SettingsSection {
   const SettingsSection(this.title, this.rows);
 
-  /// Builds a section from its rows, each paired with the hairline inset its
-  /// own content wants (e.g. [GroupedListTile.insetIconLeading] for a row
-  /// with a leading icon). Wraps every row in a [GroupedListTile] whose
-  /// slice position comes from how many rows are passed here - after the
-  /// caller's own conditionals - so a row hidden this build never leaves a
-  /// square corner on the one that ends up last.
-  factory SettingsSection.of(String title, List<(Widget, double)> rows) {
-    return SettingsSection(title, [
-      for (var i = 0; i < rows.length; i++)
-        GroupedListTile(
-          position: SlicePosition.forIndex(i, rows.length),
-          hairlineInset: rows[i].$2,
-          child: rows[i].$1,
-        ),
-    ]);
-  }
+  factory SettingsSection.of(String title, List<(Widget, double)> rows) =>
+      SettingsSection(title, rows);
 
   final String title;
-  final List<Widget> rows;
+  final List<(Widget, double)> rows;
+
+  /// Rows are keyed by their place in the section: they carry no identity of
+  /// their own, and the section's title keeps them apart from other sections.
+  ListSection<(int, (Widget, double))> toListSection() =>
+      ListSection<(int, (Widget, double))>(
+        id: title,
+        title: title,
+        items: rows.indexed.toList(growable: false),
+        keyOf: (row) => "${row.$1}",
+        itemBuilder: (_, row, position) => GroupedListTile(
+          position: position,
+          hairlineInset: row.$2.$2,
+          child: row.$2.$1,
+        ),
+      );
 }

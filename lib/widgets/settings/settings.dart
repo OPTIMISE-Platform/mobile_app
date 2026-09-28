@@ -16,14 +16,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/settings/sections/account_section.dart';
 import 'package:mobile_app/widgets/settings/sections/appearance_section.dart';
 import 'package:mobile_app/widgets/settings/sections/behaviour_section.dart';
 import 'package:mobile_app/widgets/settings/sections/diagnostics_section.dart';
 import 'package:mobile_app/widgets/settings/sections/updates_section.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
-import 'package:mobile_app/widgets/shared/section_list_header.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:provider/provider.dart';
 
 /// The settings page is a flat list of rows, so it is assembled from sections
@@ -48,15 +47,8 @@ class Settings extends StatelessWidget {
       ];
       return Scaffold(
         appBar: appBar.getAppBar(context),
-        body: ListView(
-          padding: Spacing.listPadding(context),
-          children: [
-            for (final section in sections)
-              if (section.rows.isNotEmpty) ...[
-                SectionListHeader(section.title),
-                ...section.rows,
-              ],
-          ],
+        body: SectionedListView(
+          sections: [for (final section in sections) section.toListSection()],
         ),
       );
     });

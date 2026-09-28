@@ -27,7 +27,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 
 /// Lets the user pick devices or device groups and check off as many of their
@@ -308,39 +308,37 @@ class _TargetPickerState extends State<_TargetPicker> {
     }
     return Scrollbar(
       controller: _scrollController,
-      child: ListView.builder(
+      child: SectionedListView(
         controller: _scrollController,
-        padding: Spacing.listPadding(context),
-        // One extra row carries the "loading more" indicator - outside the
-        // surface, so the last real device still closes it with round
-        // corners while more load.
-        itemCount: _devices.length + (_allLoaded ? 0 : 1),
-        itemBuilder: (_, i) {
-          if (i >= _devices.length) {
-            return const Padding(
+        sections: [
+          ListSection<DeviceInstance>(
+            id: "devices",
+            items: _devices,
+            keyOf: (device) => device.id,
+            itemBuilder: (_, device, position) {
+              final picked = _selection.countForDevice(device.id);
+              return GroupedListTile(
+                position: position,
+                hairlineInset: GroupedListTile.insetNoLeading,
+                child: ListTile(
+                  title: Text(device.displayName),
+                  subtitle: picked == 0 ? null : Text('$picked selected'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _openValuePicker(_DeviceTarget(device)),
+                ),
+              );
+            },
+          ),
+        ],
+        // The "loading more" indicator sits outside the surface, so the last
+        // real device still closes it with round corners while more load.
+        trailing: [
+          if (!_allLoaded)
+            const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: DelayedCircularProgressIndicator()),
-            );
-          }
-          final device = _devices[i];
-          final picked = _selection.countForDevice(device.id);
-          return GroupedListTile(
-            key: ValueKey(device.id),
-            position: SlicePosition.forIndex(i, _devices.length),
-            hairlineInset: GroupedListTile.insetNoLeading,
-            child: ListTile(
-              title: Text(device.displayName),
-              subtitle: picked == 0 ? null : Text('$picked selected'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openValuePicker(_DeviceTarget(device)),
             ),
-          );
-        },
-        findChildIndexCallback: (key) {
-          final id = (key as ValueKey<String>).value;
-          final index = _devices.indexWhere((d) => d.id == id);
-          return index == -1 ? null : index;
-        },
+        ],
       ),
     );
   }
@@ -351,30 +349,28 @@ class _TargetPickerState extends State<_TargetPicker> {
       return const Center(child: Text('No device groups'));
     }
     return Scrollbar(
-      child: ListView.builder(
-        padding: Spacing.listPadding(context),
-        itemCount: groups.length,
-        itemBuilder: (_, i) {
-          final group = groups[i];
-          final picked = _selection.countForGroup(group.id);
-          return GroupedListTile(
-            key: ValueKey(group.id),
-            position: SlicePosition.forIndex(i, groups.length),
-            hairlineInset: GroupedListTile.insetIconLeading,
-            child: ListTile(
-              leading: const Icon(Icons.devices_other),
-              title: Text(group.name),
-              subtitle: picked == 0 ? null : Text('$picked selected'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => _openValuePicker(_GroupTarget(group)),
-            ),
-          );
-        },
-        findChildIndexCallback: (key) {
-          final id = (key as ValueKey<String>).value;
-          final index = groups.indexWhere((g) => g.id == id);
-          return index == -1 ? null : index;
-        },
+      child: SectionedListView(
+        sections: [
+          ListSection<DeviceGroup>(
+            id: "groups",
+            items: groups,
+            keyOf: (group) => group.id,
+            itemBuilder: (_, group, position) {
+              final picked = _selection.countForGroup(group.id);
+              return GroupedListTile(
+                position: position,
+                hairlineInset: GroupedListTile.insetIconLeading,
+                child: ListTile(
+                  leading: const Icon(Icons.devices_other),
+                  title: Text(group.name),
+                  subtitle: picked == 0 ? null : Text('$picked selected'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _openValuePicker(_GroupTarget(group)),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -514,18 +510,33 @@ class _ValuePickerState extends State<_ValuePicker> {
       body: _selectable.isEmpty
           ? const Center(child: Text('No values available'))
           : Scrollbar(
-              child: ListView.builder(
-                padding: Spacing.listPadding(context),
-                itemCount: _selectable.length,
-                itemBuilder: (_, i) => GroupedListTile(
-                  position: SlicePosition.forIndex(i, _selectable.length),
-                  hairlineInset: GroupedListTile.insetIconLeading,
-                  child: _buildTile(_selectable[i]),
-                ),
+              child: SectionedListView(
+                sections: [
+                  ListSection<DeviceState>(
+                    id: "values",
+                    items: _selectable,
+                    keyOf: _valueKey,
+                    itemBuilder: (_, state, position) => GroupedListTile(
+                      position: position,
+                      hairlineInset: GroupedListTile.insetIconLeading,
+                      child: _buildTile(state),
+                    ),
+                  ),
+                ],
               ),
             ),
     );
   }
+
+  /// What prepareStates already keeps unique per state of one device or
+  /// group, the same row identity the detail page uses.
+  static String _valueKey(DeviceState state) => [
+        state.functionId,
+        state.serviceGroupKey,
+        state.aspectId,
+        state.deviceClassId,
+        state.isControlling,
+      ].join("|");
 
   Widget _buildTile(DeviceState state) {
     final pin = SensorPin.of(state);

@@ -20,11 +20,12 @@ import 'package:mobile_app/services/locations.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 
 class LocationEditGroups extends StatefulWidget {
   final int _stateLocationIndex;
@@ -75,14 +76,14 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                   ? const Center(
                 child: DelayedCircularProgressIndicator(),
               )
-                  : ListView.builder(
-                padding: Spacing.listPadding(context),
-                itemCount: state.deviceGroups.length,
-                itemBuilder: (_, i) {
-                  final group = state.deviceGroups[i];
+                  : SectionedListView(sections: [
+                ListSection<DeviceGroup>(
+                id: "groups",
+                items: state.deviceGroups,
+                keyOf: (group) => group.id,
+                itemBuilder: (_, group, position) {
                   return GroupedListTile(
-                    key: ValueKey(group.id),
-                    position: SlicePosition.forIndex(i, state.deviceGroups.length),
+                    position: position,
                     hairlineInset: GroupedListTile.insetIconLeading,
                     child: ListTile(
                       leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -98,12 +99,8 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
                     ),
                   );
                 },
-                findChildIndexCallback: (key) {
-                  final id = (key as ValueKey<String>).value;
-                  final index = state.deviceGroups.indexWhere((g) => g.id == id);
-                  return index == -1 ? null : index;
-                },
-              )),
+              ),
+              ])),
         );
     });
   }

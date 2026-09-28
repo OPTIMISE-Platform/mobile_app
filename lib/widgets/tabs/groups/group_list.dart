@@ -26,9 +26,9 @@ import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
-import 'package:mobile_app/theme.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
 
 class GroupList extends StatefulWidget {
@@ -133,31 +133,20 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
                       },
                     )
                   : Scrollbar(
-                      child: ListView.builder(
+                      child: SectionedListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: Spacing.listPadding(context),
-                      itemCount: state.deviceGroups.length + 1,
-                      itemBuilder: (context, i) {
-                        if (i >= state.deviceGroups.length) {
-                          // Trailing spacer, sized like the row+divider it
-                          // replaces, so the last group isn't hidden behind
-                          // the "new group" FAB.
-                          return const SizedBox(height: 72);
-                        }
-                        final group = state.deviceGroups[i];
-                        return GroupListItem(group, null,
-                            key: ValueKey(group.id),
-                            position: SlicePosition.forIndex(
-                                i, state.deviceGroups.length));
-                      },
-                      // Keeps a row tied to its group when groups are
-                      // inserted/removed ahead of it, not to list position.
-                      findChildIndexCallback: (key) {
-                        final id = (key as ValueKey<String>).value;
-                        final index = state.deviceGroups
-                            .indexWhere((g) => g.id == id);
-                        return index == -1 ? null : index;
-                      },
+                      sections: [
+                        ListSection<DeviceGroup>(
+                          id: "groups",
+                          items: state.deviceGroups,
+                          keyOf: (group) => group.id,
+                          itemBuilder: (_, group, position) =>
+                              GroupListItem(group, null, position: position),
+                        ),
+                      ],
+                      // Sized like the row+divider it replaces, so the last
+                      // group isn't hidden behind the "new group" FAB.
+                      trailing: const [SizedBox(height: 72)],
                     )));
     });
   }
