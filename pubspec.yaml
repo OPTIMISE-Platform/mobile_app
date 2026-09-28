@@ -94,6 +94,11 @@ dev_dependencies:
   flutter_native_splash: ^2.3.1
   isar_community_generator: ^3.3.0
 
+dependency_overrides:
+  # Vendored copy, see THIRD-PARTY.md.
+  openidconnect_android:
+    path: third_party/openidconnect_android
+
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true

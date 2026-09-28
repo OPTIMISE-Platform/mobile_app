@@ -985,13 +985,12 @@ packages:
     source: hosted
     version: "2.0.1"
   openidconnect_android:
-    dependency: transitive
+    dependency: "direct overridden"
     description:
-      name: openidconnect_android
-      sha256: a1ca0ad6da73afd4f18bd93970f5377477932d88b345a7d9213a813fc387db48
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.2"
+      path: "third_party/openidconnect_android"
+      relative: true
+    source: path
+    version: "2.0.4"
   openidconnect_darwin:
     dependency: transitive
     description:
@@ -1012,10 +1011,10 @@ packages:
     dependency: "direct main"
     description:
       name: openidconnect_platform_interface
-      sha256: e97c17c6c13379948377b18a3529a89c8dac1d043eb981747e54dcddb953d433
+      sha256: ac827d06c43fd697f9d539ba679d49591d2a5e8588328855207eff293ccc2af0
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.1"
+    version: "2.0.2"
   openidconnect_web:
     dependency: transitive
     description:
