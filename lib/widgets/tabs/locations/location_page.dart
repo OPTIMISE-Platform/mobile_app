@@ -31,7 +31,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/expandable_fab.dart';
-import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
@@ -175,6 +175,10 @@ class LocationPageState extends State<LocationPage>
           matchingGroups.add(state.deviceGroups[i]);
         }
       }
+      // Devices and groups each get their own section header only when both
+      // are present.
+      final sectioned =
+          state.devices.isNotEmpty && matchingGroups.isNotEmpty;
 
       return Scaffold(
           floatingActionButton: !LocationService.isCreateEditDeleteAvailable() ? null : ExpandableFab(
@@ -241,57 +245,44 @@ class LocationPageState extends State<LocationPage>
                               );
                             },
                           )
-                        : state.devices.isEmpty &&
-                                matchingGroups.isEmpty &&
-                                state.devicesListEnded
-                            ? const ScrollableEmptyState("No Devices")
-                            : Builder(builder: (_) {
-                            // Devices and groups each get their own section
-                            // header only when both are present.
-                            final sectioned = state.devices.isNotEmpty &&
-                                matchingGroups.isNotEmpty;
-                            return SectionedListView(
-                              sections: [
-                                // state.devices, not location.device_ids:
-                                // hidden devices make the raw id count leave
-                                // trailing blanks.
-                                ListSection<DeviceInstance>(
-                                  id: "devices",
-                                  title: sectioned ? "Devices" : null,
-                                  items: state.devices,
-                                  keyOf: (device) => device.id,
-                                  itemBuilder: (_, device, position) =>
-                                      DeviceListItem(device, null,
-                                          position: position,
-                                          currentLocationId: location.id),
-                                ),
-                                ListSection<DeviceGroup>(
-                                  id: "groups",
-                                  title: sectioned ? "Groups" : null,
-                                  items: matchingGroups,
-                                  keyOf: (group) => group.id,
-                                  itemBuilder: (_, group, position) =>
-                                      GroupListItem(group, (_) {
-                                    widget.parentState.filter.locationIds = [
-                                      location.id
-                                    ];
-                                    state.searchDevices(
-                                        widget.parentState.filter);
-                                  }, position: position),
-                                ),
-                              ],
-                              trailing: [
-                                // Not all of the location's devices have
-                                // loaded yet; also doubles as the bottom
-                                // clearance so the last row isn't hidden
-                                // behind the FAB.
-                                Builder(builder: (_) {
-                                  state.loadDevices();
-                                  return const SizedBox(height: 72);
-                                }),
-                              ],
-                            );
-                          }),
+                        : PagedDeviceList(
+                            // Also past the server's total: this list asks
+                            // until the location's search has ended.
+                            source: DeviceSearchPages(state, untilEnded: true),
+                            emptyText: "No Devices",
+                            sections: [
+                              // state.devices, not location.device_ids:
+                              // hidden devices make the raw id count leave
+                              // trailing blanks.
+                              ListSection<DeviceInstance>(
+                                id: "devices",
+                                title: sectioned ? "Devices" : null,
+                                items: state.devices,
+                                keyOf: (device) => device.id,
+                                itemBuilder: (_, device, position) =>
+                                    DeviceListItem(device, null,
+                                        position: position,
+                                        currentLocationId: location.id),
+                              ),
+                              ListSection<DeviceGroup>(
+                                id: "groups",
+                                title: sectioned ? "Groups" : null,
+                                items: matchingGroups,
+                                keyOf: (group) => group.id,
+                                itemBuilder: (_, group, position) =>
+                                    GroupListItem(group, (_) {
+                                  widget.parentState.filter.locationIds = [
+                                    location.id
+                                  ];
+                                  state.searchDevices(
+                                      widget.parentState.filter);
+                                }, position: position),
+                              ),
+                            ],
+                            // Bottom clearance, so the last row isn't hidden
+                            // behind the FAB.
+                            trailing: const [SizedBox(height: 72)],
+                          ),
           )));
     });
   }

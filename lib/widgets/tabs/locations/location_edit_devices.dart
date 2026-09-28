@@ -30,6 +30,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
@@ -116,7 +117,8 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
         .where((d) => !listed.contains(d.id) && d.displayName.toLowerCase().contains(query))
         .toList(growable: false);
     return Stack(children: [
-      SectionedListView(
+      PagedDeviceList(
+        source: DeviceSearchPages(AppState()),
         sections: [
           ListSection<DeviceInstance>(
             id: "devices",
@@ -124,13 +126,6 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
             keyOf: (device) => device.id,
             itemBuilder: (_, device, position) => _deviceTile(device, position),
           ),
-        ],
-        trailing: [
-          if (AppState().devicesListItemCount > AppState().devices.length)
-            Builder(builder: (_) {
-              AppState().loadDevices();
-              return const SizedBox.shrink();
-            }),
         ],
       ),
       Positioned(

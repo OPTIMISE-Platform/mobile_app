@@ -57,6 +57,8 @@ mixin DeviceMixin on ChangeNotifier {
   /// the next [searchDevices] clears it.
   bool _devicesLoadFailed = false;
 
+  int _devicePageLoads = 0;
+
   /// Bumped by every [searchDevices] and [clearDeviceData]. A page load that
   /// started under an older value discards its result instead of mixing it
   /// into the new search's list.
@@ -84,6 +86,11 @@ mixin DeviceMixin on ChangeNotifier {
   /// Whether the current search includes inactive devices, for code that
   /// starts a narrower search (a group's members) and must keep the toggle.
   bool get showsInactiveDevices => _deviceSearchFilter.showInactive;
+
+  /// Changes when a page load has run to its end, whatever the outcome, and
+  /// when [clearDeviceData] resets paging. A list's next-page row is keyed on
+  /// it, so it asks once more after each of those instead of on every rebuild.
+  int get devicePageLoads => _devicePageLoads;
 
   /// Raw pages fetched so far (before hiding inactive devices). Unlike
   /// [devices].length, this advances even on a page that filters down to
@@ -345,6 +352,7 @@ mixin DeviceMixin on ChangeNotifier {
         unawaited(_loadStatesInBackground(visibleDevices));
       }
     } finally {
+      _devicePageLoads++;
       _devicesMutex.release();
     }
   }
@@ -521,6 +529,7 @@ mixin DeviceMixin on ChangeNotifier {
 
   void clearDeviceData() {
     _devicesGeneration++;
+    _devicePageLoads++;
     _devicesLoadFailed = false;
     deviceClasses.clear();
     deviceTypes.clear();

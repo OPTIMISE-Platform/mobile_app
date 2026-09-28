@@ -31,7 +31,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
@@ -298,35 +298,22 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                 ),
                               ],
                             )
-                      : state.devices.isEmpty && (state.loadingDevices || _loading)
-                          ? const Center(
-                              child: DelayedCircularProgressIndicator(),
-                            )
-                          // devicesListEnded, not just an empty list: an
-                          // all-hidden page must still reach the ListView
-                          // below, or its own row never fetches the next page.
-                          : state.devices.isEmpty && state.devicesListEnded
-                              ? const ScrollableEmptyState("No Devices")
-                              : SectionedListView(
-                                  sections: [
-                                    ListSection<DeviceInstance>(
-                                      id: "devices",
-                                      items: state.devices,
-                                      keyOf: (device) => device.id,
-                                      itemBuilder: (_, device, position) =>
-                                          DeviceListItem(device, null,
-                                              position: position),
-                                    ),
-                                  ],
-                                  trailing: [
-                                    if (state.devicesListItemCount >
-                                        state.devices.length)
-                                      Builder(builder: (_) {
-                                        state.loadDevices();
-                                        return const SizedBox.shrink();
-                                      }),
-                                  ],
-                            )));
+                      : PagedDeviceList(
+                          source: DeviceSearchPages(state),
+                          loading: state.devices.isEmpty &&
+                              (state.loadingDevices || _loading),
+                          emptyText: "No Devices",
+                          sections: [
+                            ListSection<DeviceInstance>(
+                              id: "devices",
+                              items: state.devices,
+                              keyOf: (device) => device.id,
+                              itemBuilder: (_, device, position) =>
+                                  DeviceListItem(device, null,
+                                      position: position),
+                            ),
+                          ],
+                        )));
     });
   }
 }

@@ -28,7 +28,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
-import 'package:mobile_app/widgets/shared/scrollable_empty_state.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
@@ -159,27 +159,18 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                       HapticFeedbackProxy.lightImpact();
                       state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
                     },
-                    child: state.devices.isEmpty && state.devicesListEnded
-                        ? const ScrollableEmptyState("No Devices")
-                        : SectionedListView(
-                            sections: [
-                              ListSection<DeviceInstance>(
-                                id: "devices",
-                                items: state.devices,
-                                keyOf: (device) => device.id,
-                                itemBuilder: (_, device, position) =>
-                                    DeviceListItem(device, null,
-                                        position: position),
-                              ),
-                            ],
-                            trailing: [
-                              if (state.devicesListItemCount >
-                                  state.devices.length)
-                                Builder(builder: (_) {
-                                  state.loadDevices();
-                                  return const SizedBox.shrink();
-                                }),
-                            ],
+                    child: PagedDeviceList(
+                      source: DeviceSearchPages(state),
+                      emptyText: "No Devices",
+                      sections: [
+                        ListSection<DeviceInstance>(
+                          id: "devices",
+                          items: state.devices,
+                          keyOf: (device) => device.id,
+                          itemBuilder: (_, device, position) =>
+                              DeviceListItem(device, null, position: position),
+                        ),
+                      ],
                     )),
       );
     });

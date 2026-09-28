@@ -18,12 +18,11 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
@@ -64,58 +63,24 @@ class _DeviceListState extends State<DeviceList> with ResumeRefreshMixin {
     return Selector<AppState, String>(
         selector: (_, state) =>
             '${state.loadingDevices}|${state.devices.length}|${state.rawDevicesFetched}|${state.devicesListEnded}',
-        builder: (_, __, ___) => RefreshIndicator(
+        builder: (_, __, ___) => PagedDeviceList(
+              source: DeviceSearchPages(AppState()),
+              loading: AppState().loadingDevices,
+              emptyText: "No Devices",
               onRefresh: () async {
-                HapticFeedbackProxy.lightImpact();
                 AppState().refreshDevices();
               },
-              child: Scrollbar(
-                child: AppState().loadingDevices
-                    ? const Center(child: DelayedCircularProgressIndicator())
-                    // devicesListEnded, not just an empty list: an all-hidden
-                    // page must still fall through to the ListView below, or
-                    // its own row never fetches the next page.
-                    : AppState().devices.isEmpty && AppState().devicesListEnded
-                        ? LayoutBuilder(
-                            builder: (context, constraint) {
-                              return SingleChildScrollView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                child: ConstrainedBox(
-                                  constraints: BoxConstraints(minHeight: constraint.maxHeight),
-                                  child: const IntrinsicHeight(
-                                    child: Column(
-                                      children: [
-                                        Expanded(
-                                          child: Center(child: Text("No Devices")),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : SectionedListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            sections: [
-                              ListSection<DeviceInstance>(
-                                id: "devices",
-                                items: AppState().devices,
-                                keyOf: (device) => device.id,
-                                itemBuilder: (_, device, position) =>
-                                    DeviceListItem(device, null,
-                                        position: position),
-                              ),
-                            ],
-                            trailing: [
-                              if (AppState().devicesListItemCount >
-                                  AppState().devices.length)
-                                Builder(builder: (_) {
-                                  AppState().loadDevices();
-                                  return const SizedBox.shrink();
-                                }),
-                            ]),
-              ),
+              scrollbar: true,
+              physics: const AlwaysScrollableScrollPhysics(),
+              sections: [
+                ListSection<DeviceInstance>(
+                  id: "devices",
+                  items: AppState().devices,
+                  keyOf: (device) => device.id,
+                  itemBuilder: (_, device, position) =>
+                      DeviceListItem(device, null, position: position),
+                ),
+              ],
             ));
   }
 }
