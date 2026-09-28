@@ -129,8 +129,11 @@ mixin DeviceMixin on ChangeNotifier {
   /// True once devices *and* device groups have each completed an initial load.
   /// Before that, "no favorites yet" is indistinguishable from "not loaded
   /// yet" — the favorites screen uses this to show a spinner instead of briefly
-  /// flashing the empty "Add Favorites" state during startup.
-  bool get favoritesDataLoaded => _devicesLoadedOnce && _deviceGroupsLoadedOnce;
+  /// flashing the empty "Add Favorites" state during startup. A failed device
+  /// load counts as loaded, like in [devicesListEnded]: no page follows it
+  /// without a new search, so waiting for one would spin forever.
+  bool get favoritesDataLoaded =>
+      (_devicesLoadedOnce || _devicesLoadFailed) && _deviceGroupsLoadedOnce;
   bool get loadingDeviceClasses => _deviceClassesMutex.isLocked;
   bool loadingDeviceGroups() => _deviceGroupsMutex.isLocked;
 
