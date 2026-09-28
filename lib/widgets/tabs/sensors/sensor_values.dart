@@ -636,17 +636,62 @@ class _SensorValuesState extends State<SensorValues>
     if (_loading && !loadedAnything) {
       return _buildFullHeightMessage(const DelayedCircularProgressIndicator());
     }
-    return GridView.builder(
-      padding: Spacing.listPadding(context, horizontal: Spacing.md),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.05,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: _pins.length,
-      itemBuilder: (_, i) => _buildCard(_pins[i]),
+    // mainAxisExtent instead of a fixed childAspectRatio: the ratio alone
+    // does not grow with the text scale, so the subtitle and the two-line
+    // title overflowed the card at larger scales. The extent below adds
+    // exactly that growth on top of the original width/1.05 height, so
+    // scale 1.0 renders unchanged and larger scales get the extra room the
+    // labels actually need; the value itself may still shrink further via
+    // its own FittedBox.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const horizontalPadding = Spacing.md;
+        const crossAxisSpacing = 8.0;
+        final cellWidth =
+            (constraints.maxWidth - horizontalPadding * 2 - crossAxisSpacing) /
+                2;
+        final cellHeight = cellWidth / 1.05 + _cardLabelGrowth(context);
+        return GridView.builder(
+          padding: Spacing.listPadding(context, horizontal: horizontalPadding),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisExtent: cellHeight,
+            crossAxisSpacing: crossAxisSpacing,
+            mainAxisSpacing: 8,
+          ),
+          itemCount: _pins.length,
+          itemBuilder: (_, i) => _buildCard(_pins[i]),
+        );
+      },
     );
+  }
+
+  /// How much taller a card's label area (subtitle plus the two-line title)
+  /// grew at the current text scale compared to scale 1.0.
+  ///
+  /// Measures one line of each style directly rather than assuming a line
+  /// height factor, so it stays correct if the ambient text style changes.
+  double _cardLabelGrowth(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final ambient = DefaultTextStyle.of(context).style;
+    final subtitleStyle = ambient.merge(const TextStyle(fontSize: 12));
+    final titleStyle = ambient.merge(const TextStyle(fontWeight: FontWeight.bold));
+
+    double labelHeight(TextScaler s) =>
+        _lineHeight(context, subtitleStyle, s) +
+        2 * _lineHeight(context, titleStyle, s);
+
+    final grown = labelHeight(scaler) - labelHeight(TextScaler.noScaling);
+    return grown > 0 ? grown : 0;
+  }
+
+  double _lineHeight(BuildContext context, TextStyle style, TextScaler scaler) {
+    final painter = TextPainter(
+      text: TextSpan(text: 'Ag', style: style),
+      textDirection: Directionality.of(context),
+      textScaler: scaler,
+    )..layout();
+    return painter.height;
   }
 
   Widget _buildNoTabsState() {
@@ -816,10 +861,16 @@ class _SensorValuesState extends State<SensorValues>
                           ),
                         ],
                       ),
-                      const Spacer(),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: _buildValue(state, device, group),
+                      // Expanded, not a Spacer plus a plain Align: that gave
+                      // the value its natural, unbounded height, which grew
+                      // with the text scale same as the title and could
+                      // overflow the card before its own FittedBox ever got
+                      // a chance to shrink it.
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: _buildValue(state, device, group),
+                        ),
                       ),
                     ],
                   ),
