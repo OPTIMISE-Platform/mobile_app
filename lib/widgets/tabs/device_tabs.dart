@@ -187,21 +187,35 @@ class DeviceTabsState extends State<DeviceTabs> {
         Container(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
         NavigationBar(
           selectedIndex: selected < 0 ? 0 : selected,
-          // enabled stays true even when disabled: NavigationDestination(enabled:
-          // false) drops its onTap, which would also swallow the tap before
-          // _onBarTap's own disabled check ever runs and can toast about it.
-          destinations: navBarTabs.map((tabIndex) {
-            final navItem = navItems.firstWhere((n) => n.index == tabIndex);
-            return NavigationDestination(
-              icon: Icon(navItem.icon,
-                  color: navItem.disabled ? disabledColor : null),
-              label: navItem.name,
-              tooltip: navItem.disabled ? "Currently unavailable" : null,
-            );
-          }).toList(),
+          // enabled: false is what screen readers announce as disabled, but it
+          // also drops the destination's own tap; the GestureDetector brings
+          // the tap back so _onBarTap can still toast about it.
+          destinations: [
+            for (final (position, tabIndex) in navBarTabs.indexed)
+              _navDestination(
+                  navItems.firstWhere((n) => n.index == tabIndex),
+                  disabledColor,
+                  () => _onBarTap(position, disabled)),
+          ],
           onDestinationSelected: (position) => _onBarTap(position, disabled),
         ),
       ],
+    );
+  }
+
+  Widget _navDestination(
+      NavigationItem navItem, Color disabledColor, VoidCallback onDisabledTap) {
+    final destination = NavigationDestination(
+      enabled: !navItem.disabled,
+      icon: Icon(navItem.icon, color: navItem.disabled ? disabledColor : null),
+      label: navItem.name,
+      tooltip: navItem.disabled ? "Currently unavailable" : null,
+    );
+    if (!navItem.disabled) return destination;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onDisabledTap,
+      child: destination,
     );
   }
 
