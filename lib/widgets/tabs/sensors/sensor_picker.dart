@@ -109,7 +109,11 @@ class _TargetPickerState extends State<_TargetPicker> {
   int _rawFetched = 0;
   String _query = '';
   bool _initialLoadDone = false;
+  // Whether a page of the current generation is in flight.
   bool _loadingPage = false;
+  // Bumped by every [_reload]; a page that started under an older value is
+  // dropped, so the newest query wins over one still in flight.
+  int _generation = 0;
   bool _allLoaded = false;
   String? _error;
 
@@ -153,6 +157,8 @@ class _TargetPickerState extends State<_TargetPicker> {
   }
 
   Future<void> _reload() async {
+    _generation++;
+    _loadingPage = false;
     setState(() {
       _devices.clear();
       _rawFetched = 0;
@@ -170,6 +176,7 @@ class _TargetPickerState extends State<_TargetPicker> {
   /// it.
   Future<void> _loadNextPage() async {
     if (_loadingPage || _allLoaded) return;
+    final generation = _generation;
     _loadingPage = true;
     var landed = false;
     try {
@@ -187,7 +194,7 @@ class _TargetPickerState extends State<_TargetPicker> {
           result.devices.where((d) => !d.isInactive).toList(growable: false);
       await AppState()
           .ensureDeviceTypes(result.devices.map((d) => d.device_type_id));
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _devices.addAll(visibleDevices);
         _rawFetched += result.devices.length;
@@ -196,13 +203,13 @@ class _TargetPickerState extends State<_TargetPicker> {
       });
       landed = true;
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _error = 'Could not load devices';
         _initialLoadDone = true;
       });
     } finally {
-      _loadingPage = false;
+      if (generation == _generation) _loadingPage = false;
     }
     // Only after a page that landed: continuing after a failure would retry
     // without end. Each continuation fetches a new raw page, so the chain

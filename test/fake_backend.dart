@@ -56,8 +56,9 @@ class FakeBackend implements HttpClientAdapter {
 
   /// Serves `/device-repository/extended-devices` as a real paginated
   /// endpoint would: each request gets the slice of [allDevices] its
-  /// `ids` and offset/limit ask for, with `X-Total-Count` set to the count
-  /// before hiding anything client-side - which is what
+  /// `ids`, `search` (a substring of the name) and offset/limit ask for,
+  /// with `X-Total-Count` set to the count before hiding anything
+  /// client-side - which is what
   /// DevicesService.getDevices reads as [DeviceInstanceWithTotal.total].
   /// Use this over [serveJson] whenever a test needs more than one page. A
   /// [serveJson] route for the same path takes precedence.
@@ -89,9 +90,15 @@ class FakeBackend implements HttpClientAdapter {
           .split(",")
           .where((id) => id.isNotEmpty)
           .toSet();
-      final all = options.uri.queryParameters.containsKey("ids")
-          ? _devicesPage!.where((d) => ids.contains(d["id"])).toList()
-          : _devicesPage!;
+      final search =
+          (options.uri.queryParameters["search"] ?? "").toLowerCase();
+      final all = (options.uri.queryParameters.containsKey("ids")
+              ? _devicesPage!.where((d) => ids.contains(d["id"]))
+              : _devicesPage!)
+          .where((d) =>
+              search.isEmpty ||
+              (d["name"] as String).toLowerCase().contains(search))
+          .toList();
       final hold = holdDevices;
       if (hold != null) await hold.future;
       final offset = int.parse(options.uri.queryParameters["offset"] ?? "0");
