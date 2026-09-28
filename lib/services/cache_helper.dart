@@ -20,6 +20,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/location.dart';
@@ -115,6 +116,7 @@ class CacheHelper {
         await isar!.locations.clear();
       });
     }
+    AppState().replaceDeviceIndex(const []);
     // Without this the emptied cache counts as refreshed today and the next
     // scheduled refill waits up to a day - three services read their (now
     // empty) collection as the answer rather than as a cache miss.
@@ -214,6 +216,7 @@ class CacheHelper {
         await isar!.writeTxn(() => isar!.deviceInstances.putAll(chunk));
       }
     }
+    AppState().replaceDeviceIndex(newDevices);
 
     await Settings.setCacheUpdated("devices");
     if (reschedule) {

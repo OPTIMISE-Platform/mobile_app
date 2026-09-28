@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_class.dart';
@@ -62,6 +61,20 @@ mixin DeviceMixin on ChangeNotifier {
   /// started under an older value discards its result instead of mixing it
   /// into the new search's list.
   int _devicesGeneration = 0;
+
+  /// Devices seen with the inactive attribute: seeded from the Isar device
+  /// cache, which the full cache refresh fills with every device of the
+  /// account, and kept current by every page fetched or saved since. Lets a
+  /// row count the devices its list would show without a request per row.
+  final Set<String> _inactiveDeviceIds = {};
+
+  /// Bumped when the index is replaced or cleared, so a seed that read the
+  /// cache before that is discarded.
+  int _inactiveIndexEpoch = 0;
+
+  /// Ids noted while a seed is reading the cache; their note is newer than
+  /// what the seed read.
+  Set<String>? _notedDuringSeed;
 
   final List<DeviceGroup> deviceGroups = [];
   final _deviceGroupsMutex = Mutex();
@@ -241,6 +254,78 @@ mixin DeviceMixin on ChangeNotifier {
   void forgetUnavailableDeviceTypes() {
     _unavailableDeviceTypeIds.clear();
     _deviceTypesRetryAfter = null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Visible device counts
+  // ---------------------------------------------------------------------------
+
+  /// How many of [ids] a device list searched with the current "Show
+  /// inactive" setting shows: inactive devices are hidden unless they are
+  /// favourites, the same rule [loadDevices] applies. A device never seen
+  /// counts as shown, as it did before hidden devices existed.
+  int visibleDeviceCount(Iterable<String> ids) {
+    if (showsInactiveDevices || _inactiveDeviceIds.isEmpty) return ids.length;
+    Set<String>? favorites;
+    var count = 0;
+    for (final id in ids) {
+      if (!_inactiveDeviceIds.contains(id)) {
+        count++;
+        continue;
+      }
+      favorites ??= Settings.getFavoriteDeviceIds();
+      if (favorites.contains(id)) count++;
+    }
+    return count;
+  }
+
+  /// Records the inactive attribute of [devices] as just fetched or saved.
+  void noteDevices(Iterable<DeviceInstance> devices) {
+    var changed = false;
+    for (final d in devices) {
+      _notedDuringSeed?.add(d.id);
+      changed |= d.isInactive
+          ? _inactiveDeviceIds.add(d.id)
+          : _inactiveDeviceIds.remove(d.id);
+    }
+    if (changed) notifyListeners();
+  }
+
+  /// Replaces the index with [all], every device of the account, so devices
+  /// deleted since drop out of it.
+  void replaceDeviceIndex(Iterable<DeviceInstance> all) {
+    _inactiveIndexEpoch++;
+    final next = {for (final d in all) if (d.isInactive) d.id};
+    if (setEquals(next, _inactiveDeviceIds)) return;
+    _inactiveDeviceIds
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  Future<Set<String>> Function() readCachedInactiveDeviceIds =
+      DevicesService.getCachedInactiveDeviceIds;
+
+  /// Seeds the index from the device cache, one local query for all rows.
+  Future<void> loadInactiveDeviceIds() async {
+    final epoch = _inactiveIndexEpoch;
+    final noted = _notedDuringSeed = {};
+    final Set<String> cached;
+    try {
+      cached = await readCachedInactiveDeviceIds();
+    } catch (e, s) {
+      ErrorReporter.log('Could not read inactive devices from the cache', e, s);
+      return;
+    } finally {
+      if (identical(_notedDuringSeed, noted)) _notedDuringSeed = null;
+    }
+    if (epoch != _inactiveIndexEpoch) return;
+    var changed = false;
+    for (final id in cached) {
+      if (!noted.contains(id)) changed |= _inactiveDeviceIds.add(id);
+    }
+    if (changed) notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -528,6 +613,9 @@ mixin DeviceMixin on ChangeNotifier {
 
   void clearDeviceData() {
     _devicesGeneration++;
+    _inactiveIndexEpoch++;
+    _inactiveDeviceIds.clear();
+    _notedDuringSeed = null;
     _devicePageLoads++;
     _devicesLoadFailed = false;
     deviceClasses.clear();

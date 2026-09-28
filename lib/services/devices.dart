@@ -78,6 +78,7 @@ class DevicesService {
         _logger.d(
           "Getting devices from local DB took ${DateTime.now().difference(start)}",
         );
+        AppState().noteDevices(devices);
         return DeviceInstanceWithTotal(devices, cachedCount);
       }
     }
@@ -148,7 +149,21 @@ class DevicesService {
         await collection.putAll(devices);
       });
     }
+    AppState().noteDevices(devices);
     return DeviceInstanceWithTotal(devices, total);
+  }
+
+  /// Ids of the cached devices that carry the inactive attribute. Only rows
+  /// with the attribute are read; its value is judged by
+  /// [DeviceInstance.isInactive], which trims and ignores case.
+  static Future<Set<String>> getCachedInactiveDeviceIds() async {
+    final db = isar;
+    if (db == null) return {};
+    final rows = await db.deviceInstances
+        .filter()
+        .attributesElement((a) => a.keyEqualTo(attributeInactive))
+        .findAll();
+    return {for (final d in rows) if (d.isInactive) d.id};
   }
 
   /// The devices with the given [ids], fetched in requests of at most 50 ids
@@ -191,6 +206,7 @@ class DevicesService {
         await isar!.collection<DeviceInstance>().put(device);
       });
     }
+    AppState().noteDevices([device]);
     return;
   }
 

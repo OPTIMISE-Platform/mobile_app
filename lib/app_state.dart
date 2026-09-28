@@ -82,6 +82,7 @@ class AppState extends ChangeNotifier
       // instead race and drop a load already served another way.
       if (locations.isEmpty) unawaited(loadLocations());
       await Future.wait([
+        loadInactiveDeviceIds(),
         loadDeviceClasses(),
         loadDeviceTypes(),
         loadNestedFunctions(),

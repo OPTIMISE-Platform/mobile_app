@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/shared/devices_label.dart';
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
@@ -493,7 +494,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
           : deviceGroup!.imageWidget;
       final headerTitle = device != null
           ? state.deviceClasses[deviceType?.device_class_id]?.name ?? "Device"
-          : "${deviceGroup!.device_ids.length} Device${deviceGroup.device_ids.length == 1 ? "" : "s"}";
+          : devicesLabel(state.visibleDeviceCount(deviceGroup!.device_ids));
       final entitySecondLine = device != null
           ? [
               if (deviceType != null) deviceType.name,

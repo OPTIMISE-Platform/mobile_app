@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/shared/devices_label.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -79,7 +80,7 @@ class GroupListItem extends StatelessWidget {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
-              subtitle: Text("${_group.device_ids.length} Device${_group.device_ids.length > 1 || _group.device_ids.isEmpty ? "s" : ""}"),
+              subtitle: Text(devicesLabel(AppState().visibleDeviceCount(_group.device_ids))),
               leading: EntityLeadingIcon(
                   size: 40,
                   fallbackIcon: Icons.devices_other,

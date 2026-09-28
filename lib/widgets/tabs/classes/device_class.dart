@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/shared/devices_label.dart';
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
@@ -123,7 +124,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                     child: ListTile(
                                         title: Text(deviceClass.name),
                                         subtitle: Text(
-                                            "${deviceClass.deviceIds.length} Device${deviceClass.deviceIds.length > 1 || deviceClass.deviceIds.isEmpty ? "s" : ""}"),
+                                            devicesLabel(state.visibleDeviceCount(deviceClass.deviceIds))),
                                         leading: EntityLeadingIcon(
                                             size: 48,
                                             fallbackIcon: Icons.devices,

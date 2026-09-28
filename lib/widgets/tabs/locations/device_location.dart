@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/shared/devices_label.dart';
 import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
@@ -176,7 +177,7 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
                                           ),
                                         ),
                                         subtitle: Text(
-                                            "${state.locations[i].device_ids.length} Device${state.locations[i].device_ids.length > 1 || state.locations[i].device_ids.isEmpty ? "s" : ""}, ${state.locations[i].device_group_ids.length} Group${state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : ""}"),
+                                            "${devicesLabel(state.visibleDeviceCount(state.locations[i].device_ids))}, ${state.locations[i].device_group_ids.length} Group${state.locations[i].device_group_ids.length > 1 || state.locations[i].device_group_ids.isEmpty ? "s" : ""}"),
                                         onTap: () =>
                                             _openLocationPage(i, parentState))
                                   ])
