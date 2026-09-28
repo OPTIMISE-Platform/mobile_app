@@ -78,6 +78,27 @@ Light and dark captures of one screen stay in one `testWidgets`: Dio instances
 are memoized for the process, and a memoized future created in an earlier test
 may not resolve in a later one.
 
+A second `testWidgets` in the same file whose screen makes requests may never
+get its answers, for the same reason; the tests for the device filter, the
+sensor picker, group and location editing and the sensor grid therefore sit in
+files of their own, or run several cases inside one `testWidgets`.
+
+Real I/O started from a gesture hangs as well: `tester.longPress` on a row that
+writes a favourite to Hive starts the write inside the fake zone, and no later
+`pump` or `runAsync` sees it complete. Take the resolved callback from the
+widget and call it inside `runAsync` instead
+(`test/device_list_item_interactions_test.dart`).
+
+Chart tooltips show only while the pointer is down, so a tooltip golden holds
+the gesture: `startGesture` on a data point, capture, then `up()`
+(`golden_smart_service_charts_test.dart`, `golden_detail_chart_test.dart`).
+
+Goldens run without a system inset and at text scale 1.0. Layout under a bottom
+inset and at larger text sizes is covered by plain widget tests that set
+`tester.view.viewPadding` or a `TextScaler` and assert no overflow
+(`detail_page_scroll_test.dart`, `device_list_item_layout_test.dart`,
+`detail_page_header_layout_test.dart`, `sensor_values_overflow_test.dart`).
+
 ## Test hooks in `lib/`
 
 All are `@visibleForTesting` and never set by production code.
