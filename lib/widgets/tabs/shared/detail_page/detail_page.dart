@@ -41,7 +41,7 @@ import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
-import 'package:mobile_app/widgets/shared/expandable_text.dart';
+import 'package:mobile_app/widgets/shared/entity_leading_circle.dart';
 import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
@@ -486,6 +486,21 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         trailingHeader.add(FavorizeButton(null, widget._group));
       }
 
+      // The app bar already names the entity; the header says what it is.
+      final deviceType = device != null ? state.deviceTypes[device.device_type_id] : null;
+      final entityImage = device != null
+          ? state.deviceClasses[deviceType?.device_class_id]?.imageWidget
+          : deviceGroup!.imageWidget;
+      final headerTitle = device != null
+          ? state.deviceClasses[deviceType?.device_class_id]?.name ?? "Device"
+          : "${deviceGroup!.device_ids.length} Device${deviceGroup.device_ids.length == 1 ? "" : "s"}";
+      final entitySecondLine = device != null
+          ? [
+              if (deviceType != null) deviceType.name,
+              ...state.locationsForDevice(device.id).map((l) => l.name),
+            ].join(" · ")
+          : state.devices.map((e) => e.displayName).join(", ");
+
       return Scaffold(
           floatingActionButton: deviceGroup == null || !DeviceGroupsService.isCreateEditDeleteAvailable()
               ? null
@@ -516,25 +531,25 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   leading: [
                     ListTile(
                       // header
-                      leading: Container(
-                        height: MediaQuery.textScalerOf(context).scale(48),
-                        width: MediaQuery.textScalerOf(context).scale(48),
-                        decoration: BoxDecoration(color: const Color(0xFF6c6c6c), borderRadius: BorderRadius.circular(50)),
-                        child: Padding(
-                          padding: EdgeInsets.all(MediaQuery.textScalerOf(context).scale(8)),
-                          child: device != null
-                              ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.imageWidget
-                              : deviceGroup!.imageWidget ?? const Icon(Icons.devices_other, color: Colors.white),
-                        ),
+                      leading: EntityLeadingCircle(
+                        size: 48,
+                        fallbackIcon: device != null ? Icons.devices : Icons.devices_other,
+                        image: entityImage,
                       ),
                       title: Text(
-                        device != null
-                            ? state.deviceClasses[state.deviceTypes[device.device_type_id]?.device_class_id]?.name ?? "MISSING_DEVICE_CLASS_NAME"
-                            : "Device Group",
+                        headerTitle,
+                        key: const Key('detailPageHeaderTitle'),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      subtitle: device != null
-                          ? ExpandableText(state.deviceTypes[device.device_type_id]?.name ?? "MISSING_DEVICE_TYPE_NAME", 2)
-                          : ExpandableText(state.devices.map((e) => e.displayName).join("\n"), 3),
+                      subtitle: entitySecondLine.isEmpty
+                          ? null
+                          : Text(
+                              entitySecondLine,
+                              key: const Key('detailPageHeaderSubtitle'),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                       trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                     ),
                     if (list.isNotEmpty || deviceGroup != null) const SizedBox(height: Spacing.lg),
