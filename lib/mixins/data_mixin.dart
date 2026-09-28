@@ -24,31 +24,25 @@ import 'package:mobile_app/services/characteristics.dart';
 import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
-import 'package:mutex/mutex.dart';
+import 'package:mobile_app/shared/joined_load.dart';
 
 mixin DataMixin on ChangeNotifier {
 
   final Map<String, Aspect> aspects = {};
-  final _aspectsMutex = Mutex();
+  final _aspectsLoad = JoinedLoad();
 
   final Map<String, Concept> concepts = {};
-  final _conceptsMutex = Mutex();
+  final _conceptsLoad = JoinedLoad();
 
   final Map<String, Characteristic> characteristics = {};
-  final _characteristicsMutex = Mutex();
+  final _characteristicsLoad = JoinedLoad();
 
   final Map<String, PlatformFunction> platformFunctions = {};
-  final _platformFunctionsMutex = Mutex();
+  final _platformFunctionsLoad = JoinedLoad();
 
-  Future<bool> loadAspects() async {
-    final locked = _aspectsMutex.isLocked;
-    await _aspectsMutex.acquire();
-    if (locked) {
-      // Deduplicated onto the load that was already running; releasing here is
-      // what lets that dedup happen more than once per process.
-      _aspectsMutex.release();
-      return true;
-    }
+  Future<bool> loadAspects() => _aspectsLoad.run(_loadAspects);
+
+  Future<bool> _loadAspects() async {
     try {
       // Swap after the fetch: clearing first would leave the map visibly
       // empty for the whole request, clearing at all is what drops entries
@@ -61,20 +55,14 @@ mixin DataMixin on ChangeNotifier {
     } catch (e, s) {
       ErrorReporter.report('Could not load aspects', e, s);
       return false;
-    } finally {
-      _aspectsMutex.release();
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadConcepts() async {
-    final locked = _conceptsMutex.isLocked;
-    await _conceptsMutex.acquire();
-    if (locked) {
-      _conceptsMutex.release();
-      return true;
-    }
+  Future<bool> loadConcepts() => _conceptsLoad.run(_loadConcepts);
+
+  Future<bool> _loadConcepts() async {
     try {
       final fetched = await ConceptsService.getConcepts();
       concepts.clear();
@@ -84,20 +72,14 @@ mixin DataMixin on ChangeNotifier {
     } catch (e, s) {
       ErrorReporter.report('Could not get concepts', e, s);
       return false;
-    } finally {
-      _conceptsMutex.release();
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadCharacteristics() async {
-    final locked = _characteristicsMutex.isLocked;
-    await _characteristicsMutex.acquire();
-    if (locked) {
-      _characteristicsMutex.release();
-      return true;
-    }
+  Future<bool> loadCharacteristics() => _characteristicsLoad.run(_loadCharacteristics);
+
+  Future<bool> _loadCharacteristics() async {
     try {
       final fetched = await CharacteristicsService.getCharacteristics();
       characteristics.clear();
@@ -107,20 +89,14 @@ mixin DataMixin on ChangeNotifier {
     } catch (e, s) {
       ErrorReporter.report('Could not get characteristics', e, s);
       return false;
-    } finally {
-      _characteristicsMutex.release();
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadNestedFunctions() async {
-    final locked = _platformFunctionsMutex.isLocked;
-    await _platformFunctionsMutex.acquire();
-    if (locked) {
-      _platformFunctionsMutex.release();
-      return true;
-    }
+  Future<bool> loadNestedFunctions() => _platformFunctionsLoad.run(_loadNestedFunctions);
+
+  Future<bool> _loadNestedFunctions() async {
     try {
       final fetched = await FunctionsService.getFunctions();
       platformFunctions.clear();
@@ -130,8 +106,6 @@ mixin DataMixin on ChangeNotifier {
     } catch (e, s) {
       ErrorReporter.report('Could not get nested functions', e, s);
       return false;
-    } finally {
-      _platformFunctionsMutex.release();
     }
     notifyListeners();
     return true;

@@ -44,13 +44,18 @@ class _RefreshCacheTileState extends State<RefreshCacheTile> {
     try {
       await CacheHelper.clearCache();
       _setProgress(_afterClear);
-      await CacheHelper.refreshCache(
+      final collectionsRefreshed = await CacheHelper.refreshCache(
           includeMetadata: false,
           onProgress: (p) =>
               _setProgress(_afterClear + (_afterRefresh - _afterClear) * p));
+      // Checked only after the metadata reload, so one failed collection
+      // does not leave the metadata stale as well.
       await AppState().reloadMetadata(
           onProgress: (p) =>
               _setProgress(_afterRefresh + (1 - _afterRefresh) * p));
+      if (!collectionsRefreshed) {
+        throw Exception("not all cached lists could be refreshed");
+      }
       Toast.showToastNoContext("Cache refreshed");
     } catch (e) {
       Toast.showToastNoContext("Could not refresh cache: $e");

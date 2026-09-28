@@ -33,6 +33,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/joined_load.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mutex/mutex.dart';
 
@@ -41,9 +42,11 @@ mixin DeviceMixin on ChangeNotifier {
 
   final Map<String, DeviceClass> deviceClasses = {};
   final _deviceClassesMutex = Mutex();
+  final _deviceClassesLoad = JoinedLoad();
 
   final Map<String, DeviceType> deviceTypes = {};
   final _deviceTypesMutex = Mutex();
+  final _deviceTypesLoad = JoinedLoad();
 
   final List<DeviceInstance> devices = [];
   final _devicesMutex = Mutex();
@@ -145,15 +148,11 @@ mixin DeviceMixin on ChangeNotifier {
   // Device classes
   // ---------------------------------------------------------------------------
 
-  Future<bool> loadDeviceClasses() async {
-    final locked = _deviceClassesMutex.isLocked;
+  Future<bool> loadDeviceClasses() =>
+      _deviceClassesLoad.run(_loadDeviceClasses);
+
+  Future<bool> _loadDeviceClasses() async {
     await _deviceClassesMutex.acquire();
-    if (locked) {
-      // Deduplicated onto the load that was already running; releasing here is
-      // what lets that dedup happen more than once per process.
-      _deviceClassesMutex.release();
-      return true;
-    }
     try {
       final fetched = await DeviceClassesService.getDeviceClasses();
       // Swap after the fetch: clearing first would leave the map visibly
@@ -193,13 +192,13 @@ mixin DeviceMixin on ChangeNotifier {
   Future<List<DeviceType>> Function(Duration maxAge) fetchDeviceTypes =
       (maxAge) => DeviceTypesService.getDeviceTypes(null, maxAge);
 
-  Future<bool> loadDeviceTypes() async {
-    final locked = _deviceTypesMutex.isLocked;
+  Future<bool> loadDeviceTypes() => _deviceTypesLoad.run(_loadDeviceTypes);
+
+  /// Waits for an [ensureDeviceTypes] holding the mutex and then fetches
+  /// itself: that call may have failed or skipped its fetch, so its end says
+  /// nothing about whether this load would have succeeded.
+  Future<bool> _loadDeviceTypes() async {
     await _deviceTypesMutex.acquire();
-    if (locked) {
-      _deviceTypesMutex.release();
-      return true;
-    }
     try {
       final fetched = await fetchDeviceTypes(metadataMaxAge);
       deviceTypes.clear();

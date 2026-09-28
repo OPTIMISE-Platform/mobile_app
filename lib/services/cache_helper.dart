@@ -131,18 +131,25 @@ class CacheHelper {
   /// (settings refresh via [AppState.reloadMetadata]) passes false — the
   /// reload fetches against the cleared cache itself, and including the
   /// getters here would fetch and parse everything twice.
-  static refreshCache({
+  ///
+  /// Returns false when one of the Isar collections could not be refreshed;
+  /// those parts report their own error and keep the old rows. A failing
+  /// metadata getter still throws.
+  static Future<bool> refreshCache({
     bool includeMetadata = true,
     void Function(double progress)? onProgress,
   }) async {
     if (isar == null) {
-      return;
+      return true;
     }
-    final tasks = <Future>[
+    final collections = <Future<bool>>[
       _refreshDevices(Duration.zero, reschedule: false),
       _refreshDeviceGroups(Duration.zero, reschedule: false),
       _refreshNetworks(Duration.zero, reschedule: false),
       _refreshLocations(Duration.zero, reschedule: false),
+    ];
+    final tasks = <Future>[
+      ...collections,
       if (includeMetadata) ...[
         // maxAge zero, or these serve the byte cache straight back and refresh
         // nothing - anything younger than the default counts as current, so
@@ -163,6 +170,7 @@ class CacheHelper {
           done++;
           onProgress?.call(done / tasks.length);
         })));
+    return !(await Future.wait(collections)).contains(false);
   }
 
   static Future scheduleCacheUpdates() async {
@@ -177,7 +185,7 @@ class CacheHelper {
     ]);
   }
 
-  static Future<void> _refreshDevices(Duration wait,
+  static Future<bool> _refreshDevices(Duration wait,
       {bool reschedule = true}) async {
     await Future.delayed(wait);
     var allDevicesLoaded = false;
@@ -193,7 +201,7 @@ class CacheHelper {
             forceBackend: true)).devices);
       } catch (e, s) {
         ErrorReporter.report("Could not get devices", e, s);
-        return;
+        return false;
       }
       allDevicesLoaded = newDevices.length < limit;
       deviceOffset = newDevices.length;
@@ -222,6 +230,7 @@ class CacheHelper {
     if (reschedule) {
       _refreshDevices(const Duration(days: 1));
     }
+    return true;
   }
 
   static Future<void> _scheduleRefreshDevices() async {
@@ -238,7 +247,7 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshDeviceGroups(Duration wait,
+  static Future<bool> _refreshDeviceGroups(Duration wait,
       {bool reschedule = true}) async {
     await Future.delayed(wait);
     late final List<DeviceGroup> deviceGroups;
@@ -247,7 +256,7 @@ class CacheHelper {
           await DeviceGroupsService.getDeviceGroups(forceBackend: true));
     } catch (e, s) {
       ErrorReporter.report("Could not get deviceGroups", e, s);
-      return;
+      return false;
     }
 
     if (isar != null) {
@@ -261,6 +270,7 @@ class CacheHelper {
     if (reschedule) {
       _refreshDeviceGroups(const Duration(days: 1));
     }
+    return true;
   }
 
   static Future<void> _scheduleRefreshDeviceGroups() async {
@@ -277,10 +287,10 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshNetworks(Duration wait,
+  static Future<bool> _refreshNetworks(Duration wait,
       {bool reschedule = true}) async {
     if (isar == null) {
-      return;
+      return true;
     }
     await Future.delayed(wait);
     late final List<Network> networks;
@@ -289,7 +299,7 @@ class CacheHelper {
       networks = await NetworksService.getNetworks(null, true);
     } catch (e, s) {
       ErrorReporter.report("Could not get networks", e, s);
-      return;
+      return false;
     }
 
     if (isar != null) {
@@ -303,6 +313,7 @@ class CacheHelper {
     if (reschedule) {
       _refreshNetworks(const Duration(days: 1));
     }
+    return true;
   }
 
   static Future<void> _scheduleRefreshNetworks() async {
@@ -319,10 +330,10 @@ class CacheHelper {
     }
   }
 
-  static Future<void> _refreshLocations(Duration wait,
+  static Future<bool> _refreshLocations(Duration wait,
       {bool reschedule = true}) async {
     if (isar == null) {
-      return;
+      return true;
     }
     await Future.delayed(wait);
     late final List<Location> locations;
@@ -332,7 +343,7 @@ class CacheHelper {
           await LocationService.getLocations(forceBackend: true));
     } catch (e, s) {
       ErrorReporter.report("Could not get locations", e, s);
-      return;
+      return false;
     }
 
     if (isar != null) {
@@ -346,6 +357,7 @@ class CacheHelper {
     if (reschedule) {
       _refreshLocations(const Duration(days: 1));
     }
+    return true;
   }
 
   static Future<void> _scheduleRefreshLocations() async {
