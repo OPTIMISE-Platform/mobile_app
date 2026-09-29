@@ -36,7 +36,13 @@ import 'package:mobile_app/services/auth.dart';
 
 import '../shared/isar.dart';
 
-const commandUrlPrefix = "/commands/batch?timeout=10s&prefer_event_value=";
+/// How long device-command waits for the devices of a batch. Both clients
+/// wait a second longer, so the endpoint's own timeout answer arrives instead
+/// of a client-side 502 for a slow device.
+const commandTimeoutSeconds = 10;
+const commandUrlPrefix =
+    "/commands/batch?timeout=${commandTimeoutSeconds}s&prefer_event_value=";
+const batchReceiveTimeout = Duration(seconds: commandTimeoutSeconds + 1);
 const LOG_PREFIX = "DEVICE-COMMAND";
 
 /// device-command's status for a command the gateway leaves to the platform.
@@ -100,7 +106,8 @@ class DeviceCommandPath {
     var path = endpoint + commandUrlPrefix + preferEventValue.toString();
     final Response<dynamic> resp;
     try {
-      resp = await mgwEndpointService.PostToExposedPath(path, commands);
+      resp = await mgwEndpointService.PostToExposedPath(path, commands,
+          receiveTimeout: batchReceiveTimeout);
     } catch (e) {
       // No retry here: a command is not idempotent, and the caller already
       // falls back to the cloud. Dropping the cached location makes the next
@@ -143,7 +150,8 @@ class DeviceCommandCloud {
     final Response<dynamic> resp;
     final dio2H2 = await DioFactory.create(DioConfig.standard);
     resp = await dio2H2.post(url,
-        options: Options(headers: headers), data: json.encode(commands));
+        options: Options(headers: headers, receiveTimeout: batchReceiveTimeout),
+        data: json.encode(commands));
 
     List<DeviceCommandResponse> commandResponses = [];
     for (final response in resp.data) {

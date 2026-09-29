@@ -369,4 +369,29 @@ void main() {
     expect(result.single.status_code, 200);
   });
 
+  test("both batch requests wait longer than device-command's own timeout",
+      () async {
+    serveGatewayEndpoints();
+    backend.serveJson("POST", _gatewayBatch, 200, [
+      {"status_code": 200, "message": "g"}
+    ]);
+    backend.serveJson("POST", _platformBatch, 200, [
+      {"status_code": 200, "message": "p"}
+    ]);
+    final commands = [platformCommand("A"), gatewayCommand("B")];
+
+    await DeviceCommandsService.runCommands(commands);
+
+    final batches = [
+      ...requestsTo("POST", _platformBatch),
+      ...requestsTo("POST", _gatewayBatch)
+    ];
+    expect(batches, hasLength(2));
+    for (final r in batches) {
+      expect(r.uri.queryParameters["timeout"], "10s");
+      expect(r.receiveTimeout, greaterThan(const Duration(seconds: 10)),
+          reason: "the client must outlast the endpoint's own timeout");
+    }
+  });
+
 }

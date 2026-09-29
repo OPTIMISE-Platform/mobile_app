@@ -44,8 +44,10 @@ class MgwEndpointService {
     }
   }
 
-  Future<Response<dynamic>> PostToExposedPath(String path, commands) async {
+  Future<Response<dynamic>> PostToExposedPath(String path, commands,
+      {Duration? receiveTimeout}) async {
     _logger.d("$LOG_PREFIX: Post to exposed deployment path: $path");
-    return await mgwService.Post(path, commands, Options(contentType: Headers.jsonContentType));
+    return await mgwService.Post(path, commands,
+        Options(contentType: Headers.jsonContentType, receiveTimeout: receiveTimeout));
   }
 }
