@@ -19,6 +19,7 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_state.dart';
+import 'package:mobile_app/shared/axis_labels.dart';
 import 'package:mobile_app/services/db_query.dart';
 import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/math_list.dart';
@@ -271,12 +272,22 @@ class _ChartState extends State<Chart> with ResumeRefreshMixin {
                       leftTitles: AxisTitles(
                         sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 42,
+                            // Room for a label like 20.45 beside the widget's
+                            // own 8px gap; narrower and it wraps per digit.
+                            reservedSize: 50,
                             getTitlesWidget: (val, meta) {
                               if (val == meta.max || val == meta.min) {
                                 return const SizedBox.shrink();
                               }
-                              return defaultGetTitle(val, meta);
+                              return SideTitleWidget(
+                                  axisSide: meta.axisSide,
+                                  // Shrinks a label wider than the reserve
+                                  // instead of wrapping it.
+                                  child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerRight,
+                                      child:
+                                          Text(formatAxisValue(val, meta))));
                             }),
                       ),
                     ),

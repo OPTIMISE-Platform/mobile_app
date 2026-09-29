@@ -60,6 +60,17 @@ void main() {
 
       await pumpGolden(tester, Chart(state), dark: dark);
       await tester.pump(const Duration(milliseconds: 400));
+      // The y ticks step by 0.05 on a span of 1: labels with one decimal
+      // would read 20.5, 20.5, 20.4 and so on.
+      final yLabels = tester
+          .widgetList<Text>(find.descendant(
+              of: find.byType(LineChart), matching: find.byType(Text)))
+          .map((t) => t.data!)
+          .where(RegExp(r'^-?\d+(\.\d+)?$').hasMatch)
+          .toList();
+      expect(yLabels.length, greaterThan(3));
+      expect(yLabels.toSet().length, yLabels.length);
+
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/detail_chart_$suffix.png"));
 
@@ -68,14 +79,14 @@ void main() {
       // holds the gesture through the golden capture instead of tapAt - same
       // mount and backend as above, a fresh testWidgets' Dio may not resolve
       // a request served by this file's own zone (see this test's own note).
-      // The plot area starts 42px in (the left axis labels' reservedSize),
+      // The plot area starts 50px in (the left axis labels' reservedSize),
       // not at the chart box's own left edge; the mid x of the 3 evenly
       // spaced fixture points is the mid x of what's left after that, not
       // of the whole box - getCenter() lands far enough from every spot's
       // pixel x (fl_chart only matches touch by x) to miss the threshold.
       final chartBox = tester.getRect(find.byType(LineChart));
       final middleSpot = Offset(
-          chartBox.left + 42 + (chartBox.width - 42) / 2, chartBox.center.dy);
+          chartBox.left + 50 + (chartBox.width - 50) / 2, chartBox.center.dy);
       final gesture = await tester.startGesture(middleSpot);
       await tester.pump(const Duration(milliseconds: 100));
       await expectLater(find.byType(MaterialApp),
@@ -85,5 +96,34 @@ void main() {
       resetAppStateForGolden();
       resetGoldenBackend();
     }
+
+    // A label wider than the 50px reserve must shrink onto one line: wrapped,
+    // it would break per digit and read as several numbers. Same test as
+    // above: a fresh testWidgets' Dio may not resolve this file's backend.
+    final wide = FakeBackend();
+    wide.serveJson("POST", "/db/v3/queries", 200, [
+      [
+        ["2026-01-01T10:00:00.000Z", 850.0],
+        ["2026-01-01T10:05:00.000Z", 850.5],
+        ["2026-01-01T10:10:00.000Z", 851.0],
+      ]
+    ]);
+    serveGoldenBackend(wide);
+    final wideState = DeviceState(850.5, "service-1", "service-group-1",
+        "function-1", "aspect-1", false, null, null, "device-1", "value", "group");
+
+    await pumpGolden(tester, Chart(wideState), dark: false);
+    await tester.pump(const Duration(milliseconds: 400));
+
+    final labels = find.descendant(
+        of: find.byType(LineChart),
+        matching: find.textContaining(RegExp(r'^-?\d+\.\d+$')));
+    expect(labels, findsWidgets);
+    final lineHeight = tester.getSize(labels.first).height;
+    expect(lineHeight, lessThan(24), reason: "one line of 14sp text");
+    for (final label in labels.evaluate()) {
+      expect(tester.getSize(find.byWidget(label.widget)).height, lineHeight);
+    }
+    expect(find.text("850.25"), findsOneWidget);
   });
 }

@@ -17,6 +17,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/shared/axis_labels.dart';
 import 'package:mobile_app/shared/display_time.dart';
 
 class BaseChartFormatter {
@@ -64,12 +65,14 @@ class BaseChartFormatter {
           if (val == meta.max || val == meta.min) {
             return const SizedBox.shrink();
           }
-          return Text(
-              suffix == null
-                  ? meta.formattedValue
-                  : "${meta.formattedValue} $suffix",
-              style: TextStyle(
-                  fontSize: MediaQuery.textScalerOf(context).scale(12)));
+          final label = formatAxisValue(val, meta);
+          // Shrinks a label wider than the reserve instead of wrapping it.
+          return FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(suffix == null ? label : "$label $suffix",
+                  style: TextStyle(
+                      fontSize: MediaQuery.textScalerOf(context).scale(12))));
         });
   }
 
