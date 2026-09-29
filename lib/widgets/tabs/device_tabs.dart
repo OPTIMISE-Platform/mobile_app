@@ -468,7 +468,7 @@ class _DeviceSegmentBar extends StatelessWidget implements PreferredSizeWidget {
       width: double.infinity,
       height: _height,
       child: Material(
-        color: theme.navigationBarTheme.backgroundColor ?? theme.colorScheme.surface,
+        color: theme.appBarTheme.backgroundColor ?? theme.colorScheme.surface,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -498,27 +498,40 @@ class _DeviceSegmentBar extends StatelessWidget implements PreferredSizeWidget {
 
     return Tooltip(
       message: isDisabled ? "Currently unavailable" : label,
-      child: InkWell(
-        // Always wired, even when disabled: onSelected's own disabled check
-        // is what shows the "unavailable" toast, so the tap has to reach it.
+      // The InkWell's own semantics node cannot express a disabled state,
+      // while the tap has to stay wired for the "unavailable" toast.
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        enabled: !isDisabled,
+        label: label,
         onTap: () => onSelected(segmentIndex),
-        child: Container(
-          height: _height,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: isSelected ? selectedColor : Colors.transparent,
-                width: 2,
+        child: ExcludeSemantics(
+          child: InkWell(
+            // Always wired, even when disabled: onSelected's own disabled
+            // check is what shows the "unavailable" toast, so the tap has to
+            // reach it.
+            onTap: () => onSelected(segmentIndex),
+            child: Container(
+              height: _height,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: isSelected ? selectedColor : Colors.transparent,
+                    width: 2,
+                  ),
+                ),
               ),
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              child: Center(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
               ),
             ),
           ),
