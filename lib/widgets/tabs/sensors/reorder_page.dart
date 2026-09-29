@@ -66,6 +66,15 @@ class _ReorderPage<T> extends StatefulWidget {
 class _ReorderPageState<T> extends State<_ReorderPage<T>> {
   late final List<T> _items = [...widget.items];
 
+  /// Index of the row being dragged, from pick-up until the list has taken
+  /// the new order. [_items] only changes on drop, so until then the other
+  /// rows take their position from the list without the lifted row.
+  int? _dragging;
+
+  /// Bumped on every pick-up, so a proxy that is removed late cannot end a
+  /// newer drag.
+  int _dragToken = 0;
+
   // theme.dart's CardThemeData - matches GroupedListTile's own corner radius,
   // so the dragged row's shadow follows the same rounded shape it draws in.
   static const _cardRadius = BorderRadius.all(Radius.circular(14));
@@ -100,6 +109,13 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
     );
   }
 
+  SlicePosition _positionOf(int i) {
+    final d = _dragging;
+    // The lifted row's own slot is an empty gap, so its position is moot.
+    if (d == null || i == d) return SlicePosition.forIndex(i, _items.length);
+    return SlicePosition.forIndex(i < d ? i : i - 1, _items.length - 1);
+  }
+
   /// The row being dragged detaches from its neighbours, so it always shows
   /// as a complete, fully rounded card - not whatever slice its resting
   /// position happens to be - with the lift/shadow Flutter's own default
@@ -110,23 +126,38 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
   /// the margin's width too, casting the shadow around a rectangle wider
   /// than - and offset from - the visible card.
   Widget _proxyDecorator(Widget child, int index, Animation<double> animation) {
-    return AnimatedBuilder(
-      animation: animation,
-      builder: (context, _) {
-        final elevation = Tween<double>(begin: 0, end: 6).evaluate(
-            CurvedAnimation(parent: animation, curve: Curves.easeInOut));
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-          child: Material(
-            elevation: elevation,
-            color: Colors.transparent,
-            shadowColor: Theme.of(context).shadowColor,
-            borderRadius: _cardRadius,
-            child: _buildRow(index, SlicePosition.only, horizontalMargin: 0),
-          ),
-        );
-      },
+    final token = _dragToken;
+    return _ProxyLifetime(
+      onRemoved: () => _endDragIfCurrent(token),
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, _) {
+          final elevation = Tween<double>(begin: 0, end: 6).evaluate(
+              CurvedAnimation(parent: animation, curve: Curves.easeInOut));
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+            child: Material(
+              elevation: elevation,
+              color: Colors.transparent,
+              shadowColor: Theme.of(context).shadowColor,
+              borderRadius: _cardRadius,
+              child: _buildRow(index, SlicePosition.only, horizontalMargin: 0),
+            ),
+          );
+        },
+      ),
     );
+  }
+
+  /// The proxy overlay is removed on drop and on cancel alike, but only a drop
+  /// reports back (onReorderEnd, onReorderItem), so removal is what ends a
+  /// cancelled drag. Deferred: the widget tree is locked while it unmounts.
+  void _endDragIfCurrent(int token) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && token == _dragToken && _dragging != null) {
+        setState(() => _dragging = null);
+      }
+    });
   }
 
   @override
@@ -147,16 +178,53 @@ class _ReorderPageState<T> extends State<_ReorderPage<T>> {
               padding: Spacing.listPadding(context),
               itemCount: _items.length,
               proxyDecorator: _proxyDecorator,
+              onReorderStart: (index) => setState(() {
+                _dragToken++;
+                _dragging = index;
+              }),
+              // Called on release, before onReorderItem and only in the
+              // insertion index's own terms (not adjusted for the removal).
+              // A drop in place gets no onReorderItem, so it ends the drag
+              // here; a move keeps the shifted positions through the drop
+              // animation and ends in onReorderItem.
+              onReorderEnd: (index) {
+                final d = _dragging;
+                if (d != null && (index == d || index == d + 1)) {
+                  setState(() => _dragging = null);
+                }
+              },
               onReorderItem: (oldIndex, newIndex) {
                 // Unlike onReorder, onReorderItem's newIndex is already
                 // adjusted for the removal at oldIndex.
                 setState(() {
                   _items.insert(newIndex, _items.removeAt(oldIndex));
+                  _dragging = null;
                 });
               },
-              itemBuilder: (_, i) =>
-                  _buildRow(i, SlicePosition.forIndex(i, _items.length)),
+              itemBuilder: (_, i) => _buildRow(i, _positionOf(i)),
             ),
     );
+  }
+}
+
+/// Reports when the drag proxy it wraps leaves the tree.
+class _ProxyLifetime extends StatefulWidget {
+  final VoidCallback onRemoved;
+  final Widget child;
+
+  const _ProxyLifetime({required this.onRemoved, required this.child});
+
+  @override
+  State<_ProxyLifetime> createState() => _ProxyLifetimeState();
+}
+
+class _ProxyLifetimeState extends State<_ProxyLifetime> {
+  @override
+  Widget build(BuildContext context) => widget.child;
+
+  @override
+  void dispose() {
+    widget.onRemoved();
+    super.dispose();
   }
 }
