@@ -21,6 +21,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/widgets/tabs/locations/location_edit_groups.dart';
 import 'package:provider/provider.dart';
 
@@ -33,6 +34,7 @@ import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart
 import 'package:mobile_app/widgets/shared/expandable_fab.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/group_list_item.dart';
@@ -121,11 +123,12 @@ class LocationPageState extends State<LocationPage>
             if (newName == null) {
               return;
             }
-            location.name = newName;
-            final newLocation = await LocationService.saveLocation(location);
-            state.locations[widget._stateLocationIndex] = newLocation;
-            state.invalidateLocationsCache();
-            state.notifyListeners();
+            try {
+              await state.renameLocation(location.id, newName);
+            } catch (e, s) {
+              ErrorReporter.log("Could not rename the location", e, s);
+              Toast.showToastNoContext("Could not rename location");
+            }
           },
           icon: const Icon(Icons.edit),
         ));
@@ -147,19 +150,22 @@ class LocationPageState extends State<LocationPage>
                         TextButton(
                             child: const Text('Delete'),
                             onPressed: () async {
-                              await LocationService.deleteLocation(location.id);
-                              state.locations
-                                  .removeAt(widget._stateLocationIndex);
-                              state.invalidateLocationsCache();
+                              var deleted = false;
+                              try {
+                                await state.deleteLocation(location.id);
+                                deleted = true;
+                              } catch (e, s) {
+                                ErrorReporter.log(
+                                    "Could not delete the location", e, s);
+                                Toast.showToastNoContext(
+                                    "Could not delete location");
+                              }
                               if (!context.mounted) return;
-                              Navigator.pop(context, true);
+                              Navigator.pop(context, deleted);
                             })
                       ],
                     ));
-            if (deleted == true) {
-              if (context.mounted) Navigator.pop(context);
-              state.notifyListeners();
-            }
+            if (deleted == true && context.mounted) Navigator.pop(context);
           },
           icon: const Icon(Icons.delete),
         ));

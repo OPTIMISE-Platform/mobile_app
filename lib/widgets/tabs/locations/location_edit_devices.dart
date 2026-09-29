@@ -21,7 +21,6 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/devices.dart';
-import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:provider/provider.dart';
 
@@ -33,6 +32,7 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
 class LocationEditDevices extends StatefulWidget {
@@ -50,6 +50,9 @@ class LocationEditDevices extends StatefulWidget {
 class _LocationEditDevicesState extends State<LocationEditDevices> {
   final Set<String> _selected = {};
   bool _initialized = false;
+  // The location _selected was filled from, so a save still targets it when a
+  // reload has shifted the list position.
+  late String _locationId;
   Timer? _searchDebounce;
   bool _searchClosed = false;
   bool _delegateOpen = false;
@@ -139,16 +142,13 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
   Widget _fab() {
     return FloatingActionButton.extended(
       onPressed: () async {
-        AppState().locations[widget._stateLocationIndex].device_ids = _selected.toList();
-        // In a finally: device_ids above is already the in-memory model
-        // saveLocation might then fail to persist, and the cache has to
-        // match that model either way, not just the success path.
         try {
-          await LocationService.saveLocation(AppState().locations[widget._stateLocationIndex]);
-        } finally {
-          AppState().invalidateLocationsCache();
+          await AppState().setLocationDevices(_locationId, _selected.toList());
+        } catch (e, s) {
+          ErrorReporter.log("Could not save the location's devices", e, s);
+          Toast.showToastNoContext("Could not save location");
+          return;
         }
-        AppState().notifyListeners();
         if (!mounted) return;
         if (_delegateOpen) Navigator.pop(context, true);
         Navigator.pop(context);
@@ -176,6 +176,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
       final location = state.locations[widget._stateLocationIndex];
       if (!_initialized) {
         _selected.addAll(location.device_ids);
+        _locationId = location.id;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           state.searchDevices(filter);
           _loadInactiveMembers(location.device_ids.toList(growable: false));

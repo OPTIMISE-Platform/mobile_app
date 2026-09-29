@@ -158,10 +158,65 @@ mixin NetworkMixin on ChangeNotifier {
     return map;
   }
 
-  /// Call after mutating [locations] or a location's `device_ids` directly
-  /// (an edit or delete outside [loadLocations]), so the next
-  /// [locationsForDevice] rebuilds instead of serving a stale map.
-  void invalidateLocationsCache() => _locationsByDeviceId = null;
+  /// Creates a location on the platform and adds the one it returns. Errors
+  /// propagate to the caller.
+  Future<Location> createLocation(String name) async {
+    try {
+      final created = await LocationService.createLocation(name);
+      // A reload running meanwhile may already have brought it in.
+      if (!locations.any((l) => l.id == created.id)) locations.add(created);
+      notifyListeners();
+      return created;
+    } finally {
+      _locationsByDeviceId = null;
+    }
+  }
+
+  Future<void> renameLocation(String id, String name) =>
+      _saveLocation(id, (l) => l.name = name);
+
+  Future<void> setLocationDevices(String id, List<String> deviceIds) =>
+      _saveLocation(id, (l) => l.device_ids = List.of(deviceIds));
+
+  Future<void> setLocationGroups(String id, List<String> groupIds) =>
+      _saveLocation(id, (l) => l.device_group_ids = List.of(groupIds));
+
+  /// Deletes the location with [id] and removes it by id, so a list reordered
+  /// by a reload in the meantime loses the right entry.
+  Future<void> deleteLocation(String id) async {
+    try {
+      await LocationService.deleteLocation(id);
+      locations.removeWhere((l) => l.id == id);
+      notifyListeners();
+    } finally {
+      _locationsByDeviceId = null;
+    }
+  }
+
+  /// Applies [change] to a copy of the location with [id], saves the copy and
+  /// swaps in what the platform returns. A failed save leaves [locations]
+  /// untouched; the error propagates.
+  Future<void> _saveLocation(String id, void Function(Location) change) async {
+    final current = locations.where((l) => l.id == id).firstOrNull;
+    if (current == null) throw StateError("Location $id is not loaded");
+    // Through JSON so a field added to the model is carried along.
+    final copy = Location.fromJson(current.toJson());
+    change(copy);
+    try {
+      final saved = await LocationService.saveLocation(copy);
+      // initImage keeps imageWidget null when the image fails to load; the old
+      // widget still shows the same image.
+      if (saved.image == current.image) {
+        saved.imageWidget ??= current.imageWidget;
+      }
+      // Looked up again: a reload during the save may have replaced the list.
+      final index = locations.indexWhere((l) => l.id == id);
+      if (index >= 0) locations[index] = saved;
+      notifyListeners();
+    } finally {
+      _locationsByDeviceId = null;
+    }
+  }
 
   Future<void> loadStoredMGWs() async {
     _logger.d('NetworkMixin: loading stored MGWs');

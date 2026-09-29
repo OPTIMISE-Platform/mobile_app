@@ -19,7 +19,8 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/models/location.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/widgets/tabs/locations/location_page.dart';
 import 'package:provider/provider.dart';
 
@@ -28,6 +29,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
 class DeviceListByLocation extends StatefulWidget {
@@ -86,9 +88,17 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
         return;
       }
 
-      AppState().locations.add(await LocationService.createLocation(newName!));
-      _openLocationPage(AppState().locations.length - 1, parentState);
-      AppState().notifyListeners();
+      final Location created;
+      try {
+        created = await AppState().createLocation(newName!);
+      } catch (e, s) {
+        ErrorReporter.log("Could not create the location", e, s);
+        Toast.showToastNoContext("Could not create location");
+        return;
+      }
+      final index =
+          AppState().locations.indexWhere((l) => l.id == created.id);
+      if (index >= 0 && mounted) _openLocationPage(index, parentState);
     });
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       AppState().loadLocations();

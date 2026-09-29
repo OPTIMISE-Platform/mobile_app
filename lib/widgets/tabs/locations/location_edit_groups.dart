@@ -16,7 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
-import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -26,6 +26,7 @@ import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
 
 class LocationEditGroups extends StatefulWidget {
   final int _stateLocationIndex;
@@ -42,6 +43,9 @@ class LocationEditGroups extends StatefulWidget {
 class _LocationEditGroupsState extends State<LocationEditGroups> {
   final Set<String> _selected = {};
   bool _initialized = false;
+  // The location _selected was filled from, so a save still targets it when a
+  // reload has shifted the list position.
+  late String _locationId;
 
   @override
   Widget build(BuildContext context) {
@@ -54,15 +58,20 @@ class _LocationEditGroupsState extends State<LocationEditGroups> {
       final location = state.locations[widget._stateLocationIndex];
       if (!_initialized) {
         _selected.addAll(location.device_group_ids);
+        _locationId = location.id;
         _initialized = true;
       }
 
         return Scaffold(
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () async {
-              state.locations[widget._stateLocationIndex].device_group_ids = _selected.toList();
-              await LocationService.saveLocation(state.locations[widget._stateLocationIndex]);
-              state.notifyListeners();
+              try {
+                await state.setLocationGroups(_locationId, _selected.toList());
+              } catch (e, s) {
+                ErrorReporter.log("Could not save the location's groups", e, s);
+                Toast.showToastNoContext("Could not save location");
+                return;
+              }
               if (!context.mounted) return;
               Navigator.pop(context);
             },
