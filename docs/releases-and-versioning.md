@@ -7,16 +7,17 @@ commits decide the version, and nothing in the tree is bumped by hand.
 ## Scope
 
 Covers `.github/workflows/android-release.yml`, the script
-`.github/scripts/release-version.sh` it calls, and the release topics the app
-subscribes to. Not about the signing material itself — the keystore and
-`key.properties` are reconstructed from repository secrets at build time and
-exist nowhere in the tree.
+`.github/scripts/release-version.sh` it calls, the iOS build it runs for
+prereleases, and the release topics the app subscribes to. Not about the
+signing material itself — the keystore, `key.properties` and the iOS
+certificate and profile are reconstructed from repository secrets at build
+time and exist nowhere in the tree.
 
 ## The branch decides the channel
 
 | Push to | Result |
 |---|---|
-| `dev` | APK, tag `0.1.0-dev.3+412`, GitHub release with `prerelease: true` |
+| `dev` | APK and ad hoc IPA, tag `0.1.0-dev.3+412`, GitHub release with `prerelease: true` |
 | `master` | APK, tag `0.1.0+420`, GitHub release marked latest |
 | either, plus pull requests | `checks.yml`: analyzer, `flutter test`, the versioning script's tests |
 
@@ -45,9 +46,10 @@ already carries a tag of its channel is skipped.
 - **Prerelease suffix**: `-dev.K`, counting up per target version.
 
 The tag is `<version>+<build>`, and the workflow passes the parts to
-`flutter build apk --build-name --build-number` and writes the tag as `VERSION`
-into `.env`. The `version:` in `pubspec.yaml` is a placeholder for local builds
-and stays as it is.
+`flutter build --build-name --build-number`. The app reads them back from the
+installed package (`lib/shared/app_version.dart`), not from `.env`. The
+`version:` in `pubspec.yaml` is a placeholder for local builds and stays as it
+is.
 
 ## When a run fails
 
@@ -59,6 +61,30 @@ The tag exists from the moment the `version` job is done, so:
   skipped. To start over with a new number, delete the tag first.
 - **A tag without a release** still counts. Its build number is used up, and a
   stable one is the baseline for the next version.
+
+## iOS
+
+The `ios` job builds an ad hoc IPA and attaches it as `mobile_app.ipa` to the
+same release, for prereleases only; stable releases stay APK-only for now. It
+runs after the release job, also when that job failed, because a failed device
+notification leaves a complete release behind.
+
+The iOS version is the tag's version without `-dev.K`, since
+`CFBundleShortVersionString` only takes numbers; the build number is the same
+as on Android.
+
+Signing comes from three secrets: `IOS_P12` (distribution certificate with its
+key, base64), `IOS_P12_PASSWORD`, and `IOS_PROVISIONING_PROFILE` (the ad hoc
+profile, base64). The Xcode project names the profile `optimise_25`, so a
+renewed profile has to keep that name. An ad hoc build only installs on the
+devices listed in the profile; adding a device means a new profile and a new
+`IOS_PROVISIONING_PROFILE`.
+
+A local build uses the same export options:
+
+```bash
+flutter build ipa --release --no-tree-shake-icons --build-name 0.2.0 --build-number 422 --export-options-plist ios/ExportOptions-adhoc.plist
+```
 
 ## Release topics
 
@@ -79,7 +105,7 @@ The SDK version is pinned in five places, and they have drifted apart before:
 - `.fvmrc`
 - `pubspec.yaml` (`environment: flutter:`)
 - `.vscode/settings.json` (`dart.flutterSdkPath`, rewritten by `fvm use`)
-- the `flutter-version` input in both workflows
+- the `flutter-version` inputs in both workflows (the release workflow has two)
 
 A CI version older than what `pubspec.yaml` requires fails in `flutter pub get`,
 which is why the workflows carry a comment at that input.

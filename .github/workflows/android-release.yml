@@ -124,6 +124,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_26.3.app
       - uses: subosito/flutter-action@v2
         with:
+          # Keep in sync with the release job above and with .fvmrc.
           flutter-version: '3.47.5'
       - run: git config --global url."https://".insteadOf git:// # allows dependency downloads without gpg
       - run: flutter pub get
