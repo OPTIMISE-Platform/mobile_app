@@ -345,7 +345,7 @@ mixin DeviceMixin on ChangeNotifier {
     _allDevicesLoaded = false;
     _devicesLoadFailed = false;
     notifyListeners();
-    _deviceSearchFilter = filter.clone();
+    _deviceSearchFilter = filter;
     _deviceOffset = 0;
     await loadDevices(null, true);
   }

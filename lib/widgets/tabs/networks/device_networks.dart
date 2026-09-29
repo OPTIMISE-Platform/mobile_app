@@ -248,8 +248,12 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                               ? null
                                               : () {
                                                   _loading = true;
-                                                  parentState?.filter.addNetwork(
-                                                      state.networks[i].id);
+                                                  if (parentState != null) {
+                                                    parentState.filter =
+                                                        parentState.filter
+                                                            .withNetwork(state
+                                                                .networks[i].id);
+                                                  }
                                                   state
                                                       .searchDevices(
                                                           parentState?.filter ??
@@ -274,8 +278,11 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                     parentState.onBackCallback =
                                                         () {
                                                       parentState.setState(() {
-                                                        parentState.filter
-                                                            .networkIds = null;
+                                                        parentState.filter =
+                                                            parentState.filter
+                                                                .without(
+                                                                    networkIds:
+                                                                        true);
                                                         parentState
                                                                 .customAppBarTitle =
                                                             null;

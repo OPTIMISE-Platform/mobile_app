@@ -130,13 +130,15 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                             fallbackIcon: Icons.devices,
                                             image: deviceClass.imageWidget),
                                         onTap: () {
-                                          parentState?.filter.deviceClassIds = [deviceClass.id];
+                                          if (parentState != null) {
+                                            parentState.filter = parentState.filter.copyWith(deviceClassIds: [deviceClass.id]);
+                                          }
                                           state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClass.id]), true);
                                           parentState?.setState(() {
                                             parentState.setHideSearchOverride(false);
                                             parentState.onBackCallback = () {
                                               parentState.setState(() {
-                                                parentState.filter.deviceClassIds = null;
+                                                parentState.filter = parentState.filter.without(deviceClassIds: true);
                                                 parentState.customAppBarTitle = null;
                                                 parentState.onBackCallback = null;
                                                 parentState.setHideSearchOverride(null);

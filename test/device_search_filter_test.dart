@@ -21,40 +21,6 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'fake_backend.dart';
 import 'golden_helper.dart';
 
-/// One id-list field of [DeviceSearchFilter] with the filter's own mutators.
-/// `deviceIds` has none, so it is replaced like the others would be.
-class _ListField {
-  final String name;
-  final String seedId;
-  final List<String>? Function(DeviceSearchFilter) read;
-  final void Function(DeviceSearchFilter, String) add;
-  final void Function(DeviceSearchFilter, String) remove;
-
-  const _ListField(this.name, this.seedId, this.read, this.add, this.remove);
-}
-
-final _fields = [
-  _ListField("deviceClassIds", "class-1", (f) => f.deviceClassIds,
-      (f, id) => f.addDeviceClass(id), (f, id) => f.removeDeviceClass(id)),
-  _ListField("deviceGroupIds", "group-1", (f) => f.deviceGroupIds,
-      (f, id) => f.addDeviceGroup(id), (f, id) => f.removeDeviceGroup(id)),
-  _ListField("locationIds", "location-1", (f) => f.locationIds,
-      (f, id) => f.addLocation(id), (f, id) => f.removeLocation(id)),
-  _ListField("networkIds", "network-1", (f) => f.networkIds,
-      (f, id) => f.addNetwork(id), (f, id) => f.removeNetwork(id)),
-  _ListField("deviceIds", "device-1", (f) => f.deviceIds,
-      (f, id) => f.deviceIds = [...?f.deviceIds, id],
-      (f, id) => f.deviceIds = f.deviceIds!.where((e) => e != id).toList()),
-];
-
-DeviceSearchFilter _filterWithOneIdEach() {
-  final filter = DeviceSearchFilter.empty();
-  for (final field in _fields) {
-    field.add(filter, field.seedId);
-  }
-  return filter;
-}
-
 /// One id-list field with its per-id copy methods.
 class _IdField {
   final String name;
@@ -269,49 +235,6 @@ void main() {
     });
   });
 
-  group("clone()", () {
-    test("equals its original", () {
-      final original = _filterWithOneIdEach()
-        ..query = "lamp"
-        ..favorites = true
-        ..showInactive = true;
-      expect(original.clone(), equals(original));
-      expect(DeviceSearchFilter.empty().clone(), equals(DeviceSearchFilter.empty()));
-    });
-
-    for (final field in _fields) {
-      test("adding to a clone's ${field.name} leaves the original alone", () {
-        final original = _filterWithOneIdEach();
-        final copy = original.clone();
-
-        field.add(copy, "second");
-
-        expect(field.read(original), [field.seedId]);
-        expect(copy, isNot(equals(original)));
-      });
-
-      test("adding to the original's ${field.name} leaves the clone alone", () {
-        final original = _filterWithOneIdEach();
-        final copy = original.clone();
-
-        field.add(original, "second");
-
-        expect(field.read(copy), [field.seedId]);
-        expect(copy, isNot(equals(original)));
-      });
-
-      test("removing a clone's last ${field.name} entry leaves the original "
-          "alone", () {
-        final original = _filterWithOneIdEach();
-        final copy = original.clone();
-
-        field.remove(copy, field.seedId);
-
-        expect(field.read(original), [field.seedId]);
-      });
-    }
-  });
-
   group("AppState.searchDevices", () {
     setUpAll(() async {
       await setUpGoldenEnvironment();
@@ -332,17 +255,38 @@ void main() {
       backend.serveDevicesPaged([deviceJson("device-1", "Device 1")]);
       serveGoldenBackend(backend);
 
-      // The filter menu keeps one filter object and mutates it per tap.
-      final filter = DeviceSearchFilter.empty()..addDeviceClass("class-1");
+      // Each menu tap hands over a new filter with one class more.
+      final filter = DeviceSearchFilter.empty().withDeviceClass("class-1");
       await AppState().searchDevices(filter, true);
       expect(_pageRequests(backend), 1);
 
-      filter.addDeviceClass("class-2");
-      await AppState().searchDevices(filter);
+      await AppState().searchDevices(filter.withDeviceClass("class-2"));
 
       expect(_pageRequests(backend), 2);
       // loadDevices() starts a states refresh it does not await; let it finish
       // before tearDown swaps the backend out.
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
+
+    test("does not search again for an equal filter with reordered ids",
+        () async {
+      final backend = FakeBackend();
+      backend.serveJson("GET", "/device-repository/device-groups", 200, []);
+      backend.serveJson("GET", "/device-repository/extended-hubs", 200, []);
+      backend.serveJson("GET", "/device-repository/device-types", 200, []);
+      backend.serveJson("GET", "/device-repository/user-device-types", 200, []);
+      backend.serveDevicesPaged([deviceJson("device-1", "Device 1")]);
+      serveGoldenBackend(backend);
+
+      final filter = DeviceSearchFilter("", deviceClassIds: ["class-1", "class-2"]);
+      await AppState().searchDevices(filter, true);
+      expect(_pageRequests(backend), 1);
+
+      // Removing and re-adding a class in the menu reorders the list.
+      await AppState().searchDevices(
+          filter.withoutDeviceClass("class-1").withDeviceClass("class-1"));
+
+      expect(_pageRequests(backend), 1);
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
   });

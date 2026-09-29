@@ -160,7 +160,7 @@ class _DeviceListFavoritesState extends State<DeviceListFavorites>
 
             if (parent == null) return;
 
-            parent.filter.deviceGroupIds = null;
+            parent.filter = parent.filter.without(deviceGroupIds: true);
             state.searchDevices(parent.filter);
           }, position: position),
         ),

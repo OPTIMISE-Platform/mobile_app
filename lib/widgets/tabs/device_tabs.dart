@@ -55,6 +55,8 @@ class DeviceTabsState extends State<DeviceTabs> {
   bool _searchClosed = false;
   bool? _hideSearchOverride;
 
+  /// Shared by the tabs and their drill-downs; replaced on every change, never
+  /// changed in place.
   DeviceSearchFilter filter = DeviceSearchFilter.empty();
 
   Function? onBackCallback;
@@ -82,7 +84,8 @@ class DeviceTabsState extends State<DeviceTabs> {
   void _searchChanged(String search) {
     if (filter.query == search) return;
     if (search.isNotEmpty && _searchClosed) return;
-    filter.query = search;
+    // No setState: the search delegate calls this while building its results.
+    filter = filter.copyWith(query: search);
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(
       const Duration(milliseconds: 300),
@@ -102,7 +105,8 @@ class DeviceTabsState extends State<DeviceTabs> {
         // whatever the drill-down last set it to.
         _hideSearchOverride = null;
         // Clear the filter owned by the tab we're leaving.
-        tabConfigs[_navigationIndex]?.clearOwnedFilter(filter);
+        filter = tabConfigs[_navigationIndex]?.withoutOwnedFilter(filter) ??
+            filter;
         _navigationIndex = selectedIndex;
       }
       _applyTabConfig(selectedIndex);
@@ -128,13 +132,12 @@ class DeviceTabsState extends State<DeviceTabs> {
       // filter, so without forcing, the very first load would never happen and
       // the device list would stay empty.
       final force = !AppState().devicesLoadedOnce;
-      if (config.ownsFavorites()) {
-        filter.favorites = true;
-        AppState().searchDevices(filter, force);
-        filter.favorites = false;
-      } else {
-        AppState().searchDevices(filter, force);
+      // Favorites keeps its scope in the filter while shown, so its other
+      // searches (a query, the return from a group) stay scoped too.
+      if (config.ownsFavorites() && filter.favorites != true) {
+        filter = filter.copyWith(favorites: true);
       }
+      AppState().searchDevices(filter, force);
     }
   }
 

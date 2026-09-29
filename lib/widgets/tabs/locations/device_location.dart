@@ -112,17 +112,19 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
   }
 
   void _openLocationPage(int i, DeviceTabsState? parentState) async {
-    parentState?.filter.locationIds = [AppState().locations[i].id];
-    AppState().searchDevices(
-        parentState?.filter ??
-            DeviceSearchFilter("",
-                locationIds: [AppState().locations[i].id]));
+    final locationIds = [AppState().locations[i].id];
+    if (parentState != null) {
+      parentState.filter =
+          parentState.filter.copyWith(locationIds: locationIds);
+    }
+    AppState().searchDevices(parentState?.filter ??
+        DeviceSearchFilter("", locationIds: locationIds));
     await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => LocationPage(i, parentState!)));
-    if (!mounted) return;
-    parentState?.filter.locationIds = null;
+    if (!mounted || parentState == null) return;
+    parentState.filter = parentState.filter.without(locationIds: true);
   }
 
   @override

@@ -188,7 +188,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    state.filter.locationIds = ["location-1"];
+    state.filter = state.filter.copyWith(locationIds: ["location-1"]);
     expect(state.filter.locationIds, ["location-1"]);
 
     await tester.tap(find.text("Groups"));
@@ -205,7 +205,7 @@ void main() {
 
     // Starts on Favorites, the only bar tab (not just segment) with an
     // owned filter.
-    state.filter.favorites = true;
+    state.filter = state.filter.copyWith(favorites: true);
     expect(state.filter.favorites, true);
 
     await tester.tap(find.text("Sensors"));

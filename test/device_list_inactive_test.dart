@@ -317,8 +317,7 @@ void main() {
       ]);
       serveGoldenBackend(backend);
 
-      // What returning from a favourite group does: parent.filter, whose
-      // favorites flag DeviceTabsState only sets for the tab's own search.
+      // A search without the favourites scope, as from any other tab.
       await AppState().searchDevices(DeviceSearchFilter.empty(), true);
 
       expect(AppState().devices.map((d) => d.id).toList(),

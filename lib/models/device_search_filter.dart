@@ -20,18 +20,20 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/settings.dart';
 
+/// Immutable: every change returns a new filter, so AppState can keep the
+/// instance it searched with and compare the next one against it.
 class DeviceSearchFilter {
-  String query;
-  List<String>? deviceClassIds;
-  List<String>? deviceIds;
-  List<String>? deviceGroupIds;
-  List<String>? locationIds;
-  List<String>? networkIds;
-  bool? favorites;
+  final String query;
+  final List<String>? deviceClassIds;
+  final List<String>? deviceIds;
+  final List<String>? deviceGroupIds;
+  final List<String>? locationIds;
+  final List<String>? networkIds;
+  final bool? favorites;
 
   /// Whether devices carrying the `inactive` attribute are included. Off by
   /// default; not persisted, the same as the other filter fields here.
-  bool showInactive;
+  final bool showInactive;
 
   /// A null id list places no constraint, an empty one matches nothing. Lists
   /// are copied and unmodifiable.
@@ -53,9 +55,6 @@ class DeviceSearchFilter {
   static DeviceSearchFilter empty() {
     return DeviceSearchFilter("");
   }
-
-  /// AppState keeps its own copy: the tabs still change their filter in place.
-  DeviceSearchFilter clone() => copyWith();
 
   /// A copy with the given fields replaced; a null argument keeps the field.
   /// Use [without] to clear one to null.
@@ -146,22 +145,6 @@ class DeviceSearchFilter {
     final rest = _without(networkIds, id);
     return rest == null ? without(networkIds: true) : copyWith(networkIds: rest);
   }
-
-  addDeviceClass(String id) => deviceClassIds = withDeviceClass(id).deviceClassIds;
-
-  removeDeviceClass(String id) => deviceClassIds = withoutDeviceClass(id).deviceClassIds;
-
-  addDeviceGroup(String id) => deviceGroupIds = withDeviceGroup(id).deviceGroupIds;
-
-  removeDeviceGroup(String id) => deviceGroupIds = withoutDeviceGroup(id).deviceGroupIds;
-
-  addLocation(String id) => locationIds = withLocation(id).locationIds;
-
-  removeLocation(String id) => locationIds = withoutLocation(id).locationIds;
-
-  addNetwork(String id) => networkIds = withNetwork(id).networkIds;
-
-  removeNetwork(String id) => networkIds = withoutNetwork(id).networkIds;
 
   Map<String, String> toQueryParams(int limit, int offset, DeviceInstance? lastDevice, [List<String>? ids]) {
     final queryParameters = <String, String>{};

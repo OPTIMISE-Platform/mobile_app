@@ -64,7 +64,8 @@ class LocationPageState extends State<LocationPage>
   );
 
   _refresh(Location location) async {
-    widget.parentState.filter.locationIds = [location.id];
+    widget.parentState.filter =
+        widget.parentState.filter.copyWith(locationIds: [location.id]);
     await AppState().loadDeviceGroups();
     await AppState().searchDevices(widget.parentState.filter, true);
   }
@@ -277,9 +278,9 @@ class LocationPageState extends State<LocationPage>
                                 keyOf: (group) => group.id,
                                 itemBuilder: (_, group, position) =>
                                     GroupListItem(group, (_) {
-                                  widget.parentState.filter.locationIds = [
-                                    location.id
-                                  ];
+                                  widget.parentState.filter = widget
+                                      .parentState.filter
+                                      .copyWith(locationIds: [location.id]);
                                   state.searchDevices(
                                       widget.parentState.filter);
                                 }, position: position),

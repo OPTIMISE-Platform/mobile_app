@@ -44,27 +44,16 @@ class TabConfig {
 enum _OwnedFilter { none, location, group, network, deviceClass, favorites }
 
 extension TabConfigExtension on TabConfig {
-  /// Clear only the filter this tab "owns" from [filter].
-  void clearOwnedFilter(DeviceSearchFilter filter) {
-    switch (ownedFilter) {
-      case _OwnedFilter.location:
-        filter.locationIds = null;
-        break;
-      case _OwnedFilter.group:
-        filter.deviceGroupIds = null;
-        break;
-      case _OwnedFilter.network:
-        filter.networkIds = null;
-        break;
-      case _OwnedFilter.deviceClass:
-        filter.deviceClassIds = null;
-        break;
-      case _OwnedFilter.favorites:
-        filter.favorites = null;
-        break;
-      case _OwnedFilter.none:
-        break;
-    }
+  /// [filter] without the field this tab "owns".
+  DeviceSearchFilter withoutOwnedFilter(DeviceSearchFilter filter) {
+    return switch (ownedFilter) {
+      _OwnedFilter.location => filter.without(locationIds: true),
+      _OwnedFilter.group => filter.without(deviceGroupIds: true),
+      _OwnedFilter.network => filter.without(networkIds: true),
+      _OwnedFilter.deviceClass => filter.without(deviceClassIds: true),
+      _OwnedFilter.favorites => filter.without(favorites: true),
+      _OwnedFilter.none => filter,
+    };
   }
 
   bool ownsLocation() => ownedFilter == _OwnedFilter.location;

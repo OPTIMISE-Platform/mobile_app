@@ -67,7 +67,7 @@ class _LocationEditDevicesState extends State<LocationEditDevices> {
     if (search.isNotEmpty && _searchClosed) {
       return; // catches delayed search requests, when search has been cancelled
     }
-    filter.query = search;
+    filter = filter.copyWith(query: search);
     if (_searchDebounce?.isActive ?? false) _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       AppState().searchDevices(filter);
