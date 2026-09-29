@@ -55,7 +55,7 @@ class DeviceTabsState extends State<DeviceTabs> {
   bool _searchClosed = false;
   bool? _hideSearchOverride;
 
-  final DeviceSearchFilter filter = DeviceSearchFilter.empty();
+  DeviceSearchFilter filter = DeviceSearchFilter.empty();
 
   Function? onBackCallback;
   String? customAppBarTitle;
@@ -385,7 +385,8 @@ class DeviceTabsState extends State<DeviceTabs> {
     if (Settings.getFilterMode()) {
       FilterMenuBuilder(
         navigationIndex: _navigationIndex,
-        filter: filter,
+        currentFilter: () => filter,
+        onChanged: (changed) => setState(() => filter = changed),
         state: state,
         onFilterApplied: () => setState(_reloadCurrentTab),
       ).appendTo(actions, context);

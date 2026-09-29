@@ -36,13 +36,20 @@ class _FilterOption {
 class FilterMenuBuilder {
   FilterMenuBuilder({
     required this.navigationIndex,
-    required this.filter,
+    required this.currentFilter,
+    required this.onChanged,
     required this.state,
     required this.onFilterApplied,
   });
 
   final int navigationIndex;
-  final DeviceSearchFilter filter;
+
+  /// Read on each use rather than captured when the app bar is built, so a
+  /// filter replaced since then is not overwritten by a change made here.
+  final DeviceSearchFilter Function() currentFilter;
+
+  /// Receives the changed filter on every toggle; the owner stores it.
+  final ValueChanged<DeviceSearchFilter> onChanged;
   final AppState state;
 
   /// Called after the user closes a filter dialog so the screen refreshes.
@@ -110,10 +117,13 @@ class FilterMenuBuilder {
     return options;
   }
 
+  void _update(DeviceSearchFilter Function(DeviceSearchFilter) change) =>
+      onChanged(change(currentFilter()));
+
   // ── Individual filter options ──────────────────────────────────────────────
 
   _FilterOption _classesOption(BuildContext context) => _FilterOption(
-    label: '${filter.deviceClassIds != null ? '✓ ' : ''}Classes',
+    label: '${currentFilter().deviceClassIds != null ? '✓ ' : ''}Classes',
     onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Classes',
@@ -122,21 +132,16 @@ class FilterMenuBuilder {
         final deviceClass = state.deviceClasses.values.elementAt(i);
         return _FilterListTile(
           label: deviceClass.name,
-          isSelected: filter.deviceClassIds?.contains(deviceClass.id) ?? false,
-          onChanged: (checked) {
-            if (checked) {
-              filter.addDeviceClass(deviceClass.id);
-            } else {
-              filter.removeDeviceClass(deviceClass.id);
-            }
-          },
+          isSelected: currentFilter().deviceClassIds?.contains(deviceClass.id) ?? false,
+          onChanged: (checked) => _update((f) =>
+              checked ? f.withDeviceClass(deviceClass.id) : f.withoutDeviceClass(deviceClass.id)),
         );
       },
     ),
   );
 
   _FilterOption _locationsOption(BuildContext context) => _FilterOption(
-    label: '${filter.locationIds != null ? '✓ ' : ''}Locations',
+    label: '${currentFilter().locationIds != null ? '✓ ' : ''}Locations',
     onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Locations',
@@ -145,21 +150,16 @@ class FilterMenuBuilder {
         final location = state.locations.elementAt(i);
         return _FilterListTile(
           label: location.name,
-          isSelected: filter.locationIds?.contains(location.id) ?? false,
-          onChanged: (checked) {
-            if (checked) {
-              filter.addLocation(location.id);
-            } else {
-              filter.removeLocation(location.id);
-            }
-          },
+          isSelected: currentFilter().locationIds?.contains(location.id) ?? false,
+          onChanged: (checked) => _update((f) =>
+              checked ? f.withLocation(location.id) : f.withoutLocation(location.id)),
         );
       },
     ),
   );
 
   _FilterOption _groupsOption(BuildContext context) => _FilterOption(
-    label: '${filter.deviceGroupIds != null ? '✓ ' : ''}Groups',
+    label: '${currentFilter().deviceGroupIds != null ? '✓ ' : ''}Groups',
     onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Groups',
@@ -168,21 +168,16 @@ class FilterMenuBuilder {
         final group = state.deviceGroups.elementAt(i);
         return _FilterListTile(
           label: group.name,
-          isSelected: filter.deviceGroupIds?.contains(group.id) ?? false,
-          onChanged: (checked) {
-            if (checked) {
-              filter.addDeviceGroup(group.id);
-            } else {
-              filter.removeDeviceGroup(group.id);
-            }
-          },
+          isSelected: currentFilter().deviceGroupIds?.contains(group.id) ?? false,
+          onChanged: (checked) => _update((f) =>
+              checked ? f.withDeviceGroup(group.id) : f.withoutDeviceGroup(group.id)),
         );
       },
     ),
   );
 
   _FilterOption _networksOption(BuildContext context) => _FilterOption(
-    label: '${filter.networkIds != null ? '✓ ' : ''}Networks',
+    label: '${currentFilter().networkIds != null ? '✓ ' : ''}Networks',
     onTap: () => _showFilterDialog(
       context: context,
       title: 'Filter Networks',
@@ -191,43 +186,44 @@ class FilterMenuBuilder {
         final network = state.networks.elementAt(i);
         return _FilterListTile(
           label: network.name,
-          isSelected: filter.networkIds?.contains(network.id) ?? false,
-          onChanged: (checked) {
-            if (checked) {
-              filter.addNetwork(network.id);
-            } else {
-              filter.removeNetwork(network.id);
-            }
-          },
+          isSelected: currentFilter().networkIds?.contains(network.id) ?? false,
+          onChanged: (checked) => _update((f) =>
+              checked ? f.withNetwork(network.id) : f.withoutNetwork(network.id)),
         );
       },
     ),
   );
 
   _FilterOption _favoritesToggleOption() => _FilterOption(
-    label: '${filter.favorites == true ? '✓ ' : ''}Favorites',
+    label: '${currentFilter().favorites == true ? '✓ ' : ''}Favorites',
     onTap: () {
-      filter.favorites = filter.favorites == true ? null : true;
+      _update((f) => f.favorites == true
+          ? f.without(favorites: true)
+          : f.copyWith(favorites: true));
       onFilterApplied();
     },
   );
 
   _FilterOption _showInactiveToggleOption() => _FilterOption(
-    label: '${filter.showInactive ? '✓ ' : ''}Show inactive',
+    label: '${currentFilter().showInactive ? '✓ ' : ''}Show inactive',
     onTap: () {
-      filter.showInactive = !filter.showInactive;
+      _update((f) => f.copyWith(showInactive: !f.showInactive));
       onFilterApplied();
     },
   );
 
   void _reset() {
     final config = tabConfigs[navigationIndex];
-    if (!(config?.ownsLocation() ?? false)) filter.locationIds = null;
-    if (!(config?.ownsGroup() ?? false)) filter.deviceGroupIds = null;
-    if (!(config?.ownsNetwork() ?? false)) filter.networkIds = null;
-    if (!(config?.ownsDeviceClass() ?? false)) filter.deviceClassIds = null;
-    if (!(config?.ownsFavorites() ?? false)) filter.favorites = null;
-    if (_showInactiveApplies) filter.showInactive = false;
+    _update((f) {
+      final cleared = f.without(
+        locationIds: !(config?.ownsLocation() ?? false),
+        deviceGroupIds: !(config?.ownsGroup() ?? false),
+        networkIds: !(config?.ownsNetwork() ?? false),
+        deviceClassIds: !(config?.ownsDeviceClass() ?? false),
+        favorites: !(config?.ownsFavorites() ?? false),
+      );
+      return _showInactiveApplies ? cleared.copyWith(showInactive: false) : cleared;
+    });
     onFilterApplied();
   }
 
@@ -272,6 +268,7 @@ class FilterMenuBuilder {
 
   int _filterCount() {
     final config = tabConfigs[navigationIndex];
+    final filter = currentFilter();
     var count = 0;
     if (!(config?.ownsLocation() ?? false)) {
       count += (filter.locationIds ?? []).length;
