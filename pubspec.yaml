@@ -66,6 +66,7 @@ dependencies:
   open_location_picker: ^1.1.0
   openidconnect: ^2.0.0
   openidconnect_platform_interface: ^2.0.0
+  package_info_plus: ^9.0.1
   path_provider: ^2.0.11
   provider: ^6.0.5
   share_plus: ^12.0.0

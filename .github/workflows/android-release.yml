@@ -77,7 +77,6 @@ jobs:
           echo '${{ secrets.SEPL_KEYSTORE }}' | base64 -d > android/sepl.keystore
           echo '${{ secrets.KEY_PROPERTIES }}' | base64 -d > android/key.properties
           echo '${{ secrets.DOT_ENV }}' > .env
-          echo "VERSION=$TAG" >> .env
           echo "DISTRIBUTOR=github" >> .env
       - name: "Build app"
         run: flutter build apk --no-tree-shake-icons --build-name "$NAME" --build-number "$BUILD"

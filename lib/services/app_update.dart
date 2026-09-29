@@ -25,6 +25,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/app_version.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
@@ -40,7 +41,7 @@ class AppUpdater {
 
   static final githubHeaders = {
     "User-Agent": dotenv.env["GITHUB_REPO"] ??
-        "/${dotenv.env["VERSION"] ?? ""}"
+        "/${AppVersion.display}"
   };
 
 
@@ -79,7 +80,7 @@ class AppUpdater {
     if (Platform.isAndroid &&
         dotenv.env["DISTRIBUTOR"] == "github" &&
         dotenv.env["GITHUB_REPO"] != null &&
-        dotenv.env["VERSION"] != null) {
+        AppVersion.build != null) {
       return true;
     }
     return false;
@@ -170,7 +171,7 @@ class AppUpdater {
       }
       latestBuild = _buildOf(decoded["tag_name"]) ??
           (throw FormatException("No build number in ${decoded["tag_name"]}"));
-      currentBuild = int.parse(dotenv.env["VERSION"]!.split("+")[1]);
+      currentBuild = AppVersion.build!;
 
       _foundUpdateAt = DateTime.now();
 

@@ -26,6 +26,7 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/app_version.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -40,6 +41,7 @@ class AppInitializer {
     final appStart = DateTime.now();
 
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
+    await _timed('AppVersion', AppVersion.init);
     await _timed('Settings', () async => await Settings.init());
     await _timed('MyTheme', () async => await MyTheme.loadTheme());
     unawaited(_initLocale());

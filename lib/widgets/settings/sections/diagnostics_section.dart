@@ -25,6 +25,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
+import 'package:mobile_app/shared/app_version.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/widgets/settings/settings_section.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
@@ -38,7 +39,7 @@ SettingsSection diagnosticsSection(BuildContext context, AppState state) {
     ListTile(
         title: const Text("Show Debug Information"),
         onTap: () async {
-          var txt = "Version: ${dotenv.env["VERSION"]}\n"
+          var txt = "Version: ${AppVersion.display}\n"
               "Username: ${Auth().getUsername()}\n"
               "FCM Token (SHA1): ${sha1.convert(utf8.encode(state.fcmToken ?? ""))}\n"
               "Local Mode:  ${settings_service.Settings.getLocalMode()}\n\n"
