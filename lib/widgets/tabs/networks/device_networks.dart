@@ -28,6 +28,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/shared/devices_label.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
@@ -230,8 +231,16 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                   : null,
                                             )
                                           ]),
-                                          subtitle: Text(
-                                              "${(state.networks[i].device_local_ids ?? []).length} Device${(state.networks[i].device_local_ids ?? []).isEmpty || (state.networks[i].device_local_ids ?? []).length > 1 ? "s" : ""}"),
+                                          // device_ids is null on rows cached
+                                          // before it was stored; those fall
+                                          // back to the raw local id count.
+                                          subtitle: Text(devicesLabel(
+                                              network.device_ids != null
+                                                  ? state.visibleDeviceCount(
+                                                      network.device_ids!)
+                                                  : (network.device_local_ids ??
+                                                          [])
+                                                      .length)),
                                           onTap: (state.networks[i]
                                                           .device_local_ids ??
                                                       [])
