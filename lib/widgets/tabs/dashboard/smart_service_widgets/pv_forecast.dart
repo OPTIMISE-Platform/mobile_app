@@ -19,11 +19,64 @@ import 'package:mobile_app/shared/dio_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/shared/formats.dart';
+
+/// A stretch of a forecast line found by [findForecastWindows]; [from] and
+/// [to] are epoch milliseconds, [from] the earlier one.
+class ForecastWindow {
+  const ForecastWindow(this.from, this.to, this.peak);
+
+  final double from;
+  final double to;
+
+  /// Highest value reached while the window was open.
+  final double peak;
+
+  double get middle => (from + to) / 2;
+}
+
+/// Windows of [spots] (ordered by time) found by scanning from the last point
+/// back: a window opens where the value, read backwards, starts to climb by
+/// more than the noise step and closes at the first point that falls back
+/// below the highest one seen. Returned in chronological order.
+List<ForecastWindow> findForecastWindows(List<FlSpot> spots) {
+  const mustRiseAtLeast = 0.1;
+  final windows = <ForecastWindow>[];
+  if (spots.isEmpty) return windows;
+  // The scan starts at the last point, so that is the first thing to beat.
+  double currentMax = spots.last.y;
+  bool rising = false;
+  double risingSince = double.nan;
+  for (int i = spots.length - 1; i >= 0; i--) {
+    if (spots[i].y > currentMax + mustRiseAtLeast) {
+      currentMax = spots[i].y;
+      if (rising == false) {
+        risingSince = spots[i].x;
+        rising = true;
+      }
+    } else if (rising && currentMax - spots[i].y > mustRiseAtLeast) {
+      windows.add(ForecastWindow(spots[i].x, risingSince, currentMax));
+      rising = false;
+    } else if (!rising) {
+      currentMax = spots[i].y;
+    }
+  }
+  return windows.reversed.toList();
+}
+
+/// "Thursday 10 - 17": weekday and hour of the start, hour of the end, both
+/// in display time.
+String formatForecastWindow(ForecastWindow window) {
+  DateTime at(double ms) => toDisplayTime(
+      DateTime.fromMillisecondsSinceEpoch(ms.toInt(), isUtc: true));
+  final start = DateFormat.EEEE().add_H().format(at(window.from));
+  return "$start - ${DateFormat.H().format(at(window.to))}";
+}
 
 class SmSePvForecast extends SmSeRequest {
   @override
@@ -33,10 +86,10 @@ class SmSePvForecast extends SmSeRequest {
 
   final List<LineChartBarData> _lines = [];
   final List<VerticalLine> _verticalLines = [];
-  final List<String> _recommendations = [];
+  final List<ForecastWindow> _windows = [];
 
   @override
-  double get height => 6.0 + _recommendations.length;
+  double get height => 6.0 + _windows.length;
 
   @override
   double width = 5;
@@ -86,11 +139,15 @@ class SmSePvForecast extends SmSeRequest {
     return parentFlexible ? Expanded(child: w) : w;
   }
 
+  // _windows is kept in chronological order by _add2D.
+  List<String> get _recommendations =>
+      _windows.map(formatForecastWindow).toList();
+
   @override
   Future<void> refreshInternal() async {
     _lines.clear();
     _verticalLines.clear();
-    _recommendations.clear();
+    _windows.clear();
     final resp = await request.perform<List<dynamic>>();
     if (!isSuccessStatus(resp.statusCode) || resp.data == null) {
       return;
@@ -131,27 +188,12 @@ class SmSePvForecast extends SmSeRequest {
     // Not forEach: it does not await an async callback, and refresh would
     // return before the recommendations and sun markers exist.
     for (final line in _lines) {
-      double currentMax = line.spots.first.y;
-      bool rising = false;
-      double risingSince = double.nan;
-      const double mustRiseAtLeast = 0.1;
-      for (int i = line.spots.length - 1; i >= 0; i--) {
-        if (line.spots[i].y > currentMax + mustRiseAtLeast) {
-          currentMax = line.spots[i].y;
-          if (rising == false) {
-            risingSince = line.spots[i].x;
-            rising = true;
-          }
-        } else if (rising && currentMax - line.spots[i].y > mustRiseAtLeast) {
-          _recommendations.add(
-              "${DateFormat.EEEE().add_H().format(DateTime.fromMillisecondsSinceEpoch(risingSince.toInt(), isUtc: true))} - ${DateFormat.H().format(DateTime.fromMillisecondsSinceEpoch(line.spots[i].x.toInt(), isUtc: true))}");
-          if (currentMax > 0.5) _verticalLines.add(VerticalLine(x: (line.spots[i].x + risingSince) / 2, strokeWidth: 0, sizedPicture: await sunsvg(), color: Colors.white));
-          rising = false;
-        } else if (!rising) {
-          currentMax = line.spots[i].y;
-        }
+      for (final window in findForecastWindows(line.spots)) {
+        _windows.add(window);
+        if (window.peak > 0.5) _verticalLines.add(VerticalLine(x: window.middle, strokeWidth: 0, sizedPicture: await sunsvg(), color: Colors.white));
       }
     }
+    _windows.sort((a, b) => a.from.compareTo(b.from));
   }
 
   Color _getLineColor(int i) => MyTheme.getSomeColor(i);
