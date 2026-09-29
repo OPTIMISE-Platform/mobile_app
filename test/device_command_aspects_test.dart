@@ -70,8 +70,6 @@ void main() {
       "aspect_id": "a",
       "characteristic_id": null,
       "input": null,
-      "deviceInstance": null,
-      "deviceGroup": null,
     });
   });
 

@@ -33,7 +33,9 @@ class DeviceCommand {
   @JsonKey(includeIfNull: false)
   List<String>? aspect_ids;
 
+  @JsonKey(includeFromJson: false, includeToJson: false)
   DeviceInstance? deviceInstance;
+  @JsonKey(includeFromJson: false, includeToJson: false)
   DeviceGroup? deviceGroup;
 
   DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input, this.characteristic_id, this.aspect_ids]);

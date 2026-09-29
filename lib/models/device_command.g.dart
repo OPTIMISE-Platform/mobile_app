@@ -8,26 +8,16 @@ part of 'device_command.dart';
 
 DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
     DeviceCommand(
-        json['function_id'] as String,
-        json['device_id'] as String?,
-        json['service_id'] as String?,
-        json['aspect_id'] as String?,
-        json['group_id'] as String?,
-        json['device_class_id'] as String?,
-        json['input'],
-        json['characteristic_id'] as String?,
-        (json['aspect_ids'] as List<dynamic>?)
-            ?.map((e) => e as String)
-            .toList(),
-      )
-      ..deviceInstance = json['deviceInstance'] == null
-          ? null
-          : DeviceInstance.fromJson(
-              json['deviceInstance'] as Map<String, dynamic>,
-            )
-      ..deviceGroup = json['deviceGroup'] == null
-          ? null
-          : DeviceGroup.fromJson(json['deviceGroup'] as Map<String, dynamic>);
+      json['function_id'] as String,
+      json['device_id'] as String?,
+      json['service_id'] as String?,
+      json['aspect_id'] as String?,
+      json['group_id'] as String?,
+      json['device_class_id'] as String?,
+      json['input'],
+      json['characteristic_id'] as String?,
+      (json['aspect_ids'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    );
 
 Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
     <String, dynamic>{
@@ -40,6 +30,4 @@ Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
       'characteristic_id': instance.characteristic_id,
       'input': instance.input,
       'aspect_ids': ?instance.aspect_ids,
-      'deviceInstance': instance.deviceInstance,
-      'deviceGroup': instance.deviceGroup,
     };
