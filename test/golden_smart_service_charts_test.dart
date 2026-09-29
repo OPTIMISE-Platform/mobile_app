@@ -78,6 +78,22 @@ void main() {
         matchesGoldenFile("goldens/smart_service_${name}_$suffix.png"));
   }
 
+  // The two-digit texts on the chart's bottom axis, left to right, as
+  // numbers. The y labels can be two digits as well, so only the lowest row
+  // of texts counts.
+  List<int> hourLabels(WidgetTester tester, Finder chart) {
+    final labels = tester
+        .widgetList<Text>(
+            find.descendant(of: chart, matching: find.byType(Text)))
+        .where((t) => RegExp(r'^\d\d$').hasMatch(t.data ?? ""))
+        .map((t) => (tester.getTopLeft(find.byWidget(t)), int.parse(t.data!)))
+        .toList();
+    final bottom = labels.map((l) => l.$1.dy).reduce((a, b) => a > b ? a : b);
+    final row = labels.where((l) => l.$1.dy == bottom).toList()
+      ..sort((a, b) => a.$1.dx.compareTo(b.$1.dx));
+    return row.map((l) => l.$2).toList();
+  }
+
   // Every widget in one test, both themes - see
   // golden_device_tabs_shell_test.dart for why they share a test/zone.
   testWidgets("smart service chart widgets", (tester) async {
@@ -122,6 +138,17 @@ void main() {
         "widget_type": "line_chart",
         "widget_data": {"request": request("/widget-data/line"), "titles": ["Power"]},
       }, dark: dark);
+
+      // Hour labels must step evenly and start on a whole multiple of the
+      // step: fl_chart's own interval gave 01, 04, 06, 09.
+      final hours = hourLabels(tester, find.byType(LineChart));
+      expect(hours.length, greaterThan(3));
+      final step = hours[1] - hours[0];
+      // The fixture is UTC; across a DST change the grid may shift by an hour.
+      expect(hours.first % step, 0);
+      for (var i = 1; i < hours.length; i++) {
+        expect(hours[i] - hours[i - 1], step, reason: "labels $hours");
+      }
 
       await renderWidget(tester, "bar_chart", {
         "widget_type": "bar_chart",

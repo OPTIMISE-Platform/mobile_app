@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import 'dart:math';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
@@ -54,6 +56,37 @@ class BaseChartFormatter {
                           fontSize:
                               MediaQuery.textScalerOf(context).scale(12))));
         });
+  }
+
+  static const _msPerHour = 60 * 60 * 1000;
+
+  /// Hour steps between labels; each divides 24, so with ticks counted from
+  /// a local midnight ([hourTickBaseline]) they all land on whole hours.
+  static const hourSteps = [1, 2, 3, 6, 12, 24];
+
+  /// Smallest of [hourSteps] that puts at most one label per [pixelPerLabel]
+  /// of [plotWidth] on an axis spanning [spanMs], the same budget fl_chart
+  /// uses for its own interval. Null when none fits: the labels would pile up.
+  static int? hourLabelStep(int spanMs, double plotWidth,
+      {double pixelPerLabel = 40}) {
+    final maxLabels = max(plotWidth ~/ pixelPerLabel, 1);
+    for (final step in hourSteps) {
+      final stepMs = step * _msPerHour;
+      if ((spanMs + stepMs - 1) ~/ stepMs <= maxLabels) return step;
+    }
+    return null;
+  }
+
+  /// Midnight of [ms]'s day in display time, as epoch milliseconds. Passed as
+  /// baselineX, fl_chart counts its ticks from it instead of from the axis
+  /// minimum, so [hourSteps] ticks fall on whole display-time hours.
+  static double hourTickBaseline(int ms) {
+    final t =
+        toDisplayTime(DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true));
+    final midnight = t.isUtc
+        ? DateTime.utc(t.year, t.month, t.day)
+        : DateTime(t.year, t.month, t.day);
+    return midnight.millisecondsSinceEpoch.toDouble();
   }
 
   static SideTitles getLeftTitles(BuildContext context,

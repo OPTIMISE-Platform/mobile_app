@@ -40,6 +40,9 @@ class SmSeLineChart extends SmSeRequest {
 
   final List<LineChartBarData> _lines = [];
   DateFormat dateFormat = Formats.hhmm;
+
+  /// True while [dateFormat] shows only the hour.
+  bool hourlyLabels = false;
   final List<String> titles = [];
 
   @override
@@ -86,7 +89,9 @@ class SmSeLineChart extends SmSeRequest {
                 right: Spacing.md,
                 left: Spacing.xs,
                 bottom: Spacing.xs),
-            child: gestureDetector(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final hourStep = hourStepMs(constraints.maxWidth);
+              return gestureDetector(
                 context,
                 LineChart(
                   LineChartData(
@@ -95,6 +100,11 @@ class SmSeLineChart extends SmSeRequest {
                     extraLinesData: buildDayChangeLines(rawTimestamps),
                     maxX: right.toDouble(),
                     minX: left.toDouble(),
+                    baselineX: hourStep == null
+                        ? null
+                        : BaseChartFormatter.hourTickBaseline(left),
+                    gridData: FlGridData(
+                        verticalInterval: hourStep?.toDouble()),
                     titlesData: FlTitlesData(
                       show: true,
                       rightTitles: const AxisTitles(
@@ -112,9 +122,12 @@ class SmSeLineChart extends SmSeRequest {
                                         Orientation.landscape)
                             ? BaseChartFormatter.getBottomTitles(
                                     context, dateFormat,
-                                    rotated: true, reservedSize: 50)
+                                    rotated: true,
+                                    reservedSize: 50,
+                                    interval: hourStep?.toDouble())
                             : BaseChartFormatter.getBottomTitles(
-                                context, dateFormat),
+                                context, dateFormat,
+                                interval: hourStep?.toDouble()),
                       ),
                       leftTitles: AxisTitles(
                         sideTitles: BaseChartFormatter.getLeftTitles(context),
@@ -138,8 +151,23 @@ class SmSeLineChart extends SmSeRequest {
                                 .toList())),
                   ),
                   duration: Duration.zero,
-                )));
+                ));
+            }));
     return parentFlexible ? Expanded(child: w) : w;
+  }
+
+  // getLeftTitles' default reservedSize; the plot is that much narrower.
+  static const _leftTitlesWidth = 30.0;
+
+  /// Step between bottom labels in ms when they are whole hours, else null so
+  /// fl_chart picks its own interval (also when the span is too long for any
+  /// hour step).
+  @visibleForTesting
+  int? hourStepMs(double chartWidth) {
+    if (!hourlyLabels || !chartWidth.isFinite) return null;
+    final step = BaseChartFormatter.hourLabelStep(
+        right - left, chartWidth - _leftTitlesWidth);
+    return step == null ? null : step * Duration.millisecondsPerHour;
   }
 
   ExtraLinesData buildDayChangeLines(List<int> timestamps) {
@@ -277,6 +305,7 @@ class SmSeLineChart extends SmSeRequest {
           toDisplayTime(DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true)))
           .toList();
 
+      hourlyLabels = false;
       if (dates.length <= 1) {
         dateFormat = Formats.eddmmy;
         return;
@@ -304,6 +333,7 @@ class SmSeLineChart extends SmSeRequest {
         dateFormat = Formats.hhmm;
       } else if (hourChanges) {
         dateFormat = DateFormat('HH');
+        hourlyLabels = true;
       } else if (dayChanges) {
         dateFormat = Formats.ddmm;
       } else if (monthChanges) {
