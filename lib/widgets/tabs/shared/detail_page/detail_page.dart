@@ -488,8 +488,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   onPressed: () async {
                     await Navigator.push(context, MaterialPageRoute(builder: (context) => GroupEditDevices(widget._group!)));
                     await state.searchDevices(
-                        DeviceSearchFilter("", null, null, null, [deviceGroup.id], null, null)
-                          ..showInactive = state.showsInactiveDevices,
+                        DeviceSearchFilter("",
+                            deviceGroupIds: [deviceGroup.id],
+                            showInactive: state.showsInactiveDevices),
                         true);
                     deviceGroup.prepareStates(true);
                     if (!context.mounted) return;

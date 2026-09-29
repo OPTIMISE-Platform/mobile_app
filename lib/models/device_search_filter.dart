@@ -31,51 +31,137 @@ class DeviceSearchFilter {
 
   /// Whether devices carrying the `inactive` attribute are included. Off by
   /// default; not persisted, the same as the other filter fields here.
-  bool showInactive = false;
+  bool showInactive;
 
-  DeviceSearchFilter(this.query, [this.deviceClassIds, this.deviceIds, this.networkIds, this.deviceGroupIds, this.locationIds, this.favorites]);
+  /// A null id list places no constraint, an empty one matches nothing. Lists
+  /// are copied and unmodifiable.
+  DeviceSearchFilter(
+    this.query, {
+    List<String>? deviceClassIds,
+    List<String>? deviceIds,
+    List<String>? deviceGroupIds,
+    List<String>? locationIds,
+    List<String>? networkIds,
+    this.favorites,
+    this.showInactive = false,
+  })  : deviceClassIds = _frozen(deviceClassIds),
+        deviceIds = _frozen(deviceIds),
+        deviceGroupIds = _frozen(deviceGroupIds),
+        locationIds = _frozen(locationIds),
+        networkIds = _frozen(networkIds);
 
   static DeviceSearchFilter empty() {
     return DeviceSearchFilter("");
   }
 
-  /// Copies the id lists: addX/removeX mutate them in place, and a shared list
-  /// would change AppState's stored copy along with the menu's filter.
-  DeviceSearchFilter clone() {
-    return DeviceSearchFilter(query, deviceClassIds?.toList(), deviceIds?.toList(), networkIds?.toList(),
-        deviceGroupIds?.toList(), locationIds?.toList(), favorites)
-      ..showInactive = showInactive;
+  /// AppState keeps its own copy: the tabs still change their filter in place.
+  DeviceSearchFilter clone() => copyWith();
+
+  /// A copy with the given fields replaced; a null argument keeps the field.
+  /// Use [without] to clear one to null.
+  DeviceSearchFilter copyWith({
+    String? query,
+    List<String>? deviceClassIds,
+    List<String>? deviceIds,
+    List<String>? deviceGroupIds,
+    List<String>? locationIds,
+    List<String>? networkIds,
+    bool? favorites,
+    bool? showInactive,
+  }) {
+    return DeviceSearchFilter(
+      query ?? this.query,
+      deviceClassIds: deviceClassIds ?? this.deviceClassIds,
+      deviceIds: deviceIds ?? this.deviceIds,
+      deviceGroupIds: deviceGroupIds ?? this.deviceGroupIds,
+      locationIds: locationIds ?? this.locationIds,
+      networkIds: networkIds ?? this.networkIds,
+      favorites: favorites ?? this.favorites,
+      showInactive: showInactive ?? this.showInactive,
+    );
   }
 
-  List<String> _add(List<String>? l, String id) {
-    l ??= [];
-    if (!l.contains(id)) l.add(id);
-    return l;
+  /// A copy with every field flagged true cleared to null.
+  DeviceSearchFilter without({
+    bool deviceClassIds = false,
+    bool deviceIds = false,
+    bool deviceGroupIds = false,
+    bool locationIds = false,
+    bool networkIds = false,
+    bool favorites = false,
+  }) {
+    return DeviceSearchFilter(
+      query,
+      deviceClassIds: deviceClassIds ? null : this.deviceClassIds,
+      deviceIds: deviceIds ? null : this.deviceIds,
+      deviceGroupIds: deviceGroupIds ? null : this.deviceGroupIds,
+      locationIds: locationIds ? null : this.locationIds,
+      networkIds: networkIds ? null : this.networkIds,
+      favorites: favorites ? null : this.favorites,
+      showInactive: showInactive,
+    );
   }
 
-  List<String>? _remove(List<String>? l, String id) {
-    l?.remove(id);
-    if (l != null && l.isEmpty) {
-      l = null;
-    }
-    return l;
+  static List<String>? _frozen(List<String>? l) =>
+      l == null ? null : List.unmodifiable(l);
+
+  static List<String> _with(List<String>? l, String id) =>
+      l != null && l.contains(id) ? l : [...?l, id];
+
+  /// Null once the last id is gone, so the field stops constraining.
+  static List<String>? _without(List<String>? l, String id) {
+    if (l == null) return null;
+    final rest = l.where((e) => e != id).toList();
+    return rest.isEmpty ? null : rest;
   }
 
-  addDeviceClass(String id) => deviceClassIds = _add(deviceClassIds, id);
+  DeviceSearchFilter withDeviceClass(String id) =>
+      copyWith(deviceClassIds: _with(deviceClassIds, id));
 
-  removeDeviceClass(String id) => deviceClassIds = _remove(deviceClassIds, id);
+  DeviceSearchFilter withoutDeviceClass(String id) {
+    final rest = _without(deviceClassIds, id);
+    return rest == null ? without(deviceClassIds: true) : copyWith(deviceClassIds: rest);
+  }
 
-  addDeviceGroup(String id) => deviceGroupIds = _add(deviceGroupIds, id);
+  DeviceSearchFilter withDeviceGroup(String id) =>
+      copyWith(deviceGroupIds: _with(deviceGroupIds, id));
 
-  removeDeviceGroup(String id) => deviceGroupIds = _remove(deviceGroupIds, id);
+  DeviceSearchFilter withoutDeviceGroup(String id) {
+    final rest = _without(deviceGroupIds, id);
+    return rest == null ? without(deviceGroupIds: true) : copyWith(deviceGroupIds: rest);
+  }
 
-  addLocation(String id) => locationIds = _add(locationIds, id);
+  DeviceSearchFilter withLocation(String id) =>
+      copyWith(locationIds: _with(locationIds, id));
 
-  removeLocation(String id) => locationIds = _remove(locationIds, id);
+  DeviceSearchFilter withoutLocation(String id) {
+    final rest = _without(locationIds, id);
+    return rest == null ? without(locationIds: true) : copyWith(locationIds: rest);
+  }
 
-  addNetwork(String id) => networkIds = _add(networkIds, id);
+  DeviceSearchFilter withNetwork(String id) =>
+      copyWith(networkIds: _with(networkIds, id));
 
-  removeNetwork(String id) => networkIds = _remove(networkIds, id);
+  DeviceSearchFilter withoutNetwork(String id) {
+    final rest = _without(networkIds, id);
+    return rest == null ? without(networkIds: true) : copyWith(networkIds: rest);
+  }
+
+  addDeviceClass(String id) => deviceClassIds = withDeviceClass(id).deviceClassIds;
+
+  removeDeviceClass(String id) => deviceClassIds = withoutDeviceClass(id).deviceClassIds;
+
+  addDeviceGroup(String id) => deviceGroupIds = withDeviceGroup(id).deviceGroupIds;
+
+  removeDeviceGroup(String id) => deviceGroupIds = withoutDeviceGroup(id).deviceGroupIds;
+
+  addLocation(String id) => locationIds = withLocation(id).locationIds;
+
+  removeLocation(String id) => locationIds = withoutLocation(id).locationIds;
+
+  addNetwork(String id) => networkIds = withNetwork(id).networkIds;
+
+  removeNetwork(String id) => networkIds = withoutNetwork(id).networkIds;
 
   Map<String, String> toQueryParams(int limit, int offset, DeviceInstance? lastDevice, [List<String>? ids]) {
     final queryParameters = <String, String>{};
@@ -180,26 +266,47 @@ class DeviceSearchFilter {
 
   @override
   String toString() {
-    return (query +
-        deviceClassIds.toString() +
-        deviceIds.toString() +
-        networkIds.toString() +
-        deviceGroupIds.toString() +
-        favorites.toString() +
-        locationIds.toString() +
-        showInactive.toString());
+    return "DeviceSearchFilter(query: $query, deviceClassIds: $deviceClassIds, "
+        "deviceIds: $deviceIds, deviceGroupIds: $deviceGroupIds, "
+        "locationIds: $locationIds, networkIds: $networkIds, "
+        "favorites: $favorites, showInactive: $showInactive)";
   }
 
-  @override
-  int get hashCode {
-    return toString().hashCode;
+  // Id lists compare as sets: every query built from them is a membership
+  // test, so order and duplicates never change the result.
+  static bool _sameIds(List<String>? a, List<String>? b) {
+    if (a == null || b == null) return a == b;
+    final setA = a.toSet();
+    final setB = b.toSet();
+    return setA.length == setB.length && setA.containsAll(setB);
   }
+
+  static int _idsHash(List<String>? l) =>
+      l == null ? null.hashCode : Object.hashAllUnordered(l.toSet());
 
   @override
   bool operator ==(Object other) {
-    if (other is! DeviceSearchFilter) {
-      return false;
-    }
-    return hashCode == other.hashCode;
+    return identical(this, other) ||
+        other is DeviceSearchFilter &&
+            other.query == query &&
+            _sameIds(other.deviceClassIds, deviceClassIds) &&
+            _sameIds(other.deviceIds, deviceIds) &&
+            _sameIds(other.deviceGroupIds, deviceGroupIds) &&
+            _sameIds(other.locationIds, locationIds) &&
+            _sameIds(other.networkIds, networkIds) &&
+            other.favorites == favorites &&
+            other.showInactive == showInactive;
   }
+
+  @override
+  int get hashCode => Object.hash(
+        query,
+        _idsHash(deviceClassIds),
+        _idsHash(deviceIds),
+        _idsHash(deviceGroupIds),
+        _idsHash(locationIds),
+        _idsHash(networkIds),
+        favorites,
+        showInactive,
+      );
 }

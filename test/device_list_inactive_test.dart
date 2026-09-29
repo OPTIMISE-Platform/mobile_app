@@ -194,7 +194,7 @@ void main() {
       serveGoldenBackend(backend);
 
       // What DeviceTabsState._applyTabConfig does for the Favorites tab.
-      final filter = DeviceSearchFilter.empty()..favorites = true;
+      final filter = DeviceSearchFilter('', favorites: true);
       await AppState().searchDevices(filter, true);
 
       expect(AppState().devices.map((d) => d.id).toList(), ["inactive-1"]);
@@ -267,7 +267,7 @@ void main() {
       }
       // The "Show inactive" toggle, pressed while page 2 is on its way.
       final toggled = AppState()
-          .searchDevices(DeviceSearchFilter.empty()..showInactive = true);
+          .searchDevices(DeviceSearchFilter('', showInactive: true));
       backend.holdDevices!.complete();
       backend.holdDevices = null;
       await Future.wait([nextPage, toggled]);
@@ -380,7 +380,7 @@ void main() {
       serveGoldenBackend(backend);
       await warmUpMgwStorage(tester);
       unawaited(AppState()
-          .searchDevices(DeviceSearchFilter.empty()..showInactive = true, true));
+          .searchDevices(DeviceSearchFilter('', showInactive: true), true));
       await _settleWidgetBackgroundWork(tester);
       expect(AppState().showsInactiveDevices, isTrue);
 

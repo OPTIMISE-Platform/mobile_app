@@ -155,7 +155,7 @@ class _SensorValuesState extends State<SensorValues>
           .toList();
       var devices = <DeviceInstance>[];
       if (deviceIds.isNotEmpty) {
-        final filter = DeviceSearchFilter('')..deviceIds = deviceIds;
+        final filter = DeviceSearchFilter('', deviceIds: deviceIds);
         final result = await DevicesService.getDevices(
           deviceIds.length,
           0,

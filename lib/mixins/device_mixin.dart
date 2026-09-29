@@ -493,7 +493,7 @@ mixin DeviceMixin on ChangeNotifier {
         .toList(growable: false);
 
     if (outsideLocalNet.isNotEmpty) {
-      final filter = DeviceSearchFilter('')..deviceIds = outsideLocalNet;
+      final filter = DeviceSearchFilter('', deviceIds: outsideLocalNet);
       futures.add(
         DevicesService.getDevices(outsideLocalNet.length, 0, filter, null,
             forceBackend: true)

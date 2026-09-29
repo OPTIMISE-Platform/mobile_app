@@ -61,8 +61,8 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
           (context.findAncestorStateOfType<State<DeviceTabs>>()
                       as DeviceTabsState?)
                   ?.filter ??
-              DeviceSearchFilter(
-                  "", null, null, [AppState().networks[_selected!].id]), true);
+              DeviceSearchFilter("",
+                  networkIds: [AppState().networks[_selected!].id]), true);
     }
   }
 
@@ -254,7 +254,8 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
                                                       .searchDevices(
                                                           parentState?.filter ??
                                                               DeviceSearchFilter(
-                                                                  "", null, null, [
+                                                                  "",
+                                                                  networkIds: [
                                                                 state.networks[i].id
                                                               ]), true)
                                                       .then((_) {

@@ -115,8 +115,8 @@ class _DeviceListByLocationState extends State<DeviceListByLocation>
     parentState?.filter.locationIds = [AppState().locations[i].id];
     AppState().searchDevices(
         parentState?.filter ??
-            DeviceSearchFilter(
-                "", null, null, null, [AppState().locations[i].id]));
+            DeviceSearchFilter("",
+                locationIds: [AppState().locations[i].id]));
     await Navigator.push(
         context,
         MaterialPageRoute(

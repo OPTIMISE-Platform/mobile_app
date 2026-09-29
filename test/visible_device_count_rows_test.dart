@@ -86,7 +86,7 @@ void main() {
     // What opening the group does; it also lets the header render, which waits
     // for the list to end.
     unawaited(AppState()
-        .searchDevices(DeviceSearchFilter("", null, null, null, [group.id])));
+        .searchDevices(DeviceSearchFilter("", deviceGroupIds: [group.id])));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -108,8 +108,7 @@ void main() {
 
     // "Show inactive" on: the same rows count every member.
     unawaited(AppState().searchDevices(
-        DeviceSearchFilter("", null, null, null, [group.id])
-          ..showInactive = true));
+        DeviceSearchFilter("", deviceGroupIds: [group.id], showInactive: true)));
     await pumpScreen(const GroupList());
     expect(find.text("3 Devices"), findsOneWidget);
     for (var i = 0; i < 10; i++) {

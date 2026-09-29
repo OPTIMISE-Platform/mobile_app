@@ -48,7 +48,7 @@ class MgwDeviceManager {
             final deviceIds = devices.map((e) => e.id).toList();
             try {
               await DevicesService.getDevices(devices.length, 0,
-                      DeviceSearchFilter("", null, deviceIds), null,
+                      DeviceSearchFilter("", deviceIds: deviceIds), null,
                       forceBackend: true)
                   .then((ds) => applyCloudStates(devices, ds.devices));
             } on DioException catch (e, s) {

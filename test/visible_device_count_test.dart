@@ -94,7 +94,7 @@ void main() {
     expect(AppState().visibleDeviceCount(["a", "b"]), 1);
 
     await AppState()
-        .searchDevices(DeviceSearchFilter.empty()..showInactive = true);
+        .searchDevices(DeviceSearchFilter('', showInactive: true));
     expect(AppState().visibleDeviceCount(["a", "b"]), 2);
     await _settle();
   });

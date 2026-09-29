@@ -72,7 +72,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
     } else {
       final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
       final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-      AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
+      AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClasses[_selected!].id]), true);
     }
   }
 
@@ -131,7 +131,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                             image: deviceClass.imageWidget),
                                         onTap: () {
                                           parentState?.filter.deviceClassIds = [deviceClass.id];
-                                          state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClass.id]), true);
+                                          state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClass.id]), true);
                                           parentState?.setState(() {
                                             parentState.setHideSearchOverride(false);
                                             parentState.onBackCallback = () {
@@ -158,7 +158,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                 : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();
-                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", [deviceClasses[_selected!].id]), true);
+                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClasses[_selected!].id]), true);
                     },
                     child: PagedDeviceList(
                       source: DeviceSearchPages(state),

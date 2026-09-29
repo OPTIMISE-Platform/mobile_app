@@ -92,8 +92,9 @@ class GroupListItem extends StatelessWidget {
                 // The list this row sits in was searched with the parent
                 // filter, so its toggle carries over to the group's members.
                 AppState().searchDevices(
-                    DeviceSearchFilter("", null, null, null, [_group.id])
-                      ..showInactive = AppState().showsInactiveDevices);
+                    DeviceSearchFilter("",
+                        deviceGroupIds: [_group.id],
+                        showInactive: AppState().showsInactiveDevices));
                 final future = Navigator.push(
                     context,
                     MaterialPageRoute(

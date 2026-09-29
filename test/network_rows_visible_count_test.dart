@@ -77,7 +77,7 @@ void main() {
     // What loading a device list does; it teaches the app which devices are
     // inactive. A filter equal to the initial empty one would be skipped.
     unawaited(AppState()
-        .searchDevices(DeviceSearchFilter("", null, null, ["net-1"])));
+        .searchDevices(DeviceSearchFilter("", networkIds: ["net-1"])));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
@@ -99,7 +99,7 @@ void main() {
 
     // "Show inactive" on: the row counts every member.
     unawaited(AppState().searchDevices(
-        DeviceSearchFilter("", null, null, ["net-1"])..showInactive = true));
+        DeviceSearchFilter("", networkIds: ["net-1"], showInactive: true)));
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }

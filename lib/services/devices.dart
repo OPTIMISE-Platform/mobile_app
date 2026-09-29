@@ -174,7 +174,7 @@ class DevicesService {
     final result = <DeviceInstance>[];
     for (var i = 0; i < ids.length; i += chunk) {
       final part = ids.sublist(i, min(i + chunk, ids.length));
-      final filter = DeviceSearchFilter('')..deviceIds = part;
+      final filter = DeviceSearchFilter('', deviceIds: part);
       result.addAll((await getDevices(part.length, 0, filter, null)).devices);
     }
     return result;
