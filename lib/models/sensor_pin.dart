@@ -14,13 +14,14 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/device_state.dart';
 
 /// A single sensor value the user pinned to the sensors page.
 ///
 /// Identifies one [DeviceState] of one device — a reading or a control. The
 /// tuple mirrors how [StateHelper] itself de-duplicates states (service group +
-/// function + aspect, per controlling direction), so it stays stable across
+/// function + aspect set, per controlling direction), so it stays stable across
 /// reloads even though `DeviceState` objects are rebuilt on every device load.
 ///
 /// Persisted as part of a [SensorTab] via `Settings.getSensorTabs`.
@@ -36,7 +37,14 @@ class SensorPin {
   final String? deviceClassId;
 
   final String functionId;
+
+  /// The first of [aspectIds], kept so older app versions still find the pin.
   final String? aspectId;
+
+  /// The state's sorted aspect list. Null in entries written before aspect
+  /// lists, which [aspectId] alone identifies only while it is unambiguous.
+  final List<String>? aspectIds;
+
   final String? serviceGroupKey;
 
   /// Whether this refers to a controlling state (a switch/input) rather than a
@@ -64,6 +72,7 @@ class SensorPin {
     this.deviceClassId,
     required this.functionId,
     this.aspectId,
+    this.aspectIds,
     this.serviceGroupKey,
     this.isControlling = false,
     this.alias,
@@ -82,6 +91,7 @@ class SensorPin {
     deviceClassId: state.deviceClassId,
     functionId: state.functionId,
     aspectId: state.aspectId,
+    aspectIds: state.aspectIds,
     serviceGroupKey: state.serviceGroupKey,
     isControlling: state.isControlling,
   );
@@ -93,6 +103,10 @@ class SensorPin {
     deviceClassId: json['deviceClassId'] as String?,
     functionId: json['functionId'] as String,
     aspectId: json['aspectId'] as String?,
+    // Absent in entries written before aspect lists.
+    aspectIds: (json['aspectIds'] as List<dynamic>?)
+        ?.map((e) => e as String)
+        .toList(growable: false),
     serviceGroupKey: json['serviceGroupKey'] as String?,
     // Absent in entries written before controlling states could be pinned.
     isControlling: json['isControlling'] as bool? ?? false,
@@ -109,6 +123,7 @@ class SensorPin {
     'deviceClassId': deviceClassId,
     'functionId': functionId,
     'aspectId': aspectId,
+    'aspectIds': aspectIds,
     'serviceGroupKey': serviceGroupKey,
     'isControlling': isControlling,
     'alias': alias,
@@ -134,6 +149,7 @@ class SensorPin {
       deviceClassId: deviceClassId,
       functionId: functionId,
       aspectId: aspectId,
+      aspectIds: aspectIds,
       serviceGroupKey: serviceGroupKey,
       isControlling: isControlling,
       alias: (newAlias == null || newAlias.isEmpty) ? null : newAlias,
@@ -147,15 +163,50 @@ class SensorPin {
     );
   }
 
-  /// Whether [state] is the state this pin refers to.
-  bool matches(DeviceState state) =>
-      state.isControlling == isControlling &&
-      state.deviceId == deviceId &&
-      state.groupId == groupId &&
-      state.deviceClassId == deviceClassId &&
-      state.functionId == functionId &&
-      state.aspectId == aspectId &&
-      state.serviceGroupKey == serviceGroupKey;
+  /// The state in [states] this pin refers to, or null when there is none or,
+  /// for an entry without [aspectIds], when [aspectId] fits several.
+  DeviceState? findIn(Iterable<DeviceState> states) => DeviceState.resolveAspects(
+    states.where(
+      (state) =>
+          state.isControlling == isControlling &&
+          state.deviceId == deviceId &&
+          state.groupId == groupId &&
+          state.deviceClassId == deviceClassId &&
+          state.functionId == functionId &&
+          state.serviceGroupKey == serviceGroupKey,
+    ),
+    aspectId,
+    aspectIds,
+  );
+
+  /// This pin in the current format when it is an entry written before aspect
+  /// lists and [states] resolve it; null otherwise. Only then does it equal a
+  /// new pin of the same state.
+  SensorPin? upgradedIn(Iterable<DeviceState> states) {
+    if (aspectIds != null) return null;
+    final state = findIn(states);
+    if (state == null) return null;
+    return SensorPin(
+      deviceId: deviceId,
+      groupId: groupId,
+      deviceClassId: deviceClassId,
+      functionId: functionId,
+      aspectId: state.aspectId,
+      aspectIds: state.aspectIds,
+      serviceGroupKey: serviceGroupKey,
+      isControlling: isControlling,
+      alias: alias,
+      iconName: iconName,
+      subtitle: subtitle,
+      hideSubtitle: hideSubtitle,
+    );
+  }
+
+  /// [aspectIds] as a key; null for an entry written before aspect lists.
+  String? get _aspectKey {
+    final ids = aspectIds;
+    return ids == null ? null : aspectIdsKey([...ids]..sort());
+  }
 
   /// Equality covers only which sensor is referenced, deliberately excluding
   /// the presentation fields ([alias], [iconName], [subtitle],
@@ -169,6 +220,7 @@ class SensorPin {
       other.deviceClassId == deviceClassId &&
       other.functionId == functionId &&
       other.aspectId == aspectId &&
+      other._aspectKey == _aspectKey &&
       other.serviceGroupKey == serviceGroupKey &&
       other.isControlling == isControlling;
 
@@ -179,6 +231,7 @@ class SensorPin {
     deviceClassId,
     functionId,
     aspectId,
+    _aspectKey,
     serviceGroupKey,
     isControlling,
   );

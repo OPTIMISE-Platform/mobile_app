@@ -49,10 +49,9 @@ String sensorSubtitle(
     (s) =>
         s.functionId == state.functionId &&
         s != state &&
-        s.aspectId != state.aspectId,
+        s.aspectKey != state.aspectKey,
   )) {
-    subtitle +=
-        _findAspect(AppState().aspects.values, state.aspectId)?.name ?? '';
+    subtitle += joinAspectNames(AppState().aspects.values, state.aspectIds);
   }
   final groupKey = state.serviceGroupKey;
   if (device != null &&
@@ -62,7 +61,7 @@ String sensorSubtitle(
         (s) =>
             s.functionId == state.functionId &&
             s != state &&
-            s.aspectId == state.aspectId,
+            s.aspectKey == state.aspectKey,
       )) {
     String? groupName;
     for (final g
@@ -92,17 +91,4 @@ String sensorUnit(DeviceState state) {
   final conceptId = AppState().platformFunctions[state.functionId]?.concept_id;
   return AppState().concepts[conceptId]?.getBaseCharacteristic().display_unit ??
       '';
-}
-
-Aspect? _findAspect(Iterable<Aspect> aspects, String? id) {
-  if (id == null) return null;
-  for (final a in aspects) {
-    if (a.id == id) return a;
-    final subAspects = a.sub_aspects;
-    if (subAspects != null) {
-      final sub = _findAspect(subAspects, id);
-      if (sub != null) return sub;
-    }
-  }
-  return null;
 }

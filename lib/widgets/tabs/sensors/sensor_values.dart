@@ -115,6 +115,7 @@ class _SensorValuesState extends State<SensorValues>
 
   /// Loads the values of the selected tab only — switching tabs reloads.
   Future<void> _loadValues() async {
+    final tab = _currentTab;
     final pins = _pins;
     if (pins.isEmpty) {
       setState(() {
@@ -183,7 +184,7 @@ class _SensorValuesState extends State<SensorValues>
           ..addEntries(groups.map((g) => MapEntry(g.id, g)));
         _loading = false;
       });
-      unawaited(_loadSparklines(pins));
+      unawaited(_loadSparklines(_upgradeLegacyPins(tab, pins)));
     } catch (e, s) {
       ErrorReporter.log('Could not load sensor values', e, s);
       if (!mounted) return;
@@ -192,6 +193,43 @@ class _SensorValuesState extends State<SensorValues>
         _loading = false;
       });
     }
+  }
+
+  /// Rewrites, in memory, the pins of [tab] written before aspect lists that
+  /// now resolve to one state, so that picking the state again reads as
+  /// already added; the next save of the tabs stores them. Ambiguous pins stay,
+  /// and so do group pins while the group's cached criteria may be stale.
+  /// Returns the pins now on the tab.
+  List<SensorPin> _upgradeLegacyPins(SensorTab? tab, List<SensorPin> pins) {
+    // The tab may have been switched or edited while the values loaded.
+    if (tab == null || !identical(_currentTab, tab)) return pins;
+    final upgraded = <SensorPin>[];
+    for (final pin in pins) {
+      final group = pin.isGroup ? _groups[pin.groupId] : null;
+      final states = group != null
+          ? (group.criteriaMayPredateAspectLists ? null : group.states)
+          : _devices[pin.deviceId]?.states;
+      final next = (states == null ? null : pin.upgradedIn(states)) ?? pin;
+      // An old pin can turn into one that is already on the tab.
+      if (!upgraded.contains(next)) upgraded.add(next);
+    }
+    var changed = upgraded.length != pins.length;
+    for (var i = 0; !changed && i < pins.length; i++) {
+      changed = !identical(upgraded[i], pins[i]);
+    }
+    if (!changed) return pins;
+    final tabs = [..._tabs];
+    tabs[_selected] = tab.copyWith(pins: upgraded);
+    setState(() => _tabs = tabs);
+    return upgraded;
+  }
+
+  /// Whether [a] and [b] are the same value, also when one is the old-format
+  /// pin that [_upgradeLegacyPins] has replaced in the meantime.
+  bool _samePin(SensorPin a, SensorPin b) {
+    if (a == b) return true;
+    final state = _stateFor(a);
+    return state != null && identical(state, _stateFor(b));
   }
 
   /// Fetches each pin's 2h history in the background, showing every sparkline
@@ -217,10 +255,7 @@ class _SensorValuesState extends State<SensorValues>
         ? _groups[pin.groupId]?.states
         : _devices[pin.deviceId]?.states;
     if (states == null) return null;
-    for (final state in states) {
-      if (pin.matches(state)) return state;
-    }
-    return null;
+    return pin.findIn(states);
   }
 
   /// The device or group a pin belongs to, the card's subtitle by default.
@@ -430,7 +465,7 @@ class _SensorValuesState extends State<SensorValues>
     // cards that can't be told apart.
     final picked = await pickSensors(context, existing: _pins);
     if (picked == null || !mounted) return;
-    final added = picked.where((p) => !_pins.contains(p)).toList();
+    final added = picked.where((p) => !_pins.any((e) => _samePin(e, p))).toList();
     if (added.isEmpty) return;
     await _updateCurrentPins([..._pins, ...added]);
     await _loadValues();
@@ -453,10 +488,10 @@ class _SensorValuesState extends State<SensorValues>
       initialSubtitleHidden: pin.hideSubtitle,
     );
     if (result == null || !mounted) return;
-    final index = _pins.indexOf(pin);
+    final index = _pins.indexWhere((p) => _samePin(p, pin));
     if (index < 0) return;
     final pins = [..._pins];
-    pins[index] = pin.copyWith(
+    pins[index] = pins[index].copyWith(
       alias: result.name, // empty clears
       iconName: result.iconName ?? '',
       subtitle: result.subtitle, // empty falls back to the device/group name
@@ -484,7 +519,7 @@ class _SensorValuesState extends State<SensorValues>
       ),
     );
     if (confirmed != true || !mounted) return;
-    await _updateCurrentPins(_pins.where((p) => p != pin).toList());
+    await _updateCurrentPins(_pins.where((p) => !_samePin(p, pin)).toList());
   }
 
   Future<void> _showPinMenu(SensorPin pin, String label) async {
@@ -903,23 +938,20 @@ class _SensorValuesState extends State<SensorValues>
     if (controllingFunctions == null || controllingFunctions.isEmpty) {
       return false;
     }
-    return allStates.any(
-      (s) =>
-          s.isControlling &&
-          controllingFunctions.contains(s.functionId) &&
-          (isGroup || _pairsWithinDevice(s, state)),
+    // A group's criteria share neither service group nor aspects: they pair by
+    // device class, and a controlling criterion typically carries no aspect at
+    // all, so pairing them like a device's would leave every group value
+    // unswitchable.
+    if (isGroup) {
+      return allStates.any(
+        (s) => s.isControlling && controllingFunctions.contains(s.functionId),
+      );
+    }
+    // The same pairing the shared action applies to a device's measurement.
+    return controllingFunctions.any(
+      (f) => state.controlsFor(allStates, f).isNotEmpty,
     );
   }
-
-  /// A device's measurement and its control belong together when they sit in the
-  /// same service group and describe the same aspect.
-  ///
-  /// A group's criteria share neither: they pair by device class, and a
-  /// controlling criterion typically carries no aspect at all, so requiring this
-  /// would leave every group value unswitchable.
-  bool _pairsWithinDevice(DeviceState control, DeviceState measurement) =>
-      control.serviceGroupKey == measurement.serviceGroupKey &&
-      control.aspectId == measurement.aspectId;
 
   /// Whether the control can actually be triggered for the current value.
   bool _isControllable(

@@ -67,8 +67,14 @@ class _Selection extends ChangeNotifier {
 
   bool isPicked(SensorPin pin) => _picked.contains(pin);
 
-  /// Whether this value is already on the page, making it unpickable.
-  bool isExisting(SensorPin pin) => _existing.contains(pin);
+  /// Whether [state] is already on the page, making it unpickable. [states]
+  /// are all states of its device or group: a pin written before aspect lists
+  /// is only recognised by resolving it among them.
+  bool isExisting(DeviceState state, List<DeviceState> states) =>
+      _existing.contains(SensorPin.of(state)) ||
+      _existing.any(
+        (pin) => pin.aspectIds == null && identical(pin.findIn(states), state),
+      );
 
   void toggle(SensorPin pin) {
     if (!_picked.remove(pin)) _picked.add(pin);
@@ -540,14 +546,14 @@ class _ValuePickerState extends State<_ValuePicker> {
   static String _valueKey(DeviceState state) => [
         state.functionId,
         state.serviceGroupKey,
-        state.aspectId,
+        state.aspectKey,
         state.deviceClassId,
         state.isControlling,
       ].join("|");
 
   Widget _buildTile(DeviceState state) {
     final pin = SensorPin.of(state);
-    final existing = widget.selection.isExisting(pin);
+    final existing = widget.selection.isExisting(state, _all);
     final picked = existing || widget.selection.isPicked(pin);
 
     var subtitle = sensorSubtitle(state, _all, widget.target.device);

@@ -19,6 +19,9 @@ DeviceState _$DeviceStateFromJson(Map<String, dynamic> json) =>
         json['deviceId'] as String?,
         json['path'] as String?,
         json['serviceGroupName'] as String?,
+        aspectIds: (json['aspectIds'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList(),
       )
       ..transitioning = json['transitioning'] as bool
       ..deviceInstance = json['deviceInstance'] == null
@@ -41,11 +44,12 @@ Map<String, dynamic> _$DeviceStateToJson(DeviceState instance) =>
       'deviceGroup': instance.deviceGroup,
       'serviceId': instance.serviceId,
       'serviceGroupKey': instance.serviceGroupKey,
-      'aspectId': instance.aspectId,
       'groupId': instance.groupId,
       'deviceClassId': instance.deviceClassId,
       'deviceId': instance.deviceId,
       'path': instance.path,
       'name': instance.name,
       'serviceGroupName': instance.serviceGroupName,
+      'aspectIds': instance.aspectIds,
+      'aspectId': instance.aspectId,
     };

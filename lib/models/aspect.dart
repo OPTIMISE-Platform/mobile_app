@@ -27,3 +27,27 @@ class Aspect {
   factory Aspect.fromJson(Map<String, dynamic> json) => _$AspectFromJson(json);
   Map<String, dynamic> toJson() => _$AspectToJson(this);
 }
+
+/// The names of [aspectIds], searched in [aspects] and their sub-aspects,
+/// joined with ", " in the list's order. An unknown id contributes [missing],
+/// or nothing when that is null.
+String joinAspectNames(Iterable<Aspect> aspects, List<String> aspectIds, {String? missing}) {
+  final names = <String>[];
+  for (final id in aspectIds) {
+    final name = _findAspect(aspects, id)?.name ?? missing;
+    if (name != null) names.add(name);
+  }
+  return names.join(", ");
+}
+
+Aspect? _findAspect(Iterable<Aspect> aspects, String id) {
+  for (final a in aspects) {
+    if (a.id == id) return a;
+    final subAspects = a.sub_aspects;
+    if (subAspects != null) {
+      final sub = _findAspect(subAspects, id);
+      if (sub != null) return sub;
+    }
+  }
+  return null;
+}

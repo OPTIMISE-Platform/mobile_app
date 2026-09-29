@@ -1,0 +1,141 @@
+/*
+ * Copyright 2026 InfAI (CC SES)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect.dart';
+import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/device_state.dart';
+import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
+
+import 'golden_helper.dart';
+
+void main() {
+  setUpAll(() async {
+    await setUpGoldenEnvironment();
+  });
+
+  tearDown(() {
+    resetAppStateForGolden();
+  });
+
+  DeviceInstance device() {
+    final lamp = DeviceClass("class-1", "Lamps", "");
+    AppState().deviceClasses[lamp.id] = lamp;
+    AppState().deviceTypes["device-type-1"] = DeviceType("device-type-1", "Smart Lamp", "", lamp.id, [], null);
+    for (final a in [
+      Aspect("air", "Air", [Aspect("inside", "Inside", null), Aspect("outside", "Outside", null)]),
+      Aspect("device", "Device", null),
+      Aspect("lamp", "Lamp", null),
+    ]) {
+      AppState().aspects[a.id] = a;
+    }
+    final d = DeviceInstance("device-1", "device-1-local", "Living room lamp", null, "device-type-1", false, "owner-1",
+        "Living room lamp", DeviceConnectionStatus.online);
+    AppState().devices.add(d);
+    return d;
+  }
+
+  void addFunction(String id, String displayName) =>
+      AppState().platformFunctions[id] = PlatformFunction(id, id, "", displayName);
+
+  DeviceState state(DeviceInstance d, String functionId, List<String> aspectIds, bool controlling, {dynamic value}) =>
+      DeviceState(value, "service-1", "group-1", functionId, null, controlling, null, null, d.id, "path", "group",
+          aspectIds: aspectIds);
+
+  testWidgets("two readings sharing their first aspect get a row each, named by all aspects", (tester) async {
+    final d = device();
+    addFunction("temperature", "Temperature");
+    d.states
+      ..add(state(d, "temperature", ["air", "inside"], false, value: 21.5))
+      ..add(state(d, "temperature", ["air", "outside"], false, value: 4.0));
+
+    await pumpGolden(tester, DetailPage(d, null), dark: false);
+
+    expect(tester.takeException(), isNull);
+    expect(find.text("Temperature"), findsNWidgets(2));
+    expect(find.text("Air, Inside"), findsOneWidget);
+    expect(find.text("Air, Outside"), findsOneWidget);
+    // A row key built from the first aspect alone is the same for both rows,
+    // which SectionedListView can only resolve by position ("key#1").
+    final rowKeys = tester
+        .widgetList(find.byWidgetPredicate((w) => w.key is ValueKey<(String, String)>))
+        .map((w) => (w.key! as ValueKey<(String, String)>).value.$2)
+        .toList();
+    expect(rowKeys, hasLength(2));
+    expect(rowKeys, everyElement(isNot(contains("#"))));
+  });
+
+  testWidgets("a long press finds the timestamp on a subset of the reading's aspects", (tester) async {
+    final toasts = <String>[];
+    final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const channel = MethodChannel('PonnamKarthik/fluttertoast');
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      if (call.method == "showToast") toasts.add((call.arguments as Map)["msg"] as String);
+      return true;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, (call) async => true));
+
+    final d = device();
+    final timestamp = dotenv.env['FUNCTION_GET_TIMESTAMP']!;
+    addFunction("temperature", "Temperature");
+    addFunction(timestamp, "Timestamp");
+    d.states
+      ..add(state(d, "temperature", ["air", "inside"], false, value: 21.5))
+      ..add(state(d, timestamp, ["air"], false));
+
+    await pumpGolden(tester, DetailPage(d, null), dark: false);
+    // After the page's own value load, which fails without a backend.
+    d.states.last.value = "2026-09-29T08:30:00Z";
+    toasts.clear();
+    await tester.longPress(find.text("Temperature"));
+    await tester.pump();
+
+    expect(toasts, hasLength(1));
+    expect(toasts.single, contains("2026"));
+    // Lets the toast plugin's own timer run out.
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets("a reading pairs with the unique control on a subset of its aspects", (tester) async {
+    final d = device();
+    final get = dotenv.env['FUNCTION_GET_ON_OFF_STATE']!;
+    final on = dotenv.env['FUNCTION_SET_ON_STATE']!;
+    final off = dotenv.env['FUNCTION_SET_OFF_STATE']!;
+    addFunction(get, "Power state");
+    addFunction(on, "Switch on");
+    addFunction(off, "Switch off");
+    // "device" sorts first, so the first aspect of the reading is not the
+    // control's: only the subset rule pairs them.
+    d.states
+      ..add(state(d, get, ["device", "lamp"], false, value: true))
+      ..add(state(d, on, ["lamp"], true))
+      ..add(state(d, off, ["lamp"], true));
+
+    await pumpGolden(tester, DetailPage(d, null), dark: false);
+
+    expect(find.text("Power state"), findsOneWidget);
+    // Paired controls are folded into the reading's row instead of listed.
+    expect(find.text("Switch on"), findsNothing);
+    expect(find.text("Switch off"), findsNothing);
+  });
+}

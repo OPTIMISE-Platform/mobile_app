@@ -67,6 +67,12 @@ class DeviceGroup {
   @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = -1;
 
+  /// Set on a row served from a cache that an app version without aspect lists
+  /// may have written: its criteria can show a combination as its first aspect.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @ignore
+  bool criteriaMayPredateAspectLists = false;
+
   static final _logger = Logger(
     printer: SimplePrinter(),
   );

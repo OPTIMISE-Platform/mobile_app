@@ -22,6 +22,7 @@ ContentVariable _$ContentVariableFromJson(Map<String, dynamic> json) =>
       (json['serialization_options'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      (json['aspect_ids'] as List<dynamic>?)?.map((e) => e as String).toList(),
     );
 
 Map<String, dynamic> _$ContentVariableToJson(ContentVariable instance) =>
@@ -36,4 +37,5 @@ Map<String, dynamic> _$ContentVariableToJson(ContentVariable instance) =>
       'sub_content_variables': instance.sub_content_variables,
       'value': instance.value,
       'serialization_options': instance.serialization_options,
+      'aspect_ids': ?instance.aspect_ids,
     };

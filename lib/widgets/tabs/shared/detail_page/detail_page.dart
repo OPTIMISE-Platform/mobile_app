@@ -104,12 +104,13 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
   _displayTimestamp(DeviceState element, List<DeviceState> states, BuildContext context) {
     try {
-      final state = states.firstWhere((state) =>
-          !state.isControlling &&
-          state.serviceId == element.serviceId &&
-          state.aspectId == element.aspectId &&
-          state.deviceClassId == element.deviceClassId &&
-          state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]);
+      final state = DeviceState.matchAspects(
+          states.where((state) =>
+              !state.isControlling &&
+              state.serviceId == element.serviceId &&
+              state.deviceClassId == element.deviceClassId &&
+              state.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]),
+          element.aspectIds).first;
       Toast.showToastNoContext(FunctionConfigGetTimestamp().formatTimestamp(state.value));
     } catch (e) {
       _logger.w("Could not display timestamp: $e");
@@ -125,13 +126,15 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
   String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device) {
     String subtitle = "";
-    if (states.any((s) => s.functionId == element.functionId && s != element && s.aspectId != element.aspectId)) {
-      subtitle += _findAspect(AppState().aspects.values, element.aspectId)?.name ?? "MISSING_ASPECT_NAME";
+    if (states.any((s) => s.functionId == element.functionId && s != element && s.aspectKey != element.aspectKey)) {
+      subtitle += element.aspectIds.isEmpty
+          ? "MISSING_ASPECT_NAME"
+          : joinAspectNames(AppState().aspects.values, element.aspectIds, missing: "MISSING_ASPECT_NAME");
     }
     if (device != null &&
         element.serviceGroupKey != null &&
         element.serviceGroupKey != "" &&
-        states.any((s) => s.functionId == element.functionId && s != element && s.aspectId == element.aspectId)) {
+        states.any((s) => s.functionId == element.functionId && s != element && s.aspectKey == element.aspectKey)) {
       if (subtitle.isNotEmpty) subtitle += ", ";
       subtitle += (AppState().deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
           "MISSING_SERVICE_GROUP_NAME");
@@ -143,33 +146,15 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
   /// (re-)sorted list. Both `prepareStates` implementations that build
   /// `states` (device_state.dart for a device, device_group.dart for a
   /// group) already refuse to add a state whose functionId, serviceGroupKey,
-  /// aspectId, deviceClassId and isControlling all match an existing one, so
+  /// aspect set, deviceClassId and isControlling all match an existing one, so
   /// that combination is exactly the invariant already unique per row here.
   String _rowKey(DeviceState element) => [
         element.functionId,
         element.serviceGroupKey,
-        element.aspectId,
+        element.aspectKey,
         element.deviceClassId,
         element.isControlling,
       ].join("|");
-
-  Aspect? _findAspect(Iterable<Aspect> aspects, String? id) {
-    if (id == null) {
-      return null;
-    }
-    for (final a in aspects) {
-      if (a.id == id) {
-        return a;
-      }
-      if (a.sub_aspects != null) {
-        final sub = _findAspect(a.sub_aspects!, id);
-        if (sub != null) {
-          return sub;
-        }
-      }
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -317,13 +302,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
         Iterable<DeviceState>? controllingStates;
-        if (controllingFunctions != null) {
-          controllingStates = states.where((state) =>
-              state.isControlling &&
-              controllingFunctions.contains(state.functionId) &&
-              state.serviceGroupKey == element.serviceGroupKey &&
-              state.aspectId == element.aspectId &&
-              functionConfig.getRelatedControllingFunction(element.value) != null);
+        if (controllingFunctions != null && functionConfig.getRelatedControllingFunction(element.value) != null) {
+          controllingStates = controllingFunctions.expand((f) => element.controlsFor(states, f));
         }
         String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
         String? unit;

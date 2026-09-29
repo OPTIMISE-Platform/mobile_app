@@ -69,11 +69,7 @@ Future<void> performDeviceStateAction({
       _logger.e(err);
       return;
     }
-    final controllingStates = states.where((state) =>
-        state.isControlling &&
-        state.functionId == controllingFunction &&
-        state.serviceGroupKey == element.serviceGroupKey &&
-        state.aspectId == element.aspectId);
+    final controllingStates = element.controlsFor(states, controllingFunction);
     if (controllingStates.isEmpty) {
       const err = "Found no controlling service, check device type!";
       Toast.showToastNoContext(err);

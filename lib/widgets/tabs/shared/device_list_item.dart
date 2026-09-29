@@ -125,13 +125,8 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                 _logger.e(err);
                                 return;
                               }
-                              final controllingStates = device.states.where(
-                                  (state) =>
-                                      state.isControlling &&
-                                      state.functionId == controllingFunction &&
-                                      state.serviceGroupKey ==
-                                          element.serviceGroupKey &&
-                                      state.aspectId == element.aspectId);
+                              final controllingStates = element.controlsFor(
+                                  device.states, controllingFunction);
                               if (controllingStates.isEmpty) {
                                 const err =
                                     "Found no controlling service, check device type!";

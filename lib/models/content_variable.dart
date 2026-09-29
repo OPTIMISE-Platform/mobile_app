@@ -15,6 +15,7 @@
  */
 
 import 'package:json_annotation/json_annotation.dart';
+import 'package:mobile_app/models/aspect_ids.dart';
 
 part 'content_variable.g.dart';
 
@@ -38,7 +39,16 @@ class ContentVariable {
   dynamic value;
   List<String>? serialization_options;
 
-  ContentVariable(this.id, this.name, this.characteristic_id, this.unit_reference, this.aspect_id, this.function_id, this.type, this.sub_content_variables, this.value, this.serialization_options);
+  /// Replaces the deprecated [aspect_id], which a device-repository read sets
+  /// to the alphabetically first entry of this list.
+  @JsonKey(includeIfNull: false)
+  List<String>? aspect_ids;
+
+  ContentVariable(this.id, this.name, this.characteristic_id, this.unit_reference, this.aspect_id, this.function_id, this.type, this.sub_content_variables, this.value, this.serialization_options, [this.aspect_ids]);
+
+  /// The aspects this variable carries, sorted; see [effectiveAspectIds].
+  List<String> get effectiveAspects => effectiveAspectIds(aspect_id, aspect_ids);
+
   factory ContentVariable.fromJson(Map<String, dynamic> json) => _$ContentVariableFromJson(json);
   Map<String, dynamic> toJson() => _$ContentVariableToJson(this);
 }

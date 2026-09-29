@@ -97,6 +97,9 @@ void main() {
             deviceId: "device-1",
             functionId: "function-1",
             aspectId: "aspect-1",
+            // A pin in the current format; one without the list is rewritten on
+            // load, from inside the fake-async zone where the Hive write never ends.
+            aspectIds: ["aspect-1"],
             serviceGroupKey: "group-1",
           ),
         ],

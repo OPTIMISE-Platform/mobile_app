@@ -57,8 +57,8 @@ class NativePipe {
               .toList());
           return resp;
         case "setToggle":
-          final DeviceState state =
-              DeviceState.fromJson(json.decode(call.arguments));
+          final Map<String, dynamic> raw = json.decode(call.arguments);
+          final DeviceState state = DeviceState.fromJson(raw);
           final device = await isar!.deviceInstances
               .where()
               .idEqualTo(state.deviceId!)
@@ -73,13 +73,10 @@ class NativePipe {
           final controllingFunction =
               functionConfigs[dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                   ?.getRelatedControllingFunction(!(state.value as bool));
-          final controllingStates = device.states
-              .where((s) =>
-                  s.isControlling &&
-                  s.functionId == controllingFunction &&
-                  s.serviceGroupKey == state.serviceGroupKey &&
-                  s.aspectId == state.aspectId)
-              .toList();
+          final controllingStates = controllingFunction == null
+              ? const <DeviceState>[]
+              : controlsForToggle(state, (raw['aspectIds'] as List<dynamic>?)?.cast<String>(), device.states,
+                  controllingFunction);
           if (controllingStates.isEmpty) {
             throw "Found no controlling service, check device type!";
           }
@@ -120,6 +117,30 @@ class NativePipe {
           throw MissingPluginException("not implemented");
       }
     });
+  }
+
+  /// The controls of [controllingFunction] a toggle entry from the platform
+  /// side means. The entry keeps only the first aspect, but also the service and
+  /// path of its reading, which settle which state it is; the aspect rule of an
+  /// old sensor pin only breaks a tie between readings at that place. Without
+  /// such a reading, or when the tie stays, the entry itself picks the control
+  /// by its aspect, as it did before aspect lists.
+  static List<DeviceState> controlsForToggle(
+      DeviceState entry, List<String>? entryAspectIds, List<DeviceState> states, String controllingFunction) {
+    final samePlace = states
+        .where((s) =>
+            !s.isControlling &&
+            s.functionId == entry.functionId &&
+            s.serviceGroupKey == entry.serviceGroupKey &&
+            s.serviceId == entry.serviceId &&
+            s.path == entry.path)
+        .toList(growable: false);
+    final measurement = switch (samePlace.length) {
+      0 => null,
+      1 => samePlace.single,
+      _ => DeviceState.resolveAspects(samePlace, entry.aspectId, entryAspectIds),
+    };
+    return (measurement ?? entry).controlsFor(states, controllingFunction);
   }
 
   static void handleDeviceStateUpdate(DeviceState state) async {
