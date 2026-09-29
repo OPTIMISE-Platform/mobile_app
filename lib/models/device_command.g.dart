@@ -16,6 +16,9 @@ DeviceCommand _$DeviceCommandFromJson(Map<String, dynamic> json) =>
         json['device_class_id'] as String?,
         json['input'],
         json['characteristic_id'] as String?,
+        (json['aspect_ids'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList(),
       )
       ..deviceInstance = json['deviceInstance'] == null
           ? null
@@ -36,6 +39,7 @@ Map<String, dynamic> _$DeviceCommandToJson(DeviceCommand instance) =>
       'aspect_id': instance.aspect_id,
       'characteristic_id': instance.characteristic_id,
       'input': instance.input,
+      'aspect_ids': ?instance.aspect_ids,
       'deviceInstance': instance.deviceInstance,
       'deviceGroup': instance.deviceGroup,
     };

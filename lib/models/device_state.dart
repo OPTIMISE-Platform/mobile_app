@@ -83,8 +83,8 @@ class DeviceState {
   Map<String, dynamic> toJson() => _$DeviceStateToJson(this);
 
   DeviceCommand toCommand([dynamic value, DeviceGroup? deviceGroup]) {
-    final command = DeviceCommand(
-        functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value, Settings.getFunctionPreferredCharacteristicId(functionId));
+    final command = DeviceCommand(functionId, deviceId, serviceId, aspectId, groupId, deviceClassId, value,
+        Settings.getFunctionPreferredCharacteristicId(functionId), aspectIds.isEmpty ? null : [...aspectIds]);
     command.deviceInstance = deviceInstance;
     command.deviceGroup = deviceGroup ?? this.deviceGroup;
     return command;

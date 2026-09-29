@@ -26,10 +26,17 @@ class DeviceCommand {
   String function_id;
   String? device_id, group_id, device_class_id, service_id, aspect_id, characteristic_id;
   dynamic input;
+
+  /// Sent next to [aspect_id], which must be one of them: device-command adds
+  /// [aspect_id] to this list, while an older device-command on a local
+  /// gateway reads [aspect_id] alone.
+  @JsonKey(includeIfNull: false)
+  List<String>? aspect_ids;
+
   DeviceInstance? deviceInstance;
   DeviceGroup? deviceGroup;
 
-  DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input, this.characteristic_id]);
+  DeviceCommand(this.function_id, this.device_id, this.service_id, this.aspect_id, [this.group_id, this.device_class_id, this.input, this.characteristic_id, this.aspect_ids]);
   factory DeviceCommand.fromJson(Map<String, dynamic> json) => _$DeviceCommandFromJson(json);
   Map<String, dynamic> toJson() => _$DeviceCommandToJson(this);
 }
