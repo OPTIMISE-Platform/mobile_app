@@ -39,8 +39,11 @@ class DeviceSearchFilter {
     return DeviceSearchFilter("");
   }
 
+  /// Copies the id lists: addX/removeX mutate them in place, and a shared list
+  /// would change AppState's stored copy along with the menu's filter.
   DeviceSearchFilter clone() {
-    return DeviceSearchFilter(query, deviceClassIds, deviceIds, networkIds, deviceGroupIds, locationIds, favorites)
+    return DeviceSearchFilter(query, deviceClassIds?.toList(), deviceIds?.toList(), networkIds?.toList(),
+        deviceGroupIds?.toList(), locationIds?.toList(), favorites)
       ..showInactive = showInactive;
   }
 
