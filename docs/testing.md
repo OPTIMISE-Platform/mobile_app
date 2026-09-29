@@ -80,6 +80,9 @@ a screen fetches.
   until the completer finishes; `holdDevices` does the same for
   `serveDevicesPaged`. Both let a test act while a request is in flight, for
   example a second search or an upgrade tap during a reload.
+- `failures["METHOD path"] = DioExceptionType.receiveTimeout` makes the route
+  throw a `DioException` of that type instead of answering, for the code that
+  decides on the type of a failure rather than on a status.
 - `serveDevicesPaged(devices)` slices by offset/limit and honours `ids` and
   `search` (substring of the name) like the real endpoint, with `X-Total-Count`
   set to the count before client-side hiding.
