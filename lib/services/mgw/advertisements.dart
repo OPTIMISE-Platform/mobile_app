@@ -18,6 +18,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 
 const LOG_PREFIX = "MGW-ADVERTISEMENTS";
 
@@ -39,7 +40,8 @@ class MgwAdvertisements {
     connectTimeout: timeout,
     sendTimeout: timeout,
     receiveTimeout: timeout,
-  ));
+  ))
+    ..httpClientAdapter = AppHttpClientAdapter.plain();
 
   static final _logger = Logger(printer: SimplePrinter());
 

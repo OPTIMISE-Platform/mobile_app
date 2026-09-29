@@ -22,6 +22,7 @@ import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 
 const LOG_PREFIX = "MGW-RESTRICTED-API-SERVICE";
 
@@ -56,7 +57,7 @@ class MgwService {
     sendTimeout: const Duration(milliseconds: 5000),
     receiveTimeout: const Duration(milliseconds: 5000),
     ),
-  );
+  )..httpClientAdapter = AppHttpClientAdapter.plain();
 
 
   MgwService(String host, bool authenticate) {

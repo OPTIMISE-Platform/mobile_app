@@ -21,6 +21,7 @@ import 'package:mobile_app/services/mgw/advertisements.dart';
 import 'package:mobile_app/services/mgw/api.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 
 const LOG_PREFIX = "MGW-REACHABILITY";
 
@@ -73,7 +74,8 @@ class MgwReachability {
     receiveTimeout: probeTimeout,
     followRedirects: false,
     validateStatus: (_) => true,
-  ));
+  ))
+    ..httpClientAdapter = AppHttpClientAdapter.plain();
 
   static final _logger = Logger(printer: SimplePrinter());
 

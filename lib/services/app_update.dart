@@ -27,6 +27,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/display_time.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
@@ -137,7 +138,8 @@ class AppUpdater {
           receiveTimeout: const Duration(milliseconds: 5000),
           headers: githubHeaders))
         ..interceptors.add(DioCacheInterceptor(options: options))
-        ..interceptors.add(ApiAvailableInterceptor());
+        ..interceptors.add(ApiAvailableInterceptor())
+        ..httpClientAdapter = AppHttpClientAdapter.plain();
 
       Map decoded;
       if (Settings.getPreReleaseMode()){

@@ -44,6 +44,12 @@ class AppHttpClientAdapter implements HttpClientAdapter {
     );
   }
 
+  /// dio's own client settings (3 s idle timeout, no per-host limit), for the
+  /// hand-built Dio instances that only need the test seam.
+  AppHttpClientAdapter.plain() {
+    _adapter = IOHttpClientAdapter();
+  }
+
   @override
   void close({bool force = false}) {
     _adapter.close(force: force);

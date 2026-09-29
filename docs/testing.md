@@ -115,7 +115,7 @@ All are `@visibleForTesting` and never set by production code.
 
 | Hook | Effect |
 |---|---|
-| `AppHttpClientAdapter.testOverride` (`lib/shared/http_client_adapter.dart`) | Answers every request of every Dio built by `DioFactory`, including instances created before it was set, because it is checked on each fetch |
+| `AppHttpClientAdapter.testOverride` (`lib/shared/http_client_adapter.dart`) | Answers every request of every Dio that carries an `AppHttpClientAdapter` (all built by `DioFactory` and the hand-built ones under Known gaps), including instances created before it was set, because it is checked on each fetch |
 | `Auth.headersOverride` (`lib/services/auth.dart`) | Returned by `getHeaders()` instead of running the OpenID refresh |
 | `useUtcForDisplayTime` (`lib/shared/display_time.dart`) | Makes `toDisplayTime()` return UTC instead of local time, so rendered times are the same on every host |
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
@@ -130,12 +130,16 @@ developer machine and CI.
 
 ## Known gaps
 
-- Five places build their own `Dio` instead of using `DioFactory`, so
-  `testOverride` does not reach them and a test there would go to the real
-  network: `lib/services/app_update.dart` and, under `lib/services/mgw/`,
+- Five places build their own `Dio` instead of using `DioFactory`:
+  `lib/services/app_update.dart` and, under `lib/services/mgw/`,
   `advertisements.dart`, `auth.dart`, `reachability.dart` and `restricted.dart`.
-  The app bar golden with default actions is not affected, because the update
-  check returns before its request on any platform but Android.
+  They carry `AppHttpClientAdapter.plain()`, so `testOverride` reaches them,
+  but they get neither DioFactory's interceptor set nor its memoization. Only
+  `MgwAdvertisements` has a test through the seam
+  (`http_client_adapter_seam_test.dart`); for the other four nothing fails if
+  the adapter line goes missing. The update check itself still cannot be
+  driven on the test host, because it returns before its request on any
+  platform but Android.
 - Text painted directly on a canvas without a font family renders as boxes,
   because the test binding's default font is not Roboto. Affects the value
   labels in `smart_service_pv_flow`; the golden still checks layout and colours.

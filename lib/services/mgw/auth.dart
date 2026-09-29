@@ -6,6 +6,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/shared/api_available_interceptor.dart';
+import 'package:mobile_app/shared/http_client_adapter.dart';
 
 
 @JsonSerializable()
@@ -65,7 +66,9 @@ class MgwAuth {
       sendTimeout: const Duration(milliseconds: 5000),
       receiveTimeout: const Duration(milliseconds: 5000),
     ),
-  )..interceptors.add(ApiAvailableInterceptor());
+  )
+    ..interceptors.add(ApiAvailableInterceptor())
+    ..httpClientAdapter = AppHttpClientAdapter.plain();
 
 
   Future<LoginResponse> Login(String? username, String? password) async {
