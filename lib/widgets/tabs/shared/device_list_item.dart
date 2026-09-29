@@ -18,13 +18,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:logger/logger.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
-import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -36,6 +33,7 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
+import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 
 class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;
@@ -57,10 +55,6 @@ class DeviceListItem extends StatefulWidget {
 }
 
 class _DeviceListItemState extends State<DeviceListItem> {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
   // Lives on the State, where it survives widget rebuilds by itself. On the
   // widget it needed a didUpdateWidget copy to carry it across, and made the
   // widget mutable.
@@ -105,85 +99,12 @@ class _DeviceListItemState extends State<DeviceListItem> {
                       onPressed: device.connection_state ==
                               DeviceConnectionStatus.offline
                           ? null
-                          : () async {
-                              if (device.connection_state ==
-                                  DeviceConnectionStatus.offline) {
-                                Toast.showToastNoContext("Device is offline");
-                                return;
-                              }
-                              if (element.transitioning) {
-                                return; // avoid double presses
-                              }
-                              final controllingFunction = functionConfigs[
-                                      dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
-                                  ?.getRelatedControllingFunction(
-                                      element.value);
-                              if (controllingFunction == null) {
-                                const err =
-                                    "Could not find related controlling function";
-                                Toast.showToastNoContext(err);
-                                _logger.e(err);
-                                return;
-                              }
-                              final controllingStates = element.controlsFor(
-                                  device.states, controllingFunction);
-                              if (controllingStates.isEmpty) {
-                                const err =
-                                    "Found no controlling service, check device type!";
-                                Toast.showToastNoContext(err);
-                                _logger.e(err);
-                                return;
-                              }
-                              if (controllingStates.length > 1) {
-                                const err =
-                                    "Found more than one controlling service, check device type!";
-                                Toast.showToastNoContext(err);
-                                _logger.e(err);
-                                return;
-                              }
-                              element.transitioning = true;
-                              widget._device.notifyStateChanged();
-                              final List<DeviceCommandResponse> responses = [];
-                              if (!await DeviceCommandsService
-                                  .runCommandsSecurely(
-                                      [controllingStates.first.toCommand()],
-                                      responses)) {
-                                element.transitioning = false;
-                                widget._device.notifyStateChanged();
-                                return;
-                              }
-                              assert(responses.length == 1);
-                              if (responses[0].status_code != 200) {
-                                final err =
-                                    "Error running command: ${responses[0].message}";
-                                Toast.showToastNoContext(err);
-                                _logger.e(err);
-                                return;
-                              }
-                              responses.clear();
-                              if (!await DeviceCommandsService
-                                  .runCommandsSecurely(
-                                      [element.toCommand()],
-                                      responses,
-                                      false)) {
-                                element.transitioning = false;
-                                widget._device.notifyStateChanged();
-                                return;
-                              }
-                              assert(responses.length == 1);
-                              if (responses[0].status_code != 200) {
-                                final err =
-                                    "Error running command: ${responses[0].message}";
-                                Toast.showToastNoContext(err);
-                                element.transitioning = false;
-                                widget._device.notifyStateChanged();
-                                _logger.e(err);
-                                return;
-                              }
-                              element.value = responses[0].message[0];
-                              element.transitioning = false;
-                              widget._device.notifyStateChanged();
-                            },
+                          : () => toggleDeviceState(
+                                connectionStatus: device.connection_state,
+                                measurement: element,
+                                states: device.states,
+                                notifyEntity: device.notifyStateChanged,
+                              ),
                     ),
         ));
       });

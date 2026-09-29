@@ -21,7 +21,6 @@ import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
-import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
@@ -56,38 +55,13 @@ Future<void> performDeviceStateAction({
     Toast.showToastNoContext("Device is offline");
     return;
   }
-  FunctionConfig? functionConfig;
-  PlatformFunction? function;
   if (!element.isControlling) {
-    functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
-    function = AppState().platformFunctions[functionConfig.getRelatedControllingFunction(element.value)];
-
-    final controllingFunction = functionConfig.getRelatedControllingFunction(element.value);
-    if (controllingFunction == null) {
-      const err = "Could not find related controlling function";
-      Toast.showToastNoContext(err);
-      _logger.e(err);
-      return;
-    }
-    final controllingStates = element.controlsFor(states, controllingFunction);
-    if (controllingStates.isEmpty) {
-      const err = "Found no controlling service, check device type!";
-      Toast.showToastNoContext(err);
-      _logger.e(err);
-      return;
-    }
-    if (controllingStates.length > 1) {
-      const err = "Found more than one controlling service, check device type!";
-      Toast.showToastNoContext(err);
-      _logger.e(err);
-      return;
-    }
-    element = controllingStates.first;
-    functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
-  } else {
-    functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
-    function = AppState().platformFunctions[element.functionId];
+    final control = resolveControllingState(element, states);
+    if (control == null) return;
+    element = control;
   }
+  final functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
+  final function = AppState().platformFunctions[element.functionId];
 
   if (function == null) {
     const err = "Function not found";
@@ -153,7 +127,7 @@ Future<void> performDeviceStateAction({
             child: const Text('Cancel'),
             onPressed: () => Navigator.pop(context),
           ),
-          TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, functionConfig!.getConfiguredValue())),
+          TextButton(child: const Text('OK'), onPressed: () => Navigator.pop(context, functionConfig.getConfiguredValue())),
         ],
       ),
     );
@@ -205,4 +179,90 @@ Future<void> performDeviceStateAction({
     commandCallbacks[i].callback(responses[i]);
   }
   notifyEntity();
+}
+
+/// The controlling state that acts on the readable [measurement] given its
+/// current value, among all [states] of its device or group. Null, after a
+/// toast, when there is none or more than one.
+DeviceState? resolveControllingState(DeviceState measurement, List<DeviceState> states) {
+  final functionConfig = functionConfigs[measurement.functionId] ?? FunctionConfigDefault(measurement.functionId);
+  final controllingFunction = functionConfig.getRelatedControllingFunction(measurement.value);
+  if (controllingFunction == null) {
+    const err = "Could not find related controlling function";
+    Toast.showToastNoContext(err);
+    _logger.e(err);
+    return null;
+  }
+  final controllingStates = measurement.controlsFor(states, controllingFunction);
+  if (controllingStates.isEmpty) {
+    const err = "Found no controlling service, check device type!";
+    Toast.showToastNoContext(err);
+    _logger.e(err);
+    return null;
+  }
+  if (controllingStates.length > 1) {
+    const err = "Found more than one controlling service, check device type!";
+    Toast.showToastNoContext(err);
+    _logger.e(err);
+    return null;
+  }
+  return controllingStates.first;
+}
+
+/// Toggles an on/off [measurement] through its controlling state, then reads
+/// the measurement back. Unlike [performDeviceStateAction] it asks for no input,
+/// refreshes only [measurement] (the one value a device list row shows) and
+/// toasts a failed read-back with the backend's message.
+///
+/// [measurement] is transitioning from the command until this returns, on
+/// every path.
+Future<void> toggleDeviceState({
+  required DeviceConnectionStatus? connectionStatus,
+  required DeviceState measurement,
+  required List<DeviceState> states,
+  required VoidCallback notifyEntity,
+}) async {
+  if (connectionStatus == DeviceConnectionStatus.offline) {
+    Toast.showToastNoContext("Device is offline");
+    return;
+  }
+  // No await between this check and setting the flag below, so a second press
+  // cannot slip in between.
+  if (measurement.transitioning) {
+    return; // avoid double presses
+  }
+  final control = resolveControllingState(measurement, states);
+  if (control == null) return;
+
+  measurement.transitioning = true;
+  notifyEntity();
+  try {
+    final List<DeviceCommandResponse> responses = [];
+    if (!await DeviceCommandsService.runCommandsSecurely([control.toCommand()], responses)) {
+      return;
+    }
+    assert(responses.length == 1);
+    if (responses[0].status_code != 200) {
+      final err = "Error running command: ${responses[0].message}";
+      Toast.showToastNoContext(err);
+      _logger.e(err);
+      return;
+    }
+    responses.clear();
+    if (!await DeviceCommandsService.runCommandsSecurely([measurement.toCommand()], responses, false)) {
+      return;
+    }
+    assert(responses.length == 1);
+    if (responses[0].status_code != 200) {
+      final err = "Error running command: ${responses[0].message}";
+      Toast.showToastNoContext(err);
+      _logger.e(err);
+      return;
+    }
+    final message = responses[0].message;
+    measurement.value = message is List && message.length == 1 ? message[0] : message;
+  } finally {
+    measurement.transitioning = false;
+    notifyEntity();
+  }
 }
