@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:math';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart.dart';
@@ -27,16 +29,20 @@ class SmSeStackedBarChart extends SmSeBarChart {
   int touchedIndex = -1;
   List<dynamic> values = [];
 
-  bool maximized = false;
+  // One legend row at text scale 1: the 16px Indicator plus the 4px gap. Larger
+  // text makes rows taller; the chart area gives way instead of overflowing.
+  static const _legendRowHeight = 20.0;
 
   @override
   setPreview(bool enabled) {
     preview = enabled;
-    if (enabled || !maximized) {
+    if (enabled) {
       height = 7.0;
-      if (!enabled) height++;
     } else {
-      height = 8.0 + (titles.length * .5);
+      // The chart box is 8 units minus Spacing.md; the legend gets that
+      // margin plus whatever the extra units add.
+      final legendOverflow = titles.length * _legendRowHeight - Spacing.md;
+      height = 8.0 + max(legendOverflow, 0) / heightUnit;
     }
   }
 
@@ -45,7 +51,7 @@ class SmSeStackedBarChart extends SmSeBarChart {
     return StatefulBuilder(builder: (context, setState) {
       final List<Widget> legendWidgets = [];
 
-      if (!preview && maximized) {
+      if (!preview) {
         for (int i = 0; i < titles.length; i++) {
           legendWidgets.addAll([
             GestureDetector(
@@ -69,9 +75,8 @@ class SmSeStackedBarChart extends SmSeBarChart {
 
       final Widget w = barGroups.isEmpty
           ? const Center(child: Text("No Data"))
-          : Column(children: [
-              Container(
-                  height: 8 * heightUnit - Spacing.md,
+          : LayoutBuilder(builder: (context, constraints) => Column(children: [
+              Expanded(child: Container(
                   padding: const EdgeInsets.only(
                       top: Spacing.md, right: Spacing.md, left: Spacing.xs, bottom: Spacing.xs),
                   child: gestureDetector(
@@ -100,27 +105,18 @@ class SmSeStackedBarChart extends SmSeBarChart {
                           barTouchData: BarTouchData(enabled: false)),
                       swapAnimationDuration: Duration.zero,
                     ),
-                  )),
-              Expanded(
-                  child: Stack(children: [
-                Container(
-                  constraints: BoxConstraints(minHeight: 12, minWidth: MediaQuery.of(context).size.width),
-                  child: Column(children: legendWidgets),
-                ),
-                preview
-                    ? const SizedBox.shrink()
-                    : Positioned(
-                        bottom: 4,
-                        right: 12,
-                        child: IconButton(
-                            onPressed: () => setState(() {
-                                  maximized = !maximized;
-                                  setPreview(preview);
-                                  redrawDashboard(context);
-                                }),
-                            icon: Icon(maximized ? Icons.zoom_in_map : Icons.zoom_out_map)))
-              ])),
-            ]);
+                  ))),
+              if (legendWidgets.isNotEmpty)
+                // Scrolls past half the widget instead of pushing the chart
+                // out: rows grow with the text scale.
+                ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: constraints.maxHeight / 2),
+                    child: SingleChildScrollView(
+                        child: Container(
+                            padding: const EdgeInsets.only(left: Spacing.md),
+                            width: double.infinity,
+                            child: Column(children: legendWidgets)))),
+            ]));
       return parentFlexible ? Expanded(child: w) : w;
     });
   }

@@ -15,6 +15,8 @@
  */
 
 
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_app/services/settings.dart';
 
@@ -444,19 +446,31 @@ class MyTheme {
 
   /// Colour of chart series [i], rotating through six hues.
   ///
-  /// The set is checked for colour-vision deficiency. Green, gold and pink
-  /// stay under 3:1 on white, so a series needs its name next to it, not the
-  /// colour alone. One set for both themes: colours are assigned while data
-  /// loads, where no theme is at hand.
+  /// The set is checked for colour-vision deficiency, and every colour holds
+  /// at least 3:1 on #ffffff, #f5f5f5, #0a0a0a and #171717 (the light and dark
+  /// scaffold and card surfaces). One set for both themes: colours are
+  /// assigned while data loads, where no theme is at hand.
   static Color getSomeColor(int i) {
     const List<Color> colors = [
-      Color(0xFF2a78d6),
-      Color(0xFFeb6834),
-      Color(0xFF1baf7a),
-      Color(0xFFeda100),
-      Color(0xFFe87ba4),
-      Color(0xFF008300),
+      Color(0xFF2265b6),
+      Color(0xFFc25429),
+      Color(0xFF169668),
+      Color(0xFFbb7e00),
+      Color(0xFF974e69),
+      Color(0xFF007600),
     ];
     return colors[i % colors.length];
+  }
+
+  /// Whichever of [a] and [b] has the higher WCAG contrast against
+  /// [background]; [a] on a tie. For text drawn on a series colour.
+  static Color readableOn(Color background, Color a, Color b) {
+    double ratio(Color c) {
+      final l1 = c.computeLuminance();
+      final l2 = background.computeLuminance();
+      return (max(l1, l2) + 0.05) / (min(l1, l2) + 0.05);
+    }
+
+    return ratio(b) > ratio(a) ? b : a;
   }
 }

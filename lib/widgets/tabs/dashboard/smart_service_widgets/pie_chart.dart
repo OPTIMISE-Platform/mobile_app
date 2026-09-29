@@ -211,15 +211,19 @@ class SmSePieChart extends SmSeRequest {
       if (value > 0) {
         tmpActiveSections.add(e.key);
       }
+      final color = MyTheme.getSomeColor(e.key + colorOffset);
       return PieChartSectionData(
         title: (e.value).toStringAsFixed(precision),
         radius: radius,
         titleStyle: TextStyle(
           fontSize: fontSize,
           overflow: TextOverflow.clip,
+          // Pure black/white: the theme's own text colours fall to 4.3:1 on the
+          // orange slice, black and white hold 4.5:1 on all six.
+          color: MyTheme.readableOn(color, Colors.black, Colors.white),
         ),
         value: value,
-        color: MyTheme.getSomeColor(e.key + colorOffset),
+        color: color,
       );
     }).where((element) => element.value > 0));
     _active_sections.clear();

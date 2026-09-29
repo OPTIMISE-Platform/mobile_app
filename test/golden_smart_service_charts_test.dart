@@ -21,6 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/widgets/shared/indicator.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
 
@@ -162,6 +163,11 @@ void main() {
           "titles": ["Solar", "Grid"],
         },
       }, dark: dark);
+
+      // The legend names the series without a tap on the zoom button.
+      expect(find.byType(Indicator), findsNWidgets(2));
+      expect(find.text("Solar"), findsOneWidget);
+      expect(find.text("Grid"), findsOneWidget);
 
       await renderWidget(
         tester,

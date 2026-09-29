@@ -58,8 +58,11 @@ card tone; a hairline sits under the whole header and above the navigation bar.
 
 `MyTheme.getSomeColor(i)` rotates through six hues checked for colour-vision
 deficiency. One set serves both themes because series colours are assigned while
-data loads. Green, gold and pink stay under 3:1 on white, so a series needs its
-name next to it (legend or label), never the colour alone.
+data loads. Every hue holds at least 3:1 on #ffffff, #f5f5f5, #0a0a0a and
+#171717 (`test/chart_palette_test.dart`); other surfaces are not covered. A
+series still gets its name next to it (legend or label), never the colour alone.
+Text drawn on a series colour (pie slice values) is black or white, whichever
+contrasts more.
 
 ## Spacing
 
