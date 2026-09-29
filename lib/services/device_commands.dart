@@ -236,9 +236,19 @@ class DeviceCommandsService {
       return await DeviceCommandCloud().runCommands(commands, preferEventValue);
     } on DioException catch (e) {
       _logger.e("Cant run cloud commands :${e.message}");
-      return List<DeviceCommandResponse>.generate(commands.length,
-          (index) => DeviceCommandResponse(502, e.toString()));
+      final message = _platformFailureMessage(e);
+      return List<DeviceCommandResponse>.generate(
+          commands.length, (index) => DeviceCommandResponse(502, message));
     }
+  }
+
+  /// A short reason for the widgets' toast: the shared offline message when
+  /// the platform could not be reached, else what it answered.
+  static String _platformFailureMessage(DioException e) {
+    if (ErrorReporter.isOffline(e)) return ErrorReporter.offlineMessage;
+    final status = e.response?.statusCode;
+    if (status != null) return "platform answered $status";
+    return e.message ?? e.type.name;
   }
 
   /// Writes [value] to the [indices] it answers. A reply shorter than the

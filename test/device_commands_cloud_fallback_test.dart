@@ -24,6 +24,8 @@ import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_commands.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
@@ -120,8 +122,7 @@ void main() {
         reason: "a failed platform batch is not sent again");
     expect(result, hasLength(1));
     expect(result.single.status_code, 502);
-    expect(result.single.message, allOf(isA<String>(), contains("500")),
-        reason: "the DioException's text, naming the status");
+    expect(result.single.message, "platform answered 500");
   });
 
   test("a platform 513 is final", () async {
@@ -394,4 +395,32 @@ void main() {
     }
   });
 
+  test("a platform that cannot be reached is answered with the offline message",
+      () async {
+    backend.failures["POST $_platformBatch"] = DioExceptionType.connectionError;
+
+    final result =
+        await DeviceCommandsService.runCommands([platformCommand("A")]);
+
+    expect(requestsTo("POST", _platformBatch), hasLength(1));
+    expect(result.single.status_code, 502);
+    expect(result.single.message, ErrorReporter.offlineMessage);
+  });
+
+  test("in local mode the platform batch is refused with the offline message",
+      () async {
+    await Settings.setLocalMode(true);
+    addTearDown(() => Settings.setLocalMode(false));
+    backend.serveJson("POST", _platformBatch, 200, [
+      {"status_code": 200, "message": "ok"}
+    ]);
+
+    final result =
+        await DeviceCommandsService.runCommands([platformCommand("A")]);
+
+    expect(requestsTo("POST", _platformBatch), isEmpty,
+        reason: "the availability interceptor rejects before the adapter");
+    expect(result.single.status_code, 502);
+    expect(result.single.message, ErrorReporter.offlineMessage);
+  });
 }
