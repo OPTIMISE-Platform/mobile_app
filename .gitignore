@@ -50,9 +50,5 @@ app.*.map.json
 
 .env
 
-ios/Runner.xcodeproj
-ios/Runner.xcodeproj/*
-ios/Runner.xcworkspace
-
 # FVM Version Cache
 .fvm/
