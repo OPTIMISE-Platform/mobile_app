@@ -74,6 +74,11 @@ class FakeBackend implements HttpClientAdapter {
   /// before being answered, for routes registered with [serveJson].
   final Map<String, Completer<void>> holds = {};
 
+  /// Requests to a `"METHOD path"` key listed here fail with a [DioException]
+  /// of that type instead of being answered, after any [holds] entry, e.g.
+  /// to stand in for a timeout.
+  final Map<String, DioExceptionType> failures = {};
+
   @override
   Future<ResponseBody> fetch(RequestOptions options,
       Stream<Uint8List>? requestStream, Future<void>? cancelFuture) async {
@@ -83,6 +88,10 @@ class FakeBackend implements HttpClientAdapter {
 
     final routeHold = holds[key];
     if (routeHold != null) await routeHold.future;
+    final failure = failures[key];
+    if (failure != null) {
+      throw DioException(requestOptions: options, type: failure);
+    }
     final route = _routes[key];
     if (route != null) {
       return _respond(route.status, route.body, route.contentType);

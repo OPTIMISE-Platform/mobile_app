@@ -20,10 +20,12 @@ import 'package:dio/dio.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/mgw/core_manager.dart';
 import 'package:mobile_app/services/mgw/endpoint.dart';
+import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/device_command_response.dart';
@@ -36,6 +38,9 @@ import '../shared/isar.dart';
 
 const commandUrlPrefix = "/commands/batch?timeout=10s&prefer_event_value=";
 const LOG_PREFIX = "DEVICE-COMMAND";
+
+/// device-command's status for a command the gateway leaves to the platform.
+const leftToPlatformStatus = 513;
 
 class DeviceCommandPath {
   late MgwCoreService mgwCoreService;
@@ -88,7 +93,7 @@ class DeviceCommandPath {
   }
 
   Future<List<DeviceCommandResponse>> runCommands(
-      commands, preferEventValue) async {
+      List<DeviceCommand> commands, bool preferEventValue) async {
     _logger.d("$LOG_PREFIX: Run commands via exposed path");
     var endpoints = await getEndpoints();
     var endpoint = endpoints.first.location;
@@ -96,11 +101,24 @@ class DeviceCommandPath {
     final Response<dynamic> resp;
     try {
       resp = await mgwEndpointService.PostToExposedPath(path, commands);
-    } catch (_) {
+    } catch (e) {
       // No retry here: a command is not idempotent, and the caller already
       // falls back to the cloud. Dropping the cached location makes the next
       // command look it up again in case the module has moved.
       await _clearCachedEndpoints();
+      // A receive timeout means the gateway may still run the batch. A control
+      // is not idempotent, so it is answered here rather than handed to the
+      // platform; a read is, so it goes on like a 513.
+      if (e is Failure && e.errorCode == ErrorCode.RECEIVE_TIMEOUT) {
+        return [
+          for (final command in commands)
+            command.function_id.startsWith(controllingFunctionPrefix)
+                ? DeviceCommandResponse(
+                    502, "gateway took the command but did not answer")
+                : DeviceCommandResponse(
+                    leftToPlatformStatus, "gateway did not answer")
+        ];
+      }
       rethrow;
     }
     List<DeviceCommandResponse> commandResponses = [];
@@ -143,37 +161,47 @@ class DeviceCommandsService {
   static Future<List<DeviceCommandResponse>> runCommands(
       List<DeviceCommand> commands,
       [bool preferEventValue = true]) async {
-    final Map<Network?, List<DeviceCommand>> map = {};
-    commands.forEach((e) {
+    // Groups hold indices into [commands], so every answer lands at the index
+    // of the command it belongs to, even if the same command is listed twice.
+    final Map<Network?, List<int>> map = {};
+    for (int i = 0; i < commands.length; i++) {
+      final e = commands[i];
       if (e.deviceInstance != null || e.device_id != null) {
-        _insert(map, e.deviceInstance?.network, e, <DeviceCommand>[]);
+        _insert(map, e.deviceInstance?.network, i, <int>[]);
       } else if (e.deviceGroup != null || e.group_id != null) {
-        _insert(map, e.deviceGroup?.network, e, <DeviceCommand>[]);
+        _insert(map, e.deviceGroup?.network, i, <int>[]);
       }
-    });
+    }
 
     final List<Future> futures = [];
     final List<DeviceCommandResponse?> resp =
         List.generate(commands.length, (index) => null);
 
-    final List<DeviceCommand> cloudRetries = [];
+    // Indices of gateway commands the platform answers instead.
+    final List<int> cloudRetries = [];
 
     map.entries.forEach((network) {
-      final host = network.key?.localGatewayHosts?.first;
-      futures.add(_runCommands(network.value, host == null,
-              host ?? "", preferEventValue)
+      final indices = network.value;
+      final group = [for (final i in indices) commands[i]];
+      final host = network.key?.localGatewayHosts?.firstOrNull;
+      if (host == null) {
+        // A platform answer is final, 513 included: a command is never sent
+        // twice.
+        futures.add(_runOnPlatform(group, preferEventValue)
+            .then((value) => _assign(resp, indices, value)));
+        return;
+      }
+      futures.add(DeviceCommandPath(host)
+          .runCommands(group, preferEventValue)
           .onError((_, __) {
-        cloudRetries.addAll(network.value);
-        return [];
+        cloudRetries.addAll(indices);
+        return <DeviceCommandResponse>[];
       }).then((value) {
-        if (value.isEmpty) {
-          return;
-        }
-        for (int i = 0; i < network.value.length; i++) {
-          if (value[i].status_code != 513) {
-            resp[commands.indexOf(network.value[i])] = value[i];
+        for (int i = 0; i < indices.length && i < value.length; i++) {
+          if (value[i].status_code != leftToPlatformStatus) {
+            resp[indices[i]] = value[i];
           } else {
-            cloudRetries.add(network.value[i]);
+            cloudRetries.add(indices[i]);
           }
         }
       }));
@@ -181,17 +209,9 @@ class DeviceCommandsService {
     final DateTime start = DateTime.now();
     await Future.wait(futures);
     if (cloudRetries.isNotEmpty) {
-      List<DeviceCommandResponse> retryRes;
-      try {
-        retryRes = await _runCommands(cloudRetries, true, "", preferEventValue);
-      } on DioException catch (e) {
-        _logger.e("Cant run cloud commands :${e.message}");
-        retryRes = List<DeviceCommandResponse>.generate(cloudRetries.length,
-            (index) => DeviceCommandResponse(502, e.toString()));
-      }
-      for (int i = 0; i < retryRes.length; i++) {
-        resp[commands.indexOf(cloudRetries[i])] = retryRes[i];
-      }
+      final retryRes = await _runOnPlatform(
+          [for (final i in cloudRetries) commands[i]], preferEventValue);
+      _assign(resp, cloudRetries, retryRes);
     }
     _logger.d("runCommands ${DateTime.now().difference(start)}");
     return resp
@@ -199,16 +219,27 @@ class DeviceCommandsService {
         .toList();
   }
 
-  static Future<List<DeviceCommandResponse>> _runCommands(
-      List<DeviceCommand> commands,
-      bool sendToCloud,
-      String host,
-      bool preferEventValue) async {
-    if (sendToCloud) {
-      return DeviceCommandCloud().runCommands(commands, preferEventValue);
+  /// Sends [commands] to the platform in one batch. A failed request answers
+  /// 502 for each command rather than being repeated: a command is not
+  /// idempotent.
+  static Future<List<DeviceCommandResponse>> _runOnPlatform(
+      List<DeviceCommand> commands, bool preferEventValue) async {
+    try {
+      return await DeviceCommandCloud().runCommands(commands, preferEventValue);
+    } on DioException catch (e) {
+      _logger.e("Cant run cloud commands :${e.message}");
+      return List<DeviceCommandResponse>.generate(commands.length,
+          (index) => DeviceCommandResponse(502, e.toString()));
     }
+  }
 
-    return DeviceCommandPath(host).runCommands(commands, preferEventValue);
+  /// Writes [value] to the [indices] it answers. A reply shorter than the
+  /// batch leaves the rest null, which [runCommands] reports as 502.
+  static void _assign(List<DeviceCommandResponse?> resp, List<int> indices,
+      List<DeviceCommandResponse> value) {
+    for (int i = 0; i < indices.length && i < value.length; i++) {
+      resp[indices[i]] = value[i];
+    }
   }
 
   /// Fills the responses list and returns whether that succeeded. A failure is
