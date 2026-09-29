@@ -74,6 +74,8 @@ class Settings {
 
   static const _favoritesMovedKey = "favorites_moved_off_cache";
 
+  static const _deviceGroupsCachedWithAspectListsKey = "device_groups_cached_with_aspect_lists";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -442,5 +444,17 @@ class Settings {
   static Future<void> setFavoritesMoved(bool value) {
     checkInit();
     return _box!.put(_favoritesMovedKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Whether the cached device groups were fetched by a version that keeps the
+  /// criteria's aspect lists; rows from an older one lack them.
+  static bool getDeviceGroupsCachedWithAspectLists() {
+    checkInit();
+    return _box!.get(_deviceGroupsCachedWithAspectListsKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setDeviceGroupsCachedWithAspectLists(bool value) {
+    checkInit();
+    return _box!.put(_deviceGroupsCachedWithAspectListsKey, value.toString()).then((v) => _box?.flush());
   }
 }

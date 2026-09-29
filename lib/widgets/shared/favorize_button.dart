@@ -88,7 +88,15 @@ class FavorizeButton extends StatelessWidget {
         await Settings.setFavoriteGroupIds(ids);
         _group.favorite = next;
         await isar?.writeTxn(() async {
-          await isar!.deviceGroups.put(_group);
+          if (!_group.criteriaMayPredateAspectLists) {
+            await isar!.deviceGroups.put(_group);
+            return;
+          }
+          // Only the mirror: this object's criteria may be older than the row.
+          final row = await isar!.deviceGroups.get(_group.isarId);
+          if (row == null) return;
+          row.favorite = next;
+          await isar!.deviceGroups.put(row);
         });
         _group.notifyStateChanged();
       }

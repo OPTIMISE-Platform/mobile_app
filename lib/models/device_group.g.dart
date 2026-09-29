@@ -1836,18 +1836,23 @@ const DeviceGroupCriteriaSchema = Schema(
       name: r'aspect_id',
       type: IsarType.string,
     ),
-    r'device_class_id': PropertySchema(
+    r'aspect_ids': PropertySchema(
       id: 1,
+      name: r'aspect_ids',
+      type: IsarType.stringList,
+    ),
+    r'device_class_id': PropertySchema(
+      id: 2,
       name: r'device_class_id',
       type: IsarType.string,
     ),
     r'function_id': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'function_id',
       type: IsarType.string,
     ),
     r'interaction': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'interaction',
       type: IsarType.string,
     ),
@@ -1866,6 +1871,18 @@ int _deviceGroupCriteriaEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.aspect_id.length * 3;
+  {
+    final list = object.aspect_ids;
+    if (list != null) {
+      bytesCount += 3 + list.length * 3;
+      {
+        for (var i = 0; i < list.length; i++) {
+          final value = list[i];
+          bytesCount += value.length * 3;
+        }
+      }
+    }
+  }
   bytesCount += 3 + object.device_class_id.length * 3;
   bytesCount += 3 + object.function_id.length * 3;
   bytesCount += 3 + object.interaction.length * 3;
@@ -1879,9 +1896,10 @@ void _deviceGroupCriteriaSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.aspect_id);
-  writer.writeString(offsets[1], object.device_class_id);
-  writer.writeString(offsets[2], object.function_id);
-  writer.writeString(offsets[3], object.interaction);
+  writer.writeStringList(offsets[1], object.aspect_ids);
+  writer.writeString(offsets[2], object.device_class_id);
+  writer.writeString(offsets[3], object.function_id);
+  writer.writeString(offsets[4], object.interaction);
 }
 
 DeviceGroupCriteria _deviceGroupCriteriaDeserialize(
@@ -1892,9 +1910,10 @@ DeviceGroupCriteria _deviceGroupCriteriaDeserialize(
 ) {
   final object = DeviceGroupCriteria();
   object.aspect_id = reader.readString(offsets[0]);
-  object.device_class_id = reader.readString(offsets[1]);
-  object.function_id = reader.readString(offsets[2]);
-  object.interaction = reader.readString(offsets[3]);
+  object.aspect_ids = reader.readStringList(offsets[1]);
+  object.device_class_id = reader.readString(offsets[2]);
+  object.function_id = reader.readString(offsets[3]);
+  object.interaction = reader.readString(offsets[4]);
   return object;
 }
 
@@ -1908,10 +1927,12 @@ P _deviceGroupCriteriaDeserializeProp<P>(
     case 0:
       return (reader.readString(offset)) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset)) as P;
     case 2:
       return (reader.readString(offset)) as P;
     case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2062,6 +2083,218 @@ extension DeviceGroupCriteriaQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(
         FilterCondition.greaterThan(property: r'aspect_id', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'aspect_ids'),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'aspect_ids'),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementEqualTo(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'aspect_ids',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'aspect_ids',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'aspect_ids',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'aspect_ids', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'aspect_ids', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'aspect_ids', length, true, length, true);
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'aspect_ids', 0, true, 0, true);
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'aspect_ids', 0, false, 999999, true);
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsLengthLessThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'aspect_ids', 0, true, length, include);
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsLengthGreaterThan(int length, {bool include = false}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(r'aspect_ids', length, include, 999999, true);
+    });
+  }
+
+  QueryBuilder<DeviceGroupCriteria, DeviceGroupCriteria, QAfterFilterCondition>
+  aspect_idsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'aspect_ids',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
       );
     });
   }
@@ -2531,7 +2764,10 @@ DeviceGroupCriteria _$DeviceGroupCriteriaFromJson(Map<String, dynamic> json) =>
       ..aspect_id = json['aspect_id'] as String
       ..device_class_id = json['device_class_id'] as String
       ..function_id = json['function_id'] as String
-      ..interaction = json['interaction'] as String;
+      ..interaction = json['interaction'] as String
+      ..aspect_ids = (json['aspect_ids'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList();
 
 Map<String, dynamic> _$DeviceGroupCriteriaToJson(
   DeviceGroupCriteria instance,
@@ -2540,4 +2776,5 @@ Map<String, dynamic> _$DeviceGroupCriteriaToJson(
   'device_class_id': instance.device_class_id,
   'function_id': instance.function_id,
   'interaction': instance.interaction,
+  'aspect_ids': ?instance.aspect_ids,
 };

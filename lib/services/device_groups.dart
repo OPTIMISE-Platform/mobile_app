@@ -44,9 +44,13 @@ class DeviceGroupsService {
     final collection = isar?.deviceGroups;
 
     if (!forceBackend && isar != null && collection != null) {
-      return (await collection.where().sortByName().findAll())
-          .map((e) => e.initImage())
-          .toList();
+      final cached = await collection.where().sortByName().findAll();
+      if (!Settings.getDeviceGroupsCachedWithAspectLists()) {
+        for (final group in cached) {
+          group.criteriaMayPredateAspectLists = true;
+        }
+      }
+      return cached.map((e) => e.initImage()).toList();
     }
 
     String uri =
@@ -139,8 +143,17 @@ class DeviceGroupsService {
     return groupsRepo.map((e) => e.initImage()).toList(growable: false);
   }
 
-  static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group) async {
+  /// Applies [change] to [group] and saves it. A group whose cached criteria
+  /// may predate aspect lists is fetched fresh first and [change] applied to
+  /// that copy, so its stale criteria never reach the backend; if the fetch
+  /// fails, so does the save.
+  static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group, void Function(DeviceGroup group) change) async {
     _logger.d("Saving device group: ${group.id}");
+    change(group);
+    if (group.criteriaMayPredateAspectLists) {
+      group = await getDeviceGroup(group.id);
+      change(group);
+    }
 
     final uri =
         "${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/${group.id}?update-only-same-origin-attributes=$appOrigin";
@@ -171,6 +184,24 @@ class DeviceGroupsService {
     }
 
     return savedGroup;
+  }
+
+  /// One device group as [getDeviceGroups] reads it from the backend.
+  static Future<DeviceGroup> getDeviceGroup(String id) async {
+    final uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/device-groups/$id';
+    final headers = await Auth().getHeaders();
+    final dio = await DioFactory.create(DioConfig.standard);
+    final Response<Map<String, dynamic>> resp;
+    try {
+      resp = await dio.get<Map<String, dynamic>>(uri,
+          queryParameters: {"filter_generic_duplicate_criteria": "true"}, options: Options(headers: headers));
+    } on DioException catch (e) {
+      checkReadStatus(e, uri);
+      rethrow;
+    }
+    final data = resp.data;
+    if (data == null) throw UnexpectedStatusCodeException(resp.statusCode, "$uri returned no device group");
+    return DeviceGroup.fromJson(data);
   }
 
   static Future<DeviceGroup> createDeviceGroup(String name) async {

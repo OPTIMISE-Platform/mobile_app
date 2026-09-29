@@ -21,6 +21,7 @@ import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/shared/entity_image.dart';
@@ -114,13 +115,18 @@ class DeviceGroup {
         _logger.e("Function is unknown: ${criterion.function_id}");
         continue;
       }
+      // A combination row [a, b] demands one variable carrying both aspects, so
+      // it is its own value next to the single rows [a] and [b].
+      final aspectIds = criterion.effectiveAspects;
+      final aspectKey = aspectIdsKey(aspectIds);
       if (states.indexWhere((element) =>
               element.functionId == criterion.function_id &&
-              element.aspectId == criterion.aspect_id &&
+              element.aspectKey == aspectKey &&
               element.deviceClassId == criterion.device_class_id) ==
           -1) {
-        final state = DeviceState(null, null, null, criterion.function_id, criterion.aspect_id,
-            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null, null);
+        final state = DeviceState(null, null, null, criterion.function_id, null,
+            criterion.function_id.startsWith(controllingFunctionPrefix), id, criterion.device_class_id, null, null, null,
+            aspectIds: aspectIds);
         state.deviceGroup = this;
         states.add(state);
       }
@@ -160,7 +166,16 @@ class DeviceGroup {
 class DeviceGroupCriteria {
   String aspect_id = "", device_class_id = "", function_id = "", interaction = "";
 
+  /// Replaces the deprecated [aspect_id]; several aspects demand one variable
+  /// carrying all of them. Sent back exactly as read, absent when it was.
+  @JsonKey(includeIfNull: false)
+  List<String>? aspect_ids;
+
   DeviceGroupCriteria();
+
+  /// The aspects this criterion demands, sorted; see [effectiveAspectIds].
+  @ignore
+  List<String> get effectiveAspects => effectiveAspectIds(aspect_id, aspect_ids);
 
   factory DeviceGroupCriteria.fromJson(Map<String, dynamic> json) => _$DeviceGroupCriteriaFromJson(json);
 

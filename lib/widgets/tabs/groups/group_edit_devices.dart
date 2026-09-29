@@ -203,11 +203,16 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
   Widget _fab() {
     return FloatingActionButton.extended(
       onPressed: () async {
+        late final List<String> deviceIds;
+        late final List<DeviceGroupCriteria> criteria;
         await _m.protect(() async {
-          widget._group.device_ids = _selected.toList();
-          widget._group.criteria = _criteria;
+          deviceIds = _selected.toList();
+          criteria = _criteria;
         });
-        await DeviceGroupsService.saveDeviceGroup(widget._group);
+        await DeviceGroupsService.saveDeviceGroup(widget._group, (g) {
+          g.device_ids = deviceIds;
+          g.criteria = criteria;
+        });
         AppState().notifyListeners();
         if (_delegateOpen && mounted) Navigator.pop(context, true);
         if (!mounted) return;

@@ -245,9 +245,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   );
                 });
             if (newName == null) return;
-            deviceGroup.name = newName;
             try {
-              await DeviceGroupsService.saveDeviceGroup(deviceGroup);
+              await DeviceGroupsService.saveDeviceGroup(deviceGroup, (g) => g.name = newName);
               _notifyEntity();
             } catch (e, s) {
               ErrorReporter.log("Could not save the device group", e, s);

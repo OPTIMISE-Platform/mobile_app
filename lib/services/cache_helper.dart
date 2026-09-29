@@ -14,11 +14,13 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -265,6 +267,12 @@ class CacheHelper {
         await isar!.deviceGroups.putAll(deviceGroups);
       });
     }
+    // Before any further await, so a load in between does not flag fresh rows.
+    if (!Settings.getDeviceGroupsCachedWithAspectLists()) {
+      unawaited(Settings.setDeviceGroupsCachedWithAspectLists(true).then((_) {}, onError: (Object e, StackTrace s) {
+        ErrorReporter.log("Could not mark the device group cache as current", e, s);
+      }));
+    }
 
     await Settings.setCacheUpdated("deviceGroups");
     if (reschedule) {
@@ -273,8 +281,17 @@ class CacheHelper {
     return true;
   }
 
+  @visibleForTesting
+  static Future<bool> refreshDeviceGroupsNow() => _refreshDeviceGroups(Duration.zero, reschedule: false);
+
+  /// When the device group cache was last refreshed, for the daily refresh.
+  /// Rows cached before aspect lists count as never refreshed, so the first
+  /// start after the upgrade refetches them.
+  static DateTime? deviceGroupsRefreshedAt() =>
+      Settings.getDeviceGroupsCachedWithAspectLists() ? Settings.getCacheUpdated("deviceGroups") : null;
+
   static Future<void> _scheduleRefreshDeviceGroups() async {
-    final dt = Settings.getCacheUpdated("deviceGroups");
+    final dt = deviceGroupsRefreshedAt();
     if (dt == null) {
       await _refreshDeviceGroups(Duration.zero);
     } else {
