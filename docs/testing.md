@@ -122,7 +122,11 @@ All are `@visibleForTesting` and never set by production code.
 | `Auth.headersOverride` (`lib/services/auth.dart`) | Returned by `getHeaders()` instead of running the OpenID refresh |
 | `useUtcForDisplayTime` (`lib/shared/display_time.dart`) | Makes `toDisplayTime()` return UTC instead of local time, so rendered times are the same on every host |
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
-| `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP |
+| `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP; its `serveStale` argument is the stale-serving report of `docs/cache-freshness.md` |
+| `DeviceMixin.fetchDeviceClasses` / `readCachedDeviceClasses` (`lib/mixins/device_mixin.dart`) | Replace the device-class fetch and the read of its stored copy |
+| `CacheHelper.afterDeviceChunkForTest` (`lib/services/cache_helper.dart`) | Called after each chunk the device refresh writes, so a test can change the account between two chunks |
+| `CacheHelper.afterDevicePruneForTest` (`lib/services/cache_helper.dart`) | Called right after the device refresh prunes, before it marks the collection refreshed |
+| `Auth.cleanupForTest()` (`lib/services/auth.dart`) | Runs the logout cleanup without a signed-in client; the identity package's secure-storage channel (`plugins.concerti.io/openidconnect_secure_storage`) needs a mock handler |
 | `DeviceMixin.readCachedInactiveDeviceIds` (`lib/mixins/device_mixin.dart`) | Replaces the Isar query that seeds the inactive-device index, so the counters can be tested without the Isar container |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
