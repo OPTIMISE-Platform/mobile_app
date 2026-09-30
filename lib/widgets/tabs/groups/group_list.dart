@@ -15,6 +15,7 @@
  */
 
 import 'dart:async';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
@@ -80,7 +81,11 @@ class _GroupListState extends State<GroupList> with ResumeRefreshMixin {
         return;
       }
 
-      AppState().deviceGroups.add(await DeviceGroupsService.createDeviceGroup(newName!));
+      final epoch = AccountEpoch.current;
+      final created = await DeviceGroupsService.createDeviceGroup(newName!);
+      // Not into the list of an account signed in meanwhile.
+      if (epoch != AccountEpoch.current) return;
+      AppState().deviceGroups.add(created);
       _openGroupPage(AppState().deviceGroups.length - 1, parentState);
       AppState().notifyListeners();
     });

@@ -24,7 +24,7 @@ import 'package:mobile_app/shared/metadata_cache.dart';
 
 class _State extends ChangeNotifier with DeviceMixin {
   _State(this.backend) {
-    fetchDeviceTypes = (maxAge) async {
+    fetchDeviceTypes = (maxAge, {serveStale}) async {
       fetches.add(maxAge);
       // What the backend held when the request went out.
       final ids = backend;

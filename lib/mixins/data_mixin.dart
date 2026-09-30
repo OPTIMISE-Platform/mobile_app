@@ -25,6 +25,7 @@ import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/joined_load.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 
 mixin DataMixin on ChangeNotifier {
 
@@ -40,75 +41,110 @@ mixin DataMixin on ChangeNotifier {
   final Map<String, PlatformFunction> platformFunctions = {};
   final _platformFunctionsLoad = JoinedLoad();
 
-  Future<bool> loadAspects() => _aspectsLoad.run(_loadAspects);
+  Future<bool> loadAspects(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _aspectsLoad.run(() => _loadAspects(maxAge, serveStale, quiet));
 
-  Future<bool> _loadAspects() async {
+  Future<bool> _loadAspects(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     try {
       // Swap after the fetch: clearing first would leave the map visibly
       // empty for the whole request, clearing at all is what drops entries
       // deleted on the backend.
-      final fetched = await AspectsService.getAspects();
+      final fetched = await AspectsService.getAspects(
+          maxAge: maxAge, serveStale: serveStale);
       aspects.clear();
       for (final e in fetched) {
         aspects[e.id] = e;
       }
     } catch (e, s) {
-      ErrorReporter.report('Could not load aspects', e, s);
+      _reportLoadFailure('Could not load aspects', e, s, quiet);
       return false;
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadConcepts() => _conceptsLoad.run(_loadConcepts);
+  Future<bool> loadConcepts(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _conceptsLoad.run(() => _loadConcepts(maxAge, serveStale, quiet));
 
-  Future<bool> _loadConcepts() async {
+  Future<bool> _loadConcepts(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     try {
-      final fetched = await ConceptsService.getConcepts();
+      final fetched = await ConceptsService.getConcepts(
+          maxAge: maxAge, serveStale: serveStale);
       concepts.clear();
       for (final e in fetched) {
         concepts[e.id] = e;
       }
     } catch (e, s) {
-      ErrorReporter.report('Could not get concepts', e, s);
+      _reportLoadFailure('Could not get concepts', e, s, quiet);
       return false;
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadCharacteristics() => _characteristicsLoad.run(_loadCharacteristics);
+  Future<bool> loadCharacteristics(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _characteristicsLoad.run(() => _loadCharacteristics(maxAge, serveStale, quiet));
 
-  Future<bool> _loadCharacteristics() async {
+  Future<bool> _loadCharacteristics(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     try {
-      final fetched = await CharacteristicsService.getCharacteristics();
+      final fetched = await CharacteristicsService.getCharacteristics(
+          maxAge: maxAge, serveStale: serveStale);
       characteristics.clear();
       for (final e in fetched) {
         characteristics[e.id] = e;
       }
     } catch (e, s) {
-      ErrorReporter.report('Could not get characteristics', e, s);
+      _reportLoadFailure('Could not get characteristics', e, s, quiet);
       return false;
     }
     notifyListeners();
     return true;
   }
 
-  Future<bool> loadNestedFunctions() => _platformFunctionsLoad.run(_loadNestedFunctions);
+  Future<bool> loadNestedFunctions(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _platformFunctionsLoad.run(() => _loadNestedFunctions(maxAge, serveStale, quiet));
 
-  Future<bool> _loadNestedFunctions() async {
+  Future<bool> _loadNestedFunctions(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     try {
-      final fetched = await FunctionsService.getFunctions();
+      final fetched = await FunctionsService.getFunctions(
+          maxAge: maxAge, serveStale: serveStale);
       platformFunctions.clear();
       for (final e in fetched) {
         platformFunctions[e.id] = e;
       }
     } catch (e, s) {
-      ErrorReporter.report('Could not get nested functions', e, s);
+      _reportLoadFailure('Could not get nested functions', e, s, quiet);
       return false;
     }
     notifyListeners();
     return true;
+  }
+
+  /// [quiet] loads run in the background over data already on screen, so
+  /// their failure is logged only.
+  void _reportLoadFailure(
+      String message, Object e, StackTrace s, bool quiet) {
+    if (quiet) {
+      ErrorReporter.log(message, e, s);
+    } else {
+      ErrorReporter.report(message, e, s);
+    }
   }
 
   void clearData() {

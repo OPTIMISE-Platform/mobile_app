@@ -19,6 +19,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/cached_metadata.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -46,19 +47,32 @@ class MetadataCache {
   /// Returns the cached UTF-8 JSON bytes for [key] if present and younger than
   /// [maxAge], otherwise null.
   static Future<List<int>?> read(String key, Duration maxAge) async {
+    final entry = await readEntry(key);
+    if (entry == null || isStale(entry.storedAt, maxAge)) return null;
+    return entry.bytes;
+  }
+
+  /// Returns the cached bytes for [key] whatever their age, with the time they
+  /// were stored, or null when nothing usable is stored.
+  static Future<({List<int> bytes, DateTime storedAt})?> readEntry(
+      String key) async {
     final db = isar;
     if (db == null) return null;
     try {
       final entry = await db.cachedMetadatas.getByKey(key);
       if (entry == null) return null;
-      final age = DateTime.now().difference(entry.updatedAt);
-      // A negative age is an entry written under a clock that ran ahead; it
-      // would otherwise count as current even for maxAge zero.
-      if (age > maxAge || age.isNegative) return null;
-      return entry.bytes;
+      return (bytes: entry.bytes, storedAt: entry.updatedAt);
     } catch (_) {
       return null;
     }
+  }
+
+  /// Whether data stored at [storedAt] is older than [maxAge]. A time in the
+  /// future counts as stale: it was written under a clock that ran ahead and
+  /// would otherwise count as current even for maxAge zero.
+  static bool isStale(DateTime storedAt, Duration maxAge, [DateTime? now]) {
+    final age = (now ?? DateTime.now()).difference(storedAt);
+    return age > maxAge || age.isNegative;
   }
 
   /// Drops every cached entry so the next [read] misses and the caller
@@ -83,7 +97,10 @@ class MetadataCache {
     }
   }
 
-  static Future<void> write(String key, List<int> bytes) async {
+  /// Skipped when the account changed since [epoch], taken before the fetch.
+  /// Checked inside the transaction, so a clear queued after the change always
+  /// runs after the check.
+  static Future<void> write(String key, List<int> bytes, int epoch) async {
     final db = isar;
     if (db == null) return;
     try {
@@ -91,7 +108,11 @@ class MetadataCache {
         ..key = key
         ..bytes = bytes
         ..updatedAt = DateTime.now();
-      await db.writeTxn(() => db.cachedMetadatas.putByKey(entry));
+      await db.writeTxn(() async {
+        if (epoch == AccountEpoch.current) {
+          await db.cachedMetadatas.putByKey(entry);
+        }
+      });
     } catch (_) {
       // best-effort cache; ignore write failures
     }
@@ -124,16 +145,25 @@ const metadataMaxAge = Duration(days: 7);
 /// isolate, the `fromJson` build is chunked — neither blocks the UI isolate
 /// in one go.
 ///
-/// Pass `Duration.zero` to skip the cache and fetch. That keeps the stored copy
-/// intact if the fetch fails, which clearing the cache beforehand would not.
+/// With [serveStale] set, a stored entry of any age is returned instead of
+/// fetched, so only an empty cache blocks; [serveStale] then receives when the
+/// returned data was stored (the entry's time, or now after a fetch) so the
+/// caller can revalidate what is older than [maxAge].
+///
+/// `Duration.zero` always fetches, with or without [serveStale]. That keeps
+/// the stored copy intact if the fetch fails, which clearing the cache
+/// beforehand would not.
 Future<List<T>> loadMetadataCached<T>(
   String key,
   Future<List<dynamic>> Function() fetchRaw,
   T Function(Map<String, dynamic>) fromJson, {
   Duration maxAge = metadataMaxAge,
+  void Function(DateTime storedAt)? serveStale,
 }) async {
-  final bytes = await MetadataCache.read(key, maxAge);
-  if (bytes != null) {
+  final entry =
+      maxAge > Duration.zero ? await MetadataCache.readEntry(key) : null;
+  if (entry != null &&
+      (serveStale != null || !MetadataCache.isStale(entry.storedAt, maxAge))) {
     try {
       // convert() is one synchronous multi-MB parse and froze the UI for its
       // whole duration when it ran here (~800ms per blob, six blobs at every
@@ -141,10 +171,13 @@ Future<List<T>> loadMetadataCached<T>(
       // returns the decoded tree via Isolate.exit, i.e. without copying it
       // back — the copy-out concern in parseListChunked's doc applies to
       // constructed model objects, not to this plain JSON tree.
+      final bytes = entry.bytes;
       final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
       final decoded = await _decodeLimiter
           .withResource(() => compute(_decodeJsonListFromUtf8, data));
-      return await parseListChunked(decoded, fromJson);
+      final parsed = await parseListChunked(decoded, fromJson);
+      serveStale?.call(entry.storedAt);
+      return parsed;
     } catch (e) {
       // Corrupt cache, an incompatible shape, or a failed isolate spawn — all
       // recoverable by fetching, but logged rather than swallowed: a spawn
@@ -152,8 +185,12 @@ Future<List<T>> loadMetadataCached<T>(
       _logger.w("Cached metadata for $key unusable, fetching: $e");
     }
   }
+  final epoch = AccountEpoch.current;
   final raw = await fetchRaw();
+  final fetchedAt = DateTime.now();
   // JsonUtf8Encoder emits bytes directly (no giant intermediate String).
-  unawaited(MetadataCache.write(key, JsonUtf8Encoder().convert(raw)));
-  return parseListChunked(raw, fromJson);
+  unawaited(MetadataCache.write(key, JsonUtf8Encoder().convert(raw), epoch));
+  final parsed = await parseListChunked(raw, fromJson);
+  serveStale?.call(fetchedAt);
+  return parsed;
 }

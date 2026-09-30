@@ -83,7 +83,8 @@ void main() {
 
   tearDown(() {
     AppState().fetchDeviceTypes =
-        (maxAge) => DeviceTypesService.getDeviceTypes(null, maxAge);
+        (maxAge, {serveStale}) =>
+            DeviceTypesService.getDeviceTypes(null, maxAge, serveStale);
     resetAppStateForGolden();
     resetGoldenBackend();
     toasts.clear();
@@ -101,7 +102,7 @@ void main() {
   testWidgets("the Refresh Cache tile reports a failed device refresh",
       (tester) async {
     serveGoldenBackend(_backend(devicesFail: true));
-    AppState().fetchDeviceTypes = (maxAge) async => <DeviceType>[];
+    AppState().fetchDeviceTypes = (maxAge, {serveStale}) async => <DeviceType>[];
     await pumpGolden(tester, const Scaffold(body: RefreshCacheTile()),
         dark: false);
 

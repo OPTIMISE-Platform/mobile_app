@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/favorites_migration.dart';
@@ -277,7 +278,12 @@ class Auth extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Runs the logout cleanup without a signed-in client.
+  @visibleForTesting
+  Future<void> cleanupForTest() => _cleanup();
+
   Future<void> _cleanup() async {
+    AccountEpoch.advance();
     await CacheHelper.clearCache();
     await AppState().onLogout();
     _listenerRegistered = false;

@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:isar_community/isar.dart';
@@ -41,6 +42,7 @@ class DeviceGroupsService {
 
   static Future<List<Future<DeviceGroup>>> getDeviceGroups(
       {bool forceBackend = false}) async {
+    final epoch = AccountEpoch.current;
     final collection = isar?.deviceGroups;
 
     if (!forceBackend && isar != null && collection != null) {
@@ -118,7 +120,7 @@ class DeviceGroupsService {
     }
     await Future.wait(futures);
     if (isar != null && collection != null) {
-      await isar!.writeTxn(() async {
+      await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
         await applyFavoriteMirror(groupsRepo);
         await collection.putAll(groupsRepo);
       });
@@ -157,6 +159,7 @@ class DeviceGroupsService {
   /// fails, so does the save.
   static Future<DeviceGroup> saveDeviceGroup(DeviceGroup group, void Function(DeviceGroup group) change) async {
     _logger.d("Saving device group: ${group.id}");
+    final epoch = AccountEpoch.current;
     change(group);
     if (group.criteriaMayPredateAspectLists) {
       group = await getDeviceGroup(group.id);
@@ -186,9 +189,8 @@ class DeviceGroupsService {
     savedGroup.favorite = Settings.getFavoriteGroupIds().contains(savedGroup.id);
 
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.deviceGroups.put(savedGroup);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.deviceGroups.put(savedGroup));
     }
 
     return savedGroup;
@@ -213,6 +215,7 @@ class DeviceGroupsService {
   }
 
   static Future<DeviceGroup> createDeviceGroup(String name) async {
+    final epoch = AccountEpoch.current;
     String uri =
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/device-groups/';
 
@@ -229,9 +232,8 @@ class DeviceGroupsService {
     }
     final savedGroup = DeviceGroup.fromJson(resp.data);
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.deviceGroups.put(savedGroup);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.deviceGroups.put(savedGroup));
     }
 
     return savedGroup.initImage();

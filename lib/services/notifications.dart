@@ -17,6 +17,7 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/notification.dart' as app;
@@ -99,14 +100,15 @@ class NotificationsService {
     }
   }
 
-  /// Replaces the persisted set with [notifications]. The server is the source
-  /// of truth, so a successful fetch defines what is stored — entries deleted
-  /// on the backend disappear here too.
-  static Future<void> persist(List<app.Notification> notifications) async {
+  /// Replaces the persisted set with [notifications], fetched under [epoch].
+  /// The server is the source of truth, so a successful fetch defines what is
+  /// stored — entries deleted on the backend disappear here too.
+  static Future<void> persist(
+      List<app.Notification> notifications, int epoch) async {
     final db = isar;
     if (db == null) return;
     try {
-      await db.writeTxn(() async {
+      await AccountEpoch.writeIfCurrent(db, epoch, () async {
         await db.notifications.clear();
         await db.notifications.putAll(notifications);
       });

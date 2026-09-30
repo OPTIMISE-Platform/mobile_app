@@ -42,7 +42,8 @@ void main() {
 
   tearDown(() {
     AppState().fetchDeviceTypes =
-        (maxAge) => DeviceTypesService.getDeviceTypes(null, maxAge);
+        (maxAge, {serveStale}) =>
+            DeviceTypesService.getDeviceTypes(null, maxAge, serveStale);
     resetAppStateForGolden();
     resetGoldenBackend();
     toasts.clear();
@@ -66,7 +67,7 @@ void main() {
 
     var failTypes = false;
     Completer<void>? typesGate;
-    AppState().fetchDeviceTypes = (maxAge) async {
+    AppState().fetchDeviceTypes = (maxAge, {serveStale}) async {
       final gate = typesGate;
       if (gate != null) await gate.future;
       if (failTypes) throw Exception("device types unreachable");

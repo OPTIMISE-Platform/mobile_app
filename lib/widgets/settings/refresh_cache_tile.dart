@@ -35,14 +35,16 @@ class _RefreshCacheTileState extends State<RefreshCacheTile> {
   double? _progress;
 
   // Phase boundaries: clearing is quick, then the Isar-collection refresh,
-  // then the metadata reload (which fetches against the cleared cache).
+  // then the metadata reload (which fetches fresh).
   static const _afterClear = 0.05;
   static const _afterRefresh = 0.60;
 
   Future<void> _refresh() async {
     setState(() => _progress = 0);
     try {
-      await CacheHelper.clearCache();
+      // The metadata reload bypasses its cache instead, so a failed fetch
+      // keeps the stored copy.
+      await CacheHelper.clearCache(keepMetadata: true);
       _setProgress(_afterClear);
       final collectionsRefreshed = await CacheHelper.refreshCache(
           includeMetadata: false,

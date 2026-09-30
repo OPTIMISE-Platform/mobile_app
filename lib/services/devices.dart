@@ -18,6 +18,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
@@ -58,8 +59,10 @@ class DevicesService {
     DeviceSearchFilter filter,
     DeviceInstance? lastDevice, {
     bool forceBackend = false,
+    bool store = true,
   }) async {
     final start = DateTime.now();
+    final epoch = AccountEpoch.current;
     await initOptions();
 
     final collection = isar?.collection<DeviceInstance>();
@@ -123,8 +126,28 @@ class DevicesService {
       "Getting devices from remote DB took ${DateTime.now().difference(start)}",
     );
 
+    // Without [store] the caller stores and indexes the devices itself. The
+    // mirror is set inside the write, so a star tapped meanwhile is kept.
+    var mirrored = false;
+    if (store) {
+      if (isar != null && collection != null) {
+        mirrored = await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+          await applyFavoriteMirror(devices);
+          await collection.putAll(devices);
+        });
+      }
+      if (epoch == AccountEpoch.current) AppState().noteDevices(devices);
+    }
+    if (!mirrored) await applyFavoriteMirror(devices);
+    return DeviceInstanceWithTotal(devices, total);
+  }
+
+  /// Sets the `favorite` mirror of [devices] from the per-account list. The
+  /// device refresh calls it inside each chunk's write, so a star tapped since
+  /// the fetch is not overwritten.
+  static Future<void> applyFavoriteMirror(List<DeviceInstance> devices) async {
     // Favorites live in their own per-account list, not on these rows, so they
-    // survive the row being replaced here (and the whole cache being dropped).
+    // survive the row being replaced (and the whole cache being dropped).
     final favoriteIds = Settings.getFavoriteDeviceIds();
     // Until FavoritesMigration has run, the rows are still the only record of
     // the favorites made before the changeover. Clearing their flag here would
@@ -143,14 +166,6 @@ class DevicesService {
       element.favorite =
           favoriteIds.contains(element.id) || notYetMoved.contains(element.id);
     }
-
-    if (isar != null && collection != null) {
-      await isar!.writeTxn(() async {
-        await collection.putAll(devices);
-      });
-    }
-    AppState().noteDevices(devices);
-    return DeviceInstanceWithTotal(devices, total);
   }
 
   /// Ids of the cached devices that carry the inactive attribute. Only rows
@@ -182,6 +197,7 @@ class DevicesService {
 
   static Future<void> saveDevice(DeviceInstance device) async {
     _logger.d("Saving device: ${device.id}");
+    final epoch = AccountEpoch.current;
 
     final uri =
         "${Settings.getApiUrl() ?? 'localhost'}/device-manager/devices/${device.id}?update-only-same-origin-attributes=$sharedOrigin,$appOrigin";
@@ -202,11 +218,10 @@ class DevicesService {
     }
 
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.collection<DeviceInstance>().put(device);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.collection<DeviceInstance>().put(device));
     }
-    AppState().noteDevices([device]);
+    if (epoch == AccountEpoch.current) AppState().noteDevices([device]);
     return;
   }
 

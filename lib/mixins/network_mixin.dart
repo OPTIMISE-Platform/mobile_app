@@ -17,6 +17,7 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/location.dart';
@@ -160,8 +161,11 @@ mixin NetworkMixin on ChangeNotifier {
   /// Creates a location on the platform and adds the one it returns. Errors
   /// propagate to the caller.
   Future<Location> createLocation(String name) async {
+    final epoch = AccountEpoch.current;
     try {
       final created = await LocationService.createLocation(name);
+      // Not into the list of an account signed in meanwhile.
+      if (epoch != AccountEpoch.current) return created;
       // A reload running meanwhile may already have brought it in.
       if (!locations.any((l) => l.id == created.id)) locations.add(created);
       notifyListeners();

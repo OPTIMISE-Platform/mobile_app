@@ -24,8 +24,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/services/app_update.dart';
+import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/notifications.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -152,13 +154,20 @@ mixin NotificationMixin on ChangeNotifier {
     loadNotifications(context);
   }
 
+  /// The account epoch the last load started under. A caller that waited for
+  /// that load fetches itself when the account changed meanwhile, since the
+  /// load it waited for discarded its result.
+  int? _notificationsLoadEpoch;
+
   Future<void> loadNotifications(BuildContext? context) async {
     final locked = _notificationsMutex.isLocked;
     await _notificationsMutex.acquire();
-    if (locked) {
+    if (locked && _notificationsLoadEpoch == AccountEpoch.current) {
       _notificationsMutex.release();
       return;
     }
+    final epoch = AccountEpoch.current;
+    _notificationsLoadEpoch = epoch;
     await _storage.delete(key: messageKey);
 
     const limit = 10000;
@@ -173,16 +182,30 @@ mixin NotificationMixin on ChangeNotifier {
         fetched.insertAll(0, response?.notifications.reversed ?? []);
         offset += response?.notifications.length ?? 0;
       } while (response != null && response.notifications.length == limit);
+      // A fetch that outlived its account shows and stores nothing.
+      if (epoch != AccountEpoch.current) return;
       notifications = fetched;
       notifyListeners();
-      await NotificationsService.persist(fetched);
+      await NotificationsService.persist(fetched, epoch);
     } catch (e, s) {
       _logger.e('Could not load notifications: $e');
+      // The stored set belongs to the last signed-in account: never shown
+      // while nobody is signed in or after the account changed, and the
+      // failure is not the next account's to be told about.
+      if (epoch != AccountEpoch.current || !Auth().loggedIn) {
+        ErrorReporter.log('Could not load notifications', e, s);
+        return;
+      }
       if (notifications.isEmpty) {
         // Nothing loaded this session: fall back to the last set we stored, so
         // an unreachable backend shows the previous notifications instead of
         // an empty list.
-        notifications = await NotificationsService.loadPersisted();
+        final stored = await NotificationsService.loadPersisted();
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not load notifications', e, s);
+          return;
+        }
+        notifications = stored;
         notifyListeners();
       }
       // Recorded either way: a support dump has to show that the backend

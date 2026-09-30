@@ -148,25 +148,103 @@ mixin DeviceMixin on ChangeNotifier {
   // Device classes
   // ---------------------------------------------------------------------------
 
-  Future<bool> loadDeviceClasses() =>
-      _deviceClassesLoad.run(_loadDeviceClasses);
+  @visibleForTesting
+  Future<List<DeviceClass>> Function() fetchDeviceClasses =
+      () => DeviceClassesService.getDeviceClasses(fallbackToCache: false);
 
-  Future<bool> _loadDeviceClasses() async {
+  @visibleForTesting
+  Future<List<DeviceClass>?> Function() readCachedDeviceClasses =
+      DeviceClassesService.getCachedDeviceClasses;
+
+  /// Set whenever the stored copy is what got served, cleared by the next
+  /// successful fetch.
+  bool _deviceClassesFromCache = false;
+
+  /// Whether [deviceClasses] is the stored copy the backend has not confirmed
+  /// since, see [refetchDeviceClasses].
+  bool get deviceClassesFromCache => _deviceClassesFromCache;
+
+  /// Fetches fresh. With [fallbackToCache] a failed fetch serves the stored
+  /// copy and reports only when there is none; without, every failure reports.
+  Future<bool> loadDeviceClasses({bool fallbackToCache = true}) =>
+      _deviceClassesLoad.run(() => _loadDeviceClasses(fallbackToCache));
+
+  /// Serves the stored copy without asking the backend and fetches only when
+  /// nothing is stored.
+  Future<bool> loadCachedDeviceClasses() =>
+      _deviceClassesLoad.run(_loadCachedDeviceClasses);
+
+  /// Fetches fresh without the loading state, so the list stays on screen,
+  /// and swaps only on success. A failure keeps the list and is logged only.
+  Future<bool> refetchDeviceClasses() =>
+      _deviceClassesLoad.run(_refetchDeviceClasses);
+
+  void _setDeviceClasses(List<DeviceClass> fetched, {required bool stored}) {
+    // Swap after the fetch: clearing first would leave the map visibly
+    // empty for the whole request, clearing at all is what drops entries
+    // deleted on the backend.
+    deviceClasses.clear();
+    for (final e in fetched) {
+      deviceClasses[e.id] = e;
+    }
+    _deviceClassesFromCache = stored;
+  }
+
+  Future<List<DeviceClass>?> _readStoredDeviceClasses() async {
+    try {
+      return await readCachedDeviceClasses();
+    } catch (e, s) {
+      ErrorReporter.log('Could not read the stored device classes', e, s);
+      return null;
+    }
+  }
+
+  Future<bool> _loadDeviceClasses(bool fallbackToCache) async {
     await _deviceClassesMutex.acquire();
     try {
-      final fetched = await DeviceClassesService.getDeviceClasses();
-      // Swap after the fetch: clearing first would leave the map visibly
-      // empty for the whole request, clearing at all is what drops entries
-      // deleted on the backend.
-      deviceClasses.clear();
-      for (final e in fetched) {
-        deviceClasses[e.id] = e;
+      try {
+        _setDeviceClasses(await fetchDeviceClasses(), stored: false);
+      } catch (e, s) {
+        final stored =
+            fallbackToCache ? await _readStoredDeviceClasses() : null;
+        if (stored == null) {
+          ErrorReporter.report('Could not get device classes', e, s);
+          return false;
+        }
+        // Offline, local mode or a failing backend: the stored copy keeps the
+        // classes tab enabled.
+        ErrorReporter.log('Could not get device classes, showing the stored copy', e, s);
+        _setDeviceClasses(stored, stored: true);
       }
-    } catch (e, s) {
-      ErrorReporter.report('Could not get device classes', e, s);
-      return false;
     } finally {
       _deviceClassesMutex.release();
+    }
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> _loadCachedDeviceClasses() async {
+    List<DeviceClass>? stored;
+    await _deviceClassesMutex.acquire();
+    try {
+      stored = await _readStoredDeviceClasses();
+      if (stored != null) _setDeviceClasses(stored, stored: true);
+    } finally {
+      _deviceClassesMutex.release();
+    }
+    // After the release: the fetch takes the mutex itself. Nothing is stored,
+    // so there is nothing to fall back to.
+    if (stored == null) return _loadDeviceClasses(false);
+    notifyListeners();
+    return true;
+  }
+
+  Future<bool> _refetchDeviceClasses() async {
+    try {
+      _setDeviceClasses(await fetchDeviceClasses(), stored: false);
+    } catch (e, s) {
+      ErrorReporter.log('Could not refetch device classes', e, s);
+      return false;
     }
     notifyListeners();
     return true;
@@ -188,25 +266,39 @@ mixin DeviceMixin on ChangeNotifier {
   @visibleForTesting
   Duration deviceTypesRetryDelay = const Duration(minutes: 1);
 
+  /// [serveStale] as in [loadMetadataCached].
   @visibleForTesting
-  Future<List<DeviceType>> Function(Duration maxAge) fetchDeviceTypes =
-      (maxAge) => DeviceTypesService.getDeviceTypes(null, maxAge);
+  Future<List<DeviceType>> Function(Duration maxAge,
+          {void Function(DateTime storedAt)? serveStale}) fetchDeviceTypes =
+      (maxAge, {serveStale}) =>
+          DeviceTypesService.getDeviceTypes(null, maxAge, serveStale);
 
-  Future<bool> loadDeviceTypes() => _deviceTypesLoad.run(_loadDeviceTypes);
+  /// [quiet] logs a failure instead of reporting it, for a background load
+  /// over a list already on screen.
+  Future<bool> loadDeviceTypes(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _deviceTypesLoad.run(() => _loadDeviceTypes(maxAge, serveStale, quiet));
 
   /// Waits for an [ensureDeviceTypes] holding the mutex and then fetches
   /// itself: that call may have failed or skipped its fetch, so its end says
   /// nothing about whether this load would have succeeded.
-  Future<bool> _loadDeviceTypes() async {
+  Future<bool> _loadDeviceTypes(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     await _deviceTypesMutex.acquire();
     try {
-      final fetched = await fetchDeviceTypes(metadataMaxAge);
+      final fetched = await fetchDeviceTypes(maxAge, serveStale: serveStale);
       deviceTypes.clear();
       for (final e in fetched) {
         deviceTypes[e.id] = e;
       }
     } catch (e, s) {
-      ErrorReporter.report('Could not get device types', e, s);
+      if (quiet) {
+        ErrorReporter.log('Could not get device types', e, s);
+      } else {
+        ErrorReporter.report('Could not get device types', e, s);
+      }
       return false;
     } finally {
       _deviceTypesMutex.release();
@@ -621,6 +713,7 @@ mixin DeviceMixin on ChangeNotifier {
     _devicePageLoads++;
     _devicesLoadFailed = false;
     deviceClasses.clear();
+    _deviceClassesFromCache = false;
     deviceTypes.clear();
     forgetUnavailableDeviceTypes();
     _deviceSearchFilter = DeviceSearchFilter.empty();

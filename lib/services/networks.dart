@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
@@ -33,6 +34,7 @@ class NetworksService {
   static     String uri = '${Settings.getApiUrl() ?? 'localhost'}/device-repository/extended-hubs';
 
   static Future<List<Network>> getNetworks([List<String>? ids, bool forceBackend = false]) async {
+    final epoch = AccountEpoch.current;
     if (!forceBackend && isar != null) {
       return isar!.networks.where().sortByName().findAll();
     }
@@ -72,9 +74,8 @@ class NetworksService {
       cont = add.length == 9999;
     }
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.networks.putAll(networks);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.networks.putAll(networks));
     }
     return networks;
   }

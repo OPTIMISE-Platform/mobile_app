@@ -78,9 +78,11 @@ class DeviceTypesService {
   static Future<Map<String, String>> Function() listHeaders = () => Auth().getHeaders();
 
   /// Without [ids], the device types of the devices the user can see, own or
-  /// shared, not every type on the platform.
+  /// shared, not every type on the platform. [maxAge] and [serveStale] apply
+  /// to that list only, see [loadMetadataCached].
   static Future<List<DeviceType>> getDeviceTypes([List<String>? ids,
-      Duration maxAge = metadataMaxAge]) async {
+      Duration maxAge = metadataMaxAge,
+      void Function(DateTime storedAt)? serveStale]) async {
     if (ids != null && ids.isNotEmpty) {
       // Specific ids are fetched fresh and never stored as the full-list cache.
       return parseListChunked(await _fetchRaw(uri, ids), DeviceType.fromJson);
@@ -93,7 +95,7 @@ class DeviceTypesService {
     }
     return loadMetadataCached(
         'user-device-types', _fetchUserTypesRaw, DeviceType.fromJson,
-        maxAge: maxAge);
+        maxAge: maxAge, serveStale: serveStale);
   }
 
   static Future<List<dynamic>> _fetchUserTypesRaw() async {

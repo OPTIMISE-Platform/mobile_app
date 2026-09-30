@@ -16,20 +16,28 @@
 
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/mixins/data_mixin.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/mixins/network_mixin.dart';
 import 'package:mobile_app/mixins/notification_mixin.dart';
 import 'package:mobile_app/native_pipe.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/services/smart_service.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
+
+/// The reference metadata [AppState] loads at start and revalidates.
+enum _Metadata { deviceTypes, functions, aspects, concepts, characteristics }
 
 class AppState extends ChangeNotifier
     with
@@ -59,6 +67,10 @@ class AppState extends ChangeNotifier
     if (state != AppLifecycleState.resumed) return;
     handleQueuedMessages();
     manageNetworkDiscovery();
+    unawaited(CacheHelper.scheduleCacheUpdates().catchError(
+        (Object e, StackTrace s) =>
+            ErrorReporter.log('Could not refresh cache', e, s)));
+    unawaited(_revalidateCaches(refetchClasses: true));
   }
 
   @override
@@ -81,20 +93,107 @@ class AppState extends ChangeNotifier
       // itself always clears first, so calling it whenever init() runs would
       // instead race and drop a load already served another way.
       if (locations.isEmpty) unawaited(loadLocations());
+      // Stored copies of any age are served here, so only an empty cache
+      // waits for the backend; what is too old is revalidated after the frame.
       await Future.wait([
         loadInactiveDeviceIds(),
-        loadDeviceClasses(),
-        loadDeviceTypes(),
-        loadNestedFunctions(),
-        loadAspects(),
-        loadConcepts(),
-        loadCharacteristics(),
+        loadCachedDeviceClasses(),
+        for (final m in _Metadata.values) _loadMetadata(m),
         loadStoredMGWs(),
       ]);
     } finally {
       debugPrint('AppState init took ${DateTime.now().difference(startTime)}');
       _initialized = true;
       notifyListeners();
+      unawaited(SchedulerBinding.instance.endOfFrame.then((_) =>
+          _revalidateCaches(refetchClasses: deviceClassesFromCache)));
+    }
+  }
+
+  /// When the in-memory copy of each metadata set was stored, as reported by
+  /// its loader; a set whose load failed has no entry.
+  final Map<_Metadata, DateTime> _metadataStoredAt = {};
+
+  bool _revalidatingMetadata = false;
+
+  /// The device types as [init] loads them: a stored copy of any age is
+  /// served, and one older than [metadataMaxAge] is revalidated later.
+  Future<bool> loadStoredDeviceTypes() => _loadMetadata(_Metadata.deviceTypes);
+
+  Future<bool> _loadMetadata(_Metadata m,
+      {Duration maxAge = metadataMaxAge, bool quiet = false}) {
+    final epoch = AccountEpoch.current;
+    void record(DateTime storedAt) {
+      // A load that outlived a logout must not mark the next session's data.
+      if (epoch == AccountEpoch.current) _metadataStoredAt[m] = storedAt;
+    }
+    switch (m) {
+      case _Metadata.deviceTypes:
+        return loadDeviceTypes(
+            maxAge: maxAge, serveStale: record, quiet: quiet);
+      case _Metadata.functions:
+        return loadNestedFunctions(
+            maxAge: maxAge, serveStale: record, quiet: quiet);
+      case _Metadata.aspects:
+        return loadAspects(maxAge: maxAge, serveStale: record, quiet: quiet);
+      case _Metadata.concepts:
+        return loadConcepts(maxAge: maxAge, serveStale: record, quiet: quiet);
+      case _Metadata.characteristics:
+        return loadCharacteristics(
+            maxAge: maxAge, serveStale: record, quiet: quiet);
+    }
+  }
+
+  Set<_Metadata> _staleMetadata() {
+    final now = DateTime.now();
+    return {
+      for (final e in _metadataStoredAt.entries)
+        if (MetadataCache.isStale(e.value, metadataMaxAge, now)) e.key,
+    };
+  }
+
+  /// Refetches the device classes when [refetchClasses] and every metadata set
+  /// older than [metadataMaxAge], in the background: failures are logged and
+  /// keep what is on screen.
+  Future<void> _revalidateCaches({required bool refetchClasses}) async {
+    // Checked before anything reads Settings: nothing to do is the common case.
+    if (!_initialized) return;
+    final metadataDue = !_revalidatingMetadata && _staleMetadata().isNotEmpty;
+    if (!refetchClasses && !metadataDue) return;
+    if (Settings.getLocalMode()) return;
+    await Future.wait([
+      if (refetchClasses) refetchDeviceClasses(),
+      if (metadataDue) _revalidateMetadata(),
+    ]);
+  }
+
+  /// One pass at a time: a call while one runs returns at once, since the
+  /// running pass re-checks for stale sets and clears its flag in the same
+  /// synchronous step, so nothing reported stale meanwhile is missed.
+  Future<void> _revalidateMetadata() async {
+    if (_revalidatingMetadata) return;
+    _revalidatingMetadata = true;
+    final epoch = AccountEpoch.current;
+    // A logout during the pass has cleared the maps; nothing to reload.
+    bool current() => _initialized && epoch == AccountEpoch.current;
+    try {
+      final attempted = <_Metadata>{};
+      var refreshed = false;
+      while (true) {
+        final due = _staleMetadata().difference(attempted);
+        if (due.isEmpty) break;
+        attempted.addAll(due);
+        final results = await Future.wait(due.map((m) =>
+            _loadMetadata(m, maxAge: Duration.zero, quiet: true)));
+        if (!current()) return;
+        refreshed |= results.contains(true);
+      }
+      if (refreshed) {
+        notifyListeners();
+        pushRefresh();
+      }
+    } finally {
+      _revalidatingMetadata = false;
     }
   }
 
@@ -103,6 +202,7 @@ class AppState extends ChangeNotifier
     clearDeviceData();
     clearNetworkData();
     clearData();
+    _metadataStoredAt.clear();
     _initialized = false;
     // No clearCache here: the only caller (Auth._cleanup) has already awaited
     // it — this unawaited second run raced whatever a re-login started.
@@ -114,24 +214,21 @@ class AppState extends ChangeNotifier
 
   void pushRefresh() => _refreshPressedController.add(null);
 
-  /// Reloads the in-memory metadata maps and notifies the open tabs to reload
+  /// Fetches the metadata maps fresh and notifies the open tabs to reload
   /// their data. Devices, groups, networks and locations are covered by the
-  /// tabs' [refreshPressed] listeners; the metadata maps are loaded only once
-  /// at [init] and would otherwise keep their stale entries until an app
-  /// restart. The loaders swap their maps only after a successful fetch, so
-  /// readers never see them empty mid-reload.
+  /// tabs' [refreshPressed] listeners. The loaders swap their maps only after
+  /// a successful fetch, so readers never see them empty mid-reload, and
+  /// `Duration.zero` keeps the stored copies when a fetch fails.
   ///
   /// [onProgress] reports the fraction of completed reload tasks (0..1).
   /// Throws when any loader failed, after all of them have finished.
   Future<void> reloadMetadata({void Function(double progress)? onProgress}) async {
     forgetUnavailableDeviceTypes();
     final tasks = <Future<bool>>[
-      loadDeviceClasses(),
-      loadDeviceTypes(),
-      loadNestedFunctions(),
-      loadAspects(),
-      loadConcepts(),
-      loadCharacteristics(),
+      // No fallback: the stored copy would pass a failed fetch off as success.
+      loadDeviceClasses(fallbackToCache: false),
+      for (final m in _Metadata.values)
+        _loadMetadata(m, maxAge: Duration.zero),
     ];
     var done = 0;
     final results = await Future.wait(tasks.map((t) => t.whenComplete(() {

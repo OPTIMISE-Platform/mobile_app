@@ -24,7 +24,6 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
-import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/app_version.dart';
 import 'package:mobile_app/shared/isar.dart';
@@ -81,16 +80,11 @@ class AppInitializer {
     await initializeDateFormatting(Intl.systemLocale, null);
   }
 
+  /// The favorites migration runs inside [CacheHelper.scheduleCacheUpdates],
+  /// ahead of any refresh, which the resume path needs as well.
   static Future<void> _initCache() async {
-    // Before the refresh: until this has run, the cached rows are the only
-    // record of the existing favorites, and a refresh replaces them.
-    try {
-      await FavoritesMigration.run();
-    } catch (e) {
-      debugPrint('Moving favorites off the cache failed: $e');
-    }
-    await CacheHelper.scheduleCacheUpdates().catchError(
-        (Object e) => ErrorReporter.report('Could not refresh cache', e));
+    await CacheHelper.scheduleCacheUpdates().catchError((Object e, StackTrace s) =>
+        ErrorReporter.log('Could not refresh cache', e, s));
   }
 
   /// Awaits [fn], prints how long it took, and re-throws any error.

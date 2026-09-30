@@ -25,7 +25,7 @@ import 'package:mobile_app/shared/joined_load.dart';
 
 class _State extends ChangeNotifier with DeviceMixin {
   _State() {
-    fetchDeviceTypes = (maxAge) async {
+    fetchDeviceTypes = (maxAge, {serveStale}) async {
       fetches++;
       final gate = this.gate;
       if (gate != null) await gate.future;

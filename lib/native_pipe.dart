@@ -40,7 +40,7 @@ class NativePipe {
       switch (call.method) {
         case "getToggleStateless":
           final devices = await isar!.deviceInstances.where().findAll();
-          await AppState().loadDeviceTypes();
+          await AppState().loadStoredDeviceTypes();
           await AppState()
               .ensureDeviceTypes(devices.map((d) => d.device_type_id));
           final deviceTypes = AppState().deviceTypes;
@@ -63,7 +63,7 @@ class NativePipe {
               .where()
               .idEqualTo(state.deviceId!)
               .findFirst();
-          await AppState().loadDeviceTypes();
+          await AppState().loadStoredDeviceTypes();
           await AppState().ensureDeviceTypes([device!.device_type_id]);
           final deviceType = AppState().deviceTypes[device.device_type_id];
           if (deviceType == null) {

@@ -28,10 +28,11 @@ class CharacteristicsService {
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/characteristics';
 
   static Future<List<Characteristic>> getCharacteristics(
-      {Duration maxAge = metadataMaxAge}) async {
+      {Duration maxAge = metadataMaxAge,
+      void Function(DateTime storedAt)? serveStale}) async {
     return loadMetadataCached(
         'characteristics', _fetchRaw, Characteristic.fromJson,
-        maxAge: maxAge);
+        maxAge: maxAge, serveStale: serveStale);
   }
 
   static Future<List<dynamic>> _fetchRaw() async {

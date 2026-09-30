@@ -22,11 +22,14 @@ import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_cache_hive_store/http_cache_hive_store.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
+import 'package:isar_community/isar.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/models/notification.dart';
 import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/characteristics.dart';
@@ -34,6 +37,7 @@ import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/device_types.dart';
+import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/functions.dart';
 import 'package:mobile_app/services/networks.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -86,14 +90,16 @@ class CacheHelper {
     return await getApplicationDocumentsDirectory();
   }
 
-  static clearCache() async {
+  /// [keepMetadata] spares the metadata byte cache, for a caller that fetches
+  /// it fresh right after and needs the stored copies if that fails.
+  static Future<void> clearCache({bool keepMetadata = false}) async {
     final cacheFile = (await getCacheFile());
     await HiveCacheStore(cacheFile).clean();
     // The metadata byte cache lives in Isar, not Hive — without this the
-    // metadata services keep serving their cached bytes for up to maxAge.
-    await MetadataCache.clear();
+    // metadata services keep serving their cached bytes.
+    if (!keepMetadata) await MetadataCache.clear();
     // Deliberately NOT cleared here: the Isar entity collections. They leak
-    // the previous account's devices to the next account until the daily
+    // the previous account's devices to the next account until the next
     // refresh, but wiping them here kills the offline cache on any transient
     // NotLoggedIn auth event, and three services read the emptied collections
     // as authoritative. The account-switch leak needs a clear-on-account-change
@@ -109,6 +115,7 @@ class CacheHelper {
   /// in (see Auth), never on logout and never on a transient NotLoggedIn: those
   /// are the cases where the cache is the offline copy the user still needs.
   static Future<void> clearForAccountChange() async {
+    AccountEpoch.advance();
     await clearCache();
     if (isar != null) {
       await isar!.writeTxn(() async {
@@ -116,9 +123,16 @@ class CacheHelper {
         await isar!.deviceGroups.clear();
         await isar!.networks.clear();
         await isar!.locations.clear();
+        // The offline fallback of the notification list reads these, so the
+        // next account would be shown the previous one's.
+        await isar!.notifications.clear();
       });
     }
     AppState().replaceDeviceIndex(const []);
+    // A logout keeps the list in memory empty only until a late load refills
+    // it; the next account must not start with it.
+    AppState().notifications.clear();
+    AppState().notifyListeners();
     // Without this the emptied cache counts as refreshed today and the next
     // scheduled refill waits up to a day - three services read their (now
     // empty) collection as the answer rather than as a cache miss.
@@ -131,8 +145,8 @@ class CacheHelper {
   /// [includeMetadata] warms the metadata caches alongside the Isar
   /// collections. A caller that reloads the in-memory metadata right after
   /// (settings refresh via [AppState.reloadMetadata]) passes false — the
-  /// reload fetches against the cleared cache itself, and including the
-  /// getters here would fetch and parse everything twice.
+  /// reload fetches fresh itself, and including the getters here would fetch
+  /// and parse everything twice.
   ///
   /// Returns false when one of the Isar collections could not be refreshed;
   /// those parts report their own error and keep the old rows. A failing
@@ -145,10 +159,10 @@ class CacheHelper {
       return true;
     }
     final collections = <Future<bool>>[
-      _refreshDevices(Duration.zero, reschedule: false),
-      _refreshDeviceGroups(Duration.zero, reschedule: false),
-      _refreshNetworks(Duration.zero, reschedule: false),
-      _refreshLocations(Duration.zero, reschedule: false),
+      _tracked(_devices, () => _refreshDevices(quiet: false)),
+      _tracked(_deviceGroups, () => _refreshDeviceGroups(quiet: false)),
+      _tracked(_networks, () => _refreshNetworks(quiet: false)),
+      _tracked(_locations, () => _refreshLocations(quiet: false)),
     ];
     final tasks = <Future>[
       ...collections,
@@ -158,7 +172,8 @@ class CacheHelper {
         // "include the metadata" was warming a cache that was already warm.
         // Skipping the cache rather than clearing it keeps the stored copy if
         // the fetch fails. A cold start with a stored session never reaches
-        // this method, so there the metadata can still be maxAge old.
+        // this method; AppState.init serves the stored metadata there and
+        // revalidates what is older than maxAge after the first frame.
         FunctionsService.getFunctions(maxAge: Duration.zero),
         AspectsService.getAspects(maxAge: Duration.zero),
         ConceptsService.getConcepts(maxAge: Duration.zero),
@@ -175,21 +190,100 @@ class CacheHelper {
     return !(await Future.wait(collections)).contains(false);
   }
 
-  static Future scheduleCacheUpdates() async {
+  /// How long a refreshed entity collection counts as current.
+  static const entityMaxAge = Duration(days: 1);
+
+  static const _devices = "devices";
+  static const _deviceGroups = "deviceGroups";
+  static const _networks = "networks";
+  static const _locations = "locations";
+
+  /// Refreshes running per collection, from any path. A count rather than a
+  /// flag, because the explicit refreshes may overlap each other.
+  static final Map<String, int> _refreshesRunning = {};
+
+  /// [quiet] refreshes run in the background over rows already on screen, so
+  /// their failure is logged only; so is one whose account is gone.
+  static void _refreshFailed(
+      String message, Object e, StackTrace s, bool quiet, int epoch) {
+    if (quiet || epoch != AccountEpoch.current) {
+      ErrorReporter.log(message, e, s);
+    } else {
+      ErrorReporter.report(message, e, s);
+    }
+  }
+
+  static Future<bool> _tracked(
+      String cache, Future<bool> Function() refresh) async {
+    _refreshesRunning[cache] = (_refreshesRunning[cache] ?? 0) + 1;
+    try {
+      return await refresh();
+    } finally {
+      final left = _refreshesRunning[cache]! - 1;
+      if (left == 0) {
+        _refreshesRunning.remove(cache);
+      } else {
+        _refreshesRunning[cache] = left;
+      }
+    }
+  }
+
+  /// Whether a collection refreshed at [refreshedAt] needs a refresh now: never
+  /// refreshed, at least [entityMaxAge] ago, or at a time in the future.
+  @visibleForTesting
+  static bool entityRefreshDue(DateTime? refreshedAt, DateTime now) {
+    if (refreshedAt == null) return true;
+    final age = now.difference(refreshedAt);
+    return age >= entityMaxAge || age.isNegative;
+  }
+
+  /// Starts a refresh of every collection that is due and not already being
+  /// refreshed, and completes when those have ended. Arms no timer, since one
+  /// does not survive the app being killed; start and resume call this instead.
+  static Future<void> scheduleCacheUpdates() async {
     if (isar == null || !Auth().loggedIn || Settings.getLocalMode()) {
       return;
     }
-    return await Future.wait([
-      _scheduleRefreshDevices(),
-      _scheduleRefreshDeviceGroups(),
-      _scheduleRefreshNetworks(),
-      _scheduleRefreshLocations(),
-    ]);
+    // Before any refresh: until this has run, the cached rows are the only
+    // record of the existing favorites, and a refresh replaces them.
+    try {
+      await FavoritesMigration.run();
+    } catch (e, s) {
+      ErrorReporter.log('Moving favorites off the cache failed', e, s);
+    }
+    // No await from here to the last start, so a second call cannot slip
+    // between the running check and the start.
+    final now = DateTime.now();
+    final started = <Future<bool>>[
+      for (final (cache, refreshedAt, refresh) in [
+        (_devices, Settings.getCacheUpdated(_devices), _refreshDevices),
+        (_deviceGroups, deviceGroupsRefreshedAt(), _refreshDeviceGroups),
+        (_networks, Settings.getCacheUpdated(_networks), _refreshNetworks),
+        (_locations, Settings.getCacheUpdated(_locations), _refreshLocations),
+      ])
+        if (!_refreshesRunning.containsKey(cache) &&
+            entityRefreshDue(refreshedAt, now))
+          _tracked(cache, () => refresh(quiet: true))
+              .catchError((Object e, StackTrace s) {
+            ErrorReporter.log('Could not refresh cache', e, s);
+            return false;
+          }),
+    ];
+    await Future.wait(started);
   }
 
-  static Future<bool> _refreshDevices(Duration wait,
-      {bool reschedule = true}) async {
-    await Future.delayed(wait);
+  /// Called after each chunk the device refresh has written, so a test can
+  /// change the account between two chunks.
+  @visibleForTesting
+  static void Function()? afterDeviceChunkForTest;
+
+  /// Called right after the device refresh has pruned the rows it did not
+  /// fetch, before it marks the collection refreshed.
+  @visibleForTesting
+  static void Function()? afterDevicePruneForTest;
+
+  static Future<bool> _refreshDevices({required bool quiet}) async {
+    final epoch = AccountEpoch.current;
     var allDevicesLoaded = false;
     const limit = 5000;
     var deviceOffset = 0;
@@ -197,15 +291,21 @@ class CacheHelper {
     final List<DeviceInstance> newDevices = [];
 
     while (!allDevicesLoaded) {
+      final List<DeviceInstance> page;
       try {
-        newDevices.addAll((await DevicesService.getDevices(
+        // Stored below in chunks, and indexed by replaceDeviceIndex once
+        // complete; the service's own write-through would store it twice.
+        page = (await DevicesService.getDevices(
             limit, deviceOffset, DeviceSearchFilter(""), last,
-            forceBackend: true)).devices);
+            forceBackend: true, store: false)).devices;
       } catch (e, s) {
-        ErrorReporter.report("Could not get devices", e, s);
+        _refreshFailed("Could not get devices", e, s, quiet, epoch);
         return false;
       }
-      allDevicesLoaded = newDevices.length < limit;
+      newDevices.addAll(page);
+      // The page, not the total: from [limit] devices on the total never
+      // drops below it again.
+      allDevicesLoaded = page.length < limit;
       deviceOffset = newDevices.length;
       last = newDevices.isNotEmpty ? newDevices.last : null;
     }
@@ -213,63 +313,64 @@ class CacheHelper {
     if (isar != null) {
       // Write in chunks: serializing thousands of devices for Isar happens on
       // the calling (UI) isolate, so doing it in one putAll blocks frames right
-      // after login. Awaiting between chunks lets the UI render in between. The
-      // cache is briefly partial during the refresh, which only causes a cache
-      // miss (backend fetch), never wrong data.
+      // after login. Upserted over the old rows and pruned only at the end, so
+      // a refresh dropped half-way leaves the old rows plus the new ones, never
+      // an empty or partial collection.
       const chunkSize = 500;
-      await isar!.writeTxn(() => isar!.deviceInstances.clear());
       for (var i = 0; i < newDevices.length; i += chunkSize) {
         final end = i + chunkSize < newDevices.length
             ? i + chunkSize
             : newDevices.length;
         final chunk = newDevices.sublist(i, end);
-        await isar!.writeTxn(() => isar!.deviceInstances.putAll(chunk));
+        if (!await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+          // The flags from fetch time are seconds old by now.
+          await DevicesService.applyFavoriteMirror(chunk);
+          await isar!.deviceInstances.putAll(chunk);
+        })) {
+          return false;
+        }
+        afterDeviceChunkForTest?.call();
       }
+      final fetched = {for (final d in newDevices) d.isarId};
+      if (!await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+        final stored =
+            await isar!.deviceInstances.where().isarIdProperty().findAll();
+        await isar!.deviceInstances
+            .deleteAll(stored.where((id) => !fetched.contains(id)).toList());
+      })) {
+        return false;
+      }
+      afterDevicePruneForTest?.call();
     }
+    if (epoch != AccountEpoch.current) return false;
     AppState().replaceDeviceIndex(newDevices);
 
-    await Settings.setCacheUpdated("devices");
-    if (reschedule) {
-      _refreshDevices(const Duration(days: 1));
-    }
+    await Settings.setCacheUpdated(_devices);
     return true;
   }
 
-  static Future<void> _scheduleRefreshDevices() async {
-    final dt = Settings.getCacheUpdated("devices");
-    if (dt == null) {
-      await _refreshDevices(Duration.zero);
-    } else {
-      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
-      if (delay.isNegative) {
-        await _refreshDevices(delay);
-      } else {
-        _refreshDevices(delay);
-      }
-    }
-  }
-
-  static Future<bool> _refreshDeviceGroups(Duration wait,
-      {bool reschedule = true}) async {
-    await Future.delayed(wait);
+  static Future<bool> _refreshDeviceGroups({required bool quiet}) async {
+    final epoch = AccountEpoch.current;
     late final List<DeviceGroup> deviceGroups;
     try {
       deviceGroups = await Future.wait(
           await DeviceGroupsService.getDeviceGroups(forceBackend: true));
     } catch (e, s) {
-      ErrorReporter.report("Could not get deviceGroups", e, s);
+      _refreshFailed("Could not get deviceGroups", e, s, quiet, epoch);
       return false;
     }
 
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        // The images loaded meanwhile; a favorite tapped during that must not
-        // be overwritten by the mirror the groups were loaded with.
-        await DeviceGroupsService.applyFavoriteMirror(deviceGroups);
-        await isar!.deviceGroups.clear();
-        await isar!.deviceGroups.putAll(deviceGroups);
-      });
+    if (isar != null &&
+        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+          // The images loaded meanwhile; a favorite tapped during that must
+          // not be overwritten by the mirror the groups were loaded with.
+          await DeviceGroupsService.applyFavoriteMirror(deviceGroups);
+          await isar!.deviceGroups.clear();
+          await isar!.deviceGroups.putAll(deviceGroups);
+        })) {
+      return false;
     }
+    if (epoch != AccountEpoch.current) return false;
     // Before any further await, so a load in between does not flag fresh rows.
     if (!Settings.getDeviceGroupsCachedWithAspectLists()) {
       unawaited(Settings.setDeviceGroupsCachedWithAspectLists(true).then((_) {}, onError: (Object e, StackTrace s) {
@@ -277,120 +378,72 @@ class CacheHelper {
       }));
     }
 
-    await Settings.setCacheUpdated("deviceGroups");
-    if (reschedule) {
-      _refreshDeviceGroups(const Duration(days: 1));
-    }
+    await Settings.setCacheUpdated(_deviceGroups);
     return true;
   }
 
   @visibleForTesting
-  static Future<bool> refreshDeviceGroupsNow() => _refreshDeviceGroups(Duration.zero, reschedule: false);
+  static Future<bool> refreshDeviceGroupsNow() =>
+      _tracked(_deviceGroups, () => _refreshDeviceGroups(quiet: false));
 
-  /// When the device group cache was last refreshed, for the daily refresh.
+  /// When the device group cache was last refreshed, for [scheduleCacheUpdates].
   /// Rows cached before aspect lists count as never refreshed, so the first
   /// start after the upgrade refetches them.
   static DateTime? deviceGroupsRefreshedAt() =>
-      Settings.getDeviceGroupsCachedWithAspectLists() ? Settings.getCacheUpdated("deviceGroups") : null;
+      Settings.getDeviceGroupsCachedWithAspectLists() ? Settings.getCacheUpdated(_deviceGroups) : null;
 
-  static Future<void> _scheduleRefreshDeviceGroups() async {
-    final dt = deviceGroupsRefreshedAt();
-    if (dt == null) {
-      await _refreshDeviceGroups(Duration.zero);
-    } else {
-      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
-      if (delay.isNegative) {
-        await _refreshDeviceGroups(delay);
-      } else {
-        _refreshDeviceGroups(delay);
-      }
-    }
-  }
-
-  static Future<bool> _refreshNetworks(Duration wait,
-      {bool reschedule = true}) async {
+  static Future<bool> _refreshNetworks({required bool quiet}) async {
     if (isar == null) {
       return true;
     }
-    await Future.delayed(wait);
+    final epoch = AccountEpoch.current;
     late final List<Network> networks;
 
     try {
       networks = await NetworksService.getNetworks(null, true);
     } catch (e, s) {
-      ErrorReporter.report("Could not get networks", e, s);
+      _refreshFailed("Could not get networks", e, s, quiet, epoch);
       return false;
     }
 
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.networks.clear();
-        await isar!.networks.putAll(networks);
-      });
+    if (isar != null &&
+        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+          await isar!.networks.clear();
+          await isar!.networks.putAll(networks);
+        })) {
+      return false;
     }
+    if (epoch != AccountEpoch.current) return false;
 
-    await Settings.setCacheUpdated("networks");
-    if (reschedule) {
-      _refreshNetworks(const Duration(days: 1));
-    }
+    await Settings.setCacheUpdated(_networks);
     return true;
   }
 
-  static Future<void> _scheduleRefreshNetworks() async {
-    final dt = Settings.getCacheUpdated("networks");
-    if (dt == null) {
-      await _refreshNetworks(Duration.zero);
-    } else {
-      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
-      if (delay.isNegative) {
-        await _refreshNetworks(delay);
-      } else {
-        _refreshNetworks(delay);
-      }
-    }
-  }
-
-  static Future<bool> _refreshLocations(Duration wait,
-      {bool reschedule = true}) async {
+  static Future<bool> _refreshLocations({required bool quiet}) async {
     if (isar == null) {
       return true;
     }
-    await Future.delayed(wait);
+    final epoch = AccountEpoch.current;
     late final List<Location> locations;
 
     try {
       locations = await Future.wait(
           await LocationService.getLocations(forceBackend: true));
     } catch (e, s) {
-      ErrorReporter.report("Could not get locations", e, s);
+      _refreshFailed("Could not get locations", e, s, quiet, epoch);
       return false;
     }
 
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.locations.clear();
-        await isar!.locations.putAll(locations);
-      });
+    if (isar != null &&
+        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+          await isar!.locations.clear();
+          await isar!.locations.putAll(locations);
+        })) {
+      return false;
     }
+    if (epoch != AccountEpoch.current) return false;
 
-    await Settings.setCacheUpdated("locations");
-    if (reschedule) {
-      _refreshLocations(const Duration(days: 1));
-    }
+    await Settings.setCacheUpdated(_locations);
     return true;
-  }
-
-  static Future<void> _scheduleRefreshLocations() async {
-    final dt = Settings.getCacheUpdated("locations");
-    if (dt == null) {
-      await _refreshLocations(Duration.zero);
-    } else {
-      final delay = dt.add(const Duration(days: 1)).difference(DateTime.now());
-      if (delay.isNegative) {
-        await _refreshLocations(delay);
-      } else {
-        _refreshLocations(delay);
-      }
-    }
   }
 }

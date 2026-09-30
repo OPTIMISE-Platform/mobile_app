@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
@@ -37,6 +38,7 @@ class LocationService {
   static Future<List<Future<Location>>> getLocations({
     bool forceBackend = false,
   }) async {
+    final epoch = AccountEpoch.current;
     if (!forceBackend && isar != null) {
       return (await isar!.locations.where().sortByName().findAll())
           .map((e) => e.initImage())
@@ -80,14 +82,14 @@ class LocationService {
       cont = add.length == 9999;
     }
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.locations.putAll(locations);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.locations.putAll(locations));
     }
     return locations.map((e) => e.initImage()).toList(growable: false);
   }
 
   static Future<Location> saveLocation(Location location) async {
+    final epoch = AccountEpoch.current;
     String uri =
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/${location.id}';
 
@@ -107,14 +109,14 @@ class LocationService {
 
     final savedLocation = Location.fromJson(resp.data);
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.locations.put(savedLocation);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.locations.put(savedLocation));
     }
     return savedLocation.initImage();
   }
 
   static Future<Location> createLocation(String name) async {
+    final epoch = AccountEpoch.current;
     String uri =
         '${Settings.getApiUrl() ?? 'localhost'}/device-manager/locations/';
 
@@ -133,9 +135,8 @@ class LocationService {
     }
     final savedLocation = Location.fromJson(resp.data);
     if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.locations.put(savedLocation);
-      });
+      await AccountEpoch.writeIfCurrent(
+          isar!, epoch, () => isar!.locations.put(savedLocation));
     }
     return savedLocation.initImage();
   }

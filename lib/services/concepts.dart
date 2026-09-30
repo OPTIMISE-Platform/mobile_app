@@ -29,9 +29,10 @@ class ConceptsService {
       '${Settings.getApiUrl() ?? 'localhost'}/device-repository/v2/concepts-with-characteristics';
 
   static Future<List<Concept>> getConcepts(
-      {Duration maxAge = metadataMaxAge}) async {
+      {Duration maxAge = metadataMaxAge,
+      void Function(DateTime storedAt)? serveStale}) async {
     return loadMetadataCached('concepts', _fetchRaw, Concept.fromJson,
-        maxAge: maxAge);
+        maxAge: maxAge, serveStale: serveStale);
   }
 
   static Future<List<dynamic>> _fetchRaw() async {

@@ -26,6 +26,7 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/models/notification.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/devices.dart';
 
@@ -52,6 +53,7 @@ void main() {
       NetworkSchema,
       LocationSchema,
       CachedMetadataSchema,
+      NotificationSchema,
     ]);
   });
 

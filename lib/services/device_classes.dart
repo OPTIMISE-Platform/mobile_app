@@ -19,6 +19,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
@@ -39,11 +40,13 @@ class DeviceClassesService {
 
   /// Which device belongs to which class. Unlike the other reference metadata
   /// this is not stable — a newly added device has to show up under its class —
-  /// so it is fetched fresh and the last successful response is kept only as a
-  /// fallback for an unreachable backend. It used to sit on the shared 7-day
-  /// force-cache, which never asked the backend again at all.
-  static Future<List<DeviceClass>> getDeviceClasses() async {
+  /// so it is fetched fresh and the last successful response is kept as the
+  /// copy [getCachedDeviceClasses] serves. With [fallbackToCache], a failed
+  /// fetch returns that copy, of any age, instead of throwing.
+  static Future<List<DeviceClass>> getDeviceClasses(
+      {bool fallbackToCache = true}) async {
     final Map<String, String> queryParameters = {};
+    final epoch = AccountEpoch.current;
 
     Map<String, dynamic>? data;
     try {
@@ -54,19 +57,40 @@ class DeviceClassesService {
       data = resp.data;
       if (data != null) {
         unawaited(MetadataCache.write(
-            _cacheKey, JsonUtf8Encoder().convert(data)));
+            _cacheKey, JsonUtf8Encoder().convert(data), epoch));
       }
     } catch (e) {
       // Offline, local mode or a failing backend: fall back to the last
       // response we saw rather than reporting "no device classes", which
       // disables the classes tab.
-      final cached = await MetadataCache.read(_cacheKey, const Duration(days: 7));
+      final cached = fallbackToCache ? await _readCached() : null;
       if (cached == null) rethrow;
       _logger.d("Using cached device classes: $e");
-      data = jsonDecode(utf8.decode(cached)) as Map<String, dynamic>;
+      data = cached;
     }
-    if (data == null) return [];
+    return _parse(data);
+  }
 
+  /// The last successful response, whatever its age, or null when none is
+  /// stored or it cannot be read.
+  static Future<List<DeviceClass>?> getCachedDeviceClasses() async {
+    final data = await _readCached();
+    return data == null ? null : _parse(data);
+  }
+
+  static Future<Map<String, dynamic>?> _readCached() async {
+    final entry = await MetadataCache.readEntry(_cacheKey);
+    if (entry == null) return null;
+    try {
+      return jsonDecode(utf8.decode(entry.bytes)) as Map<String, dynamic>;
+    } catch (e) {
+      _logger.w("Cached device classes unusable: $e");
+      return null;
+    }
+  }
+
+  static List<DeviceClass> _parse(Map<String, dynamic>? data) {
+    if (data == null) return [];
     final l = data["device-classes"];
     if (l == null) return [];
     final deviceClasses = List<DeviceClass>.generate(
