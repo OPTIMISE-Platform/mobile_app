@@ -94,17 +94,35 @@ class _GroupEditDevicesState extends State<GroupEditDevices> implements PageSour
               try {
                 final resp = await DeviceGroupsService.getMatchingDevicesForGroup(_selected.toList(growable: false), _pageSize, 0, _query);
 
-                _reloading = false;
                 _criteria = resp.criteria;
                 _candidates = resp.devices;
                 _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
                 _allCandidatesLoaded = resp.devices.length < _pageSize;
+              } catch (e, s) {
+                // A failed reload ends the list like a failed page; the
+                // spinner must not outlive the request.
+                _reportCandidatesFailure(e, s);
+                _loadFailed = true;
+                _candidates = [];
               } finally {
+                _reloading = false;
                 _pageLoads++;
               }
+              if (!mounted) return;
               setState(() {});
               AppState().notifyListeners(); // redraws SearchDelegate
         }));
+  }
+
+  /// A toast only while the page is shown; a failure that lands after leaving
+  /// it would otherwise show on whatever screen comes next.
+  void _reportCandidatesFailure(Object e, StackTrace s) {
+    const message = 'Could not load group candidates';
+    if (mounted) {
+      ErrorReporter.report(message, e, s);
+    } else {
+      ErrorReporter.log(message, e, s);
+    }
   }
 
   /// Must not call setState before its first await: the next-page row calls
@@ -119,7 +137,7 @@ class _GroupEditDevicesState extends State<GroupEditDevices> implements PageSour
         _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
         _allCandidatesLoaded = resp.devices.length < _pageSize;
       } catch (e, s) {
-        ErrorReporter.report('Could not load group candidates', e, s);
+        _reportCandidatesFailure(e, s);
         _loadFailed = true;
       } finally {
         _pageLoads++;

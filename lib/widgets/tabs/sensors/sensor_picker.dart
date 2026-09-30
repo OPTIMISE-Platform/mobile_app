@@ -24,6 +24,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
@@ -214,10 +215,18 @@ class _TargetPickerState extends State<_TargetPicker> implements PageSource {
         _allLoaded = allLoaded;
         _initialLoadDone = true;
       });
-    } catch (e) {
+    } catch (e, s) {
       if (!mounted || generation != _generation) return;
+      const message = 'Could not load devices';
+      // With rows on screen the list just ends, so the toast is the only
+      // sign; without rows the page shows the message itself.
+      if (_devices.isEmpty) {
+        ErrorReporter.log(message, e, s);
+      } else {
+        ErrorReporter.report(message, e, s);
+      }
       setState(() {
-        _error = 'Could not load devices';
+        _error = message;
         _initialLoadDone = true;
       });
     } finally {

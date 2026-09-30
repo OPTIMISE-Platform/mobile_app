@@ -18,6 +18,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_picker.dart';
 
@@ -32,6 +33,8 @@ void main() {
   });
 
   tearDown(() {
+    ErrorReporter.resetForTest();
+    ErrorReporter.present = (_) {};
     resetAppStateForGolden();
     resetGoldenBackend();
   });
@@ -40,6 +43,8 @@ void main() {
 
   testWidgets("a failed page ends the list until the next search",
       (tester) async {
+    final shown = <String>[];
+    ErrorReporter.present = shown.add;
     await warmUpMgwStorage(tester);
     final backend = FakeBackend();
     backend.serveJson("GET", "/device-repository/device-groups", 200, []);
@@ -83,9 +88,12 @@ void main() {
     }
 
     // A JSON body, so the failure is the status and not a parse error.
+    final shownBefore = shown.length;
     backend.serveJson("GET", devicesPath, 500, {"error": "boom"});
     await scrollToEnd();
     expect(pages(), [("", "0"), ("", "50")], reason: "one failed attempt");
+    expect(shown.skip(shownBefore), ["Could not load devices"],
+        reason: "with rows on screen the toast is the only sign");
 
     // Scrolling away and back to the end does not ask again.
     await tester.drag(find.byType(ListView), const Offset(0, 1500));
