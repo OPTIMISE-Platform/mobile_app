@@ -117,9 +117,24 @@ class DeviceGroupsService {
       })));
     }
     await Future.wait(futures);
-    // See DevicesService.getDevices: the per-account list is the favorite, this
-    // flag is only the mirror on the cached row - and the row still counts
-    // until FavoritesMigration has moved what is on it.
+    if (isar != null && collection != null) {
+      await isar!.writeTxn(() async {
+        await applyFavoriteMirror(groupsRepo);
+        await collection.putAll(groupsRepo);
+      });
+    } else {
+      await applyFavoriteMirror(groupsRepo);
+    }
+
+    return groupsRepo.map((e) => e.initImage()).toList(growable: false);
+  }
+
+  /// Sets the favorite mirror of [groups] from the per-account list, which is
+  /// what a favorite is; the flag on the cached row only serves the Isar
+  /// favorites query. Called inside the write that stores the rows, so a
+  /// favorite tapped while the groups were loading is not overwritten. A row
+  /// still counts until FavoritesMigration has moved what is on it.
+  static Future<void> applyFavoriteMirror(List<DeviceGroup> groups) async {
     final favoriteIds = Settings.getFavoriteGroupIds();
     final Set<String> notYetMoved =
         isar != null && !Settings.getFavoritesMoved()
@@ -130,17 +145,10 @@ class DeviceGroupsService {
                     .findAll())
                 .toSet()
             : const {};
-    for (final element in groupsRepo) {
-      element.favorite =
-          favoriteIds.contains(element.id) || notYetMoved.contains(element.id);
+    for (final group in groups) {
+      group.favorite =
+          favoriteIds.contains(group.id) || notYetMoved.contains(group.id);
     }
-    if (isar != null && collection != null) {
-      await isar!.writeTxn(() async {
-        await collection.putAll(groupsRepo);
-      });
-    }
-
-    return groupsRepo.map((e) => e.initImage()).toList(growable: false);
   }
 
   /// Applies [change] to [group] and saves it. A group whose cached criteria

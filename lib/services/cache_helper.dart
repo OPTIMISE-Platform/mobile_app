@@ -263,6 +263,9 @@ class CacheHelper {
 
     if (isar != null) {
       await isar!.writeTxn(() async {
+        // The images loaded meanwhile; a favorite tapped during that must not
+        // be overwritten by the mirror the groups were loaded with.
+        await DeviceGroupsService.applyFavoriteMirror(deviceGroups);
         await isar!.deviceGroups.clear();
         await isar!.deviceGroups.putAll(deviceGroups);
       });
