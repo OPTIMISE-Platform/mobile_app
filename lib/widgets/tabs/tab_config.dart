@@ -29,38 +29,38 @@ class TabConfig {
 
   /// Which filter field this tab "owns" — cleared when leaving, excluded from
   /// the cross-tab filter count, and not reset by the Reset action.
-  final _OwnedFilter ownedFilter;
+  final OwnedFilter ownedFilter;
 
   const TabConfig({
     required this.index,
     required this.hideSearch,
     required this.showFabResolver,
-    this.ownedFilter = _OwnedFilter.none,
+    this.ownedFilter = OwnedFilter.none,
   });
 
   bool get showFab => showFabResolver();
 }
 
-enum _OwnedFilter { none, location, group, network, deviceClass, favorites }
+enum OwnedFilter { none, location, group, network, deviceClass, favorites }
 
 extension TabConfigExtension on TabConfig {
   /// [filter] without the field this tab "owns".
   DeviceSearchFilter withoutOwnedFilter(DeviceSearchFilter filter) {
     return switch (ownedFilter) {
-      _OwnedFilter.location => filter.without(locationIds: true),
-      _OwnedFilter.group => filter.without(deviceGroupIds: true),
-      _OwnedFilter.network => filter.without(networkIds: true),
-      _OwnedFilter.deviceClass => filter.without(deviceClassIds: true),
-      _OwnedFilter.favorites => filter.without(favorites: true),
-      _OwnedFilter.none => filter,
+      OwnedFilter.location => filter.without(locationIds: true),
+      OwnedFilter.group => filter.without(deviceGroupIds: true),
+      OwnedFilter.network => filter.without(networkIds: true),
+      OwnedFilter.deviceClass => filter.without(deviceClassIds: true),
+      OwnedFilter.favorites => filter.without(favorites: true),
+      OwnedFilter.none => filter,
     };
   }
 
-  bool ownsLocation() => ownedFilter == _OwnedFilter.location;
-  bool ownsGroup() => ownedFilter == _OwnedFilter.group;
-  bool ownsNetwork() => ownedFilter == _OwnedFilter.network;
-  bool ownsDeviceClass() => ownedFilter == _OwnedFilter.deviceClass;
-  bool ownsFavorites() => ownedFilter == _OwnedFilter.favorites;
+  bool ownsLocation() => ownedFilter == OwnedFilter.location;
+  bool ownsGroup() => ownedFilter == OwnedFilter.group;
+  bool ownsNetwork() => ownedFilter == OwnedFilter.network;
+  bool ownsDeviceClass() => ownedFilter == OwnedFilter.deviceClass;
+  bool ownsFavorites() => ownedFilter == OwnedFilter.favorites;
 }
 
 /// Registry of all tab configurations, keyed by tab index constant.
@@ -69,7 +69,7 @@ final Map<int, TabConfig> tabConfigs = {
     index: tabFavorites,
     hideSearch: false,
     showFabResolver: () => false,
-    ownedFilter: _OwnedFilter.favorites,
+    ownedFilter: OwnedFilter.favorites,
   ),
   tabDashboard: TabConfig(
     index: tabDashboard,
@@ -85,25 +85,25 @@ final Map<int, TabConfig> tabConfigs = {
     index: tabLocations,
     hideSearch: true,
     showFabResolver: LocationService.isCreateEditDeleteAvailable,
-    ownedFilter: _OwnedFilter.location,
+    ownedFilter: OwnedFilter.location,
   ),
   tabGroups: const TabConfig(
     index: tabGroups,
     hideSearch: true,
     showFabResolver: DeviceGroupsService.isCreateEditDeleteAvailable,
-    ownedFilter: _OwnedFilter.group,
+    ownedFilter: OwnedFilter.group,
   ),
   tabNetworks: TabConfig(
     index: tabNetworks,
     hideSearch: true,
     showFabResolver: () => false,
-    ownedFilter: _OwnedFilter.network,
+    ownedFilter: OwnedFilter.network,
   ),
   tabClasses: TabConfig(
     index: tabClasses,
     hideSearch: true,
     showFabResolver: () => false,
-    ownedFilter: _OwnedFilter.deviceClass,
+    ownedFilter: OwnedFilter.deviceClass,
   ),
   tabSmartServices: TabConfig(
     index: tabSmartServices,

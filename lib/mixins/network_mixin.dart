@@ -15,7 +15,6 @@
  */
 
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_group.dart';

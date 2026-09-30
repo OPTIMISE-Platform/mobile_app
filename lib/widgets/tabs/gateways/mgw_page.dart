@@ -176,7 +176,7 @@ class AddLocalNetwork extends StatefulWidget {
   const AddLocalNetwork({super.key});
 
   @override
-  _AddLocalNetworkState createState() => _AddLocalNetworkState();
+  State<AddLocalNetwork> createState() => _AddLocalNetworkState();
 }
 
 class _AddLocalNetworkState extends State<AddLocalNetwork> {

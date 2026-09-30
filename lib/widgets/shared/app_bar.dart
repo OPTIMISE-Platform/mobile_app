@@ -16,7 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/services/settings.dart' as SettingsService;
+import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
 
@@ -61,7 +61,7 @@ class MyAppBar {
   }
 
   static PreferredSizeWidget? _localMode(BuildContext context) {
-    bool? localMode = SettingsService.Settings.getLocalMode();
+    bool? localMode = settings_service.Settings.getLocalMode();
 
     return localMode != true ? null : const PreferredSize(
             preferredSize: Size(128, 23),
@@ -156,7 +156,7 @@ class UpdateIcon extends StatefulWidget {
   const UpdateIcon({super.key});
 
   @override
-  _UpdateIconState createState() => _UpdateIconState();
+  State<UpdateIcon> createState() => _UpdateIconState();
 }
 
 class _UpdateIconState extends State<UpdateIcon>
