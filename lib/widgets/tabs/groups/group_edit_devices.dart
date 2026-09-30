@@ -30,6 +30,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/shared/search_delegate.dart';
 
@@ -42,7 +43,7 @@ class GroupEditDevices extends StatefulWidget {
   State<StatefulWidget> createState() => _GroupEditDevicesState();
 }
 
-class _GroupEditDevicesState extends State<GroupEditDevices> {
+class _GroupEditDevicesState extends State<GroupEditDevices> implements PageSource {
   final Set<String> _selected = {};
   final int _pageSize = 50;
   bool _initialized = false;
@@ -50,6 +51,10 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
   bool _searchClosed = false;
   bool _delegateOpen = false;
   bool _allCandidatesLoaded = false;
+  // A failed candidates page ends the list until the next search reload.
+  bool _loadFailed = false;
+  // Advanced after every candidates page and every search reload.
+  int _pageLoads = 0;
   bool _reloading = true;
   String _query = "";
   final _m = Mutex();
@@ -57,6 +62,18 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
   List<DeviceInstanceWithRemovesCriteria> _candidates = [];
   List<DeviceGroupCriteria> _criteria = [];
   final Map<String, DeviceInstance> _deviceCollection = {};
+
+  @override
+  bool get hasMore => !_allCandidatesLoaded;
+
+  @override
+  bool get ended => _allCandidatesLoaded || _loadFailed;
+
+  @override
+  Object get pageToken => _pageLoads;
+
+  @override
+  void loadNextPage() => unawaited(_loadMoreDevices());
 
   _searchChanged(String search, bool force) {
     if (_query == search && !force) {
@@ -70,28 +87,44 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
     _searchDebounce = Timer(
         Duration(milliseconds: force ? 0 : 300),
         () async => await _m.protect(() async {
-              setState(() => _reloading = true);
-              final resp = await DeviceGroupsService.getMatchingDevicesForGroup(_selected.toList(growable: false), _pageSize, 0, _query);
+              setState(() {
+                _reloading = true;
+                _loadFailed = false;
+              });
+              try {
+                final resp = await DeviceGroupsService.getMatchingDevicesForGroup(_selected.toList(growable: false), _pageSize, 0, _query);
 
-              _reloading = false;
-              _criteria = resp.criteria;
-              _candidates = resp.devices;
-              _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
-              _allCandidatesLoaded = resp.devices.length < _pageSize;
+                _reloading = false;
+                _criteria = resp.criteria;
+                _candidates = resp.devices;
+                _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
+                _allCandidatesLoaded = resp.devices.length < _pageSize;
+              } finally {
+                _pageLoads++;
+              }
               setState(() {});
               AppState().notifyListeners(); // redraws SearchDelegate
         }));
   }
 
-  _loadMoreDevices() async {
-    if (_m.isLocked || _allCandidatesLoaded) return;
+  /// Must not call setState before its first await: the next-page row calls
+  /// it while the list builds.
+  Future<void> _loadMoreDevices() async {
+    if (_m.isLocked || _allCandidatesLoaded || _loadFailed) return;
     await _m.protect(() async {
-      setState(() {});
-      final resp = await DeviceGroupsService.getMatchingDevicesForGroup(_selected.toList(growable: false), _pageSize, _candidates.length, _query);
-      _criteria = resp.criteria;
-      _candidates.addAll(resp.devices);
-      _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
-      _allCandidatesLoaded = resp.devices.length < _pageSize;
+      try {
+        final resp = await DeviceGroupsService.getMatchingDevicesForGroup(_selected.toList(growable: false), _pageSize, _candidates.length, _query);
+        _criteria = resp.criteria;
+        _candidates.addAll(resp.devices);
+        _candidates.forEach((element) => _deviceCollection[element.device.id] = element.device);
+        _allCandidatesLoaded = resp.devices.length < _pageSize;
+      } catch (e, s) {
+        ErrorReporter.report('Could not load group candidates', e, s);
+        _loadFailed = true;
+      } finally {
+        _pageLoads++;
+      }
+      if (!mounted) return;
       setState(() {});
       AppState().notifyListeners(); // redraws SearchDelegate
     });
@@ -113,85 +146,80 @@ class _GroupEditDevicesState extends State<GroupEditDevices> {
 
   Widget _buildListWidget() {
     return Stack(children: [
-      _reloading
-          ? const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))])
-          : SectionedListView(
-              sections: [
-                // A fresh group's "Selected" section is empty and so gets
-                // neither a header nor an empty surface.
-                ListSection<String>(
-                  id: "selected",
-                  title: "Selected",
-                  items: _selected.toList(),
-                  keyOf: (id) => id,
-                  itemBuilder: (context, id, position) => GroupedListTile(
-                    position: position,
-                    hairlineInset: GroupedListTile.insetIconLeading,
-                    child: ListTile(
-                      leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: context.appColors.appInk,
-                        )
-                      ]),
-                      title: Text(_deviceCollection[id]?.displayName ?? "MISSING_DEVICE_NAME"),
-                      onTap: () {
-                        _selected.remove(id);
-                        _searchChanged(_query, true);
-                      },
-                    ),
-                  ),
-                ),
-                ListSection<DeviceInstanceWithRemovesCriteria>(
-                  id: "candidates",
-                  title: "Candidates",
-                  items: _candidates,
-                  keyOf: (candidate) => candidate.device.id,
-                  itemBuilder: (context, candidate, position) {
-                    // The last loaded candidate gives way to the spinner while
-                    // more are on their way.
-                    if (position.roundsBottom && !_allCandidatesLoaded) {
-                      _loadMoreDevices();
-                      return GroupedListTile(
-                        position: position,
-                        child: const Row(children: [Expanded(child: Center(child: DelayedCircularProgressIndicator()))]),
-                      );
+      PagedDeviceList(
+        source: this,
+        loading: _reloading,
+        sections: [
+          // A fresh group's "Selected" section is empty and so gets
+          // neither a header nor an empty surface.
+          ListSection<String>(
+            id: "selected",
+            title: "Selected",
+            items: _selected.toList(),
+            keyOf: (id) => id,
+            itemBuilder: (context, id, position) => GroupedListTile(
+              position: position,
+              hairlineInset: GroupedListTile.insetIconLeading,
+              child: ListTile(
+                leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: context.appColors.appInk,
+                  )
+                ]),
+                title: Text(_deviceCollection[id]?.displayName ?? "MISSING_DEVICE_NAME"),
+                onTap: () {
+                  _selected.remove(id);
+                  _searchChanged(_query, true);
+                },
+              ),
+            ),
+          ),
+          ListSection<DeviceInstanceWithRemovesCriteria>(
+            id: "candidates",
+            title: "Candidates",
+            items: _candidates,
+            keyOf: (candidate) => candidate.device.id,
+            itemBuilder: (context, candidate, position) {
+              return GroupedListTile(
+                position: position,
+                hairlineInset: GroupedListTile.insetIconLeading,
+                child: ListTile(
+                  leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(
+                      Icons.circle_outlined,
+                      color: context.appColors.appInk,
+                    )
+                  ]),
+                  title: Text(candidate.device.displayName),
+                  onTap: () async {
+                    if (candidate.removesCriteria || _criteria.isEmpty) {
+                      setState(() => _reloading = true);
+                      _selected.add(candidate.device.id);
+                      _searchChanged(_query, true);
+                      await _m.protect(() async {});
+                      setState(() => _reloading = false);
+                      AppState().notifyListeners(); // redraws SearchDelegate
+                    } else {
+                      _selected.add(candidate.device.id);
+                      _candidates.remove(candidate);
+                      setState(() {});
+                      AppState().notifyListeners(); // redraws SearchDelegate
                     }
-                    return GroupedListTile(
-                      position: position,
-                      hairlineInset: GroupedListTile.insetIconLeading,
-                      child: ListTile(
-                        leading: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                          Icon(
-                            Icons.circle_outlined,
-                            color: context.appColors.appInk,
-                          )
-                        ]),
-                        title: Text(candidate.device.displayName),
-                        onTap: () async {
-                          if (candidate.removesCriteria || _criteria.isEmpty) {
-                            setState(() => _reloading = true);
-                            _selected.add(candidate.device.id);
-                            _searchChanged(_query, true);
-                            await _m.protect(() async {});
-                            setState(() => _reloading = false);
-                            AppState().notifyListeners(); // redraws SearchDelegate
-                          } else {
-                            _selected.add(candidate.device.id);
-                            _candidates.remove(candidate);
-                            setState(() {});
-                            AppState().notifyListeners(); // redraws SearchDelegate
-                          }
-                        },
-                      ),
-                    );
                   },
                 ),
-              ],
-              trailing: [
-                if (!_allCandidatesLoaded) const SizedBox.shrink(),
-              ],
+              );
+            },
+          ),
+        ],
+        trailing: [
+          if (!ended)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: DelayedCircularProgressIndicator()),
             ),
+        ],
+      ),
       Positioned(
         right: 15,
         bottom: 15,

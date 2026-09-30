@@ -80,8 +80,8 @@ void main() {
       (tester) async {
     await warmUpMgwStorage(tester);
 
-    // Five rows cannot scroll, so the scroll listener alone never asks for
-    // page two.
+    // Five rows cannot scroll: page two comes only from the next-page row
+    // they leave on screen.
     var backend = backendWith(sparseFirstPage());
     serveGoldenBackend(backend);
     await openPicker(tester);
@@ -118,6 +118,20 @@ void main() {
     expect(find.text("B Active 0"), findsOneWidget);
     expect(pageOffsets(backend), ["0", "50"],
         reason: "one failed attempt, no retry loop");
+
+    // Two pages of only hidden devices: the empty list's next-page row stays
+    // on screen and asks again after each of them.
+    resetAppStateForGolden();
+    backend = backendWith([
+      for (var i = 0; i < 100; i++)
+        deviceJson("inactive-$i", "A Inactive $i", inactive: true),
+      for (var i = 0; i < 3; i++) deviceJson("late-$i", "B Late $i"),
+    ]);
+    serveGoldenBackend(backend);
+    await openPicker(tester);
+    expect(pageOffsets(backend), ["0", "50", "100"]);
+    expect(find.text("B Late 0"), findsOneWidget);
+    expect(find.text("No devices found"), findsNothing);
 
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 50));

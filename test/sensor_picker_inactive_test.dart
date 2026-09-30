@@ -74,9 +74,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    // Scrolls past the picker's own "load more" threshold. Several smaller
-    // drags, not one huge one: each step's position update is what the
-    // scroll listener needs to see, not just the drag's end point.
+    // Scrolls to the end of the 30 rows, where the list's next-page row is
+    // built and asks for page two.
     for (var i = 0; i < 15; i++) {
       await tester.drag(find.byType(ListView), const Offset(0, -300));
       await tester.pump();

@@ -27,6 +27,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
+import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 
@@ -98,11 +99,10 @@ class _TargetPicker extends StatefulWidget {
   State<_TargetPicker> createState() => _TargetPickerState();
 }
 
-class _TargetPickerState extends State<_TargetPicker> {
+class _TargetPickerState extends State<_TargetPicker> implements PageSource {
   static const _pageSize = 50;
 
   final _searchController = TextEditingController();
-  final _scrollController = ScrollController();
   Timer? _debounce;
 
   late final _Selection _selection = _Selection(widget.existing);
@@ -122,11 +122,26 @@ class _TargetPickerState extends State<_TargetPicker> {
   int _generation = 0;
   bool _allLoaded = false;
   String? _error;
+  // Advanced when a page of the current generation ends, landed or failed,
+  // and by every [_reload].
+  int _pageLoads = 0;
+
+  @override
+  bool get hasMore => !_allLoaded;
+
+  // A failed page ends the list until the next search.
+  @override
+  bool get ended => _allLoaded || _error != null;
+
+  @override
+  Object get pageToken => _pageLoads;
+
+  @override
+  void loadNextPage() => unawaited(_loadNextPage());
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     // Keeps the per-target counts and the Done button in step with what was
     // checked on the value pages.
     _selection.addListener(_onSelectionChanged);
@@ -138,20 +153,12 @@ class _TargetPickerState extends State<_TargetPicker> {
     _debounce?.cancel();
     _selection.removeListener(_onSelectionChanged);
     _selection.dispose();
-    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   void _onSelectionChanged() {
     if (mounted) setState(() {});
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 400) {
-      _loadNextPage();
-    }
   }
 
   void _onQueryChanged(String query) {
@@ -165,6 +172,7 @@ class _TargetPickerState extends State<_TargetPicker> {
   Future<void> _reload() async {
     _generation++;
     _loadingPage = false;
+    _pageLoads++;
     setState(() {
       _devices.clear();
       _rawFetched = 0;
@@ -184,7 +192,6 @@ class _TargetPickerState extends State<_TargetPicker> {
     if (_loadingPage || _allLoaded) return;
     final generation = _generation;
     _loadingPage = true;
-    var landed = false;
     try {
       await AppState().ensureInitialized();
       final result = await DevicesService.getDevices(
@@ -207,7 +214,6 @@ class _TargetPickerState extends State<_TargetPicker> {
         _allLoaded = allLoaded;
         _initialLoadDone = true;
       });
-      landed = true;
     } catch (e) {
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -215,24 +221,11 @@ class _TargetPickerState extends State<_TargetPicker> {
         _initialLoadDone = true;
       });
     } finally {
-      if (generation == _generation) _loadingPage = false;
+      if (generation == _generation) {
+        _loadingPage = false;
+        _pageLoads++;
+      }
     }
-    // Only after a page that landed: continuing after a failure would retry
-    // without end. Each continuation fetches a new raw page, so the chain
-    // ends with the data at the latest.
-    if (landed) await _continueUntilViewportFilled();
-  }
-
-  /// Paging otherwise runs only from [_onScroll], which never fires while the
-  /// rows left after hiding inactive devices do not fill the viewport.
-  Future<void> _continueUntilViewportFilled() async {
-    if (!mounted || _allLoaded) return;
-    // No rows means no ListView and so no scroll position to measure.
-    if (_devices.isEmpty) return _loadNextPage();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scrollController.hasClients) return;
-      _onScroll();
-    });
   }
 
   @override
@@ -313,46 +306,41 @@ class _TargetPickerState extends State<_TargetPicker> {
     if (!_initialLoadDone) {
       return const Center(child: DelayedCircularProgressIndicator());
     }
-    if (_devices.isEmpty) {
-      // Not yet "none found" while pages of only hidden devices are skipped.
-      return _allLoaded
-          ? const Center(child: Text('No devices found'))
-          : const Center(child: DelayedCircularProgressIndicator());
-    }
-    return Scrollbar(
-      controller: _scrollController,
-      child: SectionedListView(
-        controller: _scrollController,
-        sections: [
-          ListSection<DeviceInstance>(
-            id: "devices",
-            items: _devices,
-            keyOf: (device) => device.id,
-            itemBuilder: (_, device, position) {
-              final picked = _selection.countForDevice(device.id);
-              return GroupedListTile(
-                position: position,
-                hairlineInset: GroupedListTile.insetNoLeading,
-                child: ListTile(
-                  title: Text(device.displayName),
-                  subtitle: picked == 0 ? null : Text('$picked selected'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _openValuePicker(_DeviceTarget(device)),
-                ),
-              );
-            },
+    // With no rows yet while pages of only hidden devices are skipped, the
+    // empty list's next-page row keeps paging.
+    return PagedDeviceList(
+      source: this,
+      scrollbar: true,
+      emptyText: 'No devices found',
+      sections: [
+        ListSection<DeviceInstance>(
+          id: "devices",
+          items: _devices,
+          keyOf: (device) => device.id,
+          itemBuilder: (_, device, position) {
+            final picked = _selection.countForDevice(device.id);
+            return GroupedListTile(
+              position: position,
+              hairlineInset: GroupedListTile.insetNoLeading,
+              child: ListTile(
+                title: Text(device.displayName),
+                subtitle: picked == 0 ? null : Text('$picked selected'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _openValuePicker(_DeviceTarget(device)),
+              ),
+            );
+          },
+        ),
+      ],
+      // The "loading more" indicator sits outside the surface, so the last
+      // real device still closes it with round corners while more load.
+      trailing: [
+        if (!ended)
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Center(child: DelayedCircularProgressIndicator()),
           ),
-        ],
-        // The "loading more" indicator sits outside the surface, so the last
-        // real device still closes it with round corners while more load.
-        trailing: [
-          if (!_allLoaded)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: DelayedCircularProgressIndicator()),
-            ),
-        ],
-      ),
+      ],
     );
   }
 

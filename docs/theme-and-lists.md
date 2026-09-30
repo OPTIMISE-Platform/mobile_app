@@ -116,4 +116,5 @@ mixin advances after every load, so a page that adds no visible row (all devices
 inactive) still leads to the next request, rebuilds of the same state do not, and
 a failed page ends the list until the next search. `untilEnded: true` keeps asking
 until the source reports the end, for the location page. The sensor picker and
-group editing keep their own paging.
+group editing are their own sources, each with its own state and page token, and
+a failed page ends both lists until the next search.
