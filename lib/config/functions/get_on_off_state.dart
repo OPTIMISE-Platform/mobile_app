@@ -32,9 +32,13 @@ class FunctionConfigGetOnOffState extends FunctionConfig {
     if (value is bool && !value) {
       return const Icon(Icons.power_off_outlined);
     }
-    if (value is List && value.isNotEmpty) {
-      if (value.every((element) => element == value[0])) {
-        return displayValue(value[0], context);
+    if (value is List) {
+      // Members that did not answer are left out, as the sensors page's
+      // switch tile does.
+      final known = value.where((element) => element != null).toList();
+      if (known.isEmpty) return null;
+      if (known.every((element) => element == known[0])) {
+        return displayValue(known[0], context);
       }
       return const Icon(Icons.remove);
     }

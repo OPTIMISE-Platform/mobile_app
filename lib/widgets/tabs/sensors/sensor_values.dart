@@ -15,9 +15,11 @@
  */
 
 import 'dart:async';
+import 'dart:collection';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_group.dart';
@@ -26,6 +28,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/models/sensor_tab.dart';
+import 'package:mobile_app/services/device_connection_states.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -38,9 +41,25 @@ import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_icons.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_picker.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_sparkline.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+
+/// Fetches the pinned devices by id. Replaceable so a test can serve them as
+/// the device cache would, which needs Isar.
+@visibleForTesting
+Future<DeviceInstanceWithTotal> Function(List<String> deviceIds)
+loadPinnedDevices = _loadPinnedDevices;
+
+Future<DeviceInstanceWithTotal> _loadPinnedDevices(List<String> deviceIds) =>
+    DevicesService.getDevices(
+      deviceIds.length,
+      0,
+      DeviceSearchFilter('', deviceIds: deviceIds),
+      null,
+    );
 
 /// A page of user-defined tabs, each showing a freely composed set of
 /// individual sensor values as cards.
@@ -78,6 +97,16 @@ class _SensorValuesState extends State<SensorValues>
   /// values so a slow history never delays the readings.
   final Map<SensorPin, SparkSeries> _sparklines = {};
 
+  /// What the last load wrote into each state on screen, by identity, so a
+  /// switch command's read-back replaces only a value nothing wrote since.
+  final Map<DeviceState, Object?> _loadedValues = LinkedHashMap.identity();
+
+  /// The load running, and whether another one was asked for meanwhile.
+  Future<void>? _loadInFlight;
+  bool _loadAgain = false;
+
+  StreamSubscription<SwitchCommandEnd>? _switchSubscription;
+
   SensorTab? get _currentTab =>
       _selected >= 0 && _selected < _tabs.length ? _tabs[_selected] : null;
 
@@ -94,6 +123,7 @@ class _SensorValuesState extends State<SensorValues>
     _refreshSubscription = AppState().refreshPressed.listen(
       (_) => _loadValues(),
     );
+    _switchSubscription = SwitchCommands.ended.listen(_onSwitchCommandEnded);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _loadValues();
     });
@@ -103,7 +133,34 @@ class _SensorValuesState extends State<SensorValues>
   void dispose() {
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
+    _switchSubscription?.cancel();
     super.dispose();
+  }
+
+  Iterable<DeviceState> _statesOf(
+    Iterable<DeviceInstance> devices,
+    Iterable<DeviceGroup> groups,
+  ) => [
+    for (final d in devices) ...d.states,
+    for (final g in groups) ...g.states,
+  ];
+
+  /// Shows a command's read-back on another object of its state that a load
+  /// filled while it ran, unless something wrote that state since, and ends
+  /// the spinner of a tile whose command a page before this one started.
+  void _onSwitchCommandEnded(SwitchCommandEnd end) {
+    if (!mounted) return;
+    if (end.readBack) {
+      for (final state in _statesOf(_devices.values, _groups.values)) {
+        if (identical(state, end.measurement) || !end.isFor(state)) continue;
+        if (!_loadedValues.containsKey(state) ||
+            !identical(state.value, _loadedValues[state])) {
+          continue;
+        }
+        state.value = end.measurement.value;
+      }
+    }
+    setState(() {});
   }
 
   @override
@@ -114,7 +171,29 @@ class _SensorValuesState extends State<SensorValues>
   // ---------------------------------------------------------------------------
 
   /// Loads the values of the selected tab only — switching tabs reloads.
-  Future<void> _loadValues() async {
+  ///
+  /// One load at a time, with one more after it when asked for meanwhile: an
+  /// older load landing after a newer one would write its older values into
+  /// the shared group states.
+  Future<void> _loadValues() {
+    final running = _loadInFlight;
+    if (running != null) {
+      _loadAgain = true;
+      return running;
+    }
+    final load = _loadUntilCurrent();
+    _loadInFlight = load;
+    return load.whenComplete(() => _loadInFlight = null);
+  }
+
+  Future<void> _loadUntilCurrent() async {
+    do {
+      _loadAgain = false;
+      await _loadOnce();
+    } while (_loadAgain && mounted);
+  }
+
+  Future<void> _loadOnce() async {
     final tab = _currentTab;
     final pins = _pins;
     if (pins.isEmpty) {
@@ -155,16 +234,18 @@ class _SensorValuesState extends State<SensorValues>
           .toList();
       var devices = <DeviceInstance>[];
       if (deviceIds.isNotEmpty) {
-        final filter = DeviceSearchFilter('', deviceIds: deviceIds);
-        final result = await DevicesService.getDevices(
-          deviceIds.length,
-          0,
-          filter,
-          null,
-        );
+        final result = await loadPinnedDevices(deviceIds);
         devices = result.devices;
-        await AppState()
-            .ensureDeviceTypes(devices.map((d) => d.device_type_id));
+        // Before the values, as in the device list: a device the cache still
+        // calls offline would get no values, and one gone offline since a
+        // command.
+        await Future.wait([
+          refreshDeviceConnectionStates(
+            devices,
+            platformStatesFresh: !result.fromCache,
+          ),
+          AppState().ensureDeviceTypes(devices.map((d) => d.device_type_id)),
+        ]);
         for (final device in devices) {
           final deviceType = AppState().deviceTypes[device.device_type_id];
           if (deviceType != null) device.prepareStates(deviceType);
@@ -173,9 +254,17 @@ class _SensorValuesState extends State<SensorValues>
 
       // Only request the functions actually pinned, not every state.
       final functionIds = pins.map((p) => p.functionId).toSet().toList();
+      final loadStartedAt = SwitchCommands.beginLoad();
       await AppState().loadStates(devices, groups, functionIds);
+      // Also when unmounted: a group's states are shared with other pages.
+      SwitchCommands.reapply(_statesOf(devices, groups), loadStartedAt);
       if (!mounted) return;
       setState(() {
+        _loadedValues
+          ..clear()
+          ..addEntries(
+            _statesOf(devices, groups).map((s) => MapEntry(s, s.value)),
+          );
         _devices
           ..clear()
           ..addEntries(devices.map((d) => MapEntry(d.id, d)));
@@ -553,6 +642,17 @@ class _SensorValuesState extends State<SensorValues>
 
   @override
   Widget build(BuildContext context) {
+    // Rebuilds the tiles when a gateway is paired, found or lost, which
+    // decides whether a device counts as local; values are not reloaded.
+    context.select<AppState, int>(
+      (state) => Object.hashAll([
+        for (final n in state.networks) ...[
+          n.id,
+          identityHashCode(n.localGateways),
+          n.localGateways?.length,
+        ],
+      ]),
+    );
     if (_tabs.isEmpty) return _buildNoTabsState();
 
     return Column(
@@ -816,10 +916,23 @@ class _SensorValuesState extends State<SensorValues>
         final title =
             pin.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
         final icon = sensorIcon(pin.iconName);
+        final switchTile = !pin.isControlling && isOnOffReading(pin.functionId);
+        final reading = onOffReadingOf(state?.value);
+        final unavailability = device != null
+            ? _unavailability(device)
+            : group != null
+            ? _groupUnavailability(group)
+            : null;
+        final toggle = switchTile
+            ? _switchActionFor(pin, state, device, group)
+            : null;
 
         // The chart queries by device and service, which a group value has
         // neither of — the detail page disables it for groups too.
-        final openChart = state != null && state.value is num && device != null
+        final openChart = !switchTile &&
+                state != null &&
+                state.value is num &&
+                device != null
             ? () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -829,94 +942,119 @@ class _SensorValuesState extends State<SensorValues>
             : null;
 
         return Card(
-          child: InkWell(
-            // Without a chart the card had no tap action of its own, so a tap
-            // that missed the small value button rippled the whole card and did
-            // nothing — which is every switch, and every group value. Let the
-            // card trigger the action in that case.
-            onTap: openChart ?? _actionFor(state, device, group),
-            onLongPress: () => _showPinMenu(pin, title),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (_sparklines[pin] != null)
-                  Sparkline(_sparklines[pin]!, color: context.appColors.appInk),
-                Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (!pin.hideSubtitle) ...[
+          color: switchTile &&
+                  reading == OnOffReading.on &&
+                  unavailability == null
+              ? switchTileOnColor(Theme.of(context))
+              : null,
+          // One node for TalkBack: the title, the state and the toggle.
+          child: _mergeSemanticsIf(
+            switchTile,
+            InkWell(
+              // Without a chart the card had no tap action of its own, so a tap
+              // that missed the small value button rippled the whole card and did
+              // nothing — which is every switch, and every group value. Let the
+              // card trigger the action in that case.
+              onTap: switchTile
+                  ? toggle
+                  : openChart ?? _actionFor(state, device, group),
+              onLongPress: () => _showPinMenu(pin, title),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (_sparklines[pin] != null)
+                    Sparkline(_sparklines[pin]!, color: context.appColors.appInk),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (!pin.hideSubtitle) ...[
+                          Row(
+                            children: [
+                              if (pin.isGroup) ...[
+                                Icon(
+                                  Icons.devices_other,
+                                  size: 12,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.color,
+                                ),
+                                const SizedBox(width: 3),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  _subtitleOf(pin),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  // Not textTheme.bodySmall: its M3 height (16px
+                                  // line) is taller than this literal's natural
+                                  // one and, stacked with the figure role below,
+                                  // overflowed the card at a large text scale.
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Theme.of(context).textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                        ],
                         Row(
                           children: [
-                            if (pin.isGroup) ...[
-                              Icon(
-                                Icons.devices_other,
-                                size: 12,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.color,
-                              ),
-                              const SizedBox(width: 3),
+                            if (icon != null) ...[
+                              Icon(icon, size: 18),
+                              const SizedBox(width: 4),
                             ],
                             Expanded(
                               child: Text(
-                                _subtitleOf(pin),
-                                maxLines: 1,
+                                title,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                // Not textTheme.bodySmall: its M3 height (16px
-                                // line) is taller than this literal's natural
-                                // one and, stacked with the figure role below,
-                                // overflowed the card at a large text scale.
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                      ],
-                      Row(
-                        children: [
-                          if (icon != null) ...[
-                            Icon(icon, size: 18),
-                            const SizedBox(width: 4),
-                          ],
-                          Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        // Expanded, not a Spacer plus a plain Align: that gave
+                        // the value its natural, unbounded height, which grew
+                        // with the text scale same as the title and could
+                        // overflow the card before its own FittedBox ever got
+                        // a chance to shrink it.
+                        Expanded(
+                          child: Align(
+                            alignment: switchTile
+                                ? Alignment.bottomLeft
+                                : Alignment.bottomRight,
+                            child: switchTile
+                                ? SwitchTileFooter(
+                                    reading: reading,
+                                    unavailable: unavailability,
+                                    busy: state != null &&
+                                        (state.transitioning ||
+                                            SwitchCommands.isRunning(state)),
+                                    onToggle: toggle,
+                                  )
+                                : _buildValue(state, device, group),
                           ),
-                        ],
-                      ),
-                      // Expanded, not a Spacer plus a plain Align: that gave
-                      // the value its natural, unbounded height, which grew
-                      // with the text scale same as the title and could
-                      // overflow the card before its own FittedBox ever got
-                      // a chance to shrink it.
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: _buildValue(state, device, group),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
     );
   }
+
+  Widget _mergeSemanticsIf(bool merge, Widget child) =>
+      merge ? MergeSemantics(child: child) : child;
 
   /// Whether a control for this value exists at all — either it is itself a
   /// control, or it is a measurement with a matching controlling state (the
@@ -973,14 +1111,17 @@ class _SensorValuesState extends State<SensorValues>
   /// Needed because [performDeviceStateAction] resolves a measurement's control
   /// by aspect, which no group criterion satisfies. Handing it the control
   /// directly puts it on its `isControlling` branch and skips that lookup.
+  ///
+  /// [target] replaces the controlling function the value selects.
   DeviceState? _groupControlFor(
     DeviceState state,
-    List<DeviceState> allStates,
-  ) {
+    List<DeviceState> allStates, [
+    String? target,
+  ]) {
     final config =
         functionConfigs[state.functionId] ??
         FunctionConfigDefault(state.functionId);
-    final target = config.getRelatedControllingFunction(state.value);
+    target ??= config.getRelatedControllingFunction(state.value);
     if (target == null) return null;
     final candidates = allStates
         .where((s) => s.isControlling && s.functionId == target)
@@ -994,9 +1135,71 @@ class _SensorValuesState extends State<SensorValues>
 
   /// Whether the device can't be reached right now — the same two cases the
   /// device list distinguishes.
-  bool _isUnavailable(DeviceInstance device) =>
-      device.connection_state == DeviceConnectionStatus.offline ||
-      device.network?.localGateways?.isNotEmpty != true && Settings.getLocalMode();
+  bool _isUnavailable(DeviceInstance device) => _unavailability(device) != null;
+
+  Unavailability? _unavailability(DeviceInstance device) {
+    if (device.connection_state == DeviceConnectionStatus.offline) {
+      return Unavailability.offline;
+    }
+    if (device.network?.localGateways?.isNotEmpty != true &&
+        Settings.getLocalMode()) {
+      return Unavailability.notLocal;
+    }
+    return null;
+  }
+
+  /// A group outside a locally served network in local mode, which the
+  /// platform will not be asked for.
+  Unavailability? _groupUnavailability(DeviceGroup group) =>
+      Settings.getLocalMode() && group.network?.localGateways?.isNotEmpty != true
+      ? Unavailability.notLocal
+      : null;
+
+  /// What toggling an on/off tile does, or null when the tile is passive.
+  ///
+  /// An unknown state never switches: its controlling function would be
+  /// guessed, and the config's guess for null is "on".
+  VoidCallback? _switchActionFor(
+    SensorPin pin,
+    DeviceState? state,
+    DeviceInstance? device,
+    DeviceGroup? group,
+  ) {
+    if (state == null ||
+        state.transitioning ||
+        SwitchCommands.isRunning(state)) {
+      return null;
+    }
+    final target = onOffTargetFunction(onOffReadingOf(state.value));
+    if (target == null) return null;
+    if (device != null) {
+      if (_isUnavailable(device)) return null;
+      // The pairing toggleDeviceState resolves; without exactly one control
+      // the tile stays passive instead of toasting on every tap.
+      if (state.controlsFor(device.states, target).length != 1) return null;
+      return () => SwitchCommands.run(
+        state,
+        () => toggleDeviceState(
+          connectionStatus: device.connection_state,
+          measurement: state,
+          states: device.states,
+          notifyEntity: device.notifyStateChanged,
+          controllingFunction: target,
+        ),
+      );
+    }
+    if (group == null || _groupUnavailability(group) != null) return null;
+    final control = _groupControlFor(state, group.states, target);
+    if (control == null) return null;
+    return () => SwitchCommands.run(
+      state,
+      () => toggleThroughControl(
+        measurement: state,
+        control: control,
+        notifyEntity: group.notifyStateChanged,
+      ),
+    );
+  }
 
   /// What triggering this value does, or null when there is nothing to trigger.
   ///

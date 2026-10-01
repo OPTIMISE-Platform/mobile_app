@@ -89,6 +89,11 @@ a fresh value from the device.
   `Error running command: <message>`.
 - `loadStates` (`lib/mixins/device_mixin.dart`) hands a 502 to the state's
   callback as null and reports only an exception.
+- `toggleDeviceState` (`lib/widgets/tabs/shared/device_state_action.dart`)
+  resolves the control from the reading; `toggleThroughControl` takes one the
+  caller resolved (the sensors page's group tiles). Both show a spinner, toast
+  a non-200 with the backend message, read the value back and return whether
+  that read-back succeeded.
 - The Android widget (`lib/native_pipe.dart`) returns the responses as they
   are.
 

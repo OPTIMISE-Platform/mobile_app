@@ -45,7 +45,11 @@ class DeviceInstanceWithTotal {
   final List<DeviceInstance> devices;
   final int total;
 
-  DeviceInstanceWithTotal(this.devices, this.total);
+  /// Whether the devices were read from the local cache, whose connection
+  /// states may be stale, rather than from the platform.
+  final bool fromCache;
+
+  DeviceInstanceWithTotal(this.devices, this.total, {this.fromCache = false});
 }
 
 class DevicesService {
@@ -90,7 +94,7 @@ class DevicesService {
           "Getting devices from local DB took ${DateTime.now().difference(start)}",
         );
         AppState().noteDevices(devices);
-        return DeviceInstanceWithTotal(devices, cachedCount);
+        return DeviceInstanceWithTotal(devices, cachedCount, fromCache: true);
       }
     }
     final headers = await Auth().getHeaders();

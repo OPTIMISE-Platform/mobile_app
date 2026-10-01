@@ -47,6 +47,7 @@ import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
 class DetailPage extends StatefulWidget {
@@ -301,7 +302,13 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
         Iterable<DeviceState>? controllingStates;
-        if (controllingFunctions != null && functionConfig.getRelatedControllingFunction(element.value) != null) {
+        // The config guesses "on" for an unknown on/off state, so such a reading
+        // keeps its controls as rows of their own instead of acting for them.
+        final unknownSwitch =
+            isOnOffReading(element.functionId) && onOffReadingOf(element.value) == OnOffReading.unknown;
+        if (controllingFunctions != null &&
+            !unknownSwitch &&
+            functionConfig.getRelatedControllingFunction(element.value) != null) {
           controllingStates = controllingFunctions.expand((f) => element.controlsFor(states, f));
         }
         String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);

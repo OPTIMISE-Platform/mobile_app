@@ -22,6 +22,7 @@ import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/db_query.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/semaphore.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 
 final _logger = Logger(printer: SimplePrinter());
 
@@ -31,10 +32,11 @@ final Semaphore _sparklineLimiter = Semaphore(4);
 
 /// Whether a history sparkline can be drawn for [state].
 ///
-/// Controls have no measurement series, and the query addresses a value by its
-/// service and path.
+/// Controls have no measurement series, an on/off state has no line worth
+/// drawing, and the query addresses a value by its service and path.
 bool canShowSparkline(DeviceState state) =>
     !state.isControlling &&
+    !isOnOffReading(state.functionId) &&
     state.serviceId != null &&
     state.path != null &&
     state.deviceId != null;

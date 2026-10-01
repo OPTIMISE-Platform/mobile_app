@@ -183,10 +183,12 @@ Future<void> performDeviceStateAction({
 
 /// The controlling state that acts on the readable [measurement] given its
 /// current value, among all [states] of its device or group. Null, after a
-/// toast, when there is none or more than one.
-DeviceState? resolveControllingState(DeviceState measurement, List<DeviceState> states) {
+/// toast, when there is none or more than one. [controllingFunction] replaces
+/// the function the value would select.
+DeviceState? resolveControllingState(DeviceState measurement, List<DeviceState> states,
+    [String? controllingFunction]) {
   final functionConfig = functionConfigs[measurement.functionId] ?? FunctionConfigDefault(measurement.functionId);
-  final controllingFunction = functionConfig.getRelatedControllingFunction(measurement.value);
+  controllingFunction ??= functionConfig.getRelatedControllingFunction(measurement.value);
   if (controllingFunction == null) {
     const err = "Could not find related controlling function";
     Toast.showToastNoContext(err);
@@ -214,53 +216,72 @@ DeviceState? resolveControllingState(DeviceState measurement, List<DeviceState> 
 /// refreshes only [measurement] (the one value a device list row shows) and
 /// toasts a failed read-back with the backend's message.
 ///
+/// [controllingFunction] replaces the function the current value selects.
 /// [measurement] is transitioning from the command until this returns, on
-/// every path.
-Future<void> toggleDeviceState({
+/// every path. Returns whether the value was read back.
+Future<bool> toggleDeviceState({
   required DeviceConnectionStatus? connectionStatus,
   required DeviceState measurement,
   required List<DeviceState> states,
   required VoidCallback notifyEntity,
+  String? controllingFunction,
 }) async {
   if (connectionStatus == DeviceConnectionStatus.offline) {
     Toast.showToastNoContext("Device is offline");
-    return;
+    return false;
   }
+  if (measurement.transitioning) {
+    return false; // avoid double presses
+  }
+  final control = resolveControllingState(measurement, states, controllingFunction);
+  if (control == null) return false;
+  return toggleThroughControl(measurement: measurement, control: control, notifyEntity: notifyEntity);
+}
+
+/// Runs [control]'s command and reads [measurement] back, with the feedback of
+/// [toggleDeviceState]. For a caller that has resolved the control itself, such
+/// as a group's.
+///
+/// [measurement] is transitioning from the command until this returns, on
+/// every path. Returns whether the value was read back.
+Future<bool> toggleThroughControl({
+  required DeviceState measurement,
+  required DeviceState control,
+  required VoidCallback notifyEntity,
+}) async {
   // No await between this check and setting the flag below, so a second press
   // cannot slip in between.
   if (measurement.transitioning) {
-    return; // avoid double presses
+    return false; // avoid double presses
   }
-  final control = resolveControllingState(measurement, states);
-  if (control == null) return;
-
   measurement.transitioning = true;
   notifyEntity();
   try {
     final List<DeviceCommandResponse> responses = [];
     if (!await DeviceCommandsService.runCommandsSecurely([control.toCommand()], responses)) {
-      return;
+      return false;
     }
     assert(responses.length == 1);
     if (responses[0].status_code != 200) {
       final err = "Error running command: ${responses[0].message}";
       Toast.showToastNoContext(err);
       _logger.e(err);
-      return;
+      return false;
     }
     responses.clear();
     if (!await DeviceCommandsService.runCommandsSecurely([measurement.toCommand()], responses, false)) {
-      return;
+      return false;
     }
     assert(responses.length == 1);
     if (responses[0].status_code != 200) {
       final err = "Error running command: ${responses[0].message}";
       Toast.showToastNoContext(err);
       _logger.e(err);
-      return;
+      return false;
     }
     final message = responses[0].message;
     measurement.value = message is List && message.length == 1 ? message[0] : message;
+    return true;
   } finally {
     measurement.transitioning = false;
     notifyEntity();

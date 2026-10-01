@@ -31,6 +31,7 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 
 /// Lets the user pick devices or device groups and check off as many of their
 /// values as wanted.
@@ -564,6 +565,10 @@ class _ValuePickerState extends State<_ValuePicker> {
     return ListTile(
       leading: state.isControlling
           ? const Icon(Icons.input)
+          // The page shows an on/off reading as a switch, not a value with a
+          // history.
+          : isOnOffReading(state.functionId)
+          ? const Icon(Icons.toggle_on_outlined)
           : const Icon(Icons.show_chart),
       title: Text(sensorTitle(state)),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),

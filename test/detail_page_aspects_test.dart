@@ -132,6 +132,11 @@ void main() {
       ..add(state(d, off, ["lamp"], true));
 
     await pumpGolden(tester, DetailPage(d, null), dark: false);
+    // After the page's own value load, which fails without a backend: an
+    // unknown state keeps its controls as rows of their own.
+    d.states.first.value = true;
+    d.notifyStateChanged();
+    await tester.pump();
 
     expect(find.text("Power state"), findsOneWidget);
     // Paired controls are folded into the reading's row instead of listed.
