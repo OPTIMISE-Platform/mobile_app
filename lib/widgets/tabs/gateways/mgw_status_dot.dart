@@ -47,6 +47,7 @@ class MgwStatusDot extends StatefulWidget {
         return Colors.red;
       case MgwStatus.unreachable:
         return Colors.grey;
+      case MgwStatus.unknown:
       case null:
         return Colors.grey.shade400;
     }
@@ -62,6 +63,8 @@ class MgwStatusDot extends StatefulWidget {
         return "A different gateway answers here";
       case MgwStatus.unreachable:
         return "Not in this network";
+      case MgwStatus.unknown:
+        return "Could not check";
       case null:
         return "Checking";
     }
@@ -79,6 +82,7 @@ class _MgwStatusDotState extends State<MgwStatusDot> {
   void initState() {
     super.initState();
     _status = _check();
+    MgwReachability.revision.addListener(_onReachabilityChanged);
   }
 
   @override
@@ -88,6 +92,21 @@ class _MgwStatusDotState extends State<MgwStatusDot> {
         old.expectNetworkId != widget.expectNetworkId) {
       _status = _check();
     }
+  }
+
+  @override
+  void dispose() {
+    MgwReachability.revision.removeListener(_onReachabilityChanged);
+    super.dispose();
+  }
+
+  /// A dropped or changed answer is checked again; while a fresh one is cached
+  /// this costs no request.
+  void _onReachabilityChanged() {
+    if (!mounted) return;
+    setState(() {
+      _status = _check();
+    });
   }
 
   Future<MgwStatus> _check() => MgwReachability.statusOf(widget.host,

@@ -83,9 +83,9 @@ a screen fetches.
 - `failures["METHOD path"] = DioExceptionType.receiveTimeout` makes the route
   throw a `DioException` of that type instead of answering, for the code that
   decides on the type of a failure rather than on a status.
-- `serveDevicesPaged(devices)` slices by offset/limit and honours `ids` and
-  `search` (substring of the name) like the real endpoint, with `X-Total-Count`
-  set to the count before client-side hiding.
+- `serveDevicesPaged(devices)` slices by offset/limit and honours `ids`,
+  `device-type-ids` and `search` (substring of the name) like the real
+  endpoint, with `X-Total-Count` set to the count before client-side hiding.
 
 Light and dark captures of one screen stay in one `testWidgets`: Dio instances
 are memoized for the process, and a memoized future created in an earlier test
@@ -123,11 +123,14 @@ All are `@visibleForTesting` and never set by production code.
 | `useUtcForDisplayTime` (`lib/shared/display_time.dart`) | Makes `toDisplayTime()` return UTC instead of local time, so rendered times are the same on every host |
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
 | `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP; its `serveStale` argument is the stale-serving report of `docs/cache-freshness.md` |
-| `DeviceMixin.fetchDeviceClasses` / `readCachedDeviceClasses` (`lib/mixins/device_mixin.dart`) | Replace the device-class fetch and the read of its stored copy |
+| `DeviceMixin.fetchDeviceClasses` (`lib/mixins/device_mixin.dart`) | Replaces the device-class loader, with the same arguments as `fetchDeviceTypes` |
 | `CacheHelper.afterDeviceChunkForTest` (`lib/services/cache_helper.dart`) | Called after each chunk the device refresh writes, so a test can change the account between two chunks |
 | `CacheHelper.afterDevicePruneForTest` (`lib/services/cache_helper.dart`) | Called right after the device refresh prunes, before it marks the collection refreshed |
 | `Auth.cleanupForTest()` (`lib/services/auth.dart`) | Runs the logout cleanup without a signed-in client; the identity package's secure-storage channel (`plugins.concerti.io/openidconnect_secure_storage`) needs a mock handler |
-| `DeviceMixin.readCachedInactiveDeviceIds` (`lib/mixins/device_mixin.dart`) | Replaces the Isar query that seeds the inactive-device index, so the counters can be tested without the Isar container |
+| `DeviceMixin.readCachedDeviceIndex` (`lib/mixins/device_mixin.dart`) | Replaces the Isar read that seeds the device index (type and inactive flag per device, and whether a full refresh filled the cache), so the counters can be tested without the Isar container |
+| `DeviceMixin.deviceTypesAreAll` (`lib/mixins/device_mixin.dart`) | Replaces the read of `DeviceTypesService.userListIsAllTypes`, so the fallback to the platform's type list can be tested without its backend |
+| `MgwReachability.probeOverride` (`lib/services/mgw/reachability.dart`) | Replaces the network probe behind `check`/`statusOf`; the cache, the `forget()` epochs, the sequence guard and the `revision` signal still run |
+| `MgwDiscoveryService.discoverOverride` (`lib/services/mgw/discovery.dart`) | Replaces the mDNS scan; receives the `onUpdate` callback, so a test can report gateways while the scan runs |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
 
@@ -141,12 +144,12 @@ developer machine and CI.
   `lib/services/app_update.dart` and, under `lib/services/mgw/`,
   `advertisements.dart`, `auth.dart`, `reachability.dart` and `restricted.dart`.
   They carry `AppHttpClientAdapter.plain()`, so `testOverride` reaches them,
-  but they get neither DioFactory's interceptor set nor its memoization. Only
-  `MgwAdvertisements` has a test through the seam
-  (`http_client_adapter_seam_test.dart`); for the other four nothing fails if
-  the adapter line goes missing. The update check itself still cannot be
-  driven on the test host, because it returns before its request on any
-  platform but Android.
+  but they get neither DioFactory's interceptor set nor its memoization. The
+  four MGW clients are driven through the seam (`http_client_adapter_seam_test`,
+  `mgw_session_retry_test`, `mgw_session_storage_failure_test`); for
+  `app_update.dart` nothing fails if the adapter line goes missing. The update
+  check itself still cannot be driven on the test host, because it returns
+  before its request on any platform but Android.
 - Text painted directly on a canvas without a font family renders as boxes,
   because the test binding's default font is not Roboto. Affects the value
   labels in `smart_service_pv_flow`; the golden still checks layout and colours.

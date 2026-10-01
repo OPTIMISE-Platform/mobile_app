@@ -134,6 +134,24 @@ void main() {
         "ip": "192.168.1.5",
       });
       expect(mgw.networkId, equals("urn:infai:ses:hub:abc"));
+      expect(mgw.coreId, isEmpty,
+          reason: "a network id is no core id, and would make every entry of "
+              "the network one gateway");
+    });
+
+    test("an entry stored before the split is written back as a split one",
+        () {
+      final legacy = MGW.fromJson({
+        "hostname": "mgw.local",
+        "mDNSServiceName": "MGW",
+        "coreId": "urn:infai:ses:hub:abc",
+        "ip": "192.168.1.5",
+      });
+      final again = MGW.fromJson(legacy.toJson());
+      expect(again.coreId, isEmpty);
+      expect(again.networkId, "urn:infai:ses:hub:abc");
+      expect(again.hostname, "mgw.local");
+      expect(again.ip, "192.168.1.5");
     });
   });
 }

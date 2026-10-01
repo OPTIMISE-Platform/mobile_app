@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
 
@@ -5,7 +7,15 @@ class Failure {
   final ErrorCode errorCode;
   final String detailedMessage;
 
-  Failure(this.errorCode, this.detailedMessage);
+  /// HTTP status of the gateway's answer, null when none arrived.
+  final int? statusCode;
+
+  Failure(this.errorCode, this.detailedMessage, {this.statusCode});
+
+  @override
+  String toString() => statusCode == null
+      ? "Failure($errorCode: $detailedMessage)"
+      : "Failure($errorCode, HTTP $statusCode: $detailedMessage)";
 }
 
 enum ErrorCode {
@@ -24,6 +34,9 @@ enum ErrorCode {
   SEND_TIMEOUT,
   NO_INTERNET_CONNECTION,
 
+  /// Refused or reset: nothing accepted the connection at that address.
+  CONNECTION_ERROR,
+
   DEFAULT
 }
 
@@ -37,6 +50,14 @@ String _responseDetail(Response response) {
     if (text.isNotEmpty && text.length <= 200 && !text.startsWith("<")) {
       return text;
     }
+  }
+  // The identity provider answers with a JSON error object instead.
+  if (body is Map) {
+    final error = body["error"];
+    final message = error is Map
+        ? (error["reason"] ?? error["message"])
+        : (body["message"] ?? error);
+    if (message is String && message.trim().isNotEmpty) return message.trim();
   }
   return response.statusMessage ?? "";
 }
@@ -58,22 +79,24 @@ Failure handleDioException(DioException error) {
       failure = Failure(ErrorCode.RECEIVE_TIMEOUT, error.message ?? "");
       break;
     case DioExceptionType.badResponse:
-      if (error.response != null &&
-          error.response?.statusCode != null &&
-          error.response?.statusMessage != null) {
+      // The reason phrase is optional on the wire, so only the status decides.
+      final status = error.response?.statusCode;
+      if (status != null) {
         var message = _responseDetail(error.response!);
-        switch (error.response?.statusCode) {
+        switch (status) {
           case 404:
-            failure = Failure(ErrorCode.NOT_FOUND, message);
+            failure = Failure(ErrorCode.NOT_FOUND, message, statusCode: status);
             break;
           case 401:
-            failure = Failure(ErrorCode.UNAUTHORIZED, message);
+            failure =
+                Failure(ErrorCode.UNAUTHORIZED, message, statusCode: status);
             break;
           case 500:
-            failure = Failure(ErrorCode.SERVER_ERROR, message);
+            failure =
+                Failure(ErrorCode.SERVER_ERROR, message, statusCode: status);
             break;
           default:
-            failure = Failure(ErrorCode.DEFAULT, message);
+            failure = Failure(ErrorCode.DEFAULT, message, statusCode: status);
             break;
         }
         break;
@@ -83,6 +106,14 @@ Failure handleDioException(DioException error) {
       }
     case DioExceptionType.cancel:
       failure = Failure(ErrorCode.CANCEL, error.message ?? "");
+      break;
+    case DioExceptionType.connectionError:
+      failure = Failure(ErrorCode.CONNECTION_ERROR,
+          error.error?.toString() ?? error.message ?? "Connection failed");
+      break;
+    // A reset after connecting surfaces as unknown with the socket error.
+    case DioExceptionType.unknown when error.error is SocketException:
+      failure = Failure(ErrorCode.CONNECTION_ERROR, error.error.toString());
       break;
     default:
       final detail = error.message ?? error.error?.toString() ?? "Unknown error";

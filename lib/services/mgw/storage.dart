@@ -22,10 +22,18 @@ import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
+import 'package:mutex/mutex.dart';
 import 'package:path_provider/path_provider.dart';
 
 const LOG_PREFIX = "MGW-STORAGE-SERVICE";
+
+/// No device credentials are stored, as opposed to a store that failed to read.
+class MgwCredentialsMissing implements Exception {
+  @override
+  String toString() => "No pairing credentials are stored";
+}
 
 /// Persistence for gateway pairing.
 ///
@@ -50,6 +58,10 @@ class MgwStorage {
 
   static const _boxName = "mgw.box";
   static Box<String>? _box;
+
+  // Every change to the gateway list reads and writes the whole list, so two
+  // unserialized changes (a pairing during an address refresh) lose one.
+  static final _listLock = Mutex();
 
   // Same options as the rest of the app, so one corrupted store resets the same
   // way everywhere (see AppInitializer._clearCorruptedSecureStorage).
@@ -100,25 +112,107 @@ class MgwStorage {
     if (credentials != null) {
       return DeviceUserCredentials.fromJson(json.decode(credentials));
     }
-    throw("Credentials not stored");
+    throw MgwCredentialsMissing();
   }
 
-  static Future<void> StorePairedMGW(MGW mgw) async {
+  /// Whether [a] and [b] are the same gateway: the core id decides when both
+  /// carry one, otherwise the hostname or the address, unless both are bound
+  /// to different networks.
+  static bool isSameGateway(MGW a, MGW b) {
+    if (a.coreId.isNotEmpty && b.coreId.isNotEmpty) return a.coreId == b.coreId;
+    if (a.networkId.isNotEmpty &&
+        b.networkId.isNotEmpty &&
+        a.networkId != b.networkId) {
+      return false;
+    }
+    final sameHost = a.hostname.isNotEmpty &&
+        a.hostname.toLowerCase() == b.hostname.toLowerCase();
+    return sameHost || sameGatewayAddress(a.ip, b.ip);
+  }
+
+  /// Whether [a] and [b] are the same stored entry, field for field.
+  static bool isSameEntry(MGW a, MGW b) =>
+      a.hostname == b.hostname &&
+      a.ip == b.ip &&
+      a.coreId == b.coreId &&
+      a.networkId == b.networkId;
+
+  /// The entry in [stored] that [mgw], a possibly older copy, stands for.
+  ///
+  /// Matched on what does not change while paired: the core id, or the
+  /// hostname and network without one. The address does not count, as the
+  /// address refresh rewrites it. Among several matches the field-exact one
+  /// wins, then the one bound to the same network.
+  static MGW? resolve(MGW mgw, List<MGW> stored) {
+    final candidates = mgw.coreId.isNotEmpty
+        ? stored.where((m) => m.coreId == mgw.coreId).toList()
+        : stored
+            .where((m) =>
+                m.hostname.toLowerCase() == mgw.hostname.toLowerCase() &&
+                m.networkId == mgw.networkId)
+            .toList();
+    if (candidates.length <= 1) return candidates.firstOrNull;
+    return candidates.where((m) => isSameEntry(m, mgw)).firstOrNull ??
+        candidates.where((m) => m.networkId == mgw.networkId).firstOrNull ??
+        candidates.first;
+  }
+
+  /// Stores [mgw], replacing every entry for the same gateway and [replacing]
+  /// at the position of the first one, so pairing again does not add a second
+  /// entry.
+  ///
+  /// An entry added by address carries no core id or mDNS name; replacing a
+  /// discovered entry with it keeps those, so the gateway is still recognised
+  /// by discovery and its row keeps its key.
+  ///
+  /// Returns the entry as stored.
+  static Future<MGW> StorePairedMGW(MGW mgw, {MGW? replacing}) async {
     await init();
     _logger.d("$LOG_PREFIX: Store paired mgw: ${mgw.mDNSServiceName}");
-    var storedMGWs = await LoadPairedMGWs();
-    storedMGWs.add(mgw);
-    return await _box?.put(_mgwConnectedKeyPrefix, json.encode(storedMGWs)).then((
-        value) => _box?.flush());
+    return _listLock.protect(() async {
+      final storedMGWs = await LoadPairedMGWs();
+      bool replaced(MGW m) =>
+          isSameGateway(m, mgw) ||
+          (replacing != null && isSameEntry(m, replacing));
+      final at = storedMGWs.indexWhere(replaced);
+      final discovered = storedMGWs
+          .where((m) => replaced(m) && m.coreId.isNotEmpty)
+          .firstOrNull;
+      final entry = mgw.coreId.isEmpty && discovered != null
+          ? MGW(discovered.hostname, discovered.mDNSServiceName,
+              discovered.coreId, mgw.ip,
+              networkId:
+                  mgw.networkId.isEmpty ? discovered.networkId : mgw.networkId)
+          : mgw;
+      storedMGWs.removeWhere(replaced);
+      storedMGWs.insert(at < 0 ? storedMGWs.length : at, entry);
+      await _write(storedMGWs);
+      return entry;
+    });
   }
 
   /// Writes the whole list back, for updating an entry in place.
   static Future<void> ReplacePairedMGWs(List<MGW> mgws) async {
     await init();
     _logger.d("$LOG_PREFIX: Replace ${mgws.length} paired mgws");
-    return await _box
-        ?.put(_mgwConnectedKeyPrefix, json.encode(mgws))
-        .then((value) => _box?.flush());
+    await _listLock.protect(() => _write(mgws));
+  }
+
+  /// Applies [change] to the list as stored now and writes it back when
+  /// [change] returns true. Read and write happen under the list lock.
+  static Future<bool> UpdatePairedMGWs(bool Function(List<MGW> mgws) change) async {
+    await init();
+    return _listLock.protect(() async {
+      final mgws = await LoadPairedMGWs();
+      if (!change(mgws)) return false;
+      await _write(mgws);
+      return true;
+    });
+  }
+
+  static Future<void> _write(List<MGW> mgws) async {
+    await _box?.put(_mgwConnectedKeyPrefix, json.encode(mgws));
+    await _box?.flush();
   }
 
   static Future<List<MGW>> LoadPairedMGWs() async {
@@ -135,27 +229,25 @@ class MgwStorage {
     return mgws;
   }
 
-  static Future<void> RemovePairedMGW(MGW mgw) async {
-    // TODO use core-id published via mDNS as identifier. Atm this is not advertised.
+  /// Removes the one stored entry [mgw] stands for (see [resolve]); false when
+  /// none is stored any more.
+  static Future<bool> RemovePairedMGW(MGW mgw) async {
     await init();
     _logger.d("$LOG_PREFIX: Remove paired mgw: ${mgw.mDNSServiceName}");
-    var storedMGWs = await LoadPairedMGWs();
-    var filteredMGWs = [];
-    for(final storedMgw in storedMGWs) {
-      if(storedMgw.hostname != mgw.hostname) {
-        filteredMGWs.add(storedMgw);
+    return _listLock.protect(() async {
+      final storedMGWs = await LoadPairedMGWs();
+      final entry = resolve(mgw, storedMGWs);
+      if (entry == null) return false;
+      storedMGWs.remove(entry);
+      await MgwService.ResetSessionData();
+      // One credential set covers every gateway, so dropping it when the list
+      // empties is the only rule available.
+      if (storedMGWs.isEmpty) {
+        await _clearSecrets();
       }
-    }
-    await MgwService.ResetSessionData();
-    // One credential set covers every gateway, so dropping it when the list
-    // empties is the only rule available. Where the hostname keying above
-    // removes more than intended, this over-clears and costs a re-pair - better
-    // than leaving a usable device secret on a phone the user unpaired.
-    if (filteredMGWs.isEmpty) {
-      await _clearSecrets();
-    }
-    return await _box?.put(_mgwConnectedKeyPrefix, json.encode(filteredMGWs)).then((
-        value) => _box?.flush());
+      await _write(storedMGWs);
+      return true;
+    });
   }
 
   /// Reads [secureKey], falling back once to the plaintext Hive entry under

@@ -30,12 +30,13 @@ class MGW {
   MGW(this.hostname, this.mDNSServiceName, this.coreId, this.ip,
       {this.networkId = ""});
 
-  // Entries written before the split carried the network id in coreId, so fall
-  // back to it rather than dropping an existing binding.
+  // Entries written before the split carried the network id in coreId: it is
+  // their network, and no core id, or every such entry of one network would
+  // count as the same gateway.
   MGW.fromJson(Map<String, dynamic> json)
       : hostname = json['hostname'],
         mDNSServiceName = json['mDNSServiceName'],
-        coreId = json['coreId'] ?? "",
+        coreId = json['networkId'] == null ? "" : json['coreId'] ?? "",
         ip = json['ip'],
         networkId = json['networkId'] ?? json['coreId'] ?? "";
 

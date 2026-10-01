@@ -21,11 +21,11 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
+import 'package:mobile_app/widgets/tabs/gateways/mgw_status_panel.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
-import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/shared/devices_label.dart';
@@ -37,7 +37,6 @@ import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 
-import '../../../services/mgw/storage.dart';
 
 class DeviceListByNetwork extends StatefulWidget {
   const DeviceListByNetwork({super.key});
@@ -85,11 +84,12 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   /// Without a bound gateway it offers to add one. With one it shows what that
   /// gateway is currently good for - paired alone says nothing, since the
   /// device may be elsewhere or the gateway may have forgotten it - and opens
-  /// the unpair dialog on tap.
+  /// its status on tap.
   Widget _gatewayControl(AppState state, Network network) {
     final bound = state.gateways.where((mgw) => mgw.networkId == network.id);
     if (bound.isEmpty) {
       return IconButton(
+        tooltip: "Pair gateway",
         onPressed: () async {
           await Navigator.push(
             context,
@@ -102,47 +102,14 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
     }
     final mgw = bound.first;
     return IconButton(
-      onPressed: () => _showUnpairDialog(mgw),
+      tooltip: "Gateway status",
+      onPressed: () => showMgwStatusSheet(context, mgw),
       icon: Row(mainAxisSize: MainAxisSize.min, children: [
         MgwStatusDot(
             host: mgw.ip, expectNetworkId: mgw.networkId, size: 12),
         const SizedBox(width: 4),
         const Icon(Icons.lan_outlined),
       ]),
-    );
-  }
-
-  void _showUnpairDialog(MGW mgw) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) => SimpleDialog(
-        title: const Text('Remove Pairing'),
-        children: <Widget>[
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-            child: Text("${mgw.mDNSServiceName} - ${mgw.ip}"),
-          ),
-          Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-            child: ElevatedButton(
-              onPressed: () async {
-                // Awaited: it clears the stored secrets. loadStoredMGWs then
-                // has to run too - the row reads AppState.gateways, which only
-                // that call refills, so without it the removed pairing stays
-                // on screen.
-                await MgwStorage.RemovePairedMGW(mgw);
-                await AppState().loadStoredMGWs();
-                if (!context.mounted) return;
-                Navigator.pop(context, 'OK');
-                _refresh();
-              },
-              child: const Text('OK'),
-            ),
-          )
-        ],
-      ),
     );
   }
 

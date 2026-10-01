@@ -5,7 +5,6 @@ import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
-import 'package:mobile_app/shared/api_available_interceptor.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 
 
@@ -59,16 +58,16 @@ class MgwAuth {
     printer: SimplePrinter(),
   );
 
-  //TODO: switch to factory
+  // Without ApiAvailableInterceptor, like the status probe: in local mode it
+  // refuses a host until a probe marks it local, and the probe needs this
+  // login to do so.
   final dio = Dio(
      BaseOptions(
       connectTimeout: const Duration(milliseconds: 5000),
       sendTimeout: const Duration(milliseconds: 5000),
       receiveTimeout: const Duration(milliseconds: 5000),
     ),
-  )
-    ..interceptors.add(ApiAvailableInterceptor())
-    ..httpClientAdapter = AppHttpClientAdapter.plain();
+  )..httpClientAdapter = AppHttpClientAdapter.plain();
 
 
   Future<LoginResponse> Login(String? username, String? password) async {

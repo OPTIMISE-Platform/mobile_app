@@ -18,10 +18,11 @@ import 'dart:async';
 import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/details.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
+import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/gateways/unpair_dialog.dart';
 
 import 'package:provider/provider.dart';
 
@@ -100,9 +101,9 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                     ListSection<MGW>(
                       id: "gateways",
                       items: state.gateways,
-                      // hostname, not coreId: a manually-added gateway (see
-                      // mgw_page.dart's _addManually) always has coreId "",
-                      // and RemovePairedMGW already keys pairings by hostname.
+                      // hostname, not coreId: a gateway added by address has
+                      // coreId "". The same hostname bound to two networks
+                      // repeats, and the list tells repeats apart.
                       keyOf: (mgw) => mgw.hostname,
                       itemBuilder: (context, mgw, position) {
                         return GroupedListTile(
@@ -125,11 +126,16 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                                   MaterialPageRoute(
                                       builder: (context) => MGWDetail(mgw: mgw)));
                             },
-                            trailing: MaterialButton(
-                                child: const Icon(Icons.delete),
+                            trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: "Remove pairing",
                                 onPressed: () async {
-                                  await MgwStorage.RemovePairedMGW(mgw);
-                                  await state.loadStoredMGWs();
+                                  final result =
+                                      await removePairing(context, mgw);
+                                  if (result == PairingRemoval.notFound) {
+                                    Toast.showToastNoContext(
+                                        pairingNotFoundMessage);
+                                  }
                                 }),
                           ),
                         );

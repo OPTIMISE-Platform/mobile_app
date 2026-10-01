@@ -24,8 +24,9 @@ class MgwApiService {
   String baseUrl = "/core/api";
   MgwService mgwService = MgwService("", true);
 
-  MgwApiService(String host, bool authenticate) {
-    mgwService = MgwService(host, authenticate);
+  MgwApiService(String host, bool authenticate, {bool requireSession = false}) {
+    mgwService =
+        MgwService(host, authenticate, requireSession: requireSession);
   }
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {

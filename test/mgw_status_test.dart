@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/services/mgw/error.dart';
@@ -96,9 +98,89 @@ void main() {
         MgwStatusDot.labelOf(MgwStatus.unauthorized),
         MgwStatusDot.labelOf(MgwStatus.unreachable),
         MgwStatusDot.labelOf(MgwStatus.foreign),
+        MgwStatusDot.labelOf(MgwStatus.unknown),
         MgwStatusDot.labelOf(null),
       };
-      expect(labels, hasLength(5));
+      expect(labels, hasLength(6));
+    });
+
+    test("a check that failed on the phone does not send the user to pair",
+        () {
+      expect(MgwStatusDot.labelOf(MgwStatus.unknown), "Could not check");
+      expect(MgwStatusDot.colorOf(MgwStatus.unknown),
+          isNot(MgwStatusDot.colorOf(MgwStatus.unauthorized)));
+      expect(MgwStatusDot.colorOf(MgwStatus.unknown),
+          isNot(MgwStatusDot.colorOf(MgwStatus.ok)));
+    });
+  });
+
+  group("cache", () {
+    MgwReport report(MgwStatus status) =>
+        MgwReport(status: status, address: "h", checkedAt: DateTime.utc(2026));
+
+    tearDown(() {
+      MgwReachability.probeOverride = null;
+      MgwReachability.forget();
+    });
+
+    test("a check after forget() does not join a probe from before",
+        () async {
+      final gate = Completer<void>();
+      var probes = 0;
+      MgwReachability.probeOverride = (host, expect) async {
+        probes++;
+        await gate.future;
+        return report(MgwStatus.unauthorized);
+      };
+      final early = MgwReachability.check("h", expectNetworkId: "n");
+
+      MgwReachability.forget();
+      // A check after forget() starts its own probe instead of joining it.
+      final late = MgwReachability.check("h", expectNetworkId: "n");
+      gate.complete();
+
+      expect((await early).status, MgwStatus.unauthorized,
+          reason: "its own caller still gets the answer");
+      await late;
+      expect(probes, 2);
+    });
+
+    test("an answer from before forget() is not cached", () async {
+      final gate = Completer<void>();
+      MgwReachability.probeOverride = (host, expect) async {
+        await gate.future;
+        return report(MgwStatus.unauthorized);
+      };
+      final early = MgwReachability.check("h", expectNetworkId: "n");
+      MgwReachability.forget();
+      gate.complete();
+      await early;
+
+      expect(MgwReachability.cachedReportOf("h", expectNetworkId: "n"), isNull);
+    });
+
+    test("a gateway that could not be checked is not used", () async {
+      MgwReachability.probeOverride =
+          (host, expect) async => report(MgwStatus.unknown);
+      expect(await MgwReachability.isUsable("h", expectNetworkId: "n"), isFalse);
+    });
+
+    test("a probe that finishes late does not replace a newer answer",
+        () async {
+      final slow = Completer<MgwReport>();
+      var probes = 0;
+      MgwReachability.probeOverride = (host, expect) {
+        probes++;
+        return probes == 1 ? slow.future : Future.value(report(MgwStatus.ok));
+      };
+      final first = MgwReachability.check("h", expectNetworkId: "n");
+      await MgwReachability.check("h", expectNetworkId: "n", force: true);
+
+      slow.complete(report(MgwStatus.unauthorized));
+      await first;
+
+      expect(MgwReachability.cachedStatusOf("h", expectNetworkId: "n"),
+          MgwStatus.ok);
     });
   });
 }

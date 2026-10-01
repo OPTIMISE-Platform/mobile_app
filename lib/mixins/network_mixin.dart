@@ -25,6 +25,7 @@ import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/locations.dart';
 import 'package:mobile_app/services/mgw/discovery.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
@@ -311,24 +312,42 @@ mixin NetworkMixin on ChangeNotifier {
 
   Future<void> _refreshGatewayAddresses(
       List<MGW> stored, List<DiscoveredGateway> found) async {
-    var changed = false;
-    for (final mgw in stored) {
-      if (mgw.coreId.isEmpty) continue;
-      final matches = found.where((g) => g.coreId == mgw.coreId);
-      if (matches.isEmpty) continue;
-      final match = matches.first;
-      if (match.ip.isEmpty || match.ip == mgw.ip) continue;
-      _logger.d(
-          'NetworkMixin: gateway ${mgw.coreId} moved from ${mgw.ip} to ${match.ip}');
-      mgw.ip = match.ip;
-      mgw.hostname = match.hostname;
-      changed = true;
-    }
+    if (!stored.any((mgw) => movedAddress(mgw, found) != null)) return;
+    // Applied to the list as stored now: a gateway paired during the scan
+    // would otherwise be overwritten by the list read before it.
+    final changed = await MgwStorage.UpdatePairedMGWs((current) {
+      var any = false;
+      for (final mgw in current) {
+        final match = movedAddress(mgw, found);
+        if (match == null) continue;
+        _logger.d('NetworkMixin: gateway ${mgw.coreId} moved from ${mgw.ip} '
+            'to ${match.address}');
+        mgw.ip = match.address;
+        mgw.hostname = match.hostname;
+        any = true;
+      }
+      return any;
+    });
     if (!changed) return;
-    await MgwStorage.ReplacePairedMGWs(stored);
     // gateways holds its own instances, so without this the list and the detail
     // page keep addressing the gateway where it no longer is.
     await loadStoredMGWs();
+  }
+
+  /// The discovered gateway [mgw] is, when it now answers at a different
+  /// address; null when it was not found or has not moved.
+  ///
+  /// Compared as full addresses built the way pairing builds them, port
+  /// included: comparing the bare IP with a stored `host:port` counted every
+  /// gateway on a non-default port as moved and dropped its port.
+  @visibleForTesting
+  static DiscoveredGateway? movedAddress(
+      MGW mgw, List<DiscoveredGateway> found) {
+    if (mgw.coreId.isEmpty) return null;
+    final match = found.where((g) => g.coreId == mgw.coreId).firstOrNull;
+    if (match == null || match.ip.isEmpty) return null;
+    if (sameGatewayAddress(match.address, mgw.ip)) return null;
+    return match;
   }
 
   /// Attaches every paired gateway that is usable right now to the network it
@@ -350,11 +369,10 @@ mixin NetworkMixin on ChangeNotifier {
 
       final hostsByNetwork = <String, List<String>>{};
       if (candidates.isNotEmpty) {
-        final usable = (await MgwReachability.usableAmong(
-                candidates.map((mgw) => MapEntry(mgw.ip, mgw.networkId))))
-            .toSet();
+        final usable = await MgwReachability.usableAmong(
+            candidates.map((mgw) => (mgw.ip, mgw.networkId)));
         for (final mgw in candidates) {
-          if (!usable.contains(mgw.ip)) {
+          if (!usable.contains((mgw.ip, mgw.networkId))) {
             _logger.d(
                 'NetworkMixin: gateway ${mgw.ip} is not usable, using the cloud');
             continue;

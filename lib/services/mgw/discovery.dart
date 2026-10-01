@@ -15,6 +15,7 @@
  */
 
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
@@ -50,10 +51,19 @@ class DiscoveredGateway {
     required this.port,
   });
 
+  /// The address to pair with and to store, with the port kept. Pairing and
+  /// the address refresh both read this, so a stored address and a refreshed
+  /// one compare equal when nothing moved.
+  String get address => gatewayAddress(ip.isEmpty ? hostname : ip, port);
+
   @override
   String toString() =>
       "DiscoveredGateway($name, coreId: $coreId, $hostname/$ip:$port)";
 }
+
+/// Called with everything found so far, each time the platform reports a
+/// change.
+typedef DiscoveryUpdate = void Function(List<DiscoveredGateway> found);
 
 /// Finds MGW cores via mDNS.
 ///
@@ -83,46 +93,79 @@ class MgwDiscoveryService {
     printer: SimplePrinter(),
   );
 
-  /// Browses for [timeout] and returns what answered.
+  /// Replaces [discover] in tests, which have no platform discovery.
+  @visibleForTesting
+  static Future<List<DiscoveredGateway>> Function(DiscoveryUpdate? onUpdate)?
+      discoverOverride;
+
+  /// Browses for [timeout] and returns what answered. [onUpdate] gets the
+  /// gateways as they come in.
+  ///
+  /// Throws when discovery cannot start; a caller that treats discovery as
+  /// optional catches that itself.
   static Future<List<DiscoveredGateway>> discover({
     Duration timeout = const Duration(seconds: 5),
+    DiscoveryUpdate? onUpdate,
   }) async {
-    Discovery discovery;
+    final override = discoverOverride;
+    if (override != null) return override(onUpdate);
+
+    final Discovery discovery;
     try {
       discovery = await startDiscovery(coreServiceType,
           ipLookupType: IpLookupType.any);
     } catch (e) {
-      // Discovery is opportunistic - a gateway can always be added by address.
       _logger.e("$LOG_PREFIX: Could not start discovery: $e");
-      return [];
+      rethrow;
     }
 
+    void notify() => onUpdate?.call(_collect(discovery.services));
+    if (onUpdate != null) discovery.addListener(notify);
     try {
       await Future.delayed(timeout);
-      final found = <String, DiscoveredGateway>{};
-      for (final service in discovery.services) {
-        final gateway = fromService(
-          name: service.name,
-          host: service.host,
-          port: service.port,
-          address: service.addresses?.isNotEmpty == true
-              ? service.addresses!.first.address
-              : null,
-          txt: service.txt,
-        );
-        if (gateway == null) continue;
-        // Keyed by host: the same core answers once per interface it is seen on.
-        found[gateway.hostname] = gateway;
-      }
+      final found = _collect(discovery.services);
       _logger.d("$LOG_PREFIX: Found ${found.length} gateways");
-      return found.values.toList();
+      return found;
     } finally {
+      if (onUpdate != null) discovery.removeListener(notify);
       try {
         await stopDiscovery(discovery);
       } catch (e) {
         _logger.e("$LOG_PREFIX: Could not stop discovery: $e");
       }
     }
+  }
+
+  static List<DiscoveredGateway> _collect(List<Service> services) {
+    final found = <String, DiscoveredGateway>{};
+    for (final service in services) {
+      final gateway = fromService(
+        name: service.name,
+        host: service.host,
+        port: service.port,
+        address: pickAddress(service.addresses),
+        txt: service.txt,
+      );
+      if (gateway == null) continue;
+      // Keyed by host: the same core answers once per interface it is seen on.
+      found[gateway.hostname] = gateway;
+    }
+    return found.values.toList();
+  }
+
+  /// The address to reach a gateway at: IPv4 first, because a lookup of any
+  /// type may list an IPv6 one first and a link-local one is not routable
+  /// without its zone, then a routable IPv6 address, then whatever is left.
+  @visibleForTesting
+  static String? pickAddress(List<InternetAddress>? addresses) {
+    if (addresses == null || addresses.isEmpty) return null;
+    final ipv4 =
+        addresses.where((a) => a.type == InternetAddressType.IPv4).firstOrNull;
+    if (ipv4 != null) return ipv4.address;
+    final routable = addresses
+        .where((a) => a.type == InternetAddressType.IPv6 && !a.isLinkLocal)
+        .firstOrNull;
+    return (routable ?? addresses.first).address;
   }
 
   /// Builds a gateway from one resolved service, or null if it carries no host.
