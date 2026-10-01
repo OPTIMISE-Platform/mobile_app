@@ -70,8 +70,8 @@ class ApiAvailableService {
     final host = Uri.parse(uri).host.toLowerCase();
     if (host.isEmpty) return false;
     return networks.any((network) =>
-        network.localGatewayHosts?.any(
-            (gateway) => gatewayHostOnly(gateway).toLowerCase() == host) ??
+        network.localGateways?.any(
+            (gateway) => gatewayHostOnly(gateway.ip).toLowerCase() == host) ??
         false);
   }
 }

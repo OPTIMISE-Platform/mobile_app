@@ -17,10 +17,10 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/function.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/mgw/core_manager.dart';
@@ -34,7 +34,6 @@ import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 
-import '../shared/isar.dart';
 
 /// How long device-command waits for the devices of a batch. Both clients
 /// wait a second longer, so the endpoint's own timeout answer arrives instead
@@ -55,47 +54,20 @@ class DeviceCommandPath {
     printer: SimplePrinter(),
   );
 
-  DeviceCommandPath(String host) {
-    mgwCoreService = MgwCoreService(host);
-    mgwEndpointService = MgwEndpointService(host);
+  DeviceCommandPath(MGW gateway) {
+    mgwCoreService = MgwCoreService(gateway);
+    mgwEndpointService = MgwEndpointService(gateway);
   }
 
   static const deviceManagerModuleName =
       "github.com/SENERGY-Platform/mgw-device-command";
 
-  Future<void> _clearCachedEndpoints() async {
-    if (isar == null) {
-      return;
-    }
-    await isar!.writeTxn(() async {
-      await isar!.endpoints
-          .where()
-          .moduleNameEqualTo(deviceManagerModuleName)
-          .deleteAll();
-    });
-  }
+  Future<void> _clearCachedEndpoints() =>
+      mgwCoreService.dropCachedEndpoints(deviceManagerModuleName);
 
-  Future<List<Endpoint>> getEndpoints() async {
-    // TODO change module
+  Future<List<Endpoint>> getEndpoints() {
     _logger.d("$LOG_PREFIX: Get deployment endpoint");
-    List<Endpoint> endpoints;
-    if (isar != null) {
-      endpoints = await isar!.endpoints
-          .where()
-          .moduleNameEqualTo(deviceManagerModuleName)
-          .findAll();
-      if (endpoints.isNotEmpty) {
-        return endpoints;
-      }
-    }
-    endpoints =
-        await mgwCoreService.getEndpointsOfModule(deviceManagerModuleName);
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.endpoints.putAll(endpoints);
-      });
-    }
-    return endpoints;
+    return mgwCoreService.cachedEndpointsOfModule(deviceManagerModuleName);
   }
 
   Future<List<DeviceCommandResponse>> runCommands(
@@ -191,15 +163,17 @@ class DeviceCommandsService {
     map.entries.forEach((network) {
       final indices = network.value;
       final group = [for (final i in indices) commands[i]];
-      final host = network.key?.localGatewayHosts?.firstOrNull;
-      if (host == null) {
+      // The entry, not its address: two pairings can share an address in
+      // different networks, and the batch must carry this one's session.
+      final gateway = network.key?.localGateways?.firstOrNull;
+      if (gateway == null) {
         // A platform answer is final, 513 included: a command is never sent
         // twice.
         futures.add(_runOnPlatform(group, preferEventValue)
             .then((value) => _assign(resp, indices, value)));
         return;
       }
-      futures.add(DeviceCommandPath(host)
+      futures.add(DeviceCommandPath(gateway)
           .runCommands(group, preferEventValue)
           .onError((_, __) {
         cloudRetries.addAll(indices);

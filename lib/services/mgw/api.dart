@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
 
 class MgwApiService {
@@ -22,12 +23,16 @@ class MgwApiService {
   // Session Tokens are handles automatically
 
   String baseUrl = "/core/api";
-  MgwService mgwService = MgwService("", true);
+  final MgwService mgwService;
 
-  MgwApiService(String host, bool authenticate, {bool requireSession = false}) {
-    mgwService =
-        MgwService(host, authenticate, requireSession: requireSession);
-  }
+  /// The core API of [gateway], with the session of its pairing.
+  MgwApiService.forGateway(MGW gateway, {bool requireSession = false})
+      : mgwService =
+            MgwService.forGateway(gateway, requireSession: requireSession);
+
+  /// The core API at [host] without a session.
+  MgwApiService.unauthenticated(String host)
+      : mgwService = MgwService.unauthenticated(host);
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
     return await mgwService.Post(baseUrl+path, data, options);

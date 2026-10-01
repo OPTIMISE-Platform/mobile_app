@@ -38,6 +38,17 @@ void main() {
 
   setUp(() => MgwStorage.ReplacePairedMGWs([]));
 
+  test("entries alike in every field but their pairing are not the same",
+      () {
+    MGW entry(String pairingId) => MGW("a.local", "A", "c1", "10.0.0.1",
+        networkId: "n1", pairingId: pairingId);
+
+    expect(MgwStorage.isSameEntry(entry("p1"), entry("p2")), isFalse);
+    expect(MgwStorage.isSameEntry(entry("p1"), entry("p1")), isTrue);
+    expect(MgwStorage.isSameEntry(entry("p1"), entry("")), isTrue,
+        reason: "a copy taken before the entry was stored");
+  });
+
   test("pairing a discovered gateway again replaces its entry", () async {
     await MgwStorage.StorePairedMGW(
         MGW("mgw.local", "MGW", "c1", "192.168.1.5:8081", networkId: "n1"));
@@ -126,17 +137,23 @@ void main() {
     final office =
         MGW("192.168.0.2", "Office", "", "192.168.0.2", networkId: "n2");
     await MgwStorage.ReplacePairedMGWs([home, office]);
-    await MgwStorage.StoreCredentials(DeviceUserCredentials("id", "l", "s"));
+    await MgwStorage.StoreCredentials(
+        home.pairingId, DeviceUserCredentials("id", "home", "s"));
+    await MgwStorage.StoreCredentials(
+        office.pairingId, DeviceUserCredentials("id", "office", "s"));
 
     await MgwStorage.RemovePairedMGW(home);
 
     expect((await MgwStorage.LoadPairedMGWs()).map((m) => m.networkId), ["n2"]);
-    expect((await MgwStorage.LoadCredentials()).login, "l",
-        reason: "credentials stay while an entry remains");
+    await expectLater(MgwStorage.LoadCredentials(home.pairingId),
+        throwsA(isA<MgwCredentialsMissing>()));
+    expect((await MgwStorage.LoadCredentials(office.pairingId)).login, "office",
+        reason: "the remaining entry keeps its credentials");
 
     await MgwStorage.RemovePairedMGW(office);
     expect(await MgwStorage.LoadPairedMGWs(), isEmpty);
-    await expectLater(MgwStorage.LoadCredentials(), throwsA(anything));
+    await expectLater(MgwStorage.LoadCredentials(office.pairingId),
+        throwsA(isA<MgwCredentialsMissing>()));
   });
 
   test("removing a gateway whose address moved since it was shown", () async {
@@ -162,12 +179,13 @@ void main() {
   });
 
   test("nothing stored any more: nothing removed, the session stays", () async {
+    final b = MGW("b.local", "B", "c2", "10.0.0.2",
+        networkId: "n2", pairingId: "pairing-b");
     FlutterSecureStorage.setMockInitialValues({
-      MgwService.sessionStorageKey: "s",
-      MgwService.sessionExpirationStorageKey: "2099-01-01T00:00:00Z",
+      MgwService.sessionKeyOf("pairing-b"): "s",
+      MgwService.sessionExpirationKeyOf("pairing-b"): "2099-01-01T00:00:00Z",
     });
-    await MgwStorage.ReplacePairedMGWs(
-        [MGW("b.local", "B", "c2", "10.0.0.2", networkId: "n2")]);
+    await MgwStorage.ReplacePairedMGWs([b]);
 
     final removed = await MgwStorage.RemovePairedMGW(
         MGW("a.local", "A", "c1", "10.0.0.1", networkId: "n1"));
@@ -176,7 +194,7 @@ void main() {
     expect(await MgwStorage.LoadPairedMGWs(), hasLength(1));
     expect(
         await const FlutterSecureStorage()
-            .read(key: MgwService.sessionStorageKey),
+            .read(key: MgwService.sessionKeyOf("pairing-b")),
         "s");
   });
 

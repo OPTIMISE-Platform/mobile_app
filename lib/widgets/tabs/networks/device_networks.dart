@@ -28,6 +28,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/shared/devices_label.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
@@ -84,9 +85,11 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   /// Without a bound gateway it offers to add one. With one it shows what that
   /// gateway is currently good for - paired alone says nothing, since the
   /// device may be elsewhere or the gateway may have forgotten it - and opens
-  /// its status on tap.
+  /// its status on tap. With several it shows the one requests are routed to,
+  /// else the first, and the sheet lists the others.
   Widget _gatewayControl(AppState state, Network network) {
-    final bound = state.gateways.where((mgw) => mgw.networkId == network.id);
+    final bound =
+        state.gateways.where((mgw) => mgw.networkId == network.id).toList();
     if (bound.isEmpty) {
       return IconButton(
         tooltip: "Pair gateway",
@@ -100,13 +103,16 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
         icon: const Icon(Icons.add),
       );
     }
-    final mgw = bound.first;
+    final routed = network.localGateways ?? const [];
+    final mgw = bound
+            .where((b) => routed.any((r) => MgwStorage.isSamePairing(r, b)))
+            .firstOrNull ??
+        bound.first;
     return IconButton(
       tooltip: "Gateway status",
       onPressed: () => showMgwStatusSheet(context, mgw),
       icon: Row(mainAxisSize: MainAxisSize.min, children: [
-        MgwStatusDot(
-            host: mgw.ip, expectNetworkId: mgw.networkId, size: 12),
+        MgwStatusDot(gateway: mgw, size: 12),
         const SizedBox(width: 4),
         const Icon(Icons.lan_outlined),
       ]),

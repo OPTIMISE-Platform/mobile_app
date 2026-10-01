@@ -16,13 +16,15 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/api_available.dart';
 
 Network _network(String id, List<String>? gatewayHosts) {
   final network = Network(id, id, false, const [], const [],
       DeviceConnectionStatus.unknown, "", "");
-  network.localGatewayHosts = gatewayHosts;
+  network.localGateways =
+      gatewayHosts?.map((host) => MGW(host, host, "", host)).toList();
   return network;
 }
 

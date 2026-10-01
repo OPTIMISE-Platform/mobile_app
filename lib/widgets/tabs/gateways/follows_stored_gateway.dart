@@ -32,8 +32,10 @@ mixin FollowsStoredGateway<T extends StatefulWidget> on State<T> {
   /// Called after [gateway] moved to a changed entry.
   void gatewayChanged(MGW previous) {}
 
+  /// Starts on the stored entry [initial] stands for, which may have changed
+  /// since [initial] was taken.
   void followGateway(MGW initial) {
-    gateway = initial;
+    gateway = MgwStorage.resolve(initial, AppState().gateways) ?? initial;
     AppState().addListener(_follow);
   }
 

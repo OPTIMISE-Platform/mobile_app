@@ -101,17 +101,16 @@ class _GatewaysState extends State<Gateways> with ResumeRefreshMixin {
                     ListSection<MGW>(
                       id: "gateways",
                       items: state.gateways,
-                      // hostname, not coreId: a gateway added by address has
-                      // coreId "". The same hostname bound to two networks
-                      // repeats, and the list tells repeats apart.
-                      keyOf: (mgw) => mgw.hostname,
+                      // The pairing id: unique per entry, where the core id is
+                      // empty for a gateway added by address and a hostname
+                      // repeats when bound to two networks.
+                      keyOf: (mgw) => mgw.pairingId,
                       itemBuilder: (context, mgw, position) {
                         return GroupedListTile(
                           position: position,
                           hairlineInset: GroupedListTile.insetIconLeading,
                           child: ListTile(
-                            leading: MgwStatusDot(
-                                host: mgw.ip, expectNetworkId: mgw.networkId),
+                            leading: MgwStatusDot(gateway: mgw),
                             title: Row(children: [
                               Flexible(
                                 child: Text(

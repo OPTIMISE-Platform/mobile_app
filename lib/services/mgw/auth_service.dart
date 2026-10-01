@@ -81,11 +81,11 @@ class MgwAuthService {
   // Use this service to access the auth-service to manage users/devices
 
   final basePath = "/auth-service";
-  MgwApiService mgwApiService = MgwApiService("", false);
+  final MgwApiService mgwApiService;
 
-  MgwAuthService(String host) {
-    mgwApiService = MgwApiService(host, false);
-  }
+  // Unauthenticated: pairing is what issues the credentials.
+  MgwAuthService(String host)
+      : mgwApiService = MgwApiService.unauthenticated(host);
   final _logger = Logger(
     printer: SimplePrinter(),
   );

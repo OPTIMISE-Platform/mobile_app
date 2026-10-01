@@ -28,7 +28,12 @@ const EndpointSchema = CollectionSchema(
       name: r'moduleName',
       type: IsarType.string,
     ),
-    r'ref': PropertySchema(id: 3, name: r'ref', type: IsarType.string),
+    r'pairingId': PropertySchema(
+      id: 3,
+      name: r'pairingId',
+      type: IsarType.string,
+    ),
+    r'ref': PropertySchema(id: 4, name: r'ref', type: IsarType.string),
   },
 
   estimateSize: _endpointEstimateSize,
@@ -43,6 +48,24 @@ const EndpointSchema = CollectionSchema(
       unique: false,
       replace: false,
       properties: [
+        IndexPropertySchema(
+          name: r'moduleName',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
+      ],
+    ),
+    r'pairingId_moduleName': IndexSchema(
+      id: -7808775171471335578,
+      name: r'pairingId_moduleName',
+      unique: false,
+      replace: false,
+      properties: [
+        IndexPropertySchema(
+          name: r'pairingId',
+          type: IndexType.hash,
+          caseSensitive: true,
+        ),
         IndexPropertySchema(
           name: r'moduleName',
           type: IndexType.hash,
@@ -69,6 +92,7 @@ int _endpointEstimateSize(
   bytesCount += 3 + object.id.length * 3;
   bytesCount += 3 + object.location.length * 3;
   bytesCount += 3 + object.moduleName.length * 3;
+  bytesCount += 3 + object.pairingId.length * 3;
   bytesCount += 3 + object.ref.length * 3;
   return bytesCount;
 }
@@ -82,7 +106,8 @@ void _endpointSerialize(
   writer.writeString(offsets[0], object.id);
   writer.writeString(offsets[1], object.location);
   writer.writeString(offsets[2], object.moduleName);
-  writer.writeString(offsets[3], object.ref);
+  writer.writeString(offsets[3], object.pairingId);
+  writer.writeString(offsets[4], object.ref);
 }
 
 Endpoint _endpointDeserialize(
@@ -94,8 +119,9 @@ Endpoint _endpointDeserialize(
   final object = Endpoint(
     reader.readString(offsets[0]),
     reader.readString(offsets[1]),
-    reader.readString(offsets[3]),
+    reader.readString(offsets[4]),
     moduleName: reader.readStringOrNull(offsets[2]) ?? "",
+    pairingId: reader.readStringOrNull(offsets[3]) ?? "",
   );
   object.isarId = id;
   return object;
@@ -115,6 +141,8 @@ P _endpointDeserializeProp<P>(
     case 2:
       return (reader.readStringOrNull(offset) ?? "") as P;
     case 3:
+      return (reader.readStringOrNull(offset) ?? "") as P;
+    case 4:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -261,6 +289,116 @@ extension EndpointQueryWhere on QueryBuilder<Endpoint, Endpoint, QWhereClause> {
                 indexName: r'moduleName',
                 lower: [],
                 upper: [moduleName],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterWhereClause>
+  pairingIdEqualToAnyModuleName(String pairingId) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'pairingId_moduleName',
+          value: [pairingId],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterWhereClause>
+  pairingIdNotEqualToAnyModuleName(String pairingId) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [],
+                upper: [pairingId],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId],
+                includeLower: false,
+                upper: [],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId],
+                includeLower: false,
+                upper: [],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [],
+                upper: [pairingId],
+                includeUpper: false,
+              ),
+            );
+      }
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterWhereClause>
+  pairingIdModuleNameEqualTo(String pairingId, String moduleName) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addWhereClause(
+        IndexWhereClause.equalTo(
+          indexName: r'pairingId_moduleName',
+          value: [pairingId, moduleName],
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterWhereClause>
+  pairingIdEqualToModuleNameNotEqualTo(String pairingId, String moduleName) {
+    return QueryBuilder.apply(this, (query) {
+      if (query.whereSort == Sort.asc) {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId],
+                upper: [pairingId, moduleName],
+                includeUpper: false,
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId, moduleName],
+                includeLower: false,
+                upper: [pairingId],
+              ),
+            );
+      } else {
+        return query
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId, moduleName],
+                includeLower: false,
+                upper: [pairingId],
+              ),
+            )
+            .addWhereClause(
+              IndexWhereClause.between(
+                indexName: r'pairingId_moduleName',
+                lower: [pairingId],
+                upper: [pairingId, moduleName],
                 includeUpper: false,
               ),
             );
@@ -769,6 +907,153 @@ extension EndpointQueryFilter
     });
   }
 
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'pairingId',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdContains(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'pairingId',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdMatches(
+    String pattern, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'pairingId',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> pairingIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'pairingId', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition>
+  pairingIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'pairingId', value: ''),
+      );
+    });
+  }
+
   QueryBuilder<Endpoint, Endpoint, QAfterFilterCondition> refEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -959,6 +1244,18 @@ extension EndpointQuerySortBy on QueryBuilder<Endpoint, Endpoint, QSortBy> {
     });
   }
 
+  QueryBuilder<Endpoint, Endpoint, QAfterSortBy> sortByPairingId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pairingId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterSortBy> sortByPairingIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pairingId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Endpoint, Endpoint, QAfterSortBy> sortByRef() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ref', Sort.asc);
@@ -1022,6 +1319,18 @@ extension EndpointQuerySortThenBy
     });
   }
 
+  QueryBuilder<Endpoint, Endpoint, QAfterSortBy> thenByPairingId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pairingId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<Endpoint, Endpoint, QAfterSortBy> thenByPairingIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'pairingId', Sort.desc);
+    });
+  }
+
   QueryBuilder<Endpoint, Endpoint, QAfterSortBy> thenByRef() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ref', Sort.asc);
@@ -1061,6 +1370,14 @@ extension EndpointQueryWhereDistinct
     });
   }
 
+  QueryBuilder<Endpoint, Endpoint, QDistinct> distinctByPairingId({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'pairingId', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<Endpoint, Endpoint, QDistinct> distinctByRef({
     bool caseSensitive = true,
   }) {
@@ -1093,6 +1410,12 @@ extension EndpointQueryProperty
   QueryBuilder<Endpoint, String, QQueryOperations> moduleNameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'moduleName');
+    });
+  }
+
+  QueryBuilder<Endpoint, String, QQueryOperations> pairingIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'pairingId');
     });
   }
 

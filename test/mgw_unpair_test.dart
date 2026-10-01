@@ -45,10 +45,11 @@ void main() {
     final kitchen = MGW("a.local", "A", "c1", "10.0.0.1", networkId: "n1");
     final garage = MGW("b.local", "B", "c2", "10.0.0.2", networkId: "n2");
     await MgwStorage.ReplacePairedMGWs([kitchen, garage]);
-    await MgwStorage.StoreCredentials(DeviceUserCredentials("id", "l", "s"));
+    await MgwStorage.StoreCredentials(
+        kitchen.pairingId, DeviceUserCredentials("id", "l", "s"));
     // The merge after the removal probes the remaining gateway.
     MgwReachability.probeOverride =
-        (host, expect) async => throw StateError("probe broke");
+        (_) async => throw StateError("probe broke");
 
     expect(await removeConfirmedPairing(kitchen), PairingRemoval.removed);
     await Future<void>.delayed(const Duration(milliseconds: 100));

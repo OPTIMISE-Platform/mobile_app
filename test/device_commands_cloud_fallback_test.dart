@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -75,7 +76,10 @@ void main() {
       final network = Network("network-$deviceId", "Home", false,
           ["$deviceId-local"], [deviceId], DeviceConnectionStatus.online, "",
           "owner-1")
-        ..localGatewayHosts = hosts;
+        ..localGateways = hosts
+            ?.map((host) =>
+                MGW(host, host, "", host, networkId: "network-$deviceId"))
+            .toList();
       AppState().networks.add(network);
     }
     return DeviceCommand(functionId, deviceId, "service-1", "aspect-1")

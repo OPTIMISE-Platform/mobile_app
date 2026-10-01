@@ -106,7 +106,7 @@ void main() {
     for (final (name, report) in [("ok", _ok), ("unauthorized", _rejected)]) {
       testWidgets("status sheet $name ($suffix)", (tester) async {
         MgwReachability.forget();
-        MgwReachability.probeOverride = (host, expect) async => report;
+        MgwReachability.probeOverride = (_) async => report;
         await open(tester, dark, (context) => showMgwStatusSheet(context, _mgw));
         expect(find.text("Check again"), findsOneWidget);
         await expectLater(find.byType(MaterialApp),
@@ -130,7 +130,7 @@ void main() {
         jsonDecode(File("test/fixtures/mgw_modules_reduced.json").readAsStringSync()));
     serveGoldenBackend(backend);
     await warmUpMgwStorage(tester);
-    MgwReachability.probeOverride = (host, expect) async => _rejected;
+    MgwReachability.probeOverride = (_) async => _rejected;
 
     for (final dark in [false, true]) {
       MgwReachability.forget();

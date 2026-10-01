@@ -40,7 +40,7 @@ class MgwDeviceManager {
     devices.forEach((d) => devicesByNetwork.insert(d.network, d));
     final List<Future> futures = [];
     devicesByNetwork.m.forEach((network, devices) async {
-      if (network?.localGatewayHosts?.isNotEmpty == true) {
+      if (network?.localGateways?.isNotEmpty == true) {
         futures.add(_updateFromMgw(network!, devices)
             .onError((error, stackTrace) async {
           ExceptionLogElement.Log(error.toString());
@@ -107,13 +107,13 @@ class MgwDeviceManager {
 
   static Future<void> _updateFromMgw(
       Network network, Iterable<DeviceInstance> devices) async {
-    final ip = network.localGatewayHosts?.first;
-    if (ip == null) {
-      _logger.d("ip not set");
+    final gateway = network.localGateways?.firstOrNull;
+    if (gateway == null) {
+      _logger.d("no local gateway");
       return;
     }
 
-    final devicesFromMgw = await DeviceManagerNew(ip).getDevices();
+    final devicesFromMgw = await DeviceManagerNew(gateway).getDevices();
     _logger
         .d("MGW-DEVICE-MANAGER: Loaded ${devicesFromMgw.data!.length} devices");
     for (final device in devices) {

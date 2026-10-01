@@ -10,7 +10,7 @@ Covers `lib/services/device_commands.dart`: `DeviceCommandsService`, the
 gateway path `DeviceCommandPath` with its endpoint cache, and the platform
 path `DeviceCommandCloud`. Not about what a command carries (the aspect fields
 are in `docs/aspect-lists.md`), and not about how gateways are paired and
-probed; that is `NetworkMixin`, which fills `Network.localGatewayHosts`.
+probed; that is `NetworkMixin`, which fills `Network.localGateways`.
 
 ## One batch per network
 
@@ -19,6 +19,11 @@ their device or group. A group whose network has a reachable gateway goes to
 that gateway's device-command module, every other group goes to the platform.
 All groups are sent at once.
 
+The gateway is the first stored entry in `Network.localGateways`, not an
+address: each pairing has its own credentials and session, and two entries can
+share an address in different networks. Only the entry whose own network
+answered the status check is listed there.
+
 The result holds one `DeviceCommandResponse` per command, at the command's
 index, always. A command with neither device nor group, and a command its
 batch did not answer, comes back as 502 `upstream reply null`.
@@ -26,9 +31,11 @@ batch did not answer, comes back as 502 `upstream reply null`.
 ## The gateway is tried first
 
 `DeviceCommandPath` reads the module's endpoint from the Isar `endpoints`
-collection and asks the gateway's core-manager only when none is cached. Any
-failed gateway request drops the cached endpoint, so the next command looks
-the module up again in case it has moved.
+collection and asks the gateway's core-manager only when none is cached. Rows
+are kept per pairing id and module, so each gateway has its own; rows cached
+without a pairing id are never read. Any failed gateway request drops that
+gateway's cached endpoint, so the next command looks the module up again in
+case it has moved.
 
 A command leaves the gateway path in three ways:
 

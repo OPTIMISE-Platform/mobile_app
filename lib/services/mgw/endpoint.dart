@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/restricted.dart';
 
 import 'error.dart';
@@ -29,11 +30,10 @@ class MgwEndpointService {
   final _logger = Logger(
     printer: SimplePrinter(),
   );
-  MgwService mgwService = MgwService("", true);
+  final MgwService mgwService;
 
-  MgwEndpointService(String host) {
-    mgwService = MgwService(host, true);
-  }
+  MgwEndpointService(MGW gateway)
+      : mgwService = MgwService.forGateway(gateway);
 
   Future<Response<dynamic>> GetFromExposedPath(String path) async {
     _logger.d("$LOG_PREFIX: Get from exposed deployment path: $path");

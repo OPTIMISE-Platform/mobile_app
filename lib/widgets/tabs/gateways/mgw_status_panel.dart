@@ -31,7 +31,8 @@ import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
 import 'package:mobile_app/widgets/tabs/gateways/unpair_dialog.dart';
 
-/// Opens the status of [mgw] in a bottom sheet.
+/// Opens the status of [mgw] in a bottom sheet. The other gateways bound to
+/// its network are listed below it and open in its place.
 Future<void> showMgwStatusSheet(BuildContext context, MGW mgw) =>
     showModalBottomSheet<void>(
       context: context,
@@ -43,12 +44,67 @@ Future<void> showMgwStatusSheet(BuildContext context, MGW mgw) =>
       builder: (sheetContext) => SingleChildScrollView(
         padding:
             const EdgeInsets.fromLTRB(Spacing.xl, 0, Spacing.xl, Spacing.xl),
-        child: MgwStatusPanel(
-          mgw: mgw,
+        child: _MgwStatusSheet(
+          initial: mgw,
           onRemoved: () => Navigator.pop(sheetContext),
         ),
       ),
     );
+
+class _MgwStatusSheet extends StatefulWidget {
+  const _MgwStatusSheet({required this.initial, required this.onRemoved});
+
+  final MGW initial;
+  final VoidCallback onRemoved;
+
+  @override
+  State<_MgwStatusSheet> createState() => _MgwStatusSheetState();
+}
+
+class _MgwStatusSheetState extends State<_MgwStatusSheet> {
+  late MGW _shown = widget.initial;
+
+  @override
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: AppState(), builder: _build);
+
+  // Read from AppState on every change, so an address refresh or a new
+  // binding shows while the sheet is open.
+  Widget _build(BuildContext context, Widget? _) {
+    final theme = Theme.of(context);
+    final gateways = AppState().gateways;
+    final shown = MgwStorage.resolve(_shown, gateways) ?? _shown;
+    final others = gateways
+        .where((m) =>
+            m.networkId == shown.networkId &&
+            !identical(m, shown) &&
+            !MgwStorage.isSamePairing(m, shown))
+        .toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Keyed by the entry, so switching starts the panel afresh.
+        MgwStatusPanel(
+            key: ObjectKey(_shown), mgw: _shown, onRemoved: widget.onRemoved),
+        if (others.isNotEmpty) ...[
+          const SizedBox(height: Spacing.lg),
+          Text("Other gateways in this network",
+              style: theme.textTheme.titleSmall),
+          for (final mgw in others)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: MgwStatusDot(gateway: mgw),
+              title: Text(mgw.mDNSServiceName, overflow: TextOverflow.ellipsis),
+              subtitle: Text(mgw.ip, overflow: TextOverflow.ellipsis),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => setState(() => _shown = mgw),
+            ),
+        ],
+      ],
+    );
+  }
+}
 
 /// Texts that explain a [MgwReport].
 abstract final class MgwStatusText {
@@ -145,8 +201,6 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   ({String title, PairingFailure failure})? _problem;
 
   bool get _checking => _running > 0;
-  String get _host => gateway.ip;
-  String get _expect => gateway.networkId;
 
   @override
   bool get holdsGateway => _pairing;
@@ -155,7 +209,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   void initState() {
     super.initState();
     followGateway(widget.mgw);
-    _report = MgwReachability.cachedReportOf(_host, expectNetworkId: _expect);
+    _report = MgwReachability.cachedReportOf(gateway);
     if (_report == null) {
       _running++;
       _probe(false);
@@ -171,18 +225,18 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
 
   @override
   void gatewayChanged(MGW previous) {
-    if (previous.ip == gateway.ip && previous.networkId == gateway.networkId) {
+    if (MgwReachability.cacheKeyFor(previous) ==
+        MgwReachability.cacheKeyFor(gateway)) {
       return;
     }
-    _report = MgwReachability.cachedReportOf(_host, expectNetworkId: _expect);
+    _report = MgwReachability.cachedReportOf(gateway);
     if (_report == null) _check();
   }
 
   void _onReachabilityChanged() {
     // While pairing, the entry may still change; the pairing checks itself.
     if (!mounted || _pairing) return;
-    final cached =
-        MgwReachability.cachedReportOf(_host, expectNetworkId: _expect);
+    final cached = MgwReachability.cachedReportOf(gateway);
     if (cached == null) {
       _check();
     } else {
@@ -199,8 +253,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   /// Runs one check counted in [_running] by the caller.
   Future<void> _probe(bool force) async {
     try {
-      final report = await MgwReachability.check(_host,
-          expectNetworkId: _expect, force: force);
+      final report = await MgwReachability.check(gateway, force: force);
       if (mounted) setState(() => _report = report);
     } finally {
       _running--;
@@ -232,8 +285,8 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   /// when the panel closed meanwhile.
   ///
   /// What answers at the address is checked first, as on the pairing page:
-  /// pairing a stranger would replace the one credential set all gateways
-  /// share.
+  /// pairing a stranger would replace this pairing's credentials with ones
+  /// another gateway issued.
   Future<String?> _networkForPairAgain(MGW mgw) async {
     final networks = AppState().networks;
     var advertised = await MgwAdvertisements.networkIdOf(mgw.ip);
@@ -324,7 +377,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
     }
     final result = await pairAndStore(
         MGW(old.hostname, old.mDNSServiceName, old.coreId, old.ip,
-            networkId: networkId),
+            networkId: networkId, pairingId: old.pairingId),
         AppState(),
         replacing: old);
     final failure = result.failure;

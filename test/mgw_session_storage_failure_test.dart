@@ -22,6 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
@@ -32,11 +33,17 @@ import 'package:mobile_app/services/mgw/storage.dart';
 import 'fake_backend.dart';
 import 'golden_helper.dart';
 
-const _credentialsKey = "mgw-device-credentials";
+const _pairing = "pairing-1";
 
-const _sessionKeys = {
-  MgwService.sessionStorageKey,
-  MgwService.sessionExpirationStorageKey,
+final _gateway =
+    MGW("gw.test", "gw.test", "", "gw.test", networkId: "network-B",
+        pairingId: _pairing);
+
+final _credentialsKey = MgwStorage.credentialsKeyOf(_pairing);
+
+final _sessionKeys = {
+  MgwService.sessionKeyOf(_pairing),
+  MgwService.sessionExpirationKeyOf(_pairing),
 };
 
 /// Secure storage whose entries under [readFails] / [writeFails] throw, like a
@@ -88,7 +95,8 @@ void main() {
       {Set<String> read = const {}, Set<String> write = const {}}) async {
     final store = _FailingStore();
     FlutterSecureStorage.setMockInitialValues(store);
-    await MgwStorage.StoreCredentials(DeviceUserCredentials("id", "login", "s"));
+    await MgwStorage.StoreCredentials(
+        _pairing, DeviceUserCredentials("id", "login", "s"));
     store.readFails.addAll(read);
     store.writeFails.addAll(write);
   }
@@ -109,7 +117,7 @@ void main() {
   test("a probe completes and names the storage", () async {
     backend.serveJson("GET", "/", 200, "");
 
-    final report = await MgwReachability.check("gw.test", force: true)
+    final report = await MgwReachability.check(_gateway, force: true)
         .timeout(_budget);
 
     expect(report.status, MgwStatus.unknown);
@@ -132,7 +140,7 @@ void main() {
         false, "owner-1", "B", DeviceConnectionStatus.online);
     AppState().networks.add(Network("network-B", "Home", false, ["B-local"],
         ["B"], DeviceConnectionStatus.online, "", "owner-1")
-      ..localGatewayHosts = ["gw.test"]);
+      ..localGateways = [_gateway]);
     final command = DeviceCommand("function-1", "B", "service-1", "aspect-1")
       ..deviceInstance = device;
 
@@ -150,7 +158,7 @@ void main() {
     await useStore(read: {_credentialsKey});
     backend.serveJson("GET", "/", 200, "");
 
-    final report = await MgwReachability.check("gw.test", force: true)
+    final report = await MgwReachability.check(_gateway, force: true)
         .timeout(_budget);
 
     expect(report.failedCheck, MgwFailedCheck.sessionStorage);
@@ -168,7 +176,7 @@ void main() {
     });
     backend.serveJson("GET", _gatewayEndpoints, 200, {});
 
-    final report = await MgwReachability.check("gw.test", force: true)
+    final report = await MgwReachability.check(_gateway, force: true)
         .timeout(_budget);
 
     expect(report.status, MgwStatus.ok);

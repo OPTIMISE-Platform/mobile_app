@@ -27,8 +27,12 @@ class MGW {
   /// so the binding is set when the gateway is added.
   String networkId;
 
+  /// Names the pairing: this phone keeps the device credentials and the
+  /// session for the gateway under it. Empty until the entry is stored.
+  String pairingId;
+
   MGW(this.hostname, this.mDNSServiceName, this.coreId, this.ip,
-      {this.networkId = ""});
+      {this.networkId = "", this.pairingId = ""});
 
   // Entries written before the split carried the network id in coreId: it is
   // their network, and no core id, or every such entry of one network would
@@ -38,14 +42,16 @@ class MGW {
         mDNSServiceName = json['mDNSServiceName'],
         coreId = json['networkId'] == null ? "" : json['coreId'] ?? "",
         ip = json['ip'],
-        networkId = json['networkId'] ?? json['coreId'] ?? "";
+        networkId = json['networkId'] ?? json['coreId'] ?? "",
+        pairingId = json['pairingId'] ?? "";
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         "hostname": hostname,
         "mDNSServiceName": mDNSServiceName,
         "coreId": coreId,
         "ip": ip,
-        "networkId": networkId
+        "networkId": networkId,
+        "pairingId": pairingId
       };
 }
 

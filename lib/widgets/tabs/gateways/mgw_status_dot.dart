@@ -15,6 +15,7 @@
  */
 
 import 'package:flutter/material.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 
 /// Shows what a paired gateway is currently good for.
@@ -24,14 +25,11 @@ import 'package:mobile_app/services/mgw/reachability.dart';
 /// the stored credentials. Both look identical in a list that only knows the
 /// pairing.
 class MgwStatusDot extends StatefulWidget {
-  const MgwStatusDot(
-      {super.key, required this.host, this.expectNetworkId, this.size = 14});
+  const MgwStatusDot({super.key, required this.gateway, this.size = 14});
 
-  final String host;
-
-  /// Network the gateway was bound to, so a stranger at the same address can be
-  /// told apart from the gateway itself.
-  final String? expectNetworkId;
+  /// The stored entry: its network tells a stranger at the same address apart
+  /// from the gateway itself, its pairing is what the check logs in with.
+  final MGW gateway;
 
   final double size;
 
@@ -88,8 +86,8 @@ class _MgwStatusDotState extends State<MgwStatusDot> {
   @override
   void didUpdateWidget(MgwStatusDot old) {
     super.didUpdateWidget(old);
-    if (old.host != widget.host ||
-        old.expectNetworkId != widget.expectNetworkId) {
+    if (MgwReachability.cacheKeyFor(old.gateway) !=
+        MgwReachability.cacheKeyFor(widget.gateway)) {
       _status = _check();
     }
   }
@@ -109,16 +107,14 @@ class _MgwStatusDotState extends State<MgwStatusDot> {
     });
   }
 
-  Future<MgwStatus> _check() => MgwReachability.statusOf(widget.host,
-      expectNetworkId: widget.expectNetworkId);
+  Future<MgwStatus> _check() => MgwReachability.statusOf(widget.gateway);
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<MgwStatus>(
       // The cached answer seeds the builder so a rebuild does not flash grey
       // while the probe it already made is still running.
-      initialData: MgwReachability.cachedStatusOf(widget.host,
-          expectNetworkId: widget.expectNetworkId),
+      initialData: MgwReachability.cachedStatusOf(widget.gateway),
       future: _status,
       builder: (context, snapshot) {
         final status = snapshot.data;

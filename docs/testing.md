@@ -129,7 +129,9 @@ All are `@visibleForTesting` and never set by production code.
 | `Auth.cleanupForTest()` (`lib/services/auth.dart`) | Runs the logout cleanup without a signed-in client; the identity package's secure-storage channel (`plugins.concerti.io/openidconnect_secure_storage`) needs a mock handler |
 | `DeviceMixin.readCachedDeviceIndex` (`lib/mixins/device_mixin.dart`) | Replaces the Isar read that seeds the device index (type and inactive flag per device, and whether a full refresh filled the cache), so the counters can be tested without the Isar container |
 | `DeviceMixin.deviceTypesAreAll` (`lib/mixins/device_mixin.dart`) | Replaces the read of `DeviceTypesService.userListIsAllTypes`, so the fallback to the platform's type list can be tested without its backend |
-| `MgwReachability.probeOverride` (`lib/services/mgw/reachability.dart`) | Replaces the network probe behind `check`/`statusOf`; the cache, the `forget()` epochs, the sequence guard and the `revision` signal still run |
+| `MgwReachability.probeOverride` (`lib/services/mgw/reachability.dart`) | Replaces the network probe behind `check`/`statusOf`, given the stored entry; the cache, the `forget()` epochs, the sequence guard and the `revision` signal still run |
+| `MgwStorage.restartForTest()` (`lib/services/mgw/storage.dart`) | Forgets that the shared gateway secrets were moved to the pairings, so the next credential read runs that migration again, as a new start would |
+| `MgwStorage.beforeListWriteForTest` (`lib/services/mgw/storage.dart`) | Called before each write of the gateway list; throwing from it fails the write, for the cleanup after a pairing that could not be stored |
 | `MgwDiscoveryService.discoverOverride` (`lib/services/mgw/discovery.dart`) | Replaces the mDNS scan; receives the `onUpdate` callback, so a test can report gateways while the scan runs |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
@@ -146,7 +148,8 @@ developer machine and CI.
   They carry `AppHttpClientAdapter.plain()`, so `testOverride` reaches them,
   but they get neither DioFactory's interceptor set nor its memoization. The
   four MGW clients are driven through the seam (`http_client_adapter_seam_test`,
-  `mgw_session_retry_test`, `mgw_session_storage_failure_test`); for
+  `mgw_session_retry_test`, `mgw_session_storage_failure_test`,
+  `mgw_pairings_test`); for
   `app_update.dart` nothing fails if the adapter line goes missing. The update
   check itself still cannot be driven on the test host, because it returns
   before its request on any platform but Android.

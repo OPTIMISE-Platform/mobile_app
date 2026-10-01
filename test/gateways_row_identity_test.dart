@@ -33,20 +33,23 @@ void main() {
   });
 
   testWidgets(
-      "reordering gateways that share an empty coreId keeps each row's "
-      "status dot state with its own host", (tester) async {
-    // Both manually paired (see mgw_page.dart's _addManually), which always
-    // stores coreId "" - the case a coreId key collides on.
-    final gatewayA = MGW("host-a", "Gateway A", "", "10.0.0.1");
-    final gatewayB = MGW("host-b", "Gateway B", "", "10.0.0.2");
+      "reordering gateways that share an empty coreId and a hostname keeps "
+      "each row's status dot state with its own entry", (tester) async {
+    // Both added by address (see mgw_page.dart's _addManually), which stores
+    // coreId "", under the same hostname bound to two networks - the case a
+    // coreId or hostname key collides on.
+    final gatewayA = MGW("mgw.local", "Gateway A", "", "10.0.0.1",
+        networkId: "n1", pairingId: "pairing-a");
+    final gatewayB = MGW("mgw.local", "Gateway B", "", "10.0.0.2",
+        networkId: "n2", pairingId: "pairing-b");
     AppState().gateways.addAll([gatewayA, gatewayB]);
 
     await pumpGolden(tester, const Scaffold(body: Gateways()), dark: false);
 
     State<MgwStatusDot> stateFor(String host) => tester.state(
-        find.byWidgetPredicate((w) => w is MgwStatusDot && w.host == host));
+        find.byWidgetPredicate((w) => w is MgwStatusDot && w.gateway.ip == host));
 
-    // MgwStatusDot is given mgw.ip, not mgw.hostname, as its own "host".
+    // Found by the entry's ip, not its hostname.
     final beforeA = stateFor("10.0.0.1");
     final beforeB = stateFor("10.0.0.2");
 
@@ -62,11 +65,11 @@ void main() {
 
     expect(identical(beforeA, afterA), isTrue,
         reason:
-            "host-a's status dot state should follow host-a, not swap with "
-            "whatever row is now at host-a's old position");
+            "A's status dot state should follow A, not swap with "
+            "whatever row is now at A's old position");
     expect(identical(beforeB, afterB), isTrue,
         reason:
-            "host-b's status dot state should follow host-b, not swap with "
-            "whatever row is now at host-b's old position");
+            "B's status dot state should follow B, not swap with "
+            "whatever row is now at B's old position");
   });
 }

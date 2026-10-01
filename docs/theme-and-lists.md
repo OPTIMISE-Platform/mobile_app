@@ -85,9 +85,10 @@ positions, headers, keys and index lookup; do not compute them by hand.
   `(section id, item key)`, so an id taken from the index or the title would
   re-key every later row when a section comes or goes.
 - `keyOf` must be unique within its section and name the item, not its index.
-  Gateways use the hostname because `coreId` is empty for manually added ones.
-  A repeated row key from real data (a gateway paired twice) is told apart by
-  its occurrence and logged; a duplicate section id is a bug and throws in debug.
+  Gateways use the pairing id, because `coreId` is empty for manually added
+  ones and a hostname repeats when bound to two networks. A repeated row key
+  from real data is told apart by its occurrence and logged; a duplicate
+  section id is a bug and throws in debug.
 - A header is shown only for a section with a `title` that has rows; positions
   count the rows actually shown, so a hidden last row keeps the rounded bottom.
 - `leading` and `trailing` take unkeyed extras such as a page header or the 72px

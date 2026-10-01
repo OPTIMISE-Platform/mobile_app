@@ -51,15 +51,15 @@ void main() {
     serveGoldenBackend(backend);
     probes = 0;
     status = MgwStatus.foreign;
-    MgwReachability.probeOverride = (host, expect) async {
+    MgwReachability.probeOverride = (mgw) async {
       probes++;
       return MgwReport(
           status: status,
           failedCheck:
               status == MgwStatus.foreign ? MgwFailedCheck.foreignNetwork : null,
-          address: host,
+          address: mgw.ip,
           checkedAt: DateTime.utc(2026),
-          expectedNetworkId: expect,
+          expectedNetworkId: mgw.networkId,
           advertisedNetworkId: "network-2");
     };
     AppState().networks.addAll([

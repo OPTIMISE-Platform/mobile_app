@@ -27,7 +27,6 @@ import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
-import 'package:mobile_app/services/mgw/restricted.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/theme.dart';
@@ -200,34 +199,35 @@ class _HostDialogState extends State<_HostDialog> {
   }
 }
 
-Future<void> PairWithGateway(MGW mgw) async {
-  var host = mgw.ip;
-  MgwAuthService authService = MgwAuthService(host);
+/// Registers this phone with [mgw] and stores the entry in place of
+/// [replacing], with the credentials the gateway issued under its pairing id.
+/// Returns the entry as stored.
+///
+/// Entry and credentials are stored in one step, so a failure leaves no
+/// credentials under an id no entry carries; the secrets of other gateways
+/// stay as they are.
+Future<MGW> PairWithGateway(MGW mgw, {MGW? replacing}) async {
+  final host = mgw.ip;
+  final authService = MgwAuthService(host);
 
   _logger.d("Pair with gateway: $host");
-  DeviceUserCredentials credentials = await authService.RegisterDevice();
+  final credentials = await authService.RegisterDevice();
   _logger.d("Paired successfully with gateway: $host");
 
-  _logger.d("Store device credentials");
-  await MgwStorage.StoreCredentials(credentials);
-  // The stored session belongs to the credentials just replaced.
-  await MgwService.ResetSessionData();
-  _logger.d("Stored credentials");
+  final stored = await MgwStorage.StorePairedMGW(mgw,
+      replacing: replacing, credentials: credentials);
+  _logger.d("Stored mgw and its credentials");
+  return stored;
 }
 
-/// Stores [mgw] in place of [replacing] and returns the entry as stored.
-Future<MGW> StoreGateway(MGW mgw, AppState appState, {MGW? replacing}) async {
-  _logger.d("Store paired mgw");
-  final stored = await MgwStorage.StorePairedMGW(mgw, replacing: replacing);
-  _logger.d("Stored mgw");
-
+/// Brings the app's gateway list and routing up to date after a pairing.
+Future<void> _applyPairing(AppState appState) async {
   // Reloaded rather than appended: pairing again replaces the stored entry.
   await appState.loadStoredMGWs();
   // A status from before the pairing would keep the gateway unused.
   MgwReachability.forget();
   // Without this the gateway stays unused until the next network load.
   await appState.mergeGatewaysWithNetworks();
-  return stored;
 }
 
 /// Pairs with [mgw] and stores it in place of [replacing]: the entry as stored
@@ -237,8 +237,8 @@ Future<({MGW? stored, PairingFailure? failure})> pairAndStore(
     {MGW? replacing}) async {
   try {
     _logger.d("Try to pair token based");
-    await PairWithGateway(mgw);
-    final stored = await StoreGateway(mgw, appState, replacing: replacing);
+    final stored = await PairWithGateway(mgw, replacing: replacing);
+    await _applyPairing(appState);
     return (stored: stored, failure: null);
   } catch (e, s) {
     ErrorReporter.log("Pairing with ${mgw.ip} failed", e, s);

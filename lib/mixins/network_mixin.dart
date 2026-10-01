@@ -352,7 +352,7 @@ mixin NetworkMixin on ChangeNotifier {
 
   /// Attaches every paired gateway that is usable right now to the network it
   /// was bound to when it was added. A network without one keeps
-  /// [Network.localGatewayHosts] null and is served from the cloud.
+  /// [Network.localGateways] null and is served from the cloud.
   ///
   /// The status check is what makes a gateway in a different local network - or
   /// one that no longer knows this device - harmless: it stays paired, but
@@ -367,23 +367,23 @@ mixin NetworkMixin on ChangeNotifier {
           .where((mgw) => mgw.networkId.isNotEmpty && mgw.ip.isNotEmpty)
           .toList();
 
-      final hostsByNetwork = <String, List<String>>{};
+      // Entries, not addresses: requests take the credentials of the pairing
+      // they go to, and two pairings can share an address.
+      final gatewaysByNetwork = <String, List<MGW>>{};
       if (candidates.isNotEmpty) {
-        final usable = await MgwReachability.usableAmong(
-            candidates.map((mgw) => (mgw.ip, mgw.networkId)));
+        final usable = await MgwReachability.usableAmong(candidates);
         for (final mgw in candidates) {
-          if (!usable.contains((mgw.ip, mgw.networkId))) {
+          if (!usable.contains(mgw)) {
             _logger.d(
                 'NetworkMixin: gateway ${mgw.ip} is not usable, using the cloud');
             continue;
           }
-          final hosts = hostsByNetwork.putIfAbsent(mgw.networkId, () => []);
-          if (!hosts.contains(mgw.ip)) hosts.add(mgw.ip);
+          gatewaysByNetwork.putIfAbsent(mgw.networkId, () => []).add(mgw);
         }
       }
 
       for (final n in networks) {
-        n.localGatewayHosts = hostsByNetwork[n.id];
+        n.localGateways = gatewaysByNetwork[n.id];
       }
     });
     notifyListeners();

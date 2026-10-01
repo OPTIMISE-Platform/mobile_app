@@ -17,6 +17,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/auth.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/error.dart';
@@ -56,9 +57,13 @@ class MgwSessionException implements Exception {
 class MgwService {
   // Use this service to perform request with automatically added session tokens
 
-  String baseUrl = "";
-  MgwAuth mgwAuthService = MgwAuth("");
+  final String baseUrl;
+  final MgwAuth mgwAuthService;
   DeviceUserCredentials deviceCredentials = DeviceUserCredentials("", "", "");
+
+  /// The pairing whose credentials and session the requests carry; null for a
+  /// client that sends none.
+  final String? pairingId;
 
   /// When true, a request for which no session can be obtained fails with
   /// [MgwSessionException] instead of going out without a token.
@@ -77,20 +82,34 @@ class MgwService {
         encryptedSharedPreferences: true,
         resetOnError: true,
   ));
-  static const sessionStorageKey = "mgw-session";
-  static const sessionExpirationStorageKey = "mgw-session-expiration";
+
+  // The one session every gateway shared before pairings had their own; only
+  // the migration in MgwStorage still reads them.
+  static const sharedSessionKey = "mgw-session";
+  static const sharedSessionExpirationKey = "mgw-session-expiration";
+
+  /// Secure-storage key of the session token of [pairingId].
+  static String sessionKeyOf(String pairingId) =>
+      "$sharedSessionKey:$pairingId";
+
+  /// Secure-storage key of the session expiry of [pairingId].
+  static String sessionExpirationKeyOf(String pairingId) =>
+      "$sharedSessionExpirationKey:$pairingId";
 
   // Request extras: set by the caller to skip the stored session, and by the
   // interceptor to record whether the stored one was used.
   static const _freshSessionKey = "mgw-fresh-session";
   static const _reusedSessionKey = "mgw-reused-session";
 
+  /// Drops the stored session of [pairingId] and of no other pairing.
+  ///
   /// Never throws: it runs while handling another failure, and a throw would
   /// replace that one.
-  static Future<void> ResetSessionData() async {
+  static Future<void> ResetSessionData(String pairingId) async {
+    if (pairingId.isEmpty) return;
     try {
-      await _storage.delete(key: sessionStorageKey);
-      await _storage.delete(key: sessionExpirationStorageKey);
+      await _storage.delete(key: sessionKeyOf(pairingId));
+      await _storage.delete(key: sessionExpirationKeyOf(pairingId));
     } catch (e) {
       Logger(printer: SimplePrinter())
           .e("$LOG_PREFIX: Could not drop the stored session: $e");
@@ -110,12 +129,18 @@ class MgwService {
     ),
   )..httpClientAdapter = AppHttpClientAdapter.plain();
 
+  /// Requests to [gateway] that carry the session of its pairing.
+  MgwService.forGateway(MGW gateway, {bool requireSession = false})
+      : this._(gateway.ip, gateway.pairingId, requireSession);
 
-  MgwService(String host, bool authenticate, {this.requireSession = false}) {
-    baseUrl = "http://${gatewayAuthority(host)}";
-    mgwAuthService = MgwAuth(host);
+  /// Requests to [host] without a session, for what a gateway serves before
+  /// it is paired.
+  MgwService.unauthenticated(String host) : this._(host, null, false);
 
-    if (authenticate) {
+  MgwService._(String host, this.pairingId, this.requireSession)
+      : baseUrl = "http://${gatewayAuthority(host)}",
+        mgwAuthService = MgwAuth(host) {
+    if (pairingId != null) {
       dio.interceptors
           .add(InterceptorsWrapper(onRequest: (options, handler) async {
         options.headers['X-No-Auth-Redirect'] = 'true';
@@ -146,6 +171,11 @@ class MgwService {
     }
   }
 
+  Future<void> _resetSession() async {
+    final id = pairingId;
+    if (id != null) await ResetSessionData(id);
+  }
+
   Future<String> GetSessionToken() async => (await obtainSession()).token;
 
   /// A session token, the stored one unless [fresh] or it expires within
@@ -163,10 +193,11 @@ class MgwService {
       throw MgwSessionException(MgwSessionProblem.storageFailed,
           "Could not read the pairing credentials ($e)");
     }
+    final id = pairingId ?? "";
     if (!fresh) {
-      final session = await _storage.read(key: sessionStorageKey);
+      final session = await _storage.read(key: sessionKeyOf(id));
       final expiration = DateTime.tryParse(
-          await _storage.read(key: sessionExpirationStorageKey) ?? "");
+          await _storage.read(key: sessionExpirationKeyOf(id)) ?? "");
       if (session != null &&
           expiration != null &&
           expiration.isAfter(DateTime.now().add(const Duration(hours: 3)))) {
@@ -186,9 +217,9 @@ class MgwService {
       throw MgwSessionException(MgwSessionProblem.loginFailed, e.toString());
     }
     try {
-      await _storage.write(key: sessionStorageKey, value: loginResponse.token);
+      await _storage.write(key: sessionKeyOf(id), value: loginResponse.token);
       await _storage.write(
-          key: sessionExpirationStorageKey, value: loginResponse.expires_at);
+          key: sessionExpirationKeyOf(id), value: loginResponse.expires_at);
     } catch (e, s) {
       // The token is valid all the same; the next request logs in again.
       ErrorReporter.log("Could not store the gateway session", e, s);
@@ -198,7 +229,7 @@ class MgwService {
 
   LoadCredentialsFromStorage() async {
     _logger.d("$LOG_PREFIX: Load device credentials from storage");
-    deviceCredentials = await MgwStorage.LoadCredentials();
+    deviceCredentials = await MgwStorage.LoadCredentials(pairingId ?? "");
   }
 
   Future<Response<dynamic>> Post(String path, dynamic data, Options options) async {
@@ -227,7 +258,7 @@ class MgwService {
     } on DioException catch (e) {
       if (!_rejectedStoredSession(e)) throw await _failureOf(e);
       _logger.d("$LOG_PREFIX: Stored session rejected, logging in again");
-      await ResetSessionData();
+      await _resetSession();
       retriedWithFreshSession = true;
       try {
         return await dio.get(url,
@@ -249,7 +280,7 @@ class MgwService {
     final sessionProblem = e.error;
     if (sessionProblem is MgwSessionException) return sessionProblem;
     if (e.response?.statusCode == 401) {
-      await ResetSessionData();
+      await _resetSession();
     }
     return handleDioException(e);
   }

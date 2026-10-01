@@ -18,9 +18,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/error.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
+
+MGW _at(String host, {String network = "", String pairing = ""}) =>
+    MGW(host, host, "", host, networkId: network, pairingId: pairing);
 
 void main() {
   group("classify", () {
@@ -57,15 +61,25 @@ void main() {
     test("carries the expected network", () {
       // An answer found without an expectation says nothing about identity, so
       // it must not be handed to a call that asked for one.
-      expect(MgwReachability.cacheKeyFor("10.0.2.2", null),
-          isNot(equals(MgwReachability.cacheKeyFor("10.0.2.2", "urn:hub:a"))));
-      expect(MgwReachability.cacheKeyFor("10.0.2.2", "urn:hub:a"),
-          isNot(equals(MgwReachability.cacheKeyFor("10.0.2.2", "urn:hub:b"))));
+      expect(MgwReachability.cacheKeyFor(_at("10.0.2.2")),
+          isNot(equals(MgwReachability.cacheKeyFor(
+              _at("10.0.2.2", network: "urn:hub:a")))));
+      expect(MgwReachability.cacheKeyFor(_at("10.0.2.2", network: "urn:hub:a")),
+          isNot(equals(MgwReachability.cacheKeyFor(
+              _at("10.0.2.2", network: "urn:hub:b")))));
     });
 
     test("separates hosts", () {
-      expect(MgwReachability.cacheKeyFor("a", "n"),
-          isNot(equals(MgwReachability.cacheKeyFor("b", "n"))));
+      expect(MgwReachability.cacheKeyFor(_at("a", network: "n")),
+          isNot(equals(MgwReachability.cacheKeyFor(_at("b", network: "n")))));
+    });
+
+    test("separates pairings", () {
+      // The authenticated check logs in with the pairing's own credentials.
+      expect(
+          MgwReachability.cacheKeyFor(_at("a", network: "n", pairing: "p1")),
+          isNot(equals(MgwReachability.cacheKeyFor(
+              _at("a", network: "n", pairing: "p2")))));
     });
   });
 
@@ -115,6 +129,7 @@ void main() {
   });
 
   group("cache", () {
+    final h = _at("h", network: "n");
     MgwReport report(MgwStatus status) =>
         MgwReport(status: status, address: "h", checkedAt: DateTime.utc(2026));
 
@@ -127,16 +142,16 @@ void main() {
         () async {
       final gate = Completer<void>();
       var probes = 0;
-      MgwReachability.probeOverride = (host, expect) async {
+      MgwReachability.probeOverride = (_) async {
         probes++;
         await gate.future;
         return report(MgwStatus.unauthorized);
       };
-      final early = MgwReachability.check("h", expectNetworkId: "n");
+      final early = MgwReachability.check(h);
 
       MgwReachability.forget();
       // A check after forget() starts its own probe instead of joining it.
-      final late = MgwReachability.check("h", expectNetworkId: "n");
+      final late = MgwReachability.check(h);
       gate.complete();
 
       expect((await early).status, MgwStatus.unauthorized,
@@ -147,39 +162,39 @@ void main() {
 
     test("an answer from before forget() is not cached", () async {
       final gate = Completer<void>();
-      MgwReachability.probeOverride = (host, expect) async {
+      MgwReachability.probeOverride = (_) async {
         await gate.future;
         return report(MgwStatus.unauthorized);
       };
-      final early = MgwReachability.check("h", expectNetworkId: "n");
+      final early = MgwReachability.check(h);
       MgwReachability.forget();
       gate.complete();
       await early;
 
-      expect(MgwReachability.cachedReportOf("h", expectNetworkId: "n"), isNull);
+      expect(MgwReachability.cachedReportOf(h), isNull);
     });
 
     test("a gateway that could not be checked is not used", () async {
       MgwReachability.probeOverride =
-          (host, expect) async => report(MgwStatus.unknown);
-      expect(await MgwReachability.isUsable("h", expectNetworkId: "n"), isFalse);
+          (_) async => report(MgwStatus.unknown);
+      expect(await MgwReachability.isUsable(h), isFalse);
     });
 
     test("a probe that finishes late does not replace a newer answer",
         () async {
       final slow = Completer<MgwReport>();
       var probes = 0;
-      MgwReachability.probeOverride = (host, expect) {
+      MgwReachability.probeOverride = (_) {
         probes++;
         return probes == 1 ? slow.future : Future.value(report(MgwStatus.ok));
       };
-      final first = MgwReachability.check("h", expectNetworkId: "n");
-      await MgwReachability.check("h", expectNetworkId: "n", force: true);
+      final first = MgwReachability.check(h);
+      await MgwReachability.check(h, force: true);
 
       slow.complete(report(MgwStatus.unauthorized));
       await first;
 
-      expect(MgwReachability.cachedStatusOf("h", expectNetworkId: "n"),
+      expect(MgwReachability.cachedStatusOf(h),
           MgwStatus.ok);
     });
   });

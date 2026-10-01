@@ -36,6 +36,12 @@ import 'golden_helper.dart';
 
 const _host = "192.0.2.10:8081";
 const _endpoints = "/core/api/core-manager/endpoints";
+const _pairing = "pairing-a";
+
+final _gateway = MGW(_host, _host, "", _host, pairingId: _pairing);
+
+Future<String?> _storedSession() => const FlutterSecureStorage()
+    .read(key: MgwService.sessionKeyOf(_pairing));
 
 /// A gateway whose answers a test decides per request.
 class _Gateway implements HttpClientAdapter {
@@ -91,11 +97,12 @@ ResponseBody? _login(RequestOptions o, {String token = "fresh"}) {
 Future<void> _pairedWith({String? storedSession}) async {
   FlutterSecureStorage.setMockInitialValues({
     if (storedSession != null) ...{
-      MgwService.sessionStorageKey: storedSession,
-      MgwService.sessionExpirationStorageKey: "2099-01-01T00:00:00Z",
+      MgwService.sessionKeyOf(_pairing): storedSession,
+      MgwService.sessionExpirationKeyOf(_pairing): "2099-01-01T00:00:00Z",
     }
   });
-  await MgwStorage.StoreCredentials(DeviceUserCredentials("id", "login", "s"));
+  await MgwStorage.StoreCredentials(
+      _pairing, DeviceUserCredentials("id", "login", "s"));
 }
 
 void main() {
@@ -104,9 +111,10 @@ void main() {
     await MgwStorage.init();
   });
 
-  tearDown(() {
+  tearDown(() async {
     AppHttpClientAdapter.testOverride = null;
     MgwReachability.forget();
+    await MgwStorage.ReplacePairedMGWs([]);
   });
 
   group("classify", () {
@@ -150,7 +158,7 @@ void main() {
       final gateway = _Gateway((o) => o.uri.path == "/" ? _text(200, "") : null);
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unreachable);
       expect(report.failedCheck, MgwFailedCheck.notAnswering);
@@ -171,15 +179,14 @@ void main() {
       });
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.ok);
       expect(report.sessionReused, isTrue);
       expect(report.retriedWithFreshLogin, isTrue);
       expect(gateway.to(_endpoints).map((r) => r.headers["X-Session-Token"]),
           ["stored", "fresh"]);
-      expect(await const FlutterSecureStorage()
-          .read(key: MgwService.sessionStorageKey), "fresh");
+      expect(await _storedSession(), "fresh");
     });
 
     test("rejected again after the new login: unauthorized, with details",
@@ -192,7 +199,7 @@ void main() {
       });
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unauthorized);
       expect(report.failedCheck, MgwFailedCheck.rejected);
@@ -213,7 +220,7 @@ void main() {
       });
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unauthorized);
       expect(report.failedCheck, MgwFailedCheck.rejected);
@@ -222,10 +229,7 @@ void main() {
       expect(report.retriedWithFreshLogin, isFalse);
       expect(gateway.to(_endpoints), hasLength(1));
       expect(gateway.to("/core/auth/login"), isEmpty);
-      expect(
-          await const FlutterSecureStorage()
-              .read(key: MgwService.sessionStorageKey),
-          "stored");
+      expect(await _storedSession(), "stored");
     });
 
     for (final status in [401, 403]) {
@@ -240,7 +244,8 @@ void main() {
         AppHttpClientAdapter.testOverride = gateway;
 
         await expectLater(
-            MgwService(_host, true).Post("/mgw-dc/commands/batch", "[]", Options()),
+            MgwService.forGateway(_gateway)
+                .Post("/mgw-dc/commands/batch", "[]", Options()),
             throwsA(isA<Failure>()));
 
         expect(gateway.to("/mgw-dc/commands/batch"), hasLength(1));
@@ -256,7 +261,7 @@ void main() {
       });
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unauthorized);
       expect(report.sessionReused, isFalse);
@@ -271,7 +276,7 @@ void main() {
       final gateway = _Gateway((o) => o.uri.path == "/" ? _text(200, "") : null);
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unauthorized);
       expect(report.failedCheck, MgwFailedCheck.noCredentials);
@@ -294,7 +299,7 @@ void main() {
       });
       AppHttpClientAdapter.testOverride = gateway;
 
-      final report = await MgwReachability.check(_host, force: true);
+      final report = await MgwReachability.check(_gateway, force: true);
 
       expect(report.status, MgwStatus.unauthorized);
       expect(report.failedCheck, MgwFailedCheck.loginFailed);
@@ -306,18 +311,18 @@ void main() {
 
   test("pairing drops the session of the replaced credentials", () async {
     await _pairedWith(storedSession: "stored");
+    await MgwStorage.ReplacePairedMGWs([_gateway]);
     AppHttpClientAdapter.testOverride = _Gateway((o) =>
         o.uri.path == "/core/api/auth-service/pairing/request"
             ? _json(200, {"id": "id-2", "login": "login-2", "secret": "s-2"})
             : null);
 
-    await PairWithGateway(MGW(_host, _host, "", _host));
+    final stored = await PairWithGateway(MGW(_host, _host, "", _host),
+        replacing: _gateway);
 
-    expect(
-        await const FlutterSecureStorage()
-            .read(key: MgwService.sessionStorageKey),
-        isNull);
-    expect((await MgwStorage.LoadCredentials()).login, "login-2");
+    expect(stored.pairingId, _pairing);
+    expect(await _storedSession(), isNull);
+    expect((await MgwStorage.LoadCredentials(_pairing)).login, "login-2");
   });
 
   test("the gateway login is not held back by local mode", () async {

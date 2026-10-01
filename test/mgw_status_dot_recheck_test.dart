@@ -16,8 +16,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_dot.dart';
+
+final _gateway =
+    MGW("10.0.0.1", "10.0.0.1", "", "10.0.0.1", networkId: "n1");
 
 void main() {
   var status = MgwStatus.unauthorized;
@@ -27,10 +31,10 @@ void main() {
     status = MgwStatus.unauthorized;
     probes = 0;
     MgwReachability.forget();
-    MgwReachability.probeOverride = (host, expect) async {
+    MgwReachability.probeOverride = (mgw) async {
       probes++;
       return MgwReport(
-          status: status, address: host, checkedAt: DateTime.utc(2026));
+          status: status, address: mgw.ip, checkedAt: DateTime.utc(2026));
     };
   });
 
@@ -49,8 +53,7 @@ void main() {
   Future<void> pumpDot(WidgetTester tester, {Key? key}) => tester.pumpWidget(
       MaterialApp(
           home: Center(
-              child: MgwStatusDot(
-                  key: key, host: "10.0.0.1", expectNetworkId: "n1"))));
+              child: MgwStatusDot(key: key, gateway: _gateway))));
 
   testWidgets("a failed check is checked again once the cache is dropped",
       (tester) async {
@@ -79,7 +82,7 @@ void main() {
     status = MgwStatus.ok;
     // "Check again" in the status sheet: a forced probe of the same gateway.
     final forced =
-        MgwReachability.check("10.0.0.1", expectNetworkId: "n1", force: true);
+        MgwReachability.check(_gateway, force: true);
     await tester.pump();
     await tester.pump();
 

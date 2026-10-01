@@ -15,9 +15,12 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:isar_community/isar.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_deployment.dart';
 import 'package:mobile_app/services/mgw/api.dart';
+import 'package:mobile_app/shared/isar.dart';
 
 const LOG_PREFIX = "MGW-CORE-MANAGER-SERVICE";
 
@@ -25,11 +28,14 @@ class MgwCoreService {
   // Use this service to access the MGW core-manager to manage exposed endpoints
 
   final basePath = "/core-manager";
-  MgwApiService mgwApiService = MgwApiService("", true);
+  final MgwApiService mgwApiService;
 
-  MgwCoreService(String host) {
-    mgwApiService = MgwApiService(host, true);
-  }
+  /// Pairing the cached endpoints are kept under.
+  final String pairingId;
+
+  MgwCoreService(MGW gateway)
+      : mgwApiService = MgwApiService.forGateway(gateway),
+        pairingId = gateway.pairingId;
   final _logger = Logger(
     printer: SimplePrinter(),
   );
@@ -50,5 +56,38 @@ class MgwCoreService {
       endpoints.add(endpoint);
     }
     return endpoints;
+  }
+
+  // Without a pairing id there is no gateway to keep the rows under, and an
+  // empty one would match rows cached before endpoints were kept per gateway.
+  bool get _caches => isar != null && pairingId.isNotEmpty;
+
+  /// Endpoints of [moduleID] on this gateway: the cached ones if Isar holds
+  /// any for its pairing, else asked for and cached.
+  Future<List<Endpoint>> cachedEndpointsOfModule(String moduleID) async {
+    if (_caches) {
+      final cached = await isar!.endpoints
+          .where()
+          .pairingIdModuleNameEqualTo(pairingId, moduleID)
+          .findAll();
+      if (cached.isNotEmpty) return cached;
+    }
+    final endpoints = await getEndpointsOfModule(moduleID);
+    if (_caches) {
+      for (final endpoint in endpoints) {
+        endpoint.cacheFor(pairingId);
+      }
+      await isar!.writeTxn(() => isar!.endpoints.putAll(endpoints));
+    }
+    return endpoints;
+  }
+
+  /// Drops this gateway's cached endpoints of [moduleID], and no others.
+  Future<void> dropCachedEndpoints(String moduleID) async {
+    if (!_caches) return;
+    await isar!.writeTxn(() => isar!.endpoints
+        .where()
+        .pairingIdModuleNameEqualTo(pairingId, moduleID)
+        .deleteAll());
   }
 }

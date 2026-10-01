@@ -26,6 +26,7 @@ import 'package:mobile_app/services/mgw/advertisements.dart';
 import 'package:mobile_app/services/mgw/discovery.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_page.dart';
+import 'package:mobile_app/widgets/tabs/gateways/mgw_status_panel.dart';
 import 'package:mobile_app/widgets/tabs/gateways/gateways.dart';
 import 'package:mobile_app/widgets/tabs/networks/device_networks.dart';
 
@@ -42,10 +43,10 @@ void main() {
   });
 
   setUp(() {
-    MgwReachability.probeOverride = (host, expect) async => MgwReport(
+    MgwReachability.probeOverride = (mgw) async => MgwReport(
         status: MgwStatus.unauthorized,
         failedCheck: MgwFailedCheck.rejected,
-        address: host,
+        address: mgw.ip,
         checkedAt: DateTime.utc(2026),
         httpStatus: 401);
   });
@@ -93,6 +94,108 @@ void main() {
     expect(find.text("401"), findsOneWidget);
     expect(find.text("Check again"), findsOneWidget);
     expect(find.text("Remove pairing"), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets("with two gateways in a network the row shows the routed one, "
+      "and the sheet opens the other", (tester) async {
+    final first = MGW("mgw-a.local", "Gateway A", "a", "192.168.1.4",
+        networkId: "network-1", pairingId: "pairing-a");
+    final routed = MGW("mgw-b.local", "Gateway B", "b", "192.168.1.5",
+        networkId: "network-1", pairingId: "pairing-b");
+    MgwReachability.probeOverride = (mgw) async => MgwReport(
+        status: mgw.pairingId == routed.pairingId
+            ? MgwStatus.ok
+            : MgwStatus.unauthorized,
+        address: mgw.ip,
+        checkedAt: DateTime.utc(2026));
+    AppState().networks.add(Network("network-1", "Ground floor", false, [],
+        [], DeviceConnectionStatus.online, "hash-1", "owner-1")
+      ..localGateways = [routed]);
+    AppState().gateways.addAll([first, routed]);
+    await pumpGolden(tester, const Scaffold(body: DeviceListByNetwork()),
+        dark: false);
+
+    await tester.tap(find.byTooltip("Gateway status"));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text("Gateway B"), findsOneWidget);
+    expect(find.text("Connected"), findsOneWidget);
+    expect(find.text("Other gateways in this network"), findsOneWidget);
+
+    await tester.tap(find.text("Gateway A"));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text("192.168.1.4 \u00b7 Ground floor"), findsOneWidget);
+    expect(find.text("Rejected - pair again"), findsOneWidget);
+    expect(find.text("Gateway B"), findsOneWidget,
+        reason: "the routed gateway is listed in its place");
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets("an address refresh while the sheet is open updates the other "
+      "gateway's row", (tester) async {
+    final first = MGW("mgw-a.local", "Gateway A", "a", "192.168.1.4",
+        networkId: "network-1", pairingId: "pairing-a");
+    final routed = MGW("mgw-b.local", "Gateway B", "b", "192.168.1.5",
+        networkId: "network-1", pairingId: "pairing-b");
+    AppState().networks.add(Network("network-1", "Ground floor", false, [],
+        [], DeviceConnectionStatus.online, "hash-1", "owner-1")
+      ..localGateways = [routed]);
+    AppState().gateways.addAll([first, routed]);
+    await pumpGolden(tester, const Scaffold(body: DeviceListByNetwork()),
+        dark: false);
+    await tester.tap(find.byTooltip("Gateway status"));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text("192.168.1.4"), findsOneWidget);
+
+    // What loadStoredMGWs leaves after the refresh: new instances.
+    AppState().gateways
+      ..clear()
+      ..addAll([
+        MGW(first.hostname, first.mDNSServiceName, first.coreId, "192.168.1.14",
+            networkId: first.networkId, pairingId: first.pairingId),
+        MGW(routed.hostname, routed.mDNSServiceName, routed.coreId,
+            routed.ip,
+            networkId: routed.networkId, pairingId: routed.pairingId),
+      ]);
+    AppState().notifyListeners();
+    await tester.pump();
+
+    expect(find.text("192.168.1.14"), findsOneWidget);
+    expect(find.text("192.168.1.4"), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets("a sheet opened with an older copy shows the stored entry",
+      (tester) async {
+    final stale = MGW("mgw-a.local", "Gateway A", "a", "192.168.1.4",
+        networkId: "network-1", pairingId: "pairing-a");
+    AppState().gateways.add(MGW(stale.hostname, stale.mDNSServiceName,
+        stale.coreId, "192.168.1.14",
+        networkId: stale.networkId, pairingId: stale.pairingId));
+    await pumpGolden(
+        tester,
+        Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => showMgwStatusSheet(context, stale),
+                child: const Text("Open"),
+              ),
+            ),
+          ),
+        ),
+        dark: false);
+    await tester.tap(find.text("Open"));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text("192.168.1.14 \u00b7 network-1"), findsOneWidget);
+    expect(find.text("192.168.1.4 \u00b7 network-1"), findsNothing);
     await tester.pumpWidget(const SizedBox());
   });
 

@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/advertisements.dart';
 import 'package:mobile_app/services/mgw/api.dart';
 import 'package:mobile_app/services/mgw/error.dart';
@@ -163,8 +164,7 @@ class MgwReachability {
 
   /// Replaces the network probe in tests.
   @visibleForTesting
-  static Future<MgwReport> Function(String host, String? expectNetworkId)?
-      probeOverride;
+  static Future<MgwReport> Function(MGW gateway)? probeOverride;
 
   /// Bumped when a report is cached or the cache is dropped, so a widget
   /// showing one can read it again or check again.
@@ -197,23 +197,26 @@ class MgwReachability {
     revision.value++;
   }
 
-  // The expectation belongs in the key: an answer found without one says
-  // nothing about identity, and reusing it for a call that carries one would
-  // skip the very check that call asked for.
-  @visibleForTesting
-  static String cacheKeyFor(String host, String? expectNetworkId) =>
-      "$host|${expectNetworkId ?? ''}";
-
-  /// Report on the gateway at [host], cached for [cacheTtl]. [force] probes
-  /// again even when a fresh answer or a running probe exists.
+  /// What a report on [gateway] depends on: two entries with the same key
+  /// share one check.
   ///
-  /// [expectNetworkId] is the network the gateway was bound to; when it
-  /// advertises a different one, the answer is [MgwStatus.foreign].
-  static Future<MgwReport> check(String host,
-      {String? expectNetworkId, bool force = false}) {
-    final key = cacheKeyFor(host, expectNetworkId);
+  /// The expectation belongs in the key: an answer found without one says
+  /// nothing about identity, and reusing it for a call that carries one would
+  /// skip the very check that call asked for. The pairing does too: the
+  /// authenticated check uses its credentials.
+  static String cacheKeyFor(MGW gateway) =>
+      "${gateway.ip}|${gateway.networkId}|${gateway.pairingId}";
+
+  /// Report on [gateway], cached for [cacheTtl]. [force] probes again even
+  /// when a fresh answer or a running probe exists.
+  ///
+  /// The gateway's network is the one it was bound to; when it advertises a
+  /// different one, the answer is [MgwStatus.foreign]. The authenticated check
+  /// uses the credentials of its pairing.
+  static Future<MgwReport> check(MGW gateway, {bool force = false}) {
+    final key = cacheKeyFor(gateway);
     if (!force) {
-      final cached = cachedReportOf(host, expectNetworkId: expectNetworkId);
+      final cached = cachedReportOf(gateway);
       if (cached != null) return Future.value(cached);
       final running = _pending[key];
       if (running != null && running.epoch == _epoch) {
@@ -225,7 +228,7 @@ class MgwReachability {
     () async {
       try {
         final probe = probeOverride ?? _probe;
-        final report = await probe(host, expectNetworkId);
+        final report = await probe(gateway);
         if (pending.epoch == _epoch) _store(key, pending.sequence, report);
         pending.completer.complete(report);
       } catch (e, s) {
@@ -244,45 +247,42 @@ class MgwReachability {
     revision.value++;
   }
 
-  /// Status of the gateway at [host]. Cached for [cacheTtl].
-  static Future<MgwStatus> statusOf(String host,
-          {String? expectNetworkId}) async =>
-      (await check(host, expectNetworkId: expectNetworkId)).status;
+  /// Status of [gateway]. Cached for [cacheTtl].
+  static Future<MgwStatus> statusOf(MGW gateway) async =>
+      (await check(gateway)).status;
 
   /// The cached report, or null when nothing fresh is cached. For a widget
   /// that must not start a request while building.
-  static MgwReport? cachedReportOf(String host, {String? expectNetworkId}) {
-    final cached = _cache[cacheKeyFor(host, expectNetworkId)];
+  static MgwReport? cachedReportOf(MGW gateway) {
+    final cached = _cache[cacheKeyFor(gateway)];
     if (cached == null) return null;
     if (_age.elapsed - cached.storedAt >= cacheTtl) return null;
     return cached.report;
   }
 
   /// The cached status, or null when nothing was probed yet.
-  static MgwStatus? cachedStatusOf(String host, {String? expectNetworkId}) =>
-      cachedReportOf(host, expectNetworkId: expectNetworkId)?.status;
+  static MgwStatus? cachedStatusOf(MGW gateway) =>
+      cachedReportOf(gateway)?.status;
 
-  /// Whether the gateway at [host] can be used right now.
-  static Future<bool> isUsable(String host, {String? expectNetworkId}) async =>
-      await statusOf(host, expectNetworkId: expectNetworkId) == MgwStatus.ok;
+  /// Whether [gateway] can be used right now.
+  static Future<bool> isUsable(MGW gateway) async =>
+      await statusOf(gateway) == MgwStatus.ok;
 
-  /// Checks several gateways at once and returns the (host, network) pairs
-  /// that can be used.
+  /// Checks several gateways at once and returns those that can be used, in
+  /// the order given.
   ///
-  /// Keyed by both: two gateways can share an address while serving different
+  /// Per entry: two gateways can share an address while serving different
   /// networks, and only the one whose own network answers may be used.
-  static Future<Set<(String, String)>> usableAmong(
-      Iterable<(String, String)> hostsWithNetwork) async {
-    final checked = await Future.wait(hostsWithNetwork.map((e) async =>
-        (e, await isUsable(e.$1, expectNetworkId: e.$2))));
-    return {for (final (pair, usable) in checked) if (usable) pair};
+  static Future<List<MGW>> usableAmong(Iterable<MGW> gateways) async {
+    final checked = await Future.wait(
+        gateways.map((gateway) async => (gateway, await isUsable(gateway))));
+    return [for (final (gateway, usable) in checked) if (usable) gateway];
   }
 
-  static Future<MgwReport> _probe(String host, String? expectNetworkId) async {
+  static Future<MgwReport> _probe(MGW gateway) async {
+    final host = gateway.ip;
     final address = gatewayAuthority(host);
-    final expected = (expectNetworkId == null || expectNetworkId.isEmpty)
-        ? null
-        : expectNetworkId;
+    final expected = gateway.networkId.isEmpty ? null : gateway.networkId;
     MgwReport report(MgwStatus status,
             {MgwFailedCheck? failedCheck,
             String? error,
@@ -312,7 +312,8 @@ class MgwReachability {
             failedCheck: MgwFailedCheck.foreignNetwork, advertised: advertised);
       }
     }
-    final result = await _authenticates(host, address, expected, advertised);
+    final result =
+        await _authenticates(gateway, address, expected, advertised);
     _logger.d("$LOG_PREFIX: $host is ${result.status}");
     return result;
   }
@@ -347,9 +348,9 @@ class MgwReachability {
   /// Sends one request that needs the session token the pairing produced. It is
   /// the same path every local device call takes, so nothing is spent here that
   /// the first real call would not spend anyway.
-  static Future<MgwReport> _authenticates(String host, String address,
+  static Future<MgwReport> _authenticates(MGW gateway, String address,
       String? expected, String? advertised) async {
-    final api = MgwApiService(host, true, requireSession: true);
+    final api = MgwApiService.forGateway(gateway, requireSession: true);
     final service = api.mgwService;
     MgwReport report(MgwStatus status,
             {MgwFailedCheck? failedCheck,
@@ -403,7 +404,8 @@ class MgwReachability {
               : MgwFailedCheck.rejected,
           failure: e);
     } catch (e) {
-      _logger.d("$LOG_PREFIX: $host failed the authenticated check: $e");
+      _logger.d(
+          "$LOG_PREFIX: ${gateway.ip} failed the authenticated check: $e");
       return report(MgwStatus.unauthorized,
           failedCheck: MgwFailedCheck.rejected, error: e.toString());
     }

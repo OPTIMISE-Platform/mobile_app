@@ -26,13 +26,15 @@ class _MGWDetailState extends State<MGWDetail> with FollowsStoredGateway {
   void initState() {
     super.initState();
     followGateway(widget.mgw);
-    _modules = MgwModuleService(gateway.ip).getModules();
+    _modules = MgwModuleService(gateway).getModules();
   }
 
   @override
   void gatewayChanged(MGW previous) {
-    if (previous.ip == gateway.ip) return;
-    setState(() => _modules = MgwModuleService(gateway.ip).getModules());
+    if (previous.ip == gateway.ip && previous.pairingId == gateway.pairingId) {
+      return;
+    }
+    setState(() => _modules = MgwModuleService(gateway).getModules());
   }
 
   /// Grey unless the module is deployed; the deployment's state is 1 for

@@ -92,7 +92,7 @@ void main() {
     test("a request to a bracketed gateway counts as served locally", () {
       final network = Network("n", "N", false, [], [],
           DeviceConnectionStatus.online, "h", "o")
-        ..localGatewayHosts = ["[fd00::5]:8081"];
+        ..localGateways = [MGW("v6", "v6", "", "[fd00::5]:8081")];
       expect(
           ApiAvailableService.servedLocally(
               [network], "http://[fd00::5]:8081/core/api"),
@@ -122,7 +122,7 @@ void main() {
     test("a request to a zoned gateway counts as served locally", () {
       final network = Network("n", "N", false, [], [],
           DeviceConnectionStatus.online, "h", "o")
-        ..localGatewayHosts = ["fe80::1%eth0"];
+        ..localGateways = [MGW("zoned", "zoned", "", "fe80::1%eth0")];
       expect(
           ApiAvailableService.servedLocally([network],
               "http://${gatewayAuthority("fe80::1%eth0")}/core/api"),
@@ -270,11 +270,11 @@ void main() {
       MgwDiscoveryService.discoverOverride =
           (_) async => [_found("192.168.1.5", 8081)];
       final probed = <String>[];
-      MgwReachability.probeOverride = (host, expect) async {
-        probed.add(host);
+      MgwReachability.probeOverride = (mgw) async {
+        probed.add(mgw.ip);
         return MgwReport(
             status: MgwStatus.ok,
-            address: gatewayAuthority(host),
+            address: gatewayAuthority(mgw.ip),
             checkedAt: DateTime.utc(2026));
       };
 
@@ -292,9 +292,9 @@ void main() {
       ]);
       MgwDiscoveryService.discoverOverride =
           (_) async => [_found("192.168.1.9", 8081)];
-      MgwReachability.probeOverride = (host, expect) async => MgwReport(
+      MgwReachability.probeOverride = (mgw) async => MgwReport(
           status: MgwStatus.ok,
-          address: gatewayAuthority(host),
+          address: gatewayAuthority(mgw.ip),
           checkedAt: DateTime.utc(2026));
 
       await AppState().manageNetworkDiscovery();
@@ -302,6 +302,27 @@ void main() {
       final stored = await MgwStorage.LoadPairedMGWs();
       expect(stored.single.ip, "192.168.1.9:8081");
       expect(AppState().gateways.single.ip, "192.168.1.9:8081");
+    });
+
+    test("a moved gateway keeps its pairing id", () async {
+      await MgwStorage.ReplacePairedMGWs([
+        MGW("mgw-c1.local", "MGW", "c1", "192.168.1.5:8081",
+            networkId: "net-1")
+      ]);
+      final before = (await MgwStorage.LoadPairedMGWs()).single.pairingId;
+      MgwDiscoveryService.discoverOverride =
+          (_) async => [_found("192.168.1.9", 8081)];
+      MgwReachability.probeOverride = (mgw) async => MgwReport(
+          status: MgwStatus.ok,
+          address: gatewayAuthority(mgw.ip),
+          checkedAt: DateTime.utc(2026));
+
+      await AppState().manageNetworkDiscovery();
+
+      final stored = (await MgwStorage.LoadPairedMGWs()).single;
+      expect(stored.ip, "192.168.1.9:8081");
+      expect(stored.pairingId, before);
+      expect(AppState().gateways.single.pairingId, before);
     });
 
     test("entries stored before the network id split start no scan",
@@ -320,9 +341,9 @@ void main() {
         scans++;
         return [];
       };
-      MgwReachability.probeOverride = (host, expect) async => MgwReport(
+      MgwReachability.probeOverride = (mgw) async => MgwReport(
           status: MgwStatus.ok,
-          address: gatewayAuthority(host),
+          address: gatewayAuthority(mgw.ip),
           checkedAt: DateTime.utc(2026));
 
       await AppState().manageNetworkDiscovery();
@@ -341,15 +362,15 @@ void main() {
       final office = Network("n2", "Office", false, [], [],
           DeviceConnectionStatus.online, "h2", "o");
       AppState().networks.addAll([home, office]);
-      MgwReachability.probeOverride = (host, expect) async => MgwReport(
-          status: expect == "n1" ? MgwStatus.ok : MgwStatus.foreign,
-          address: gatewayAuthority(host),
+      MgwReachability.probeOverride = (mgw) async => MgwReport(
+          status: mgw.networkId == "n1" ? MgwStatus.ok : MgwStatus.foreign,
+          address: gatewayAuthority(mgw.ip),
           checkedAt: DateTime.utc(2026));
 
       await AppState().mergeGatewaysWithNetworks();
 
-      expect(home.localGatewayHosts, ["192.168.0.2"]);
-      expect(office.localGatewayHosts, isNull);
+      expect(home.localGateways?.map((g) => g.mDNSServiceName), ["Home"]);
+      expect(office.localGateways, isNull);
     });
 
     test("does not drop a gateway paired while the scan ran", () async {
@@ -363,9 +384,9 @@ void main() {
             MGW("10.0.0.7", "10.0.0.7", "", "10.0.0.7", networkId: "net-2"));
         return [_found("192.168.1.9", 8081)];
       };
-      MgwReachability.probeOverride = (host, expect) async => MgwReport(
+      MgwReachability.probeOverride = (mgw) async => MgwReport(
           status: MgwStatus.ok,
-          address: gatewayAuthority(host),
+          address: gatewayAuthority(mgw.ip),
           checkedAt: DateTime.utc(2026));
 
       await AppState().manageNetworkDiscovery();

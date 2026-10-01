@@ -30,11 +30,30 @@ class Endpoint {
   @Index()
   String moduleName;
 
+  /// Pairing of the gateway that reported this endpoint: two gateways can run
+  /// a module at different locations. Empty in rows cached before it was kept,
+  /// which are never read.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @Index(composite: [CompositeIndex('moduleName')])
+  String pairingId;
+
   @JsonKey(includeFromJson: false, includeToJson: false)
   Id isarId = Isar.autoIncrement;
 
-  Endpoint(this.id, this.location, this.ref, {this.moduleName = ""}){
-    isarId = fastHash(id);
+  Endpoint(this.id, this.location, this.ref,
+      {this.moduleName = "", this.pairingId = ""}) {
+    isarId = _isarIdOf(pairingId, id);
+  }
+
+  // Includes the pairing, so the same endpoint id reported by two gateways
+  // keeps one row each.
+  static Id _isarIdOf(String pairingId, String id) =>
+      fastHash(pairingId.isEmpty ? id : "$pairingId/$id");
+
+  /// Assigns this endpoint to the gateway of [pairingId].
+  void cacheFor(String pairingId) {
+    this.pairingId = pairingId;
+    isarId = _isarIdOf(pairingId, id);
   }
   factory Endpoint.fromJson(Map<String, dynamic> json) => _$EndpointFromJson(json);
   Map<String, dynamic> toJson() => _$EndpointToJson(this);

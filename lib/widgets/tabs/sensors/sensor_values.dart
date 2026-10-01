@@ -996,7 +996,7 @@ class _SensorValuesState extends State<SensorValues>
   /// device list distinguishes.
   bool _isUnavailable(DeviceInstance device) =>
       device.connection_state == DeviceConnectionStatus.offline ||
-      device.network?.localGatewayHosts?.isNotEmpty != true && Settings.getLocalMode();
+      device.network?.localGateways?.isNotEmpty != true && Settings.getLocalMode();
 
   /// What triggering this value does, or null when there is nothing to trigger.
   ///

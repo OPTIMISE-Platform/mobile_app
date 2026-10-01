@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_module.dart';
 
 import 'package:mobile_app/services/mgw/api.dart';
@@ -26,11 +27,10 @@ class MgwModuleService {
   // Use this service to access the MGW module-manager to manage deployments and modules
 
   final basePath = "/module-manager";
-  MgwApiService mgwApiService = MgwApiService("", true);
+  final MgwApiService mgwApiService;
 
-  MgwModuleService(String host) {
-    mgwApiService = MgwApiService(host, true);
-  }
+  MgwModuleService(MGW gateway)
+      : mgwApiService = MgwApiService.forGateway(gateway);
   final _logger = Logger(
     printer: SimplePrinter(),
   );

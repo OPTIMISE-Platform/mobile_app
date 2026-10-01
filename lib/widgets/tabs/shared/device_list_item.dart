@@ -111,7 +111,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
 
       final connectionStatus = device.connection_state;
       final unavailable = connectionStatus == DeviceConnectionStatus.offline ||
-          device.network?.localGatewayHosts?.isNotEmpty != true && Settings.getLocalMode();
+          device.network?.localGateways?.isNotEmpty != true && Settings.getLocalMode();
 
       final deviceType = AppState().deviceTypes[device.device_type_id];
       final deviceClass = deviceType == null
