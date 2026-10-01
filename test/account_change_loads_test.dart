@@ -337,7 +337,7 @@ void main() {
       () async {
     final readGate = Completer<void>();
     var reads = 0;
-    AppState().readCachedDeviceClasses = () async {
+    AppState().fetchDeviceClasses = (maxAge, {serveStale}) async {
       reads++;
       await readGate.future;
       return [DeviceClass("stored", "Stored", "")];
@@ -346,8 +346,9 @@ void main() {
     addTearDown(() {
       AppState().fetchDeviceTypes = (maxAge, {serveStale}) =>
           DeviceTypesService.getDeviceTypes(null, maxAge, serveStale);
-      AppState().readCachedDeviceClasses =
-          DeviceClassesService.getCachedDeviceClasses;
+      AppState().fetchDeviceClasses = (maxAge, {serveStale}) =>
+          DeviceClassesService.getDeviceClasses(
+              maxAge: maxAge, serveStale: serveStale);
     });
 
     final old = AppState().init();

@@ -14,94 +14,125 @@
  *  limitations under the License.
  */
 
-import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
-import 'package:logger/logger.dart';
-import 'package:mobile_app/shared/account_epoch.dart';
+import 'package:flutter/foundation.dart';
 import 'package:mobile_app/models/device_class.dart';
-import 'package:mobile_app/services/settings.dart';
-import 'package:mobile_app/shared/dio_factory.dart';
-import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
+import 'package:mobile_app/shared/dio_factory.dart';
+import 'package:mobile_app/shared/dio_status.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/metadata_cache.dart';
 
 class DeviceClassesService {
-  static final _logger = Logger(
-    printer: SimplePrinter(),
-  );
-
   static String uri =
-      '${Settings.getApiUrl() ?? 'localhost'}/api-aggregator/device-class-uses';
+      '${Settings.getApiUrl() ?? 'localhost'}/device-repository/v2/device-classes';
 
-  /// Cache key for the last successful response, see [getDeviceClasses].
-  static const _cacheKey = 'device-class-uses';
+  static const _pageSize = 1000;
 
-  /// Which device belongs to which class. Unlike the other reference metadata
-  /// this is not stable — a newly added device has to show up under its class —
-  /// so it is fetched fresh and the last successful response is kept as the
-  /// copy [getCachedDeviceClasses] serves. With [fallbackToCache], a failed
-  /// fetch returns that copy, of any age, instead of throwing.
+  /// Every device class of the platform, sorted by name. Which of them the
+  /// user has devices of follows from the device types, see
+  /// `DeviceMixin.usedDeviceClasses`. [maxAge] and [serveStale] as in
+  /// [loadMetadataCached].
   static Future<List<DeviceClass>> getDeviceClasses(
-      {bool fallbackToCache = true}) async {
-    final Map<String, String> queryParameters = {};
-    final epoch = AccountEpoch.current;
+      {Duration maxAge = metadataMaxAge,
+      void Function(DateTime storedAt)? serveStale}) async {
+    await (_legacyMigration ??= _migrateLegacy());
+    return loadMetadataCached(_key, _fetchRaw, DeviceClass.fromJson,
+        maxAge: maxAge, serveStale: serveStale);
+  }
 
-    Map<String, dynamic>? data;
+  static const _key = 'device-classes';
+
+  /// The stored answer of the removed api-aggregator endpoint.
+  static const _legacyKey = 'device-class-uses';
+
+  static Future<void>? _legacyMigration;
+
+  @visibleForTesting
+  static void resetLegacyMigrationForTest() => _legacyMigration = null;
+
+  /// Without a copy of its own, the classes of the old entry are stored as a
+  /// stale one, so local mode keeps its classes and the next pass refetches.
+  /// The old entry is deleted only once a copy of the new key exists. Never
+  /// throws: an unusable old entry is logged and left alone.
+  static Future<void> _migrateLegacy() async {
     try {
-      final headers = await Auth().getHeaders();
-      final dio = await DioFactory.create(DioConfig.standard);
-      final resp = await dio.get<Map<String, dynamic>?>(uri,
-          queryParameters: queryParameters, options: Options(headers: headers));
-      data = resp.data;
-      if (data != null) {
-        unawaited(MetadataCache.write(
-            _cacheKey, JsonUtf8Encoder().convert(data), epoch));
+      final epoch = AccountEpoch.current;
+      final legacy = await MetadataCache.readEntry(_legacyKey);
+      if (legacy == null) return;
+      if (await MetadataCache.readEntry(_key) == null) {
+        final decoded = jsonDecode(utf8.decode(legacy.bytes));
+        final classes = (decoded as Map<String, dynamic>)["device-classes"];
+        if (classes is! List) return;
+        final sorted = _sorted([
+          for (final c in classes) DeviceClass.fromJson(c as Map<String, dynamic>).toJson()
+        ]);
+        await MetadataCache.write(_key, JsonUtf8Encoder().convert(sorted), epoch,
+            storedAt: DateTime.fromMillisecondsSinceEpoch(0));
+        if (await MetadataCache.readEntry(_key) == null) return;
       }
-    } catch (e) {
-      // Offline, local mode or a failing backend: fall back to the last
-      // response we saw rather than reporting "no device classes", which
-      // disables the classes tab.
-      final cached = fallbackToCache ? await _readCached() : null;
-      if (cached == null) rethrow;
-      _logger.d("Using cached device classes: $e");
-      data = cached;
-    }
-    return _parse(data);
-  }
-
-  /// The last successful response, whatever its age, or null when none is
-  /// stored or it cannot be read.
-  static Future<List<DeviceClass>?> getCachedDeviceClasses() async {
-    final data = await _readCached();
-    return data == null ? null : _parse(data);
-  }
-
-  static Future<Map<String, dynamic>?> _readCached() async {
-    final entry = await MetadataCache.readEntry(_cacheKey);
-    if (entry == null) return null;
-    try {
-      return jsonDecode(utf8.decode(entry.bytes)) as Map<String, dynamic>;
-    } catch (e) {
-      _logger.w("Cached device classes unusable: $e");
-      return null;
+      await MetadataCache.delete(_legacyKey);
+    } catch (e, s) {
+      ErrorReporter.log('Could not migrate the stored device classes', e, s);
     }
   }
 
-  static List<DeviceClass> _parse(Map<String, dynamic>? data) {
-    if (data == null) return [];
-    final l = data["device-classes"];
-    if (l == null) return [];
-    final deviceClasses = List<DeviceClass>.generate(
-        l.length, (index) => DeviceClass.fromJson(l[index]));
-    for (var element in deviceClasses) {
-      for (var s in (data["used-devices"][element.id] as List<dynamic>? ?? [])) {
-        element.deviceIds.add(s as String);
+  static Future<List<dynamic>> _fetchRaw() async {
+    final headers = await Auth().getHeaders();
+    // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
+    final dio = await DioFactory.create(DioConfig.standard);
+    final byId = <String, Map<String, dynamic>>{};
+    var fetched = 0;
+    while (true) {
+      final Response<List<dynamic>?> resp;
+      try {
+        // Paged by id, which is unique, so no class falls between two pages.
+        resp = await dio.get<List<dynamic>?>(uri,
+            queryParameters: {
+              "limit": "$_pageSize",
+              "offset": "$fetched",
+              "sort": "id.asc",
+            },
+            options: Options(headers: headers));
+      } on DioException catch (e) {
+        checkReadStatus(e, uri);
+        rethrow;
+      }
+      final page = resp.data ?? const [];
+      final known = byId.length;
+      for (final c in page) {
+        final m = c as Map<String, dynamic>;
+        byId[m["id"] as String] = m;
+      }
+      fetched += page.length;
+      final total = int.tryParse(resp.headers.value('X-Total-Count') ?? '');
+      // The total, when sent, ends the list even if the backend caps the
+      // page below [_pageSize]; without it a short page does. A page with
+      // nothing new ends it too, so a backend ignoring the offset cannot loop.
+      if (byId.length == known ||
+          (total != null ? fetched >= total : page.length < _pageSize)) {
+        break;
       }
     }
-    return deviceClasses;
+    return _sorted(byId.values.toList());
   }
+
+  /// Stored in display order, which is the order the map keeps them in.
+  static List<dynamic> _sorted(List<dynamic> classes) => classes
+    ..sort((a, b) {
+      final byName = _name(a).compareTo(_name(b));
+      return byName != 0
+          ? byName
+          : (a["id"] as String).compareTo(b["id"] as String);
+    });
+
+  static String _name(dynamic c) =>
+      ((c as Map<String, dynamic>)["name"] as String? ?? "").toLowerCase();
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
 }

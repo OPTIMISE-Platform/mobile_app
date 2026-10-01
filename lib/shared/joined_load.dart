@@ -25,8 +25,18 @@ import 'package:mobile_app/shared/account_epoch.dart';
 class JoinedLoad {
   Future<bool>? _running;
   int? _runningEpoch;
+  Object? _runningTag;
 
-  Future<bool> run(Future<bool> Function() load) {
+  /// The [run] `tag` of the run a call made now would join, or null when it
+  /// would start its own.
+  Object? get joinableTag =>
+      _running != null && _runningEpoch == AccountEpoch.current
+          ? _runningTag
+          : null;
+
+  /// [tag] describes the run for [joinableTag]; a call that joins keeps the
+  /// running one's.
+  Future<bool> run(Future<bool> Function() load, {Object? tag}) {
     final epoch = AccountEpoch.current;
     final running = _running;
     if (running != null && _runningEpoch == epoch) return running;
@@ -37,10 +47,12 @@ class JoinedLoad {
       if (identical(_running, started)) {
         _running = null;
         _runningEpoch = null;
+        _runningTag = null;
       }
     });
     _running = started;
     _runningEpoch = epoch;
+    _runningTag = tag;
     return started;
   }
 }

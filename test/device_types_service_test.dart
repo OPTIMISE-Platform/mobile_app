@@ -59,6 +59,18 @@ void main() {
     });
   }
 
+  test("tells whether the list it returned is the platform list", () async {
+    backend.status["/device-repository/user-device-types"] = 404;
+    backend.types["/device-repository/device-types"] = [deviceTypeJson("a")];
+    await DeviceTypesService.getDeviceTypes(null, Duration.zero);
+    expect(DeviceTypesService.userListIsAllTypes, isTrue);
+
+    backend.status.remove("/device-repository/user-device-types");
+    backend.types["/device-repository/user-device-types"] = [deviceTypeJson("a")];
+    await DeviceTypesService.getDeviceTypes(null, Duration.zero);
+    expect(DeviceTypesService.userListIsAllTypes, isFalse);
+  });
+
   test("does not fall back on a server error", () async {
     backend.status["/device-repository/user-device-types"] = 500;
 

@@ -99,15 +99,16 @@ class MetadataCache {
 
   /// Skipped when the account changed since [epoch], taken before the fetch.
   /// Checked inside the transaction, so a clear queued after the change always
-  /// runs after the check.
-  static Future<void> write(String key, List<int> bytes, int epoch) async {
+  /// runs after the check. [storedAt] defaults to now.
+  static Future<void> write(String key, List<int> bytes, int epoch,
+      {DateTime? storedAt}) async {
     final db = isar;
     if (db == null) return;
     try {
       final entry = CachedMetadata()
         ..key = key
         ..bytes = bytes
-        ..updatedAt = DateTime.now();
+        ..updatedAt = storedAt ?? DateTime.now();
       await db.writeTxn(() async {
         if (epoch == AccountEpoch.current) {
           await db.cachedMetadatas.putByKey(entry);

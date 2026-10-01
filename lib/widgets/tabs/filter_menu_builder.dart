@@ -98,7 +98,7 @@ class FilterMenuBuilder {
     final options = <_FilterOption>[];
 
     if (!(config?.ownsDeviceClass() ?? false) &&
-        state.deviceClasses.isNotEmpty) {
+        state.usedDeviceClasses.isNotEmpty) {
       options.add(_classesOption(context));
     }
     if (!(config?.ownsLocation() ?? false) && state.locations.isNotEmpty) {
@@ -124,20 +124,23 @@ class FilterMenuBuilder {
 
   _FilterOption _classesOption(BuildContext context) => _FilterOption(
     label: '${currentFilter().deviceClassIds != null ? '✓ ' : ''}Classes',
-    onTap: () => _showFilterDialog(
-      context: context,
-      title: 'Filter Classes',
-      itemCount: state.deviceClasses.values.length,
-      itemBuilder: (i) {
-        final deviceClass = state.deviceClasses.values.elementAt(i);
-        return _FilterListTile(
-          label: deviceClass.name,
-          isSelected: currentFilter().deviceClassIds?.contains(deviceClass.id) ?? false,
-          onChanged: (checked) => _update((f) =>
-              checked ? f.withDeviceClass(deviceClass.id) : f.withoutDeviceClass(deviceClass.id)),
-        );
-      },
-    ),
+    onTap: () {
+      final classes = state.usedDeviceClasses;
+      _showFilterDialog(
+        context: context,
+        title: 'Filter Classes',
+        itemCount: classes.length,
+        itemBuilder: (i) {
+          final deviceClass = classes[i];
+          return _FilterListTile(
+            label: deviceClass.name,
+            isSelected: currentFilter().deviceClassIds?.contains(deviceClass.id) ?? false,
+            onChanged: (checked) => _update((f) =>
+                checked ? f.withDeviceClass(deviceClass.id) : f.withoutDeviceClass(deviceClass.id)),
+          );
+        },
+      );
+    },
   );
 
   _FilterOption _locationsOption(BuildContext context) => _FilterOption(

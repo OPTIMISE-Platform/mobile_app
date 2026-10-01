@@ -38,10 +38,9 @@ void main() {
   tearDown(() {
     AppState().fetchDeviceTypes = (maxAge, {serveStale}) =>
         DeviceTypesService.getDeviceTypes(null, maxAge, serveStale);
-    AppState().fetchDeviceClasses =
-        () => DeviceClassesService.getDeviceClasses(fallbackToCache: false);
-    AppState().readCachedDeviceClasses =
-        DeviceClassesService.getCachedDeviceClasses;
+    AppState().fetchDeviceClasses = (maxAge, {serveStale}) =>
+        DeviceClassesService.getDeviceClasses(
+            maxAge: maxAge, serveStale: serveStale);
     ErrorReporter.present = (_) {};
     resetAppStateForGolden();
     resetGoldenBackend();
@@ -53,8 +52,7 @@ void main() {
       "init serves stale metadata and revalidates it once, after the first "
       "frame", (tester) async {
     final backend = FakeBackend();
-    backend.serveJson("GET", "/api-aggregator/device-class-uses", 200,
-        {"device-classes": [], "used-devices": {}});
+    backend.serveJson("GET", "/device-repository/v2/device-classes", 200, []);
     for (final path in [
       "/device-repository/functions",
       "/device-repository/aspects",
@@ -242,12 +240,12 @@ void main() {
     await settle();
     await tester.pump();
 
-    // The Settings refresh fails on failing device classes, even with a
-    // stored copy to fall back to.
+    // The Settings refresh fails on failing device classes, and keeps the
+    // ones loaded before.
     shown.clear();
-    AppState().fetchDeviceClasses = () async => throw Exception("offline");
-    AppState().readCachedDeviceClasses =
-        () async => [DeviceClass("stored", "Stored", "")];
+    AppState().deviceClasses["stored"] = DeviceClass("stored", "Stored", "");
+    AppState().fetchDeviceClasses =
+        (maxAge, {serveStale}) async => throw Exception("offline");
     Object? reloadError;
     await drive(() async {
       try {
@@ -258,6 +256,7 @@ void main() {
     });
     expect(reloadError, isNotNull);
     expect(shown, contains("Could not get device classes"));
+    expect(AppState().deviceClasses.keys, ["stored"]);
     await tester.pump();
 
     await tester.runAsync(() => AppState().onLogout());

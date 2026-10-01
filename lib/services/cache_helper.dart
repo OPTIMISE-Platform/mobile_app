@@ -128,7 +128,7 @@ class CacheHelper {
         await isar!.notifications.clear();
       });
     }
-    AppState().replaceDeviceIndex(const []);
+    AppState().replaceDeviceIndex(const [], complete: false);
     // A logout keeps the list in memory empty only until a late load refills
     // it; the next account must not start with it.
     AppState().notifications.clear();
@@ -159,7 +159,7 @@ class CacheHelper {
       return true;
     }
     final collections = <Future<bool>>[
-      _tracked(_devices, () => _refreshDevices(quiet: false)),
+      _tracked(_devices, () => _refreshDevicesShared(quiet: false)),
       _tracked(_deviceGroups, () => _refreshDeviceGroups(quiet: false)),
       _tracked(_networks, () => _refreshNetworks(quiet: false)),
       _tracked(_locations, () => _refreshLocations(quiet: false)),
@@ -179,7 +179,7 @@ class CacheHelper {
         ConceptsService.getConcepts(maxAge: Duration.zero),
         CharacteristicsService.getCharacteristics(maxAge: Duration.zero),
         DeviceTypesService.getDeviceTypes(null, Duration.zero),
-        DeviceClassesService.getDeviceClasses(),
+        DeviceClassesService.getDeviceClasses(maxAge: Duration.zero),
       ],
     ];
     var done = 0;
@@ -192,6 +192,11 @@ class CacheHelper {
 
   /// How long a refreshed entity collection counts as current.
   static const entityMaxAge = Duration(days: 1);
+
+  /// Whether a full device refresh has completed for this account, so the
+  /// device rows in Isar are all of its devices rather than pages seen.
+  static bool devicesRefreshedOnce() =>
+      Settings.getCacheUpdated(_devices) != null;
 
   static const _devices = "devices";
   static const _deviceGroups = "deviceGroups";
@@ -256,7 +261,7 @@ class CacheHelper {
     final now = DateTime.now();
     final started = <Future<bool>>[
       for (final (cache, refreshedAt, refresh) in [
-        (_devices, Settings.getCacheUpdated(_devices), _refreshDevices),
+        (_devices, Settings.getCacheUpdated(_devices), _refreshDevicesShared),
         (_deviceGroups, deviceGroupsRefreshedAt(), _refreshDeviceGroups),
         (_networks, Settings.getCacheUpdated(_networks), _refreshNetworks),
         (_locations, Settings.getCacheUpdated(_locations), _refreshLocations),
@@ -282,7 +287,32 @@ class CacheHelper {
   @visibleForTesting
   static void Function()? afterDevicePruneForTest;
 
-  static Future<bool> _refreshDevices({required bool quiet}) async {
+  static _DeviceRefreshRun? _deviceRun;
+
+  /// Joins the device refresh running under the current account instead of
+  /// starting a second one, whose prune could drop rows the other fetched. A
+  /// caller that reports gets the failure of a quiet run it joined reported.
+  static Future<bool> _refreshDevicesShared({required bool quiet}) async {
+    final joined = _deviceRun;
+    if (joined != null && joined.epoch == AccountEpoch.current) {
+      final ok = await joined.done;
+      final failure = joined.failure;
+      if (!ok && !quiet && joined.quiet && failure != null) {
+        _refreshFailed(failure.message, failure.error, failure.stack, false,
+            joined.epoch);
+      }
+      return ok;
+    }
+    final run = _DeviceRefreshRun(quiet, AccountEpoch.current);
+    _deviceRun = run;
+    run.done = _refreshDevices(quiet: quiet, run: run).whenComplete(() {
+      if (identical(_deviceRun, run)) _deviceRun = null;
+    });
+    return run.done;
+  }
+
+  static Future<bool> _refreshDevices(
+      {required bool quiet, _DeviceRefreshRun? run}) async {
     final epoch = AccountEpoch.current;
     var allDevicesLoaded = false;
     const limit = 5000;
@@ -299,6 +329,7 @@ class CacheHelper {
             limit, deviceOffset, DeviceSearchFilter(""), last,
             forceBackend: true, store: false)).devices;
       } catch (e, s) {
+        run?.failure = (message: "Could not get devices", error: e, stack: s);
         _refreshFailed("Could not get devices", e, s, quiet, epoch);
         return false;
       }
@@ -382,6 +413,16 @@ class CacheHelper {
     return true;
   }
 
+  /// Runs the device refresh as an explicit one: failures are reported, and
+  /// it counts as running for [scheduleCacheUpdates].
+  static Future<bool> refreshDevicesNow() =>
+      _tracked(_devices, () => _refreshDevicesShared(quiet: false));
+
+  /// Runs the device refresh as the background one does, quietly.
+  @visibleForTesting
+  static Future<bool> refreshDevicesInBackgroundForTest() =>
+      _tracked(_devices, () => _refreshDevicesShared(quiet: true));
+
   @visibleForTesting
   static Future<bool> refreshDeviceGroupsNow() =>
       _tracked(_deviceGroups, () => _refreshDeviceGroups(quiet: false));
@@ -446,4 +487,14 @@ class CacheHelper {
     await Settings.setCacheUpdated(_locations);
     return true;
   }
+}
+
+/// A device refresh in flight, for callers that join it.
+class _DeviceRefreshRun {
+  _DeviceRefreshRun(this.quiet, this.epoch);
+
+  final bool quiet;
+  final int epoch;
+  late final Future<bool> done;
+  ({String message, Object error, StackTrace stack})? failure;
 }

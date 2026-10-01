@@ -141,20 +141,86 @@ void main() {
     expect(fetches, 1);
   });
 
-  test("the stored device classes are served whatever their age", () async {
-    await _put(db, 'device-class-uses',
-        DateTime.now().subtract(const Duration(days: 30)), {
-      "device-classes": [
-        {"id": "c1", "name": "Lamps", "image": ""}
-      ],
-      "used-devices": {
-        "c1": ["d1"]
-      },
+  group("the stored api-aggregator answer", () {
+    setUp(DeviceClassesService.resetLegacyMigrationForTest);
+
+    test("serves its classes as a stale copy when nothing newer is stored, "
+        "and is deleted once that copy is", () async {
+      await _put(db, 'device-class-uses', DateTime.now(), {
+        "device-classes": [
+          {"id": "c2", "name": "Sensors", "image": ""},
+          {"id": "c1", "name": "Lamps", "image": ""},
+        ],
+        "used-devices": {},
+      });
+
+      DateTime? reported;
+      // Nothing answers a fetch here, as in local mode.
+      final classes = await DeviceClassesService.getDeviceClasses(
+          serveStale: (t) => reported = t);
+
+      expect(classes.map((c) => c.id), ["c1", "c2"]);
+      expect(MetadataCache.isStale(reported!, metadataMaxAge), isTrue);
+      expect(await db.cachedMetadatas.getByKey('device-class-uses'), isNull);
+      expect(await db.cachedMetadatas.getByKey('device-classes'), isNotNull);
     });
 
-    final classes = await DeviceClassesService.getCachedDeviceClasses();
+    test("is deleted when a copy of the new key exists", () async {
+      await _put(db, 'device-class-uses', DateTime.now(), {"device-classes": []});
+      await _put(db, 'device-classes', DateTime.now(), [
+        {"id": "c1", "name": "Lamps", "image": ""}
+      ]);
 
-    expect(classes!.map((c) => c.id), ["c1"]);
-    expect(classes.single.deviceIds, ["d1"]);
+      final classes = await DeviceClassesService.getDeviceClasses();
+
+      expect(classes.map((c) => c.id), ["c1"]);
+      expect(await db.cachedMetadatas.getByKey('device-class-uses'), isNull);
+    });
+
+    test("with a malformed class is left alone, and later loads still work",
+        () async {
+      await _put(db, 'device-class-uses', DateTime.now(), {
+        "device-classes": [
+          42,
+          {"id": "c1", "name": "Lamps", "image": ""},
+        ],
+      });
+
+      await expectLater(DeviceClassesService.getDeviceClasses(),
+          throwsA(anything),
+          reason: "nothing usable is stored, and the fetch fails here");
+      expect(await db.cachedMetadatas.getByKey('device-class-uses'), isNotNull);
+      expect(await db.cachedMetadatas.getByKey('device-classes'), isNull);
+
+      await _put(db, 'device-classes', DateTime.now(), [
+        {"id": "c1", "name": "Lamps", "image": ""}
+      ]);
+      final classes = await DeviceClassesService.getDeviceClasses();
+      expect(classes.map((c) => c.id), ["c1"]);
+    });
+
+    test("is kept when it holds no classes to migrate", () async {
+      await _put(db, 'device-class-uses', DateTime.now(), {"other": 1});
+
+      await expectLater(
+          DeviceClassesService.getDeviceClasses(maxAge: metadataMaxAge),
+          throwsA(anything),
+          reason: "nothing stored, and the fetch fails here");
+      expect(await db.cachedMetadatas.getByKey('device-class-uses'), isNotNull);
+    });
+  });
+
+  test("the stored device classes are served whatever their age", () async {
+    final storedAt = DateTime.now().subtract(const Duration(days: 30));
+    await _put(db, 'device-classes', storedAt, [
+      {"id": "c1", "name": "Lamps", "image": ""}
+    ]);
+
+    DateTime? reported;
+    final classes = await DeviceClassesService.getDeviceClasses(
+        serveStale: (t) => reported = t);
+
+    expect(classes.map((c) => c.id), ["c1"]);
+    expect(reported!.isAtSameMomentAs(storedAt), isTrue);
   });
 }

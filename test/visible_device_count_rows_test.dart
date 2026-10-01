@@ -20,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_group.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/widgets/tabs/classes/device_class.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_list.dart';
@@ -50,7 +51,8 @@ void main() {
     backend.serveJson("GET", "/device-repository/device-groups", 200, []);
     backend.serveJson("GET", "/device-repository/extended-hubs", 200, []);
     backend.serveJson("GET", "/device-repository/device-types", 200, []);
-    backend.serveJson("GET", "/device-repository/user-device-types", 200, []);
+    backend.serveJson("GET", "/device-repository/user-device-types", 200,
+        [deviceTypeJson("device-type-1", deviceClassId: "class-1")]);
     backend.serveJson("GET", "/device-repository/locations", 200, [
       {
         "id": "location-1",
@@ -61,17 +63,14 @@ void main() {
         "device_group_ids": [],
       }
     ]);
-    backend.serveJson("GET", "/api-aggregator/device-class-uses", 200, {
-      "device-classes": [
-        {"id": "class-1", "name": "Lamps", "image": ""}
-      ],
-      "used-devices": {"class-1": ids},
-    });
-    backend.serveDevicesPaged([
+    backend.serveJson("GET", "/device-repository/v2/device-classes", 200,
+        [deviceClassJson("class-1", "Lamps")]);
+    final devices = [
       deviceJson("active-1", "Active 1"),
       deviceJson("active-2", "Active 2"),
       deviceJson("inactive-1", "Inactive 1", inactive: true),
-    ]);
+    ];
+    backend.serveDevicesPaged(devices);
     serveGoldenBackend(backend);
 
     Future<void> pumpScreen(Widget screen) async {
@@ -94,6 +93,8 @@ void main() {
     await pumpScreen(const GroupList());
     expect(find.text("2 Devices"), findsOneWidget, reason: "group row");
 
+    // What the full device refresh does; class rows count from it.
+    AppState().replaceDeviceIndex(devices.map(DeviceInstance.fromJson));
     await pumpScreen(const DeviceListByDeviceClass());
     expect(find.text("Lamps"), findsOneWidget);
     expect(find.text("2 Devices"), findsOneWidget, reason: "class row");

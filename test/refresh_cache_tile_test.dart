@@ -53,8 +53,7 @@ void main() {
       "a device-type reload that fails while the refresh runs is reported "
       "as a failed refresh", (tester) async {
     final backend = FakeBackend();
-    backend.serveJson("GET", "/api-aggregator/device-class-uses", 200,
-        {"device-classes": [], "used-devices": {}});
+    backend.serveJson("GET", "/device-repository/v2/device-classes", 200, []);
     for (final path in [
       "/device-repository/functions",
       "/device-repository/aspects",

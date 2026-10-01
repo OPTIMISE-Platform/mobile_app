@@ -42,7 +42,9 @@ class DeviceListByDeviceClass extends StatefulWidget {
 }
 
 class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with ResumeRefreshMixin {
-  int? _selected;
+  /// The class whose devices are shown, by id: the list's order and length
+  /// change as device types load.
+  String? _selectedId;
   StreamSubscription? _refreshSubscription;
 
   @override
@@ -51,47 +53,50 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
     super.dispose();
   }
 
+  DeviceSearchFilter _selectedFilter() {
+    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    return parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [_selectedId!]);
+  }
+
   @override
   void initState() {
     super.initState();
-    final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
+    // Resume and refreshes keep the classes, types and device index current
+    // in AppState; only opening the tab without classes asks for a retry.
+    if (AppState().deviceClasses.isEmpty) {
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => AppState().retryFailedMetadata());
+    }
     _refreshSubscription = AppState().refreshPressed.listen((_) {
-      if (_selected == null) {
-        AppState().loadDeviceClasses();
-      } else if (parentState != null) {
-        AppState().searchDevices(
-            parentState.filter, true);
+      if (mounted && _selectedId != null) {
+        AppState().searchDevices(_selectedFilter(), true);
       }
     });
   }
 
   @override
   void onResumed() {
-    if (_selected == null) {
-      AppState().loadDeviceClasses();
-    } else {
-      final deviceClasses = AppState().deviceClasses.values.toList(growable: false);
-      final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
-      AppState().searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClasses[_selected!].id]), true);
-    }
+    if (_selectedId != null) AppState().searchDevices(_selectedFilter(), true);
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AppState>(builder: (context, state, child) {
-      final deviceClasses = state.deviceClasses.values.toList(growable: false);
+      final deviceClasses = state.usedDeviceClasses;
       final parentState = context.findAncestorStateOfType<State<DeviceTabs>>() as DeviceTabsState?;
 
       return Scrollbar(
-        child: state.loadingDeviceClasses
-            ? const Center(child: DelayedCircularProgressIndicator())
-            : _selected == null
-                ? RefreshIndicator(
+        child: _selectedId == null
+            // Both ends notify: init when it is done, a class load also when
+            // it failed.
+            ? deviceClasses.isEmpty && (!state.initialized || state.loadingDeviceClasses)
+                ? const Center(child: DelayedCircularProgressIndicator())
+                : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();
-                      state.loadDeviceClasses();
+                      state.reloadDeviceClasses();
                     },
-                    child: state.deviceClasses.isEmpty
+                    child: deviceClasses.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraint) {
                               return SingleChildScrollView(
@@ -119,12 +124,13 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                 items: deviceClasses,
                                 keyOf: (deviceClass) => deviceClass.id,
                                 itemBuilder: (_, deviceClass, position) {
+                                  // Null until the device index is complete.
+                                  final count = state.visibleDeviceCountOfClass(deviceClass.id);
                                   return GroupedListTile(
                                     position: position,
                                     child: ListTile(
                                         title: Text(deviceClass.name),
-                                        subtitle: Text(
-                                            devicesLabel(state.visibleDeviceCount(deviceClass.deviceIds))),
+                                        subtitle: count == null ? null : Text(devicesLabel(count)),
                                         leading: EntityLeadingIcon(
                                             size: 48,
                                             fallbackIcon: Icons.devices,
@@ -143,14 +149,11 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                                                 parentState.onBackCallback = null;
                                                 parentState.setHideSearchOverride(null);
                                               });
-                                              setState(() => _selected = null);
+                                              setState(() => _selectedId = null);
                                             };
                                             parentState.customAppBarTitle = deviceClass.name;
-
-                                            setState(() {
-                                              _selected = deviceClasses.indexOf(deviceClass);
-                                            });
                                           });
+                                          setState(() => _selectedId = deviceClass.id);
                                         }),
                                   );
                                 },
@@ -160,7 +163,7 @@ class _DeviceListByDeviceClassState extends State<DeviceListByDeviceClass> with 
                 : RefreshIndicator(
                     onRefresh: () async {
                       HapticFeedbackProxy.lightImpact();
-                      state.searchDevices(parentState?.filter ?? DeviceSearchFilter("", deviceClassIds: [deviceClasses[_selected!].id]), true);
+                      state.searchDevices(_selectedFilter(), true);
                     },
                     child: PagedDeviceList(
                       source: DeviceSearchPages(state),

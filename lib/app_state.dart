@@ -37,7 +37,14 @@ import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
 
 /// The reference metadata [AppState] loads at start and revalidates.
-enum _Metadata { deviceTypes, functions, aspects, concepts, characteristics }
+enum _Metadata {
+  deviceTypes,
+  deviceClasses,
+  functions,
+  aspects,
+  concepts,
+  characteristics
+}
 
 class AppState extends ChangeNotifier
     with
@@ -70,7 +77,7 @@ class AppState extends ChangeNotifier
     unawaited(CacheHelper.scheduleCacheUpdates().catchError(
         (Object e, StackTrace s) =>
             ErrorReporter.log('Could not refresh cache', e, s)));
-    unawaited(_revalidateCaches(refetchClasses: true));
+    unawaited(_revalidateCaches(retryFailed: true));
   }
 
   @override
@@ -97,8 +104,7 @@ class AppState extends ChangeNotifier
       // Stored copies of any age are served here, so only an empty cache
       // waits for the backend; what is too old is revalidated after the frame.
       await Future.wait([
-        loadInactiveDeviceIds(),
-        loadCachedDeviceClasses(),
+        loadDeviceIndex(),
         for (final m in _Metadata.values) _loadMetadata(m),
         loadStoredMGWs(),
       ]);
@@ -109,8 +115,8 @@ class AppState extends ChangeNotifier
       if (epoch == AccountEpoch.current) {
         _initialized = true;
         notifyListeners();
-        unawaited(SchedulerBinding.instance.endOfFrame.then((_) =>
-            _revalidateCaches(refetchClasses: deviceClassesFromCache)));
+        unawaited(SchedulerBinding.instance.endOfFrame
+            .then((_) => _revalidateCaches()));
       }
     }
   }
@@ -120,6 +126,15 @@ class AppState extends ChangeNotifier
   final Map<_Metadata, DateTime> _metadataStoredAt = {};
 
   bool _revalidatingMetadata = false;
+
+  /// The latest request to retry the sets whose last load failed, with the
+  /// account epoch it was made under; null once a pass has covered it.
+  ({int serial, int epoch})? _retryRequest;
+  int _retrySerial = 0;
+
+  /// Per set, the request serial it was last retried for, so one request
+  /// retries a failing set once and a later request once more.
+  final Map<_Metadata, int> _retriedFor = {};
 
   /// The device types as [init] loads them: a stored copy of any age is
   /// served, and one older than [metadataMaxAge] is revalidated later.
@@ -136,6 +151,9 @@ class AppState extends ChangeNotifier
       case _Metadata.deviceTypes:
         return loadDeviceTypes(
             maxAge: maxAge, serveStale: record, quiet: quiet);
+      case _Metadata.deviceClasses:
+        return loadDeviceClasses(
+            maxAge: maxAge, serveStale: record, quiet: quiet);
       case _Metadata.functions:
         return loadNestedFunctions(
             maxAge: maxAge, serveStale: record, quiet: quiet);
@@ -149,56 +167,98 @@ class AppState extends ChangeNotifier
     }
   }
 
-  Set<_Metadata> _staleMetadata() {
+  /// The sets older than [metadataMaxAge] not yet [attempted], and with a
+  /// retry [request] of [epoch] the sets without a stored time, whose last
+  /// load failed, not yet retried for it.
+  Set<_Metadata> _dueMetadata(
+      int epoch, Set<_Metadata> attempted, ({int serial, int epoch})? request) {
     final now = DateTime.now();
+    final retry = request != null && request.epoch == epoch ? request.serial : null;
     return {
-      for (final e in _metadataStoredAt.entries)
-        if (MetadataCache.isStale(e.value, metadataMaxAge, now)) e.key,
+      for (final m in _Metadata.values)
+        if (_metadataStoredAt[m] == null
+            ? retry != null && (_retriedFor[m] ?? -1) < retry
+            : !attempted.contains(m) &&
+                MetadataCache.isStale(_metadataStoredAt[m]!, metadataMaxAge, now))
+          m,
     };
   }
 
-  /// Refetches the device classes when [refetchClasses] and every metadata set
-  /// older than [metadataMaxAge], in the background: failures are logged and
-  /// keep what is on screen.
-  Future<void> _revalidateCaches({required bool refetchClasses}) async {
-    // Checked before anything reads Settings: nothing to do is the common case.
+  /// Refetches every metadata set older than [metadataMaxAge], and with
+  /// [retryFailed] every set whose last load failed, in the background:
+  /// failures are logged and keep what is on screen.
+  Future<void> _revalidateCaches({bool retryFailed = false}) async {
     if (!_initialized) return;
-    final metadataDue = !_revalidatingMetadata && _staleMetadata().isNotEmpty;
-    if (!refetchClasses && !metadataDue) return;
-    if (Settings.getLocalMode()) return;
-    await Future.wait([
-      if (refetchClasses) refetchDeviceClasses(),
-      if (metadataDue) _revalidateMetadata(),
-    ]);
+    final epoch = AccountEpoch.current;
+    if (_retryRequest != null && _retryRequest!.epoch != epoch) {
+      _retryRequest = null;
+    }
+    if (retryFailed) _retryRequest = (serial: ++_retrySerial, epoch: epoch);
+    // The running pass, or the one it starts when it ends, takes it up.
+    if (_revalidatingMetadata) return;
+    // Checked before anything reads Settings: nothing to do is the common case.
+    if (_dueMetadata(epoch, const {}, _retryRequest).isEmpty ||
+        Settings.getLocalMode()) {
+      _retryRequest = null;
+      return;
+    }
+    await _revalidateMetadata();
   }
 
-  /// One pass at a time: a call while one runs returns at once, since the
-  /// running pass re-checks for stale sets and clears its flag in the same
-  /// synchronous step, so nothing reported stale meanwhile is missed.
+  /// Loads every metadata set whose last load failed, and the stale ones,
+  /// through the background pass.
+  Future<void> retryFailedMetadata() => _revalidateCaches(retryFailed: true);
+
+  /// One pass at a time: a call while one runs returns at once. The pass
+  /// re-checks for due sets before it ends, and a retry request it did not
+  /// cover, such as one of the next account, gets a pass of its own.
   Future<void> _revalidateMetadata() async {
     if (_revalidatingMetadata) return;
     _revalidatingMetadata = true;
     final epoch = AccountEpoch.current;
     // A logout during the pass has cleared the maps; nothing to reload.
     bool current() => _initialized && epoch == AccountEpoch.current;
+    var refreshed = false;
+    int? coveredSerial;
     try {
       final attempted = <_Metadata>{};
-      var refreshed = false;
       while (true) {
-        final due = _staleMetadata().difference(attempted);
-        if (due.isEmpty) break;
-        attempted.addAll(due);
+        final request = _retryRequest;
+        coveredSerial = request?.serial;
+        final due = _dueMetadata(epoch, attempted, request);
+        if (due.isEmpty) {
+          if (request != null &&
+              request.epoch == epoch &&
+              _retryRequest?.serial == request.serial) {
+            _retryRequest = null;
+          }
+          break;
+        }
+        for (final m in due) {
+          attempted.add(m);
+          if (_metadataStoredAt[m] == null) _retriedFor[m] = request!.serial;
+        }
         final results = await Future.wait(due.map((m) =>
             _loadMetadata(m, maxAge: Duration.zero, quiet: true)));
         if (!current()) return;
         refreshed |= results.contains(true);
       }
-      if (refreshed) {
-        notifyListeners();
-        pushRefresh();
-      }
     } finally {
       _revalidatingMetadata = false;
+      // Also when a loader threw: the request's sets were tried, and keeping
+      // it would start pass after pass.
+      if (coveredSerial != null && _retryRequest?.serial == coveredSerial) {
+        _retryRequest = null;
+      }
+      final pending = _retryRequest;
+      if (pending != null && pending.epoch == AccountEpoch.current) {
+        unawaited(_revalidateCaches());
+      }
+    }
+    // After the flag: a listener starting a pass of its own is not dropped.
+    if (refreshed) {
+      notifyListeners();
+      pushRefresh();
     }
   }
 
@@ -208,6 +268,8 @@ class AppState extends ChangeNotifier
     clearNetworkData();
     clearData();
     _metadataStoredAt.clear();
+    _retryRequest = null;
+    _retriedFor.clear();
     _initialized = false;
     // No clearCache here: the only caller (Auth._cleanup) has already awaited
     // it — this unawaited second run raced whatever a re-login started.
@@ -232,8 +294,6 @@ class AppState extends ChangeNotifier
     final epoch = AccountEpoch.current;
     forgetUnavailableDeviceTypes();
     final tasks = <Future<bool>>[
-      // No fallback: the stored copy would pass a failed fetch off as success.
-      loadDeviceClasses(fallbackToCache: false),
       for (final m in _Metadata.values)
         _loadMetadata(m, maxAge: Duration.zero),
     ];
@@ -252,6 +312,36 @@ class AppState extends ChangeNotifier
     if (results.contains(false)) {
       throw Exception("not all metadata could be reloaded");
     }
+  }
+
+  /// Fetches the device classes, the device types and the devices fresh: the
+  /// classes list and its counts are made of them. Failures are reported and
+  /// keep what is loaded. Does nothing in local mode, where none of them can
+  /// be fetched.
+  Future<void> reloadDeviceClasses() async {
+    if (Settings.getLocalMode()) return;
+    forgetUnavailableDeviceTypes();
+    await Future.wait([
+      _loadFreshReported(
+          _Metadata.deviceClasses, () => joinableDeviceClassesLoad),
+      _loadFreshReported(_Metadata.deviceTypes, () => joinableDeviceTypesLoad),
+      CacheHelper.refreshDevicesNow().catchError((Object e, StackTrace s) {
+        ErrorReporter.report('Could not refresh devices', e, s);
+        return false;
+      }),
+    ]);
+  }
+
+  /// Loads [m] fresh, reporting a failure. A call joins a running load; unless
+  /// that one fetched fresh and reported, a load of its own follows it.
+  Future<void> _loadFreshReported(
+      _Metadata m, ({bool fresh, bool quiet})? Function() joinable) async {
+    final epoch = AccountEpoch.current;
+    final joined = joinable();
+    await _loadMetadata(m, maxAge: Duration.zero);
+    if (joined == null || (joined.fresh && !joined.quiet)) return;
+    if (epoch != AccountEpoch.current) return;
+    await _loadMetadata(m, maxAge: Duration.zero);
   }
 
   // Memoized result of setAndGetDisabledTabs(). Recomputing walks every nav

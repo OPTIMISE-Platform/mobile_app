@@ -56,7 +56,8 @@ class FakeBackend implements HttpClientAdapter {
 
   /// Serves `/device-repository/extended-devices` as a real paginated
   /// endpoint would: each request gets the slice of [allDevices] its
-  /// `ids`, `search` (a substring of the name) and offset/limit ask for,
+  /// `ids`, `device-type-ids`, `search` (a substring of the name) and
+  /// offset/limit ask for,
   /// with `X-Total-Count` set to the count before hiding anything
   /// client-side - which is what
   /// DevicesService.getDevices reads as [DeviceInstanceWithTotal.total].
@@ -99,17 +100,18 @@ class FakeBackend implements HttpClientAdapter {
 
     if (_devicesPage != null &&
         key == 'GET /device-repository/extended-devices') {
-      // `ids` narrows like the real endpoint; the client may send a leading
-      // empty entry (DeviceSearchFilter.toQueryParams).
-      final ids = (options.uri.queryParameters["ids"] ?? "")
-          .split(",")
-          .where((id) => id.isNotEmpty)
-          .toSet();
-      final search =
-          (options.uri.queryParameters["search"] ?? "").toLowerCase();
-      final all = (options.uri.queryParameters.containsKey("ids")
-              ? _devicesPage!.where((d) => ids.contains(d["id"]))
-              : _devicesPage!)
+      // `ids` and `device-type-ids` narrow like the real endpoint: present
+      // but empty matches nothing.
+      final params = options.uri.queryParameters;
+      Set<String>? listParam(String name) => params.containsKey(name)
+          ? params[name]!.split(",").where((id) => id.isNotEmpty).toSet()
+          : null;
+      final ids = listParam("ids");
+      final typeIds = listParam("device-type-ids");
+      final search = (params["search"] ?? "").toLowerCase();
+      final all = _devicesPage!
+          .where((d) => ids == null || ids.contains(d["id"]))
+          .where((d) => typeIds == null || typeIds.contains(d["device_type_id"]))
           .where((d) =>
               search.isEmpty ||
               (d["name"] as String).toLowerCase().contains(search))
@@ -172,13 +174,18 @@ void serveDeviceTypes(FakeBackend backend) {
   DeviceTypesService.listHeaders = () async => {"authorization": "Bearer t"};
 }
 
-Map<String, dynamic> deviceTypeJson(String id) => {
+Map<String, dynamic> deviceTypeJson(String id, {String deviceClassId = ""}) => {
       "id": id,
       "name": id,
       "description": "",
-      "device_class_id": "",
+      "device_class_id": deviceClassId,
       "services": [],
     };
+
+/// Wire shape of `DeviceClass.fromJson`, as `/device-repository/v2/device-classes`
+/// lists it.
+Map<String, dynamic> deviceClassJson(String id, String name) =>
+    {"id": id, "name": name, "image": ""};
 
 /// Wire shape of `DeviceInstance.fromJson`, for routes that hand a device
 /// back from the backend (extended-devices, the group helper, ...).

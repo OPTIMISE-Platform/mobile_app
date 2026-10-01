@@ -31,7 +31,15 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/auth.dart';
+
+/// See [DevicesService.getCachedDeviceIndex].
+typedef CachedDeviceIndex = ({
+  Map<String, String> deviceTypes,
+  Set<String> inactive,
+  bool complete,
+});
 
 class DeviceInstanceWithTotal {
   final List<DeviceInstance> devices;
@@ -90,7 +98,7 @@ class DevicesService {
     final queryParameters = filter.toQueryParams(limit, offset, lastDevice);
     if (filter.favorites == true && (queryParameters["ids"] ?? "").isEmpty) {
       // A favorites filter that narrowed to nothing is answerable here: the
-      // list is local. Sending ids= empty would return every device instead.
+      // list is local, and an empty ids matches nothing on the backend too.
       return DeviceInstanceWithTotal([], 0);
     }
     final uri =
@@ -168,17 +176,37 @@ class DevicesService {
     }
   }
 
-  /// Ids of the cached devices that carry the inactive attribute. Only rows
-  /// with the attribute are read; its value is judged by
-  /// [DeviceInstance.isInactive], which trims and ignores case.
-  static Future<Set<String>> getCachedInactiveDeviceIds() async {
+  /// The cached devices as the device index needs them: each one's type, the
+  /// ids of those that are inactive, and whether a full device refresh has
+  /// filled the cache, without which its rows are only the pages seen so far.
+  /// The attribute is judged by [DeviceInstance.isInactive], which trims and
+  /// ignores case.
+  static Future<CachedDeviceIndex> getCachedDeviceIndex() async {
     final db = isar;
-    if (db == null) return {};
-    final rows = await db.deviceInstances
-        .filter()
-        .attributesElement((a) => a.keyEqualTo(attributeInactive))
-        .findAll();
-    return {for (final d in rows) if (d.isInactive) d.id};
+    if (db == null) {
+      return (deviceTypes: <String, String>{}, inactive: <String>{}, complete: false);
+    }
+    final complete = CacheHelper.devicesRefreshedOnce();
+    // One read transaction, so the two property lists come from the same rows
+    // in the same order.
+    return db.txn(() async {
+      final ids = await db.deviceInstances.where().idProperty().findAll();
+      final types =
+          await db.deviceInstances.where().device_type_idProperty().findAll();
+      if (ids.length != types.length) {
+        throw StateError("device index read ${ids.length} ids and "
+            "${types.length} types");
+      }
+      final inactiveRows = await db.deviceInstances
+          .filter()
+          .attributesElement((a) => a.keyEqualTo(attributeInactive))
+          .findAll();
+      return (
+        deviceTypes: {for (var i = 0; i < ids.length; i++) ids[i]: types[i]},
+        inactive: {for (final d in inactiveRows) if (d.isInactive) d.id},
+        complete: complete,
+      );
+    });
   }
 
   /// The devices with the given [ids], fetched in requests of at most 50 ids

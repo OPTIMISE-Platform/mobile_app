@@ -72,6 +72,30 @@ mixin DeviceMixin on ChangeNotifier {
   /// row count the devices its list would show without a request per row.
   final Set<String> _inactiveDeviceIds = {};
 
+  /// The device type of every device in the index, by device id, kept the
+  /// same way as [_inactiveDeviceIds]. Class rows count their devices by it.
+  final Map<String, String> _indexedDeviceTypes = {};
+
+  /// Whether the index holds every device of the account: after
+  /// [replaceDeviceIndex], or a seed from a cache a full refresh has filled.
+  bool _deviceIndexComplete = false;
+
+  /// The indexed device ids per class, built on demand and dropped whenever
+  /// the index or the types change.
+  Map<String, List<String>>? _classDeviceIdsCache;
+
+  Map<String, List<String>> get _classDeviceIds =>
+      _classDeviceIdsCache ??= _buildClassDeviceIds();
+
+  Map<String, List<String>> _buildClassDeviceIds() {
+    final byClass = <String, List<String>>{};
+    for (final e in _indexedDeviceTypes.entries) {
+      final classId = deviceTypes[e.value]?.device_class_id;
+      if (classId != null) (byClass[classId] ??= []).add(e.key);
+    }
+    return byClass;
+  }
+
   /// Bumped when the index is replaced or cleared, so a seed that read the
   /// cache before that is discarded.
   int _inactiveIndexEpoch = 0;
@@ -149,124 +173,99 @@ mixin DeviceMixin on ChangeNotifier {
   // Device classes
   // ---------------------------------------------------------------------------
 
+  /// [serveStale] as in [loadMetadataCached].
   @visibleForTesting
-  Future<List<DeviceClass>> Function() fetchDeviceClasses =
-      () => DeviceClassesService.getDeviceClasses(fallbackToCache: false);
+  Future<List<DeviceClass>> Function(Duration maxAge,
+          {void Function(DateTime storedAt)? serveStale}) fetchDeviceClasses =
+      (maxAge, {serveStale}) => DeviceClassesService.getDeviceClasses(
+          maxAge: maxAge, serveStale: serveStale);
 
-  @visibleForTesting
-  Future<List<DeviceClass>?> Function() readCachedDeviceClasses =
-      DeviceClassesService.getCachedDeviceClasses;
+  /// [quiet] logs a failure instead of reporting it, for a background load
+  /// over a list already on screen. A failure keeps the classes loaded before.
+  Future<bool> loadDeviceClasses(
+          {Duration maxAge = metadataMaxAge,
+          void Function(DateTime storedAt)? serveStale,
+          bool quiet = false}) =>
+      _deviceClassesLoad.run(
+          () => _loadDeviceClasses(maxAge, serveStale, quiet),
+          tag: (fresh: maxAge == Duration.zero, quiet: quiet));
 
-  /// Set whenever the stored copy is what got served, cleared by the next
-  /// successful fetch.
-  bool _deviceClassesFromCache = false;
+  /// How the class load a call would now join was started, or null if none.
+  ({bool fresh, bool quiet})? get joinableDeviceClassesLoad =>
+      _deviceClassesLoad.joinableTag as ({bool fresh, bool quiet})?;
 
-  /// Whether [deviceClasses] is the stored copy the backend has not confirmed
-  /// since, see [refetchDeviceClasses].
-  bool get deviceClassesFromCache => _deviceClassesFromCache;
-
-  /// Fetches fresh. With [fallbackToCache] a failed fetch serves the stored
-  /// copy and reports only when there is none; without, every failure reports.
-  Future<bool> loadDeviceClasses({bool fallbackToCache = true}) =>
-      _deviceClassesLoad.run(() => _loadDeviceClasses(fallbackToCache));
-
-  /// Serves the stored copy without asking the backend and fetches only when
-  /// nothing is stored.
-  Future<bool> loadCachedDeviceClasses() =>
-      _deviceClassesLoad.run(_loadCachedDeviceClasses);
-
-  /// Fetches fresh without the loading state, so the list stays on screen,
-  /// and swaps only on success. A failure keeps the list and is logged only.
-  Future<bool> refetchDeviceClasses() =>
-      _deviceClassesLoad.run(_refetchDeviceClasses);
-
-  void _setDeviceClasses(List<DeviceClass> fetched, {required bool stored}) {
-    // Swap after the fetch: clearing first would leave the map visibly
-    // empty for the whole request, clearing at all is what drops entries
-    // deleted on the backend.
-    deviceClasses.clear();
-    for (final e in fetched) {
-      deviceClasses[e.id] = e;
-    }
-    _deviceClassesFromCache = stored;
-  }
-
-  Future<List<DeviceClass>?> _readStoredDeviceClasses() async {
-    try {
-      return await readCachedDeviceClasses();
-    } catch (e, s) {
-      ErrorReporter.log('Could not read the stored device classes', e, s);
-      return null;
-    }
-  }
-
-  Future<bool> _loadDeviceClasses(bool fallbackToCache) async {
+  Future<bool> _loadDeviceClasses(Duration maxAge,
+      void Function(DateTime storedAt)? serveStale, bool quiet) async {
     final epoch = AccountEpoch.current;
+    var loaded = false;
     await _deviceClassesMutex.acquire();
     try {
-      try {
-        final fetched = await fetchDeviceClasses();
-        // A fetch that outlived its account leaves the next one's map alone.
-        if (epoch != AccountEpoch.current) return false;
-        _setDeviceClasses(fetched, stored: false);
-      } catch (e, s) {
-        if (epoch != AccountEpoch.current) {
-          ErrorReporter.log('Could not get device classes', e, s);
-          return false;
-        }
-        final stored =
-            fallbackToCache ? await _readStoredDeviceClasses() : null;
-        // The stored copy read before the wipe is the gone account's.
-        if (epoch != AccountEpoch.current) {
-          ErrorReporter.log('Could not get device classes', e, s);
-          return false;
-        }
-        if (stored == null) {
-          ErrorReporter.report('Could not get device classes', e, s);
-          return false;
-        }
-        // Offline, local mode or a failing backend: the stored copy keeps the
-        // classes tab enabled.
-        ErrorReporter.log('Could not get device classes, showing the stored copy', e, s);
-        _setDeviceClasses(stored, stored: true);
+      final fetched = await fetchDeviceClasses(maxAge, serveStale: serveStale);
+      // A fetch that outlived its account leaves the next one's map alone.
+      if (epoch != AccountEpoch.current) return false;
+      // Swap after the fetch: clearing first would leave the map visibly
+      // empty for the whole request, clearing at all is what drops entries
+      // deleted on the backend.
+      deviceClasses.clear();
+      for (final e in fetched) {
+        deviceClasses[e.id] = e;
+      }
+      loaded = true;
+    } catch (e, s) {
+      if (quiet || epoch != AccountEpoch.current) {
+        ErrorReporter.log('Could not get device classes', e, s);
+      } else {
+        ErrorReporter.report('Could not get device classes', e, s);
       }
     } finally {
       _deviceClassesMutex.release();
     }
+    if (epoch != AccountEpoch.current) return false;
+    if (loaded) _loadUsedClassImages();
+    // Also after a failure, after the release: the Classes list shows a
+    // spinner while [loadingDeviceClasses] and must learn that it ended.
     notifyListeners();
-    return true;
+    return loaded;
   }
 
-  Future<bool> _loadCachedDeviceClasses() async {
-    final epoch = AccountEpoch.current;
-    List<DeviceClass>? stored;
-    await _deviceClassesMutex.acquire();
-    try {
-      stored = await _readStoredDeviceClasses();
-      if (epoch != AccountEpoch.current) return false;
-      if (stored != null) _setDeviceClasses(stored, stored: true);
-    } finally {
-      _deviceClassesMutex.release();
-    }
-    // After the release: the fetch takes the mutex itself. Nothing is stored,
-    // so there is nothing to fall back to.
-    if (stored == null) return _loadDeviceClasses(false);
-    notifyListeners();
-    return true;
+  /// Whether the loaded types are every type of the platform, because the
+  /// backend has no /user-device-types; then the complete device index says
+  /// which of them the user's devices have.
+  bool get _typesFromIndex => _deviceTypesAreAll && _deviceIndexComplete;
+
+  /// The ids of the user's device types that belong to one of [classIds].
+  List<String> deviceTypeIdsOfClasses(Iterable<String> classIds) {
+    final classes = classIds.toSet();
+    final indexed =
+        _typesFromIndex ? _indexedDeviceTypes.values.toSet() : null;
+    return [
+      for (final t in deviceTypes.values)
+        if (classes.contains(t.device_class_id) &&
+            (indexed == null || indexed.contains(t.id)))
+          t.id
+    ];
   }
 
-  Future<bool> _refetchDeviceClasses() async {
-    final epoch = AccountEpoch.current;
-    try {
-      final fetched = await fetchDeviceClasses();
-      if (epoch != AccountEpoch.current) return false;
-      _setDeviceClasses(fetched, stored: false);
-    } catch (e, s) {
-      ErrorReporter.log('Could not refetch device classes', e, s);
-      return false;
+  /// The classes of the user's device types, in the order of [deviceClasses].
+  /// [deviceTypes] normally holds the types of the user's devices only.
+  List<DeviceClass> get usedDeviceClasses {
+    final used = _typesFromIndex
+        ? _classDeviceIds.keys.toSet()
+        : {for (final t in deviceTypes.values) t.device_class_id};
+    return [
+      for (final c in deviceClasses.values)
+        if (used.contains(c.id)) c
+    ];
+  }
+
+  /// Images are shown for the user's classes only (class list, device rows,
+  /// detail page), so only those are downloaded; none while the types are the
+  /// platform's and the index cannot yet tell the user's from them.
+  void _loadUsedClassImages() {
+    if (_deviceTypesAreAll && !_deviceIndexComplete) return;
+    for (final c in usedDeviceClasses) {
+      c.loadImage();
     }
-    notifyListeners();
-    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -285,6 +284,26 @@ mixin DeviceMixin on ChangeNotifier {
   @visibleForTesting
   Duration deviceTypesRetryDelay = const Duration(minutes: 1);
 
+  /// Set by the first successful type load, whatever it returned.
+  bool _deviceTypesLoaded = false;
+
+  /// [DeviceTypesService.userListIsAllTypes] as of the list in [deviceTypes].
+  bool _deviceTypesAreAll = false;
+
+  @visibleForTesting
+  bool Function() deviceTypesAreAll = () => DeviceTypesService.userListIsAllTypes;
+
+  void _setDeviceTypes(List<DeviceType> fetched) {
+    deviceTypes.clear();
+    for (final e in fetched) {
+      deviceTypes[e.id] = e;
+    }
+    _deviceTypesLoaded = true;
+    _deviceTypesAreAll = deviceTypesAreAll();
+    _classDeviceIdsCache = null;
+    _loadUsedClassImages();
+  }
+
   /// [serveStale] as in [loadMetadataCached].
   @visibleForTesting
   Future<List<DeviceType>> Function(Duration maxAge,
@@ -298,7 +317,12 @@ mixin DeviceMixin on ChangeNotifier {
           {Duration maxAge = metadataMaxAge,
           void Function(DateTime storedAt)? serveStale,
           bool quiet = false}) =>
-      _deviceTypesLoad.run(() => _loadDeviceTypes(maxAge, serveStale, quiet));
+      _deviceTypesLoad.run(() => _loadDeviceTypes(maxAge, serveStale, quiet),
+          tag: (fresh: maxAge == Duration.zero, quiet: quiet));
+
+  /// How the type load a call would now join was started, or null if none.
+  ({bool fresh, bool quiet})? get joinableDeviceTypesLoad =>
+      _deviceTypesLoad.joinableTag as ({bool fresh, bool quiet})?;
 
   /// Waits for an [ensureDeviceTypes] holding the mutex and then fetches
   /// itself: that call may have failed or skipped its fetch, so its end says
@@ -310,10 +334,8 @@ mixin DeviceMixin on ChangeNotifier {
     try {
       final fetched = await fetchDeviceTypes(maxAge, serveStale: serveStale);
       if (epoch != AccountEpoch.current) return false;
-      deviceTypes.clear();
-      for (final e in fetched) {
-        deviceTypes[e.id] = e;
-      }
+      _setDeviceTypes(fetched);
+      if (maxAge == Duration.zero) _typesWithoutDevices.addAll(_orphanTypes());
     } catch (e, s) {
       // Not the next account's failure to be told about.
       if (quiet || epoch != AccountEpoch.current) {
@@ -325,6 +347,7 @@ mixin DeviceMixin on ChangeNotifier {
     } finally {
       _deviceTypesMutex.release();
     }
+    _reloadTypesWithoutDevices();
     notifyListeners();
     return true;
   }
@@ -337,14 +360,24 @@ mixin DeviceMixin on ChangeNotifier {
     bool hasMissing() => ids.any(
         (id) => !deviceTypes.containsKey(id) && !_unavailableDeviceTypeIds.contains(id));
     if (!hasMissing()) return;
+    await _loadFreshDeviceTypes(hasMissing,
+        () => _unavailableDeviceTypeIds
+            .addAll(ids.where((id) => !deviceTypes.containsKey(id))));
+  }
+
+  /// A fresh type load while [needed] holds, at most one per
+  /// [deviceTypesRetryDelay] after a failure. [afterLoad] records what the
+  /// load did not resolve, so the same cause does not fetch again.
+  Future<void> _loadFreshDeviceTypes(
+      bool Function() needed, void Function() afterLoad) async {
     final epoch = AccountEpoch.current;
     // Not via loadDeviceTypes: joining a load that is already running there
     // returns without fetching, and that load may have been served from cache.
     await _deviceTypesMutex.acquire();
     try {
-      // [typeIds] belong to the account of [epoch]: after a change they say
+      // The cause belongs to the account of [epoch]: after a change it says
       // nothing about the next account's types, nor its retry state.
-      if (epoch != AccountEpoch.current || !hasMissing()) return;
+      if (epoch != AccountEpoch.current || !needed()) return;
       final retryAfter = _deviceTypesRetryAfter;
       if (retryAfter != null && DateTime.now().isBefore(retryAfter)) return;
       final List<DeviceType> fetched;
@@ -362,21 +395,54 @@ mixin DeviceMixin on ChangeNotifier {
       }
       if (epoch != AccountEpoch.current) return;
       _deviceTypesRetryAfter = null;
-      deviceTypes.clear();
-      for (final e in fetched) {
-        deviceTypes[e.id] = e;
-      }
-      _unavailableDeviceTypeIds.addAll(ids.where((id) => !deviceTypes.containsKey(id)));
+      _setDeviceTypes(fetched);
+      afterLoad();
+      _typesWithoutDevices.addAll(_orphanTypes());
     } finally {
       _deviceTypesMutex.release();
     }
     notifyListeners();
   }
 
+  /// Types a fresh load returned although no device in the complete index has
+  /// them; not reloaded for again.
+  final Set<String> _typesWithoutDevices = {};
+
+  /// The user's types without a device in the complete index; empty while the
+  /// index is incomplete or the types are the platform's.
+  Set<String> _orphanTypes() {
+    if (!_deviceTypesLoaded || !_deviceIndexComplete || _deviceTypesAreAll) {
+      return const {};
+    }
+    final indexed = _indexedDeviceTypes.values.toSet();
+    return {
+      for (final id in deviceTypes.keys)
+        if (!indexed.contains(id)) id
+    };
+  }
+
+  /// The list holds only types of the user's devices, so a type without any
+  /// in the complete index means the list is behind, e.g. its last device was
+  /// deleted: reload it fresh.
+  void _reloadTypesWithoutDevices() {
+    bool needed() =>
+        _orphanTypes().difference(_typesWithoutDevices).isNotEmpty;
+    if (needed()) unawaited(_loadFreshDeviceTypes(needed, () {}));
+  }
+
+  /// After every change of the index: the class map is rebuilt on demand,
+  /// newly used classes get their images, and the types are checked.
+  void _deviceIndexChanged() {
+    _classDeviceIdsCache = null;
+    _loadUsedClassImages();
+    _reloadTypesWithoutDevices();
+  }
+
   /// Lets [ensureDeviceTypes] try again for types an earlier fresh load did
   /// not return.
   void forgetUnavailableDeviceTypes() {
     _unavailableDeviceTypeIds.clear();
+    _typesWithoutDevices.clear();
     _deviceTypesRetryAfter = null;
   }
 
@@ -403,53 +469,110 @@ mixin DeviceMixin on ChangeNotifier {
     return count;
   }
 
-  /// Records the inactive attribute of [devices] as just fetched or saved.
+  /// How many devices of class [classId] its list shows, by the rule of
+  /// [visibleDeviceCount]. Null until the index holds every device of the
+  /// account: a count over part of them would be too low.
+  int? visibleDeviceCountOfClass(String classId) {
+    if (!_deviceIndexComplete) return null;
+    final ids = _classDeviceIds[classId];
+    // A listed class has a device of the user's type by definition: none in
+    // the complete index means the type list is behind, which starts a fresh
+    // type load (_reloadTypesWithoutDevices); 0 would be wrong meanwhile.
+    if (ids == null || ids.isEmpty) return null;
+    return visibleDeviceCount(ids);
+  }
+
+  /// Records the inactive attribute and the type of [devices] as just fetched
+  /// or saved.
   void noteDevices(Iterable<DeviceInstance> devices) {
     var changed = false;
+    var typesChanged = false;
     for (final d in devices) {
       _notedDuringSeed?.add(d.id);
       changed |= d.isInactive
           ? _inactiveDeviceIds.add(d.id)
           : _inactiveDeviceIds.remove(d.id);
+      final previousType = _indexedDeviceTypes[d.id];
+      if (previousType != d.device_type_id) {
+        _indexedDeviceTypes[d.id] = d.device_type_id;
+        typesChanged = true;
+        // Class counts show only over a complete index.
+        changed |= _deviceIndexComplete;
+      }
     }
+    if (typesChanged) _deviceIndexChanged();
     if (changed) notifyListeners();
   }
 
   /// Replaces the index with [all], every device of the account, so devices
-  /// deleted since drop out of it.
-  void replaceDeviceIndex(Iterable<DeviceInstance> all) {
+  /// deleted since drop out of it. [complete] false empties it without
+  /// claiming that the account has no devices.
+  void replaceDeviceIndex(Iterable<DeviceInstance> all,
+      {bool complete = true}) {
     _inactiveIndexEpoch++;
-    final next = {for (final d in all) if (d.isInactive) d.id};
-    if (setEquals(next, _inactiveDeviceIds)) return;
+    final nextInactive = <String>{};
+    final nextTypes = <String, String>{};
+    for (final d in all) {
+      if (d.isInactive) nextInactive.add(d.id);
+      nextTypes[d.id] = d.device_type_id;
+    }
+    // A type no loaded one matches would keep its class off the list until
+    // the next revalidation. Only once types are loaded: before that every
+    // type is missing, and init is about to load them.
+    if (_deviceTypesLoaded) unawaited(ensureDeviceTypes(nextTypes.values));
+    if (complete == _deviceIndexComplete &&
+        setEquals(nextInactive, _inactiveDeviceIds) &&
+        mapEquals(nextTypes, _indexedDeviceTypes)) {
+      return;
+    }
+    _deviceIndexComplete = complete;
     _inactiveDeviceIds
       ..clear()
-      ..addAll(next);
+      ..addAll(nextInactive);
+    _indexedDeviceTypes
+      ..clear()
+      ..addAll(nextTypes);
+    _deviceIndexChanged();
     notifyListeners();
   }
 
   @visibleForTesting
-  Future<Set<String>> Function() readCachedInactiveDeviceIds =
-      DevicesService.getCachedInactiveDeviceIds;
+  Future<CachedDeviceIndex> Function() readCachedDeviceIndex =
+      DevicesService.getCachedDeviceIndex;
 
-  /// Seeds the index from the device cache, one local query for all rows.
-  Future<void> loadInactiveDeviceIds() async {
+  /// Seeds the index from the device cache, one local read for all rows.
+  Future<void> loadDeviceIndex() async {
     final epoch = _inactiveIndexEpoch;
     final noted = _notedDuringSeed = {};
-    final Set<String> cached;
+    final CachedDeviceIndex cached;
     try {
-      cached = await readCachedInactiveDeviceIds();
+      cached = await readCachedDeviceIndex();
     } catch (e, s) {
-      ErrorReporter.log('Could not read inactive devices from the cache', e, s);
+      ErrorReporter.log('Could not read the device index from the cache', e, s);
       return;
     } finally {
       if (identical(_notedDuringSeed, noted)) _notedDuringSeed = null;
     }
     if (epoch != _inactiveIndexEpoch) return;
     var changed = false;
-    for (final id in cached) {
+    for (final id in cached.inactive) {
       if (!noted.contains(id)) changed |= _inactiveDeviceIds.add(id);
     }
-    if (changed) notifyListeners();
+    for (final e in cached.deviceTypes.entries) {
+      if (noted.contains(e.key) || _indexedDeviceTypes[e.key] == e.value) {
+        continue;
+      }
+      changed = true;
+      _indexedDeviceTypes[e.key] = e.value;
+    }
+    if (cached.complete && !_deviceIndexComplete) {
+      _deviceIndexComplete = true;
+      changed = true;
+    }
+    if (changed) {
+      _deviceIndexChanged();
+      notifyListeners();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -759,12 +882,16 @@ mixin DeviceMixin on ChangeNotifier {
     _devicesGeneration++;
     _inactiveIndexEpoch++;
     _inactiveDeviceIds.clear();
+    _indexedDeviceTypes.clear();
+    _deviceIndexComplete = false;
+    _classDeviceIdsCache = null;
     _notedDuringSeed = null;
     _devicePageLoads++;
     _devicesLoadFailed = false;
     deviceClasses.clear();
-    _deviceClassesFromCache = false;
     deviceTypes.clear();
+    _deviceTypesLoaded = false;
+    _deviceTypesAreAll = false;
     forgetUnavailableDeviceTypes();
     _deviceSearchFilter = DeviceSearchFilter.empty();
     totalDevices = 0;

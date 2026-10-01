@@ -16,7 +16,10 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/services/settings.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
@@ -232,6 +235,82 @@ void main() {
       // ["a, b"] and ["a", "b"] both print as [a, b].
       expect(DeviceSearchFilter("", deviceClassIds: ["a, b"]),
           isNot(equals(DeviceSearchFilter("", deviceClassIds: ["a", "b"]))));
+    });
+  });
+
+  group("toQueryParams()", () {
+    setUpAll(() async {
+      await setUpGoldenEnvironment();
+    });
+
+    setUp(() {
+      AppState().deviceTypes.addAll({
+        "lamp-a": DeviceType("lamp-a", "", "", "lamp", [], null),
+        "lamp-b": DeviceType("lamp-b", "", "", "lamp", [], null),
+        "heater": DeviceType("heater", "", "", "heating", [], null),
+      });
+    });
+
+    tearDown(resetAppStateForGolden);
+
+    Map<String, String> params(DeviceSearchFilter f) =>
+        f.toQueryParams(50, 0, null);
+
+    test("a class filter sends the device types of its classes, not ids", () {
+      final p = params(DeviceSearchFilter("", deviceClassIds: ["lamp"]));
+
+      expect(p["device-type-ids"]!.split(",").toSet(), {"lamp-a", "lamp-b"});
+      expect(p.containsKey("ids"), isFalse);
+    });
+
+    test("several classes send the types of all of them", () {
+      final p = params(
+          DeviceSearchFilter("", deviceClassIds: ["lamp", "heating"]));
+
+      expect(p["device-type-ids"]!.split(",").toSet(),
+          {"lamp-a", "lamp-b", "heater"});
+    });
+
+    test("a class without loaded types matches nothing", () {
+      final p = params(DeviceSearchFilter("", deviceClassIds: ["sensors"]));
+
+      expect(p["device-type-ids"], "");
+    });
+
+    test("no class filter sends no device types", () {
+      expect(params(DeviceSearchFilter.empty()).containsKey("device-type-ids"),
+          isFalse);
+    });
+
+    test("a class filter narrows the ids of the other fields further", () {
+      AppState().deviceGroups.add(
+          DeviceGroup("g", "Ground floor", null, "", ["d1", "d2"], null));
+      final p = params(DeviceSearchFilter("",
+          deviceClassIds: ["lamp"], deviceIds: ["d1", "d3"], deviceGroupIds: ["g"]));
+
+      expect(p["ids"], "d1");
+      expect(p["device-type-ids"]!.split(",").toSet(), {"lamp-a", "lamp-b"});
+    });
+
+    test("favourites under an empty constraint match nothing", () async {
+      await Settings.setAccount("test-account");
+      await Settings.setFavoriteDeviceIds({"d1"});
+      addTearDown(() => Settings.setFavoriteDeviceIds({}));
+      AppState().deviceGroups.add(DeviceGroup("empty", "Empty", null, "", [], null));
+
+      expect(
+          params(DeviceSearchFilter("", favorites: true, deviceGroupIds: ["empty"]))["ids"],
+          "");
+      expect(params(DeviceSearchFilter("", favorites: true))["ids"], "d1");
+      expect(
+          params(DeviceSearchFilter("", favorites: true, deviceIds: ["d1", "d2"]))["ids"],
+          "d1");
+    });
+
+    test("ids start without an empty entry", () {
+      expect(params(DeviceSearchFilter("", deviceIds: ["d1", "d2"]))["ids"],
+          "d1,d2");
+      expect(params(DeviceSearchFilter("", deviceIds: []))["ids"], "");
     });
   });
 

@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/tabs/classes/device_class.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
@@ -93,6 +94,8 @@ void main() {
       (tester) async {
     final deviceClass = DeviceClass("class-1", "Lamps", "");
     AppState().deviceClasses[deviceClass.id] = deviceClass;
+    AppState().deviceTypes["type-1"] =
+        DeviceType("type-1", "Lamp", "", deviceClass.id, [], null);
     await pumpShell(tester);
 
     await tester.tap(find.text("Devices"));
@@ -120,6 +123,8 @@ void main() {
       (tester) async {
     final deviceClass = DeviceClass("class-1", "Lamps", "");
     AppState().deviceClasses[deviceClass.id] = deviceClass;
+    AppState().deviceTypes["type-1"] =
+        DeviceType("type-1", "Lamp", "", deviceClass.id, [], null);
     await pumpShell(tester);
 
     await tester.tap(find.text("Devices"));
@@ -153,6 +158,8 @@ void main() {
       (tester) async {
     final deviceClass = DeviceClass("class-1", "Lamps", "");
     AppState().deviceClasses[deviceClass.id] = deviceClass;
+    AppState().deviceTypes["type-1"] =
+        DeviceType("type-1", "Lamp", "", deviceClass.id, [], null);
     await pumpShell(tester);
 
     await tester.tap(find.text("Devices"));

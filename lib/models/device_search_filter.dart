@@ -153,15 +153,14 @@ class DeviceSearchFilter {
     queryParameters["sort"] = "display_name.asc";
     queryParameters["search"] = query;
 
-    if (ids != null) {
-      queryParameters["ids"] = ids.join(",");
+    final allDeviceIds = _allDeviceIds;
+    if (ids != null || allDeviceIds != null) {
+      queryParameters["ids"] = [...?ids, ...?allDeviceIds].join(",");
     }
 
-    List<String>? allDeviceIds;
-    if ((allDeviceIds = _allDeviceIds) != null) {
-      final ids = (queryParameters["ids"] ?? "").split(",");
-      ids.addAll(allDeviceIds!);
-      queryParameters["ids"] = ids.join(",");
+    final deviceTypeIds = _deviceTypeIds;
+    if (deviceTypeIds != null) {
+      queryParameters["device-type-ids"] = deviceTypeIds.join(",");
     }
 
     if (networkIds != null) {
@@ -176,9 +175,11 @@ class DeviceSearchFilter {
       // Favorites are a local, per-account id list, so narrow by id. The
       // previous attr-keys query asked for a device attribute that nothing
       // writes and therefore always came back empty.
+      // An empty `ids` is a constraint that matches nothing, not a missing
+      // one, so it narrows the favorites to none.
       final favoriteIds = Settings.getFavoriteDeviceIds();
       final existing = queryParameters["ids"];
-      queryParameters["ids"] = (existing == null || existing.isEmpty
+      queryParameters["ids"] = (existing == null
               ? favoriteIds
               : favoriteIds.intersection(existing.split(",").toSet()))
           .join(",");
@@ -189,15 +190,20 @@ class DeviceSearchFilter {
   QueryBuilder<DeviceInstance, DeviceInstance, QAfterLimit> isarQuery(int limit, int offset, IsarCollection<DeviceInstance> collection) {
     var isarQ = collection.filter().display_nameContains(query, caseSensitive: false);
 
-    List<String>? allDeviceIds;
-    if ((allDeviceIds = _allDeviceIds) != null) {
-      isarQ = isarQ.anyOf(allDeviceIds!, (q, String e) => q.idEqualTo(e));
+    final allDeviceIds = _allDeviceIds;
+    if (allDeviceIds != null) {
+      isarQ = _anyOf(isarQ, allDeviceIds, (q, e) => q.idEqualTo(e));
+    }
+
+    final deviceTypeIds = _deviceTypeIds;
+    if (deviceTypeIds != null) {
+      isarQ = _anyOf(isarQ, deviceTypeIds, (q, e) => q.device_type_idEqualTo(e));
     }
 
     if (networkIds != null) {
       final List<String> localIds = [];
       AppState().networks.where((element) => networkIds!.contains(element.id)).forEach((element) => localIds.addAll(element.device_local_ids ?? []));
-      isarQ =  isarQ.anyOf(localIds, (q, String e) => q.local_idEqualTo(e));
+      isarQ = _anyOf(isarQ, localIds, (q, e) => q.local_idEqualTo(e));
     }
 
     if (favorites == true) {
@@ -207,22 +213,30 @@ class DeviceSearchFilter {
     return isarQ.sortByDisplay_name().offset(offset).limit(limit);
   }
 
+  /// Isar's anyOf with no values places no condition; an empty id list must
+  /// match nothing, as it does in [toQueryParams].
+  static QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition> _anyOf(
+      QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition> q,
+      List<String> values,
+      QueryBuilder<DeviceInstance, DeviceInstance, QAfterFilterCondition> Function(
+              QueryBuilder<DeviceInstance, DeviceInstance, QFilterCondition> q, String value)
+          match) {
+    if (values.isEmpty) return q.idIsEmpty().and().idIsNotEmpty();
+    return q.anyOf(values, match);
+  }
+
+  /// The loaded device types of the classes in [deviceClassIds], read when
+  /// the query is built; null when no class is filtered.
+  List<String>? get _deviceTypeIds => deviceClassIds == null
+      ? null
+      : AppState().deviceTypeIdsOfClasses(deviceClassIds!);
+
+  /// The device ids the id fields allow, intersected; null when none of them
+  /// is set. Classes narrow by device type instead, see [_deviceTypeIds].
   List<String>? get _allDeviceIds {
     List<String>? allDeviceIds;
     if (deviceIds != null) {
       allDeviceIds = deviceIds?.toList();
-    }
-
-    if (deviceClassIds != null) {
-      final List<String> deviceIds = [];
-      for (var e in deviceClassIds!) {
-        deviceIds.addAll(AppState().deviceClasses[e]?.deviceIds ?? []);
-      }
-      if (allDeviceIds == null) {
-        allDeviceIds = deviceIds;
-      } else {
-        allDeviceIds = allDeviceIds.where((element) => deviceIds.contains(element)).toList();
-      }
     }
 
     if (deviceGroupIds != null) {

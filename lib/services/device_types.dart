@@ -16,10 +16,12 @@
 
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:logger/logger.dart';
@@ -93,20 +95,63 @@ class DeviceTypesService {
       _legacyCacheDropped = true;
       unawaited(MetadataCache.delete('device-types'));
     }
-    return loadMetadataCached(
-        'user-device-types', _fetchUserTypesRaw, DeviceType.fromJson,
-        maxAge: maxAge, serveStale: serveStale);
+    final epoch = AccountEpoch.current;
+    final storedAll = await _readStoredAllTypes();
+    bool? fetchedAll;
+    final types = await loadMetadataCached('user-device-types', () async {
+      final fetched = await _fetchUserTypesRaw();
+      fetchedAll = fetched.all;
+      return fetched.types;
+    }, DeviceType.fromJson, maxAge: maxAge,
+        serveStale: serveStale == null
+            ? null
+            // A stored list without the flag may be the platform list a
+            // version before the flag stored: reported stale, so the first
+            // pass refetches it.
+            : (storedAt) => serveStale(fetchedAll == null && storedAll == null
+                ? DateTime.fromMillisecondsSinceEpoch(0)
+                : storedAt));
+    final all = fetchedAll;
+    if (all != null) {
+      _userListIsAllTypes = all;
+      unawaited(MetadataCache.write(
+          _allTypesKey, JsonUtf8Encoder().convert(all), epoch));
+    } else {
+      _userListIsAllTypes = storedAll ?? false;
+    }
+    return types;
   }
 
-  static Future<List<dynamic>> _fetchUserTypesRaw() async {
+  /// Stored next to the list, so it is cleared and rewritten with it.
+  static const _allTypesKey = 'user-device-types-all';
+
+  static bool _userListIsAllTypes = false;
+
+  /// Whether the last list [getDeviceTypes] returned without ids is every
+  /// type of the platform, because the backend has no /user-device-types.
+  static bool get userListIsAllTypes => _userListIsAllTypes;
+
+  /// Null when no usable flag is stored.
+  static Future<bool?> _readStoredAllTypes() async {
+    final entry = await MetadataCache.readEntry(_allTypesKey);
+    if (entry == null) return null;
     try {
-      return await _fetchRaw(userUri, null);
+      final value = jsonDecode(utf8.decode(entry.bytes));
+      return value is bool ? value : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<({List<dynamic> types, bool all})> _fetchUserTypesRaw() async {
+    try {
+      return (types: await _fetchRaw(userUri, null), all: false);
     } on UnexpectedStatusCodeException catch (e) {
       // A device-repository older than /user-device-types, or a gateway policy
       // that does not cover the path yet.
       if (e.code != 404 && e.code != 403) rethrow;
       ErrorReporter.log('user-device-types unavailable, loading all device types', e);
-      return _fetchRaw(uri, null);
+      return (types: await _fetchRaw(uri, null), all: true);
     }
   }
 

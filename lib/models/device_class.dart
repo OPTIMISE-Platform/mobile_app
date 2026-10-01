@@ -15,6 +15,8 @@
  */
 
 
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/shared/entity_image.dart';
@@ -30,8 +32,15 @@ class DeviceClass {
   @JsonKey(includeFromJson: false, includeToJson: false)
   Widget? imageWidget;
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  List<String> deviceIds = [];
+  bool _imageRequested = false;
+
+  /// Starts the image download, once per instance. Not done on parse: the list
+  /// holds every class of the platform, and only the user's are shown.
+  void loadImage() {
+    if (_imageRequested) return;
+    _imageRequested = true;
+    unawaited(_initImage());
+  }
 
   Future<void> _initImage() async {
     // Only on success, so a later failed reload does not blank an image that
@@ -42,11 +51,8 @@ class DeviceClass {
 
   DeviceClass(this.id, this.name, this.image);
 
-  factory DeviceClass.fromJson(Map<String, dynamic> json) {
-    final c = _$DeviceClassFromJson(json);
-    c._initImage();
-    return c;
-  }
+  factory DeviceClass.fromJson(Map<String, dynamic> json) =>
+      _$DeviceClassFromJson(json);
 
   Map<String, dynamic> toJson() => _$DeviceClassToJson(this);
 }

@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
 
@@ -72,8 +73,11 @@ void main() {
 
     // A dialog switch applies to the shared filter at once, but only OK
     // searches.
-    AppState().deviceClasses["class-1"] = DeviceClass("class-1", "Lamps", "")
-      ..deviceIds = ["device-1"];
+    AppState().deviceClasses["class-1"] = DeviceClass("class-1", "Lamps", "");
+    AppState().deviceTypes["device-type-1"] =
+        DeviceType("device-type-1", "Lamp", "", "class-1", [], null);
+    // Without a device type of the user, a class is not offered.
+    AppState().deviceClasses["class-2"] = DeviceClass("class-2", "Doorbells", "");
     final beforeDialog = state.filter;
     final pagesBeforeDialog = _pageRequests(backend).length;
     await tester.tap(find.byIcon(Icons.filter_alt));
@@ -83,6 +87,7 @@ void main() {
         of: find.byType(PopupMenuItem<VoidCallback>),
         matching: find.text("Classes")));
     await tester.pumpAndSettle();
+    expect(find.text("Doorbells"), findsNothing);
     await tester.tap(find.byType(Switch));
     await tester.pumpAndSettle();
     expect(state.filter.deviceClassIds, ["class-1"]);
@@ -93,7 +98,8 @@ void main() {
     await tester.tap(find.text("OK"));
     await tester.pumpAndSettle();
     expect(_pageRequests(backend).length, pagesBeforeDialog + 1);
-    expect(_pageRequests(backend).last.queryParameters["ids"], contains("device-1"));
+    expect(_pageRequests(backend).last.queryParameters["device-type-ids"],
+        "device-type-1");
 
     // Reset clears everything the Devices tab does not own.
     await tester.tap(find.byIcon(Icons.filter_alt));

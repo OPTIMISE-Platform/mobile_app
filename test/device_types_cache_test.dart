@@ -80,6 +80,50 @@ void main() {
     expect(backend.requests, hasLength(1));
   });
 
+  test("whether the list is the platform list is stored with it", () async {
+    backend.status["/device-repository/user-device-types"] = 404;
+    backend.types["/device-repository/device-types"] = [deviceTypeJson("a")];
+    await DeviceTypesService.getDeviceTypes(null, Duration.zero);
+    expect(await _entry(db, 'user-device-types-all'), isNotNull);
+
+    // A list fetched from /user-device-types, then a stored copy that says
+    // it is the platform list: served from the store, the flag follows it.
+    backend.status.remove("/device-repository/user-device-types");
+    backend.types["/device-repository/user-device-types"] = [deviceTypeJson("a")];
+    await DeviceTypesService.getDeviceTypes(null, Duration.zero);
+    expect(DeviceTypesService.userListIsAllTypes, isFalse);
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+    await db.writeTxn(() => db.cachedMetadatas.putByKey(CachedMetadata()
+      ..key = 'user-device-types-all'
+      ..bytes = 'true'.codeUnits
+      ..updatedAt = DateTime.now()));
+
+    await DeviceTypesService.getDeviceTypes();
+    expect(DeviceTypesService.userListIsAllTypes, isTrue);
+    expect(backend.requests.where((r) => r.uri.path.endsWith("user-device-types")),
+        hasLength(2), reason: "the last load was served from the store");
+  });
+
+  test("a stored list without the flag is served but reported stale",
+      () async {
+    final storedAt = DateTime.now().subtract(const Duration(hours: 1));
+    await _put(db, 'user-device-types', storedAt);
+
+    DateTime? reported;
+    await DeviceTypesService.getDeviceTypes(
+        null, metadataMaxAge, (t) => reported = t);
+    expect(backend.requests, isEmpty, reason: "served, not fetched");
+    expect(MetadataCache.isStale(reported!, metadataMaxAge), isTrue);
+
+    await db.writeTxn(() => db.cachedMetadatas.putByKey(CachedMetadata()
+      ..key = 'user-device-types-all'
+      ..bytes = 'false'.codeUnits
+      ..updatedAt = storedAt));
+    await DeviceTypesService.getDeviceTypes(
+        null, metadataMaxAge, (t) => reported = t);
+    expect(reported!.isAtSameMomentAs(storedAt), isTrue);
+  });
+
   test("an entry dated in the future counts as stale", () async {
     await _put(db, 'k', DateTime.now().add(const Duration(days: 1)));
 

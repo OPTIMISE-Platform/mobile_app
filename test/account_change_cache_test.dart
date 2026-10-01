@@ -389,17 +389,13 @@ void main() {
 
     test("device classes fetched before an account change are not stored",
         () async {
-      const path = "/api-aggregator/device-class-uses";
-      backend.serveJson("GET", path, 200, {
-        "device-classes": [
-          {"id": "c1", "name": "Lamps", "image": ""}
-        ],
-        "used-devices": {},
-      });
+      const path = "/device-repository/v2/device-classes";
+      backend.serveJson("GET", path, 200, [deviceClassJson("c1", "Lamps")]);
       final gate = Completer<void>();
       backend.holds["GET $path"] = gate;
 
-      final fetch = DeviceClassesService.getDeviceClasses(fallbackToCache: false);
+      final fetch =
+          DeviceClassesService.getDeviceClasses(maxAge: Duration.zero);
       await _until(() => requestsTo(path) == 1);
       AccountEpoch.advance();
       await MetadataCache.clear();
@@ -407,7 +403,7 @@ void main() {
       await fetch;
       await Future<void>.delayed(const Duration(milliseconds: 200));
 
-      expect(await MetadataCache.readEntry('device-class-uses'), isNull);
+      expect(await MetadataCache.readEntry('device-classes'), isNull);
     });
   });
 

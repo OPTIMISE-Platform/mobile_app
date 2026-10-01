@@ -41,8 +41,7 @@ FakeBackend _backend({required bool devicesFail}) {
   backend.serveJson("GET", "/device-repository/device-groups", 200, []);
   backend.serveJson("GET", "/device-repository/extended-hubs", 200, []);
   backend.serveJson("GET", "/device-repository/locations", 200, []);
-  backend.serveJson("GET", "/api-aggregator/device-class-uses", 200,
-      {"device-classes": [], "used-devices": {}});
+  backend.serveJson("GET", "/device-repository/v2/device-classes", 200, []);
   for (final path in [
     "/device-repository/functions",
     "/device-repository/aspects",

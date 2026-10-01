@@ -20,9 +20,11 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/attribute.dart';
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/widgets/tabs/classes/device_class.dart';
@@ -72,14 +74,35 @@ void main() {
     });
 
     testWidgets("device classes list ($suffix)", (tester) async {
-      final lamp = DeviceClass("class-1", "Lamps", "")..deviceIds.addAll(["device-1", "device-2"]);
-      final heating = DeviceClass("class-2", "Heating", "")..deviceIds.add("device-3");
+      final lamp = DeviceClass("class-1", "Lamps", "");
+      final heating = DeviceClass("class-2", "Heating", "");
       final sensor = DeviceClass("class-3", "Sensors", "");
       AppState().deviceClasses.addAll({
         lamp.id: lamp,
         heating.id: heating,
         sensor.id: sensor,
       });
+      AppState().deviceTypes.addAll({
+        for (final (type, deviceClass) in [
+          ("type-1", lamp),
+          ("type-2", heating),
+          ("type-3", sensor),
+        ])
+          type: DeviceType(type, type, "", deviceClass.id, [], null),
+      });
+      AppState().replaceDeviceIndex([
+        for (final (id, type) in [
+          ("device-1", "type-1"),
+          ("device-2", "type-1"),
+          ("device-3", "type-2"),
+        ])
+          DeviceInstance(id, "$id-local", id, null, type, false, "owner-1", id,
+              DeviceConnectionStatus.online),
+        // A class whose only device is hidden counts 0.
+        DeviceInstance("device-4", "device-4-local", "device-4",
+            [Attribute.New(attributeInactive, "true", null)], "type-3", false,
+            "owner-1", "device-4", DeviceConnectionStatus.online),
+      ]);
       await pumpGolden(tester, tabScreen(const DeviceListByDeviceClass()), dark: dark);
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/device_classes_list_$suffix.png"));
