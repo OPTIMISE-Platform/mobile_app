@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -64,14 +65,39 @@ mixin NotificationMixin on ChangeNotifier {
   /// being constructed, and FirebaseMessaging.instance throws until
   /// Firebase.initializeApp has completed - which AppInitializer.runDeferred
   /// does without being awaited, so the widget tree can get there first.
-  FirebaseMessaging get messaging => FirebaseMessaging.instance;
+  FirebaseMessaging get messaging =>
+      messagingOverride ?? FirebaseMessaging.instance;
+
+  /// Replaces [FirebaseMessaging.instance], which needs a Firebase app.
+  @visibleForTesting
+  FirebaseMessaging? messagingOverride;
 
   String? fcmToken;
+
+  /// The token the backend has registered for the signed-in account, or null.
+  String? _registeredFcmToken;
+
+  /// The deletions of previous accounts' tokens, each chained onto the one
+  /// before. Awaited before a token is requested again, which would otherwise
+  /// return a token about to be deleted.
+  Future<void> _fcmTokenDeletions = Future.value();
+  int _fcmTokenDeletionsQueued = 0;
+
+  /// How long a token request waits for the deletions.
+  @visibleForTesting
+  Duration fcmTokenDeletionTimeout = const Duration(seconds: 10);
+
+  /// Completes when the deletions queued so far have ended.
+  @visibleForTesting
+  Future<void> get fcmTokenDeletionsForTest => _fcmTokenDeletions;
+
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+  StreamSubscription<String>? _tokenRefreshSubscription;
 
   /// Every Android install hears about stable releases; prerelease notices go
   /// to their own topic, which follows the pre-release setting.
   Future<void> syncReleaseTopics() async {
-    if (!Platform.isAndroid) {
+    if (!releaseTopicsSupported()) {
       return;
     }
     try {
@@ -85,6 +111,10 @@ mixin NotificationMixin on ChangeNotifier {
       ErrorReporter.log('Could not update release topics', e, s);
     }
   }
+
+  /// Release topics exist for Android only.
+  @visibleForTesting
+  static bool Function() releaseTopicsSupported = () => Platform.isAndroid;
 
   static Future<void> queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
@@ -121,16 +151,34 @@ mixin NotificationMixin on ChangeNotifier {
 
   Future<void> initMessaging() async {
     _logger.d('init Messaging');
+    // Before the topics too: subscribing requests a token.
+    final deletionsEnded = await _awaitFcmTokenDeletions();
     try {
       await messaging.requestPermission();
     } catch (e) {
       _logger.w(e);
       return;
     }
+    // A deletion that failed, before Firebase was up or offline, or that a
+    // kill interrupted. Not behind one that is still running.
+    if (deletionsEnded && Settings.getFcmTokenDeletionPending()) {
+      _queueFcmTokenDeletion();
+      await _awaitFcmTokenDeletions();
+    }
     await syncReleaseTopics();
-    FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
-    messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
+    // Once per process: init runs again for every sign-in, and each listener
+    // would handle every message once more.
+    _messageSubscription ??=
+        FirebaseMessaging.onMessage.listen(_handleRemoteMessage);
+    _tokenRefreshSubscription ??=
+        messaging.onTokenRefresh.listen(_handleFcmTokenRefresh);
 
+    await _requestFcmToken();
+    _logger.d('init Messaging done');
+    _handleMessageInteraction(await messaging.getInitialMessage());
+  }
+
+  Future<void> _requestFcmToken() async {
     if (Platform.isIOS) {
       await messaging.getAPNSToken(); // must be called before getToken on iOS
     }
@@ -142,8 +190,38 @@ mixin NotificationMixin on ChangeNotifier {
     } else {
       await _handleFcmTokenRefresh(token);
     }
-    _logger.d('init Messaging done');
-    _handleMessageInteraction(await messaging.getInitialMessage());
+  }
+
+  void _queueFcmTokenDeletion() {
+    // Persisted before it runs, so a kill does not lose it.
+    Settings.setFcmTokenDeletionPending(true).catchError((Object e,
+            StackTrace s) =>
+        ErrorReporter.log('Could not record the FCM token deletion', e, s));
+    _fcmTokenDeletionsQueued++;
+    _fcmTokenDeletions = _fcmTokenDeletions.then((_) => _deleteFcmToken());
+  }
+
+  /// Bounded, so a deletion that never returns does not hold every later
+  /// token request. Returns whether the deletions ended in time.
+  Future<bool> _awaitFcmTokenDeletions() async {
+    final deletions = _fcmTokenDeletions;
+    try {
+      await deletions.timeout(fcmTokenDeletionTimeout);
+      return true;
+    } on TimeoutException catch (e, s) {
+      ErrorReporter.log('FCM token deletion did not finish in time', e, s);
+      // The token requested meanwhile, and its topics, go with the deletion
+      // once it ends.
+      final epoch = AccountEpoch.current;
+      unawaited(deletions.then((_) async {
+        if (epoch != AccountEpoch.current) return;
+        await syncReleaseTopics();
+        await _requestFcmToken();
+      }).catchError((Object e, StackTrace s) {
+        ErrorReporter.log('Could not request an FCM token', e, s);
+      }));
+      return false;
+    }
   }
 
   bool get loadingNotifications => _notificationsMutex.isLocked;
@@ -304,13 +382,20 @@ mixin NotificationMixin on ChangeNotifier {
       case notificationUpdateType:
         final updated =
         app.Notification.fromJson(json.decode(data['payload'] as String));
+        if (updated.isRead) Eraser.clearAppNotificationsByTag(updated.id);
+        // userId is the sub the token was registered under, and the account
+        // key holds the signed-in sub: the token of an account signed out
+        // offline may still be registered to it.
+        if (updated.userId != Settings.getAccount()) {
+          _logger.d('Dropped a message for another account');
+          break;
+        }
         final idx = notifications.indexWhere((e) => e.id == updated.id);
         if (idx != -1) {
           notifications[idx] = updated;
         } else {
           notifications.insert(0, updated);
         }
-        if (updated.isRead) Eraser.clearAppNotificationsByTag(updated.id);
         notifyListeners();
         break;
 
@@ -344,21 +429,27 @@ mixin NotificationMixin on ChangeNotifier {
 
   Future<void> _handleFcmTokenRefresh(String token) async {
     await _fcmTokenMutex.protect(() async {
-      if (fcmToken == token) {
+      // Unchanged only once registered: a token whose registration failed or
+      // outlived its account is registered again when it comes back.
+      if (_registeredFcmToken == token) {
         _logger.d('FCM token unchanged');
         return;
       }
-      if (fcmToken != null) {
+      final previous = _registeredFcmToken;
+      if (previous != null) {
         try {
-          await FcmTokenService.deregisterFcmToken(fcmToken!);
+          await FcmTokenService.deregisterFcmToken(previous);
         } catch (e, s) {
           ErrorReporter.report('Could not deregister FCM', e, s);
         }
       }
+      final epoch = AccountEpoch.current;
       fcmToken = token;
-      _logger.d('Firebase token: $fcmToken');
+      _registeredFcmToken = null;
+      _logger.d('Firebase token changed');
       try {
-        await FcmTokenService.registerFcmToken(fcmToken!);
+        await FcmTokenService.registerFcmToken(token);
+        if (epoch == AccountEpoch.current) _registeredFcmToken = token;
         await messaging.subscribeToTopic('announcements');
       } catch (e, s) {
         ErrorReporter.report('Could not setup FCM', e, s);
@@ -367,15 +458,41 @@ mixin NotificationMixin on ChangeNotifier {
   }
 
   Future<void> clearNotificationData() async {
-    try {
-      await messaging.deleteToken();
-    } catch (e) {
-      _logger.w('Could not delete FCM token: $e');
-    }
+    // Not awaited: on an account change this runs before the next account
+    // gets past the login spinner, and offline it may not return.
+    _queueFcmTokenDeletion();
     fcmToken = null;
-    await _storage.delete(key: messageKey);
+    _registeredFcmToken = null;
     notifications.clear();
     _notificationInited = false;
     _messageIdToDisplay = null;
+    await _clearQueuedMessages();
+  }
+
+  /// The token may still be registered to the account signed out offline;
+  /// deleted, it no longer receives that account's messages. Never throws.
+  Future<void> _deleteFcmToken() async {
+    try {
+      await messaging.deleteToken();
+      // Only by the last one queued: a later one is still to run.
+      if (_fcmTokenDeletionsQueued == 1) {
+        await Settings.setFcmTokenDeletionPending(false);
+      }
+    } catch (e) {
+      _logger.w('Could not delete FCM token: $e');
+    } finally {
+      _fcmTokenDeletionsQueued--;
+    }
+    // What arrived for that account until now.
+    await _clearQueuedMessages();
+  }
+
+  /// Logged, never thrown: a logout and an account change go on without it.
+  Future<void> _clearQueuedMessages() async {
+    try {
+      await _storage.delete(key: messageKey);
+    } catch (e, s) {
+      ErrorReporter.log('Could not clear the queued messages', e, s);
+    }
   }
 }

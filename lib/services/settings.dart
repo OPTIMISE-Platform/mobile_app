@@ -22,6 +22,7 @@ import 'package:mobile_app/exceptions/settings_exception.dart';
 import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/models/sensor_tab.dart';
 import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:path_provider/path_provider.dart';
 
 class Settings {
@@ -42,12 +43,16 @@ class Settings {
   static const _defaultDisplayedFractionDigits = 2;
   static int _currentDisplayedFractionDigits = 0;
 
-  static const _smartServiceDashboardsKey = "smart_service_dashboards";
+  // Per account under the prefix; the unkeyed keys are what an earlier
+  // version stored for everyone, moved to the first account that reads them.
+  static const _smartServiceDashboardsKeyPrefix = "smart_service_dashboards_";
+  static const _legacySmartServiceDashboardsKey = "smart_service_dashboards";
 
-  // Superseded by _sensorTabsKey; still read once to migrate existing values.
+  // Superseded by the sensor tabs; moved like the unkeyed tabs.
   static const _pinnedSensorsKey = "pinned_sensors";
 
-  static const _sensorTabsKey = "sensor_tabs";
+  static const _sensorTabsKeyPrefix = "sensor_tabs_";
+  static const _legacySensorTabsKey = "sensor_tabs";
 
   static const _initialTabKey = "initial_tab";
 
@@ -75,6 +80,9 @@ class Settings {
   static const _favoritesMovedKey = "favorites_moved_off_cache";
 
   static const _deviceGroupsCachedWithAspectListsKey = "device_groups_cached_with_aspect_lists";
+
+  static const _accountWipePendingKey = "account_wipe_pending";
+  static const _fcmTokenDeletionPendingKey = "fcm_token_deletion_pending";
 
   static checkInit() {
     if (!isInitialized) {
@@ -193,27 +201,31 @@ class Settings {
     await _box?.put(_displayedFractionDigitsKey, value.toString()).then((v) => _box?.flush());
   }
 
+  /// The dashboards of the signed-in account; empty without one.
   static List<SmartServiceDashboard> getSmartServiceDashboards() {
     checkInit();
-    final str = _box!.get(_smartServiceDashboardsKey);
+    final str = _accountValue(
+        _smartServiceDashboardsKeyPrefix, _legacyDashboards);
     if (str == null) return [];
     final List<dynamic> l = json.decode(str);
     return List<SmartServiceDashboard>.generate(l.length, (index) => SmartServiceDashboard.fromJson(l[index]));
   }
 
+  /// A no-op without an account, like the favorites.
   static setSmartServiceDashboards(List<SmartServiceDashboard> dashboards) async {
     checkInit();
-    await _box?.put(_smartServiceDashboardsKey, json.encode(dashboards)).then((value) => _box?.flush());
+    await _setAccountValue(_smartServiceDashboardsKeyPrefix, _legacyDashboards,
+        json.encode(dashboards));
   }
 
-  /// The user-defined tabs of the sensors page, each with its own pinned values,
-  /// in display order.
+  /// The user-defined tabs of the sensors page of the signed-in account, each
+  /// with its own pinned values, in display order; empty without an account.
   ///
   /// Migrates the earlier flat `pinned_sensors` list into a single default tab.
   static List<SensorTab> getSensorTabs() {
     checkInit();
-    final str = _box!.get(_sensorTabsKey);
-    if (str == null) return _migratePinnedSensors();
+    final str = _accountValue(_sensorTabsKeyPrefix, _legacySensorTabs);
+    if (str == null) return [];
     try {
       final List<dynamic> l = json.decode(str);
       return List<SensorTab>.generate(
@@ -223,26 +235,91 @@ class Settings {
     }
   }
 
+  /// A no-op without an account, like the favorites.
   static Future<void> setSensorTabs(List<SensorTab> tabs) async {
     checkInit();
-    await _box?.put(_sensorTabsKey, json.encode(tabs)).then((value) => _box?.flush());
+    await _setAccountValue(
+        _sensorTabsKeyPrefix, _legacySensorTabs, json.encode(tabs));
   }
 
-  /// Reads the pre-tabs `pinned_sensors` list, if any, as one "Sensors" tab.
-  static List<SensorTab> _migratePinnedSensors() {
-    final str = _box!.get(_pinnedSensorsKey);
-    if (str == null) return [];
+  /// The unkeyed sensor tabs first; without them the pre-tabs pins.
+  static final Map<String, String? Function(String)> _legacySensorTabs = {
+    _legacySensorTabsKey: (v) => v,
+    _pinnedSensorsKey: _migratePinnedSensors,
+  };
+
+  static final Map<String, String? Function(String)> _legacyDashboards = {
+    _legacySmartServiceDashboardsKey: (v) => v,
+  };
+
+  /// Reads the pre-tabs `pinned_sensors` list as one "Sensors" tab, encoded
+  /// like the tabs; null when it holds none.
+  static String? _migratePinnedSensors(String str) {
     try {
       final List<dynamic> l = json.decode(str);
-      if (l.isEmpty) return [];
+      if (l.isEmpty) return null;
       final pins = List<SensorPin>.generate(
           l.length, (i) => SensorPin.fromJson(l[i] as Map<String, dynamic>));
-      return [
+      return json.encode([
         SensorTab(id: 'migrated', name: 'Sensors', pins: pins),
-      ];
+      ]);
     } catch (_) {
-      return [];
+      return null;
     }
+  }
+
+  /// Moves the unkeyed sensor tabs and dashboards to the signed-in account.
+  /// Called by an account switch before the new key is written: the values
+  /// belong to the account that was signed in when they were stored.
+  static Future<void> moveLegacyAccountSettings() async {
+    checkInit();
+    await _resolveAccountValue(_sensorTabsKeyPrefix, _legacySensorTabs).move;
+    await _resolveAccountValue(
+            _smartServiceDashboardsKeyPrefix, _legacyDashboards)
+        .move;
+  }
+
+  /// The value under [prefix] for the signed-in account, null without one.
+  static String? _accountValue(
+      String prefix, Map<String, String? Function(String)> legacy) {
+    final resolved = _resolveAccountValue(prefix, legacy);
+    resolved.move?.catchError((Object e, StackTrace s) =>
+        ErrorReporter.log('Could not move a setting to the account', e, s));
+    return resolved.value;
+  }
+
+  /// Without a value of its own, the account takes over what the first present
+  /// key of [legacy] holds, converted; [move] then stores it under the account
+  /// and deletes every legacy key, so no later account inherits it. Hive shows
+  /// the new value at once, before [move] completes.
+  static ({String? value, Future<void>? move}) _resolveAccountValue(
+      String prefix, Map<String, String? Function(String)> legacy) {
+    final account = getAccount();
+    if (account == null) return (value: null, move: null);
+    final key = prefix + account;
+    final own = _box!.get(key);
+    final present = legacy.keys.where(_box!.containsKey).toList();
+    if (present.isEmpty) return (value: own, move: null);
+    if (own != null) return (value: own, move: _moveLegacy(null, null, present));
+    final taken = legacy[present.first]!(_box!.get(present.first)!);
+    return (value: taken, move: _moveLegacy(key, taken, present));
+  }
+
+  /// The delete waits for the write, so a failed write loses nothing.
+  static Future<void> _moveLegacy(
+      String? key, String? value, List<String> legacyKeys) async {
+    if (key != null && value != null) await _box!.put(key, value);
+    await _box!.deleteAll(legacyKeys);
+    await _box!.flush();
+  }
+
+  static Future<void> _setAccountValue(String prefix,
+      Map<String, String? Function(String)> legacy, String value) async {
+    final account = getAccount();
+    if (account == null) return;
+    // Takes over the legacy value first, or a later account would inherit it.
+    await _resolveAccountValue(prefix, legacy).move;
+    await _box?.put(prefix + account, value).then((v) => _box?.flush());
   }
 
   /// The tab (or, for a Locations/Groups/Networks/Classes value, the Devices
@@ -456,5 +533,29 @@ class Settings {
   static Future<void> setDeviceGroupsCachedWithAspectLists(bool value) {
     checkInit();
     return _box!.put(_deviceGroupsCachedWithAspectListsKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Set by an account switch until the previous account's cached rows are
+  /// wiped; a sign-in and the app start retry the wipe while it is set.
+  static bool getAccountWipePending() {
+    checkInit();
+    return _box!.get(_accountWipePendingKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setAccountWipePending(bool value) {
+    checkInit();
+    return _box!.put(_accountWipePendingKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Set while the FCM token of a signed-out account may still exist; cleared
+  /// only by a successful deletion.
+  static bool getFcmTokenDeletionPending() {
+    checkInit();
+    return _box!.get(_fcmTokenDeletionPendingKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setFcmTokenDeletionPending(bool value) {
+    checkInit();
+    return _box!.put(_fcmTokenDeletionPendingKey, value.toString()).then((v) => _box?.flush());
   }
 }

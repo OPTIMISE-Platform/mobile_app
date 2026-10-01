@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:isar_community/isar.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
@@ -59,9 +60,7 @@ class AppInitializer {
     // an offline start races past the cache and toasts backend errors. The
     // open is local and cheap; Firebase and Auth (network OIDC discovery)
     // stay parallel. _initCache needs both isar and Auth, so it runs last.
-    await _timed('Isar', () async {
-      isar = await IsarService().db;
-    });
+    await openCache();
     await Future.wait([
       _timed('Firebase', FirebaseService.init),
       _timed('Auth', () async {
@@ -70,6 +69,17 @@ class AppInitializer {
       }),
     ]);
     unawaited(_initCache());
+  }
+
+  /// Opens Isar ([open] stands in for it in tests), then retries a pending
+  /// account wipe before the tabs can mount on a stored identity: a switch
+  /// that did not complete left the previous account's rows behind.
+  @visibleForTesting
+  static Future<void> openCache([Future<Isar?> Function()? open]) async {
+    await _timed('Isar', () async {
+      isar = await (open ?? () => IsarService().db)();
+    });
+    await CacheHelper.retryPendingAccountWipe();
   }
 
   static Future<void> _initLocale() async {

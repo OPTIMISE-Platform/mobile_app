@@ -14,6 +14,7 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
 import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -30,6 +31,7 @@ import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/services/fcm_token.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 import 'package:mobile_app/services/cache_helper.dart';
@@ -42,7 +44,6 @@ class Auth extends ChangeNotifier {
   static Future<Map<String, String>> Function()? headersOverride;
 
   bool isInitialized = false;
-  bool _listenerRegistered = false;
 
   factory Auth() => _instance;
 
@@ -72,6 +73,14 @@ class Auth extends ChangeNotifier {
   );
   final _m = Mutex();
   final _clientSetupMutex = Mutex();
+
+  /// Serializes [_rememberAccount]: the login and the OIDC event it raises
+  /// both report the new identity, and two switches at once would each wipe.
+  final _accountMutex = Mutex();
+
+  /// The listener of the current client's events, cancelled when the client
+  /// is dropped: its late events would act on the next client.
+  StreamSubscription<AuthEvent>? _clientEvents;
 
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);
@@ -124,28 +133,8 @@ class Auth extends ChangeNotifier {
         await _rememberAccount(_client?.identity);
         loggedIn = _client?.identity != null;
         notifyListeners();
-        if (!_listenerRegistered) {
-          _listenerRegistered = true;
-          _client?.changes.listen((event) async {
-            _logger.d("${event.type}: ${event.message}");
-            switch (event.type) {
-              case AuthEventTypes.Refresh:
-              case AuthEventTypes.Success:
-                await _rememberAccount(_client?.identity);
-                loggedIn = true;
-                notifyListeners();
-                break;
-              case AuthEventTypes.NotLoggedIn:
-                loggedIn = _client?.identity != null;
-                notifyListeners();
-                if (!loggedIn) await _cleanup();
-                notifyListeners();
-                break;
-              case AuthEventTypes.Error:
-              case AuthEventTypes.LoggingOut:
-                await _onLogout();
-            }
-          });
+        if (_clientEvents == null && _client != null) {
+          _clientEvents = _client!.changes.listen(_onClientEvent);
         }
       } catch (e) {
         // Offline or server unreachable — fall back to cached token
@@ -167,6 +156,27 @@ class Auth extends ChangeNotifier {
 
   bool get _initialized => _client != null;
 
+  Future<void> _onClientEvent(AuthEvent event) async {
+    _logger.d("${event.type}: ${event.message}");
+    switch (event.type) {
+      case AuthEventTypes.Refresh:
+      case AuthEventTypes.Success:
+        await _rememberAccount(_client?.identity);
+        loggedIn = true;
+        notifyListeners();
+        break;
+      case AuthEventTypes.NotLoggedIn:
+        loggedIn = _client?.identity != null;
+        notifyListeners();
+        if (!loggedIn) await _cleanup();
+        notifyListeners();
+        break;
+      case AuthEventTypes.Error:
+      case AuthEventTypes.LoggingOut:
+        await _onLogout();
+    }
+  }
+
   // Written before loggedIn flips, because the tabs mount on that flag and read
   // the per-account favorites right away. Never cleared on logout: the
   // favorites are keyed by it and have to survive until that account returns.
@@ -178,20 +188,30 @@ class Auth extends ChangeNotifier {
   Future<void> _rememberAccount(OpenIdIdentity? identity) async {
     if (identity == null) return;
     try {
-      final previous = Settings.getAccount();
-      if (previous == null || previous == identity.sub) {
-        await Settings.setAccount(identity.sub);
-        return;
-      }
-      // Order matters twice over. The outgoing account's favorites may still
-      // only exist on the rows that are about to be dropped, and the migration
-      // keys by the account that is still set here. And the new key is written
-      // last, so a wipe that fails leaves the old key in place and is retried
-      // on the next sign-in instead of silently leaving the old data behind.
-      await FavoritesMigration.run();
-      await CacheHelper.clearForAccountChange();
-      await Settings.setAccount(identity.sub);
-      _logger.d("Account changed, dropped the previous account's cache");
+      await _accountMutex.protect(() async {
+        final previous = Settings.getAccount();
+        if (previous == null || previous == identity.sub) {
+          await Settings.setAccount(identity.sub);
+          // A switch whose wipe did not complete. The rows of this account it
+          // drops too are refilled by the next refresh.
+          await CacheHelper.retryPendingAccountWipe();
+          return;
+        }
+        // Under the outgoing account, which owns what these move; neither
+        // failing may keep the next account in the previous one's state.
+        try {
+          await FavoritesMigration.run();
+        } catch (e, s) {
+          ErrorReporter.log("Could not move the favorites off the cache", e, s);
+        }
+        try {
+          await Settings.moveLegacyAccountSettings();
+        } catch (e, s) {
+          ErrorReporter.log("Could not move the unkeyed settings", e, s);
+        }
+        await CacheHelper.switchAccount(identity.sub);
+        _logger.d("Account changed, dropped the previous account's cache");
+      });
     } catch (e) {
       // Never let this escape: init() runs it on the path that decides whether
       // the app gets past the login spinner at all.
@@ -261,9 +281,16 @@ class Auth extends ChangeNotifier {
       }
     }
 
-    await _client!.logout();
+    final client = _client!;
+    await client.logout();
     _logger.d("logout");
-    await _onLogout();
+    // Offline the client's own events were cancelled with it. Not when a new
+    // session began while this revoke was in flight.
+    if (_client == null || identical(_client, client)) {
+      await _cleanup();
+      loggedIn = false;
+      notifyListeners();
+    }
     if (!context.mounted) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
@@ -272,7 +299,23 @@ class Auth extends ChangeNotifier {
     if (await _serverAvailable()) {
       await _cleanup();
     } else {
+      final client = _client;
       _client = null;
+      await _clientEvents?.cancel();
+      _clientEvents = null;
+      // Not revocable offline, but the stored tokens must not sign the next
+      // login back in, whatever credentials it was given. Through the client
+      // when there is one: it forgets its identity too, so its own logout,
+      // still running, cannot clear the next session's stored one.
+      try {
+        if (client != null) {
+          await client.clearIdentity();
+        } else {
+          await OpenIdIdentity.clear();
+        }
+      } catch (e) {
+        _logger.w("Could not clear identity: $e");
+      }
     }
     loggedIn = false;
     notifyListeners();
@@ -282,11 +325,34 @@ class Auth extends ChangeNotifier {
   @visibleForTesting
   Future<void> cleanupForTest() => _cleanup();
 
+  /// Replaces the server check of the logout, so a test can log out offline.
+  @visibleForTesting
+  static Future<bool> Function()? serverAvailableOverride;
+
+  /// Runs the logout that follows the client's logout or error event.
+  @visibleForTesting
+  Future<void> onLogoutForTest() => _onLogout();
+
+  /// Records [identity] as signed in, as every sign-in path does before
+  /// [loggedIn] flips.
+  @visibleForTesting
+  Future<void> rememberAccountForTest(OpenIdIdentity identity) =>
+      _rememberAccount(identity);
+
+  /// Whether the client's events have a listener; the next client setup
+  /// registers one when not.
+  @visibleForTesting
+  bool get clientListenerRegistered => _clientEvents != null;
+
+  /// Listens to [events] as to the events of a set-up client.
+  @visibleForTesting
+  void listenToClientEventsForTest(Stream<AuthEvent> events) =>
+      _clientEvents = events.listen(_onClientEvent);
+
   Future<void> _cleanup() async {
     AccountEpoch.advance();
     await CacheHelper.clearCache();
     await AppState().onLogout();
-    _listenerRegistered = false;
     if (_client != null) {
       // Awaited, not slept on: clearIdentity returns a Future since
       // openidconnect 2.0. The old fixed 2s wait predates that upgrade and
@@ -356,6 +422,7 @@ class Auth extends ChangeNotifier {
   }
 
   Future<bool> _serverAvailable() async {
+    if (serverAvailableOverride != null) return serverAvailableOverride!();
     if (_lastOnlineCheck != null && DateTime.now().difference(_lastOnlineCheck!) < _checkCacheDuration) {
       return _checkCache;
     }

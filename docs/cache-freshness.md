@@ -101,12 +101,39 @@ resume or `refreshPressed`, so one resume retries a failing set once.
   entity rows (the refreshes and the list fetches of the entity services) are
   dropped for a gone account; that includes the row a save or create stores
   after its request and the persisted notifications, all through
-  `AccountEpoch.writeIfCurrent`. An account change also clears the persisted
-  notifications, which the notification list falls back to offline, and the
-  list in memory. The epoch does not know the account, so a save that returns
-  after a logout and a new sign-in of the same account is dropped too; that
-  row is missing from Isar until the next refresh or list fetch writes it.
+  `AccountEpoch.writeIfCurrent`. An account change (`CacheHelper.switchAccount`)
+  persists `account_wipe_pending` and `fcm_token_deletion_pending`, advances
+  the epoch, writes the new account key, resets the state in memory as a
+  logout does (`AppState.onLogout`, which the logout after an OIDC error or
+  logout event skips without a server, while the logout button runs it:
+  lists, metadata maps, device index, paging and `initialized`, so the next
+  account's `init` runs and loads its own) and then wipes the cache in parts
+  that each run on their own: the metadata and HTTP cache, the entity rows
+  including the persisted notifications the list falls back to offline, and
+  last the refresh times. A failed step is logged and the next one runs; the
+  flag is cleared only when every part succeeded. While it is set, every
+  sign-in and the app start retry the wipe, and only the wipe: the epoch, the
+  session and the token stay. A refresh running across the wipe sees a
+  counter the wipe's transaction bumps, writes nothing more and does not mark
+  its collection refreshed; together with the refresh times cleared after the
+  rows, what the wipe drops of the signed-in account stays due and the next
+  refresh refills it. One switch runs at a time, so the login and the OIDC event it
+  raises switch once. The epoch does not know the account, so a save that
+  returns after a logout and a new sign-in of the same account is dropped too;
+  that row is missing from Isar until the next refresh or list fetch writes it.
   Accepted: the window is one request long, and the login refresh refills it.
+- The reset deletes the FCM token, which may still be registered to the
+  previous account, without waiting for it. `fcm_token_deletion_pending` is
+  persisted when a deletion is queued and cleared by the success of the last
+  one queued. Deletions run one after the other; the next `initMessaging`
+  waits for them, at most `fcmTokenDeletionTimeout` (10 s), and once a late
+  one ends syncs the release topics and registers a new token. A pending
+  deletion, failed before Firebase was up, offline or cut off by a kill, runs
+  before the next token request. A token is registered again even when it is
+  the old one. The queued background messages are cleared when a deletion
+  ends; a failed clear is logged and does not stop the switch. A message whose
+  `userId` is not the account key, the signed-in `sub` from the moment of the
+  switch on, is dropped.
 - A load that outlives the change leaves the maps and lists in memory alone
   and logs its failure instead of reporting it; a loader that reports success
   returns `false`. It does not notify, except a network load dropped after its
@@ -193,12 +220,24 @@ own, so the pull always fetches fresh and reports a failure.
 | `CacheHelper.refreshDevicesInBackgroundForTest()` | Runs the device refresh quietly, as `scheduleCacheUpdates` does, so an explicit one can join it |
 | `DeviceClassesService.resetLegacyMigrationForTest()` | Lets the next class load migrate the `device-class-uses` entry again |
 | `CacheHelper.entityRefreshDue(refreshedAt, now)` | The due check of the entity refresh |
-| `CacheHelper.afterDeviceChunkForTest` | Called after each chunk the device refresh writes, to change the account between two chunks |
-| `CacheHelper.afterDevicePruneForTest` | Called right after the device refresh prunes, before it marks the collection refreshed |
+| `CacheHelper.afterDeviceChunkForTest` | Called after each chunk the device refresh writes, to change the account between two chunks; the refresh awaits it |
+| `CacheHelper.afterDevicePruneForTest` | Called right after the device refresh prunes, before it marks the collection refreshed; the refresh awaits it |
 | `Auth.cleanupForTest()` | Runs the logout cleanup (`_cleanup`) without a signed-in client |
+| `Auth.serverAvailableOverride` | Replaces the server check of the logout, so a test can log out offline |
+| `Auth.onLogoutForTest()` | Runs the logout that follows the client's logout or error event (`_onLogout`) |
+| `Auth.rememberAccountForTest(identity)` | Records a sign-in of `identity`, switching the account when its `sub` differs (`_rememberAccount`) |
+| `Auth.clientListenerRegistered` / `listenToClientEventsForTest(events)` | Whether the client's events have a listener, and a stream to listen to as a set-up client's |
+| `CacheHelper.beforeAccountWipeForTest` | Called before the cache clear of an account wipe; throwing from it fails that part |
+| `CacheHelper.afterAccountKeyForTest` | Called right after a switch wrote the new account key |
+| `AppInitializer.openCache(open)` | Opens Isar through `open` and retries a pending account wipe, as the start does |
+| `NotificationMixin.releaseTopicsSupported` | Whether the release topics are synced, Android only by default |
+| `NotificationMixin.messagingOverride` | Replaces `FirebaseMessaging.instance`, which needs a Firebase app |
+| `NotificationMixin.fcmTokenDeletionTimeout` / `fcmTokenDeletionsForTest` | How long a token request waits for the token deletions, and those deletions |
 
 Tests: `metadata_stale_cache_test.dart`, `cache_updates_resume_test.dart`,
-`account_change_cache_test.dart`, `inactive_device_cache_test.dart`,
+`account_change_cache_test.dart`, `account_change_memory_test.dart`,
+`home_account_remount_test.dart`,
+`inactive_device_cache_test.dart`,
 `device_types_cache_test.dart` and
 `device_search_filter_isar_test.dart` (tag `isar`),
 `metadata_revalidation_test.dart`, `device_classes_load_test.dart`,

@@ -105,9 +105,11 @@ void main() {
     serveGoldenBackend(backend);
   });
 
-  tearDown(() {
+  tearDown(() async {
     CacheHelper.afterDeviceChunkForTest = null;
     CacheHelper.afterDevicePruneForTest = null;
+    CacheHelper.beforeAccountWipeForTest = null;
+    await Settings.setAccountWipePending(false);
     resetGoldenBackend();
   });
 
@@ -133,6 +135,42 @@ void main() {
       expect(ids.length, 1700, reason: "the old rows plus the first chunk");
       expect(Settings.getCacheUpdated("devices"), isNull,
           reason: "still due, so the next resume retries");
+    });
+
+    test("a refresh running across a retried account wipe stays due",
+        () async {
+      await _store([]);
+      await _devicesOverdue();
+      backend.serveDevicesPaged(_devices(2600));
+      await Settings.setAccountWipePending(true);
+      var chunks = 0;
+      // After the fifth chunk, before the sixth, which holds the last 100.
+      CacheHelper.afterDeviceChunkForTest = () async {
+        if (++chunks == 5) await CacheHelper.retryPendingAccountWipe();
+      };
+
+      await CacheHelper.scheduleCacheUpdates();
+
+      expect(chunks, 5, reason: "the refresh wrote nothing after the wipe");
+      expect(Settings.getAccountWipePending(), isFalse);
+      expect(Settings.getCacheUpdated("devices"), isNull,
+          reason: "the rows are partial, so the next refresh refills them");
+      expect(CacheHelper.devicesRefreshedOnce(), isFalse);
+    });
+
+    test("a refresh whose rows a retried wipe dropped after its prune stays "
+        "due", () async {
+      await _store([]);
+      await _devicesOverdue();
+      backend.serveDevicesPaged(_devices(3));
+      await Settings.setAccountWipePending(true);
+      CacheHelper.afterDevicePruneForTest =
+          CacheHelper.retryPendingAccountWipe;
+
+      await CacheHelper.scheduleCacheUpdates();
+
+      expect(await isar!.deviceInstances.count(), 0);
+      expect(Settings.getCacheUpdated("devices"), isNull);
     });
 
     test("a refresh stores each device once, in its chunks", () async {
@@ -243,6 +281,37 @@ void main() {
     });
   });
 
+  test("an account wipe whose cache clear fails still wipes the rows and "
+      "stays pending", () async {
+    await _store(_devices(3));
+    await isar!.writeTxn(() async {
+      await isar!.networks.put(Network.fromJson({
+        "id": "net-1",
+        "name": "Net",
+        "hash": "",
+        "owner_id": "owner-1",
+        "shared": false,
+        "device_local_ids": <String>[],
+        "device_ids": <String>[],
+        "connection_state": "online",
+      }));
+      await isar!.notifications.put(app.Notification(
+          "2026-10-01T00:00:00Z", "m", "a", "n1", false, "t"));
+    });
+    await Settings.setCacheUpdated("devices");
+    await Settings.setAccountWipePending(true);
+    CacheHelper.beforeAccountWipeForTest = () => throw Exception("disk full");
+
+    await CacheHelper.retryPendingAccountWipe();
+
+    expect(await isar!.deviceInstances.count(), 0);
+    expect(await isar!.networks.count(), 0);
+    expect(await isar!.notifications.count(), 0);
+    expect(Settings.getCacheUpdated("devices"), isNull);
+    expect(Settings.getAccountWipePending(), isTrue,
+        reason: "the failed part runs again");
+  });
+
   group("stored notifications", () {
     app.Notification note(String id) =>
         app.Notification("2026-09-30T00:00:00Z", "m", "user", id, false, "t");
@@ -255,7 +324,7 @@ void main() {
         ..clear()
         ..add(note("n1"));
 
-      await CacheHelper.clearForAccountChange();
+      await CacheHelper.switchAccount("next-account");
 
       expect(await NotificationsService.loadPersisted(), isEmpty,
           reason: "the offline fallback would show them to the next account");

@@ -108,35 +108,112 @@ class CacheHelper {
     // rows.
   }
 
-  /// Drops everything the previous account left behind, including the entity
-  /// collections that [clearCache] deliberately spares.
+  /// Switches the app to [account]: records the wipe as pending, moves the
+  /// epoch, writes the new account key, resets the state in memory as a
+  /// logout does and wipes what the previous account left on disk, including
+  /// the entity collections that [clearCache] deliberately spares. Each step
+  /// runs even when one before it failed; failures are logged.
   ///
   /// Only called when a different account has actually been observed signing
   /// in (see Auth), never on logout and never on a transient NotLoggedIn: those
   /// are the cases where the cache is the offline copy the user still needs.
-  static Future<void> clearForAccountChange() async {
+  static Future<void> switchAccount(String account) async {
+    // First: what does not complete runs at the next sign-in or start, also
+    // after a kill before the reset below queues the token deletion.
+    await _logged(() => Settings.setAccountWipePending(true));
+    await _logged(() => Settings.setFcmTokenDeletionPending(true));
+    // The key right after the epoch, with no await between: everything that
+    // reads it, and the tabs that remount on the epoch, see the new account.
     AccountEpoch.advance();
-    await clearCache();
-    if (isar != null) {
-      await isar!.writeTxn(() async {
-        await isar!.deviceInstances.clear();
-        await isar!.deviceGroups.clear();
-        await isar!.networks.clear();
-        await isar!.locations.clear();
-        // The offline fallback of the notification list reads these, so the
-        // next account would be shown the previous one's.
-        await isar!.notifications.clear();
-      });
-    }
-    AppState().replaceDeviceIndex(const [], complete: false);
-    // A logout keeps the list in memory empty only until a late load refills
-    // it; the next account must not start with it.
-    AppState().notifications.clear();
+    await _logged(() => Settings.setAccount(account));
+    afterAccountKeyForTest?.call();
+    await AppState().onLogout();
     AppState().notifyListeners();
-    // Without this the emptied cache counts as refreshed today and the next
-    // scheduled refill waits up to a day - three services read their (now
+    await _logged(_wipeAccountData);
+  }
+
+  /// Retries the wipe of a switch that did not complete. Leaves the session
+  /// alone: what it drops of the signed-in account the next refresh refills,
+  /// and a refresh running across it stays due.
+  static Future<void> retryPendingAccountWipe() async {
+    if (!Settings.getAccountWipePending()) return;
+    await _logged(_wipeAccountData);
+  }
+
+  static Future<void> _logged(Future<void> Function() step) async {
+    try {
+      await step();
+    } catch (e, s) {
+      ErrorReporter.log('Account switch step failed', e, s);
+    }
+  }
+
+  /// Each part runs whatever the others do; the flag is cleared only when all
+  /// of them succeeded.
+  static Future<void> _wipeAccountData() async {
+    var complete = true;
+    Future<void> part(Future<void> Function() step) async {
+      try {
+        await step();
+      } catch (e, s) {
+        complete = false;
+        ErrorReporter.log('Account switch wipe failed', e, s);
+      }
+    }
+
+    await part(() async {
+      beforeAccountWipeForTest?.call();
+      await clearCache();
+    });
+    if (isar != null) {
+      await part(() => isar!.writeTxn(() async {
+            // Inside the transaction: a refresh writing or checking after it
+            // sees it.
+            _entityWipes++;
+            await isar!.deviceInstances.clear();
+            await isar!.deviceGroups.clear();
+            await isar!.networks.clear();
+            await isar!.locations.clear();
+            // The offline fallback of the notification list reads these, so
+            // the next account would be shown the previous one's.
+            await isar!.notifications.clear();
+          }));
+    }
+    // After the rows, so a refresh that marked itself before they went is
+    // due again. Without it the emptied cache counts as refreshed today and
+    // the next refill waits up to a day - three services read their (now
     // empty) collection as the answer rather than as a cache miss.
-    await Settings.clearCacheUpdated();
+    await part(Settings.clearCacheUpdated);
+    if (complete) await part(() => Settings.setAccountWipePending(false));
+  }
+
+  /// Called before the cache clear of an account change's wipe; throwing from
+  /// it fails that part.
+  @visibleForTesting
+  static void Function()? beforeAccountWipeForTest;
+
+  /// Called right after a switch has written the new account key.
+  @visibleForTesting
+  static void Function()? afterAccountKeyForTest;
+
+  /// Bumped by the wipe of the entity rows. A refresh that saw it move writes
+  /// nothing more and does not mark its collection refreshed, so it stays due.
+  static int _entityWipes = 0;
+
+  static bool _current(int epoch, int wipes) =>
+      epoch == AccountEpoch.current && wipes == _entityWipes;
+
+  /// [AccountEpoch.writeIfCurrent], also skipped after a wipe; checked inside
+  /// the transaction, so a wipe queued after it always runs after the check.
+  static Future<bool> _writeIfCurrent(
+      int epoch, int wipes, Future<void> Function() write) async {
+    var written = false;
+    await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+      if (wipes != _entityWipes) return;
+      await write();
+      written = true;
+    });
+    return written;
   }
 
   /// [onProgress] reports the fraction of completed refresh tasks (0..1),
@@ -278,14 +355,16 @@ class CacheHelper {
   }
 
   /// Called after each chunk the device refresh has written, so a test can
-  /// change the account between two chunks.
+  /// change the account between two chunks; the refresh waits for what it
+  /// returns.
   @visibleForTesting
-  static void Function()? afterDeviceChunkForTest;
+  static FutureOr<void> Function()? afterDeviceChunkForTest;
 
   /// Called right after the device refresh has pruned the rows it did not
-  /// fetch, before it marks the collection refreshed.
+  /// fetch, before it marks the collection refreshed; the refresh waits for
+  /// what it returns.
   @visibleForTesting
-  static void Function()? afterDevicePruneForTest;
+  static FutureOr<void> Function()? afterDevicePruneForTest;
 
   static _DeviceRefreshRun? _deviceRun;
 
@@ -314,6 +393,7 @@ class CacheHelper {
   static Future<bool> _refreshDevices(
       {required bool quiet, _DeviceRefreshRun? run}) async {
     final epoch = AccountEpoch.current;
+    final wipes = _entityWipes;
     var allDevicesLoaded = false;
     const limit = 5000;
     var deviceOffset = 0;
@@ -353,17 +433,18 @@ class CacheHelper {
             ? i + chunkSize
             : newDevices.length;
         final chunk = newDevices.sublist(i, end);
-        if (!await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+        if (!await _writeIfCurrent(epoch, wipes, () async {
           // The flags from fetch time are seconds old by now.
           await DevicesService.applyFavoriteMirror(chunk);
           await isar!.deviceInstances.putAll(chunk);
         })) {
           return false;
         }
-        afterDeviceChunkForTest?.call();
+        final afterChunk = afterDeviceChunkForTest;
+        if (afterChunk != null) await afterChunk();
       }
       final fetched = {for (final d in newDevices) d.isarId};
-      if (!await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+      if (!await _writeIfCurrent(epoch, wipes, () async {
         final stored =
             await isar!.deviceInstances.where().isarIdProperty().findAll();
         await isar!.deviceInstances
@@ -371,9 +452,10 @@ class CacheHelper {
       })) {
         return false;
       }
-      afterDevicePruneForTest?.call();
+      final afterPrune = afterDevicePruneForTest;
+      if (afterPrune != null) await afterPrune();
     }
-    if (epoch != AccountEpoch.current) return false;
+    if (!_current(epoch, wipes)) return false;
     AppState().replaceDeviceIndex(newDevices);
 
     await Settings.setCacheUpdated(_devices);
@@ -382,6 +464,7 @@ class CacheHelper {
 
   static Future<bool> _refreshDeviceGroups({required bool quiet}) async {
     final epoch = AccountEpoch.current;
+    final wipes = _entityWipes;
     late final List<DeviceGroup> deviceGroups;
     try {
       deviceGroups = await Future.wait(
@@ -392,7 +475,7 @@ class CacheHelper {
     }
 
     if (isar != null &&
-        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+        !await _writeIfCurrent(epoch, wipes, () async {
           // The images loaded meanwhile; a favorite tapped during that must
           // not be overwritten by the mirror the groups were loaded with.
           await DeviceGroupsService.applyFavoriteMirror(deviceGroups);
@@ -401,7 +484,7 @@ class CacheHelper {
         })) {
       return false;
     }
-    if (epoch != AccountEpoch.current) return false;
+    if (!_current(epoch, wipes)) return false;
     // Before any further await, so a load in between does not flag fresh rows.
     if (!Settings.getDeviceGroupsCachedWithAspectLists()) {
       unawaited(Settings.setDeviceGroupsCachedWithAspectLists(true).then((_) {}, onError: (Object e, StackTrace s) {
@@ -438,6 +521,7 @@ class CacheHelper {
       return true;
     }
     final epoch = AccountEpoch.current;
+    final wipes = _entityWipes;
     late final List<Network> networks;
 
     try {
@@ -448,13 +532,13 @@ class CacheHelper {
     }
 
     if (isar != null &&
-        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+        !await _writeIfCurrent(epoch, wipes, () async {
           await isar!.networks.clear();
           await isar!.networks.putAll(networks);
         })) {
       return false;
     }
-    if (epoch != AccountEpoch.current) return false;
+    if (!_current(epoch, wipes)) return false;
 
     await Settings.setCacheUpdated(_networks);
     return true;
@@ -465,6 +549,7 @@ class CacheHelper {
       return true;
     }
     final epoch = AccountEpoch.current;
+    final wipes = _entityWipes;
     late final List<Location> locations;
 
     try {
@@ -476,13 +561,13 @@ class CacheHelper {
     }
 
     if (isar != null &&
-        !await AccountEpoch.writeIfCurrent(isar!, epoch, () async {
+        !await _writeIfCurrent(epoch, wipes, () async {
           await isar!.locations.clear();
           await isar!.locations.putAll(locations);
         })) {
       return false;
     }
-    if (epoch != AccountEpoch.current) return false;
+    if (!_current(epoch, wipes)) return false;
 
     await Settings.setCacheUpdated(_locations);
     return true;

@@ -56,9 +56,11 @@ Golden diffs of a failed run land in `test/failures/`, which is ignored.
 `test/golden_helper.dart`:
 
 - `setUpGoldenEnvironment()` — once per file: dotenv from the keys of
-  `.env.example` (`.env` is not in the repository), Settings in a temp Hive,
-  mocked secure storage and toast channel, silenced `ErrorReporter`, Roboto and
-  MaterialIcons loaded from the Flutter SDK, and UTC as display time zone.
+  `.env.example` (`.env` is not in the repository), Settings in a temp Hive
+  with the account `test-account` (sensor tabs, dashboards and favorites are
+  per account), mocked secure storage and toast channel, silenced
+  `ErrorReporter`, Roboto and MaterialIcons loaded from the Flutter SDK, and
+  UTC as display time zone.
 - `pumpGolden(tester, widget, dark: ...)` — mounts the widget under the app's
   providers and themes on a 412×915 surface at device pixel ratio 1. It mounts
   each variant **fresh**: pumping light and then dark into the same tree would
@@ -112,6 +114,13 @@ inset and at larger text sizes is covered by plain widget tests that set
 (`detail_page_scroll_test.dart`, `device_list_item_layout_test.dart`,
 `detail_page_header_layout_test.dart`, `sensor_values_overflow_test.dart`).
 
+The switch tile tests share `test/sensor_switch_fixture.dart` (`PlugBackend`,
+which answers command batches like real plugs): `switch_tile_test.dart`,
+`sensor_switch_tile_{device,group,connection,layout,readback}_test.dart`,
+`sensor_picker_on_off_test.dart`, `detail_page_unknown_switch_test.dart` and
+`golden_sensor_switch_tiles_test.dart`. A test whose last step toasts must pump
+3 s at the end: the fluttertoast plugin leaves a 2 s timer pending.
+
 ## Test hooks in `lib/`
 
 All are `@visibleForTesting` and never set by production code.
@@ -124,9 +133,17 @@ All are `@visibleForTesting` and never set by production code.
 | `DeviceTypesService.listDio` / `listHeaders` (`lib/services/device_types.dart`) | The Dio and headers of the device-type list requests only |
 | `DeviceMixin.fetchDeviceTypes` (`lib/mixins/device_mixin.dart`) | Replaces the device-type loader, for tests of the reload logic without HTTP; its `serveStale` argument is the stale-serving report of `docs/cache-freshness.md` |
 | `DeviceMixin.fetchDeviceClasses` (`lib/mixins/device_mixin.dart`) | Replaces the device-class loader, with the same arguments as `fetchDeviceTypes` |
-| `CacheHelper.afterDeviceChunkForTest` (`lib/services/cache_helper.dart`) | Called after each chunk the device refresh writes, so a test can change the account between two chunks |
-| `CacheHelper.afterDevicePruneForTest` (`lib/services/cache_helper.dart`) | Called right after the device refresh prunes, before it marks the collection refreshed |
+| `CacheHelper.afterDeviceChunkForTest` (`lib/services/cache_helper.dart`) | Called after each chunk the device refresh writes, so a test can change the account between two chunks; awaited, so it can run a whole wipe there |
+| `CacheHelper.afterDevicePruneForTest` (`lib/services/cache_helper.dart`) | Called right after the device refresh prunes, before it marks the collection refreshed; awaited like the chunk hook |
 | `Auth.cleanupForTest()` (`lib/services/auth.dart`) | Runs the logout cleanup without a signed-in client; the identity package's secure-storage channel (`plugins.concerti.io/openidconnect_secure_storage`) needs a mock handler |
+| `Auth.serverAvailableOverride` / `onLogoutForTest()` (`lib/services/auth.dart`) | Replace the server check of the logout and run the logout that follows a client event, so a test can log out offline |
+| `Auth.rememberAccountForTest(identity)` (`lib/services/auth.dart`) | Records a sign-in as every sign-in path does, switching the account when the identity's `sub` differs; an `OpenIdIdentity` with an unsigned id token carrying `sub` is enough |
+| `Auth.clientListenerRegistered` / `listenToClientEventsForTest(events)` (`lib/services/auth.dart`) | Whether the OIDC client's events have a listener, and a stream to listen to in place of a real client's, which only a real setup provides |
+| `CacheHelper.beforeAccountWipeForTest` / `afterAccountKeyForTest` (`lib/services/cache_helper.dart`) | Called before the cache clear of an account wipe, where throwing fails that part, and right after a switch wrote the new key |
+| `AppInitializer.openCache(open)` (`lib/app_initializer.dart`) | Opens Isar through `open` and retries a pending account wipe, as the start does |
+| `NotificationMixin.releaseTopicsSupported` (`lib/mixins/notification_mixin.dart`) | Whether the release topics are synced; Android only by default, so a test sets it to drive them |
+| `NotificationMixin.fcmTokenDeletionTimeout` / `fcmTokenDeletionsForTest` (`lib/mixins/notification_mixin.dart`) | How long a token request waits for the token deletions, and the chain of those deletions, which a `tearDown` awaits so none runs into the next test |
+| `NotificationMixin.messagingOverride` (`lib/mixins/notification_mixin.dart`) | Replaces `FirebaseMessaging.instance`, which throws without a Firebase app; a `Fake implements FirebaseMessaging` answers `requestPermission` through `noSuchMethod` (`account_change_memory_test.dart`) |
 | `DeviceMixin.readCachedDeviceIndex` (`lib/mixins/device_mixin.dart`) | Replaces the Isar read that seeds the device index (type and inactive flag per device, and whether a full refresh filled the cache), so the counters can be tested without the Isar container |
 | `DeviceMixin.deviceTypesAreAll` (`lib/mixins/device_mixin.dart`) | Replaces the read of `DeviceTypesService.userListIsAllTypes`, so the fallback to the platform's type list can be tested without its backend |
 | `MgwReachability.probeOverride` (`lib/services/mgw/reachability.dart`) | Replaces the network probe behind `check`/`statusOf`, given the stored entry; the cache, the `forget()` epochs, the sequence guard and the `revision` signal still run |
@@ -134,6 +151,8 @@ All are `@visibleForTesting` and never set by production code.
 | `MgwStorage.beforeListWriteForTest` (`lib/services/mgw/storage.dart`) | Called before each write of the gateway list; throwing from it fails the write, for the cleanup after a pairing that could not be stored |
 | `MgwDiscoveryService.discoverOverride` (`lib/services/mgw/discovery.dart`) | Replaces the mDNS scan; receives the `onUpdate` callback, so a test can report gateways while the scan runs |
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
+| `loadPinnedDevices` (`lib/widgets/tabs/sensors/sensor_values.dart`) | Replaces the sensors page's fetch of pinned devices, so a test can mark them `fromCache` |
+| `SwitchCommands.resetForTest()` (`lib/widgets/tabs/sensors/switch_commands.dart`) | Clears the static in-flight guard and the stored read-backs of the switch tiles |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
 
 Rendered times go through `toDisplayTime()`. A new widget that shows a local

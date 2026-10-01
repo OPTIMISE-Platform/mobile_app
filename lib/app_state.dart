@@ -262,8 +262,11 @@ class AppState extends ChangeNotifier
     }
   }
 
+  /// Resets the state of the signed-in account, on logout and on an account
+  /// change; the next [ensureInitialized] runs [init] again.
   Future<void> onLogout() async {
-    await clearNotificationData();
+    // Everything in memory before the first await, so no load sees it half
+    // reset, and also when the storage write below fails.
     clearDeviceData();
     clearNetworkData();
     clearData();
@@ -271,8 +274,9 @@ class AppState extends ChangeNotifier
     _retryRequest = null;
     _retriedFor.clear();
     _initialized = false;
-    // No clearCache here: the only caller (Auth._cleanup) has already awaited
-    // it — this unawaited second run raced whatever a re-login started.
+    await clearNotificationData();
+    // No clearCache here: Auth._cleanup has awaited it, and
+    // CacheHelper.switchAccount wipes after this.
   }
 
   final _refreshPressedController = StreamController.broadcast();

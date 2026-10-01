@@ -131,7 +131,7 @@ void main() {
     AppState().noteDevices([_cached("b", "true")]);
     expect(AppState().visibleDeviceCount(["b"]), 0);
 
-    await CacheHelper.clearForAccountChange();
+    await CacheHelper.switchAccount("next-account");
 
     expect(AppState().visibleDeviceCount(["b"]), 1);
   });
@@ -142,7 +142,7 @@ void main() {
     AppState().replaceDeviceIndex([_cached("a", null, "lamp-type")]);
     expect(AppState().visibleDeviceCountOfClass("lamp"), 1);
 
-    await CacheHelper.clearForAccountChange();
+    await CacheHelper.switchAccount("next-account");
     AppState().noteDevices([_cached("n", null, "lamp-type")]);
 
     expect(AppState().visibleDeviceCountOfClass("lamp"), isNull);

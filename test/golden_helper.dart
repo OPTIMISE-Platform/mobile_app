@@ -50,6 +50,8 @@ Future<void> setUpGoldenEnvironment() async {
         envString: await File(".env.example").readAsString());
   }
   await Settings.init();
+  // The sensor tabs, dashboards and favorites are stored per account.
+  if (Settings.getAccount() == null) await Settings.setAccount("test-account");
   FlutterSecureStorage.setMockInitialValues({});
   ErrorReporter.present = (_) {};
   await _loadTestFonts();

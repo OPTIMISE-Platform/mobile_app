@@ -161,7 +161,7 @@ void main() {
     expect(deviceRequests(), 1);
 
     // The held request has already sliced the previous account's list.
-    await CacheHelper.clearForAccountChange();
+    await CacheHelper.switchAccount("next-account");
     final hold = backend.holdDevices!;
     backend.holdDevices = null;
     backend.serveDevicesPaged([deviceJson("d2", "Heater")]);

@@ -14,7 +14,13 @@
  *  limitations under the License.
  */
 
+import "dart:convert";
+
 import "package:flutter_test/flutter_test.dart";
+import "package:hive/hive.dart";
+import "package:mobile_app/models/sensor_pin.dart";
+import "package:mobile_app/models/sensor_tab.dart";
+import "package:mobile_app/models/smart_service.dart";
 import "package:mobile_app/services/settings.dart";
 
 import "test_helper.dart";
@@ -146,4 +152,103 @@ void main() {
     });
   });
 
+
+  group("sensor tabs and dashboards", () {
+    // What an earlier version stored for everyone, under the unkeyed keys.
+    Future<void> storeLegacy(String key, Object value) =>
+        Hive.box<String>("settings.box").put(key, jsonEncode(value));
+    bool hasLegacy(String key) =>
+        Hive.box<String>("settings.box").containsKey(key);
+    // The legacy keys go once the account's copy is written.
+    Future<bool> legacyGone(String key) async {
+      for (var i = 0; i < 100 && hasLegacy(key); i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+      return !hasLegacy(key);
+    }
+
+    const tab = SensorTab(id: "t1", name: "Kitchen");
+    final dashboard = SmartServiceDashboard("d1", "Energy", []);
+
+    List<String> tabIds() => Settings.getSensorTabs().map((t) => t.id).toList();
+    List<String> dashboardIds() =>
+        Settings.getSmartServiceDashboards().map((d) => d.id).toList();
+
+    test("are empty without an account and leave the old entries alone",
+        () async {
+      await storeLegacy("sensor_tabs", [tab]);
+      await storeLegacy("smart_service_dashboards", [dashboard]);
+
+      expect(Settings.getSensorTabs(), isEmpty);
+      expect(Settings.getSmartServiceDashboards(), isEmpty);
+      await Settings.setSensorTabs([tab]);
+      expect(hasLegacy("sensor_tabs"), isTrue);
+      expect(hasLegacy("smart_service_dashboards"), isTrue);
+    });
+
+    test("move to the first account that reads them, once", () async {
+      await storeLegacy("sensor_tabs", [tab]);
+      await storeLegacy("smart_service_dashboards", [dashboard]);
+      await Settings.setAccount("account-a");
+
+      expect(tabIds(), ["t1"]);
+      expect(dashboardIds(), ["d1"]);
+      expect(await legacyGone("sensor_tabs"), isTrue);
+      expect(await legacyGone("smart_service_dashboards"), isTrue);
+      await Settings.close();
+      await Settings.init();
+      expect(tabIds(), ["t1"], reason: "stored under the account");
+      expect(dashboardIds(), ["d1"]);
+    });
+
+    test("move the pins from before the tabs as one tab", () async {
+      await storeLegacy("pinned_sensors", [
+        const SensorPin(deviceId: "device-1", functionId: "f1").toJson()
+      ]);
+      await Settings.setAccount("account-a");
+
+      final tabs = Settings.getSensorTabs();
+      expect(tabs.single.pins.single.deviceId, "device-1");
+      expect(await legacyGone("pinned_sensors"), isTrue);
+    });
+
+    test("old entries left next to the account's own are deleted", () async {
+      await Settings.setAccount("account-a");
+      await Settings.setSensorTabs([tab]);
+      await storeLegacy("sensor_tabs", [const SensorTab(id: "t9", name: "Old")]);
+
+      expect(tabIds(), ["t1"]);
+      expect(await legacyGone("sensor_tabs"), isTrue,
+          reason: "a later account would inherit it");
+    });
+
+    test("a write of the first account takes the old entries over too",
+        () async {
+      await storeLegacy("sensor_tabs", [tab]);
+      await Settings.setAccount("account-a");
+      await Settings.setSensorTabs([const SensorTab(id: "t2", name: "Hall")]);
+
+      await Settings.setAccount("account-b");
+      expect(Settings.getSensorTabs(), isEmpty);
+    });
+
+    test("a second account sees none of the first one's, and the first finds "
+        "its own again", () async {
+      await storeLegacy("sensor_tabs", [tab]);
+      await Settings.setAccount("account-a");
+      expect(tabIds(), ["t1"]);
+      await Settings.setSmartServiceDashboards([dashboard]);
+
+      await Settings.setAccount("account-b");
+      expect(Settings.getSensorTabs(), isEmpty);
+      expect(Settings.getSmartServiceDashboards(), isEmpty);
+      await Settings.setSensorTabs([const SensorTab(id: "t2", name: "Hall")]);
+
+      await Settings.setAccount("account-a");
+      expect(tabIds(), ["t1"]);
+      expect(dashboardIds(), ["d1"]);
+      await Settings.setAccount("account-b");
+      expect(tabIds(), ["t2"]);
+    });
+  });
 }

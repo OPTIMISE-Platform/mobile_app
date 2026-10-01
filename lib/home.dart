@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/services/favorites_migration.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
@@ -130,7 +131,12 @@ class _HomeState extends State<Home> {
         // backend call can lock the login mutex while the client setup is
         // still running — gating on loggingIn first would unmount DeviceTabs
         // and bring the login spinner back for the whole token refresh.
-        if (auth.loggedIn) return const DeviceTabs();
+        // Keyed by the epoch, so an account change under mounted tabs
+        // remounts them: several screens read their configuration only when
+        // they mount.
+        if (auth.loggedIn) {
+          return DeviceTabs(key: ValueKey(AccountEpoch.current));
+        }
         if (!auth.isInitialized || auth.loggingIn) {
           return Scaffold(
             appBar: appBar.getAppBar(context, []),
