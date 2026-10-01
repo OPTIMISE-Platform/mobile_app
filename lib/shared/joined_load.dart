@@ -14,14 +14,33 @@
  *  limitations under the License.
  */
 
+import 'package:mobile_app/shared/account_epoch.dart';
+
 /// Lets concurrent calls of a loader share one run, and its outcome.
 ///
 /// A caller arriving while a run is in flight gets that run's result, not an
 /// assumed success: the settings refresh reported "Cache refreshed" over a
-/// joined load that had failed.
+/// joined load that had failed. Only a run started under the current
+/// [AccountEpoch] is joined; a call after an account change starts its own.
 class JoinedLoad {
   Future<bool>? _running;
+  int? _runningEpoch;
 
-  Future<bool> run(Future<bool> Function() load) =>
-      _running ??= load().whenComplete(() => _running = null);
+  Future<bool> run(Future<bool> Function() load) {
+    final epoch = AccountEpoch.current;
+    final running = _running;
+    if (running != null && _runningEpoch == epoch) return running;
+    late final Future<bool> started;
+    // Cleared only by its own run: an older run ending must not drop a newer
+    // one that later callers should still join.
+    started = load().whenComplete(() {
+      if (identical(_running, started)) {
+        _running = null;
+        _runningEpoch = null;
+      }
+    });
+    _running = started;
+    _runningEpoch = epoch;
+    return started;
+  }
 }

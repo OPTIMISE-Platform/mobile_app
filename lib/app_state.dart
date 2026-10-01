@@ -80,6 +80,7 @@ class AppState extends ChangeNotifier
 
   Future<void> init() async {
     if (_initialized) return;
+    final epoch = AccountEpoch.current;
     final startTime = DateTime.now();
 
     try {
@@ -103,10 +104,14 @@ class AppState extends ChangeNotifier
       ]);
     } finally {
       debugPrint('AppState init took ${DateTime.now().difference(startTime)}');
-      _initialized = true;
-      notifyListeners();
-      unawaited(SchedulerBinding.instance.endOfFrame.then((_) =>
-          _revalidateCaches(refetchClasses: deviceClassesFromCache)));
+      // An init that outlived its account loaded nothing for the next one, so
+      // that account's ensureInitialized must still run its own.
+      if (epoch == AccountEpoch.current) {
+        _initialized = true;
+        notifyListeners();
+        unawaited(SchedulerBinding.instance.endOfFrame.then((_) =>
+            _revalidateCaches(refetchClasses: deviceClassesFromCache)));
+      }
     }
   }
 
@@ -221,8 +226,10 @@ class AppState extends ChangeNotifier
   /// `Duration.zero` keeps the stored copies when a fetch fails.
   ///
   /// [onProgress] reports the fraction of completed reload tasks (0..1).
-  /// Throws when any loader failed, after all of them have finished.
+  /// Throws when any loader failed, after all of them have finished, unless
+  /// the account changed meanwhile.
   Future<void> reloadMetadata({void Function(double progress)? onProgress}) async {
+    final epoch = AccountEpoch.current;
     forgetUnavailableDeviceTypes();
     final tasks = <Future<bool>>[
       // No fallback: the stored copy would pass a failed fetch off as success.
@@ -235,6 +242,9 @@ class AppState extends ChangeNotifier
           done++;
           onProgress?.call(done / tasks.length);
         })));
+    // The loaders dropped what they fetched for the gone account; that is
+    // neither a reload to announce nor a failure to report.
+    if (epoch != AccountEpoch.current) return;
     notifyListeners();
     pushRefresh();
     // The loaders toast and swallow their own errors; without this the caller

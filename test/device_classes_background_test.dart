@@ -20,19 +20,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
 class _State extends ChangeNotifier with DeviceMixin {
   _State() {
     fetchDeviceClasses = () async {
       fetches++;
+      final name = fetchedName;
       final gate = this.gate;
       if (gate != null) await gate.future;
       if (fail) throw Exception("offline");
-      return [DeviceClass("fresh", "Fresh", "")];
+      return [DeviceClass(name, name, "")];
     };
     readCachedDeviceClasses = () async {
       reads++;
+      await readGate?.future;
       return stored ? [DeviceClass("stored", "Stored", "")] : null;
     };
     addListener(() => notifications++);
@@ -40,7 +43,11 @@ class _State extends ChangeNotifier with DeviceMixin {
 
   bool stored = true;
   bool fail = false;
+
+  /// The id the next fetch returns, read when it starts.
+  String fetchedName = "fresh";
   Completer<void>? gate;
+  Completer<void>? readGate;
   int fetches = 0;
   int reads = 0;
   int notifications = 0;
@@ -141,5 +148,85 @@ void main() {
     expect(s.loadingDeviceClasses, isFalse);
     s.gate!.complete();
     await refetch;
+  });
+
+  group("across an account change", () {
+    void changeAccount(_State s) {
+      AccountEpoch.advance();
+      s.clearDeviceData();
+      s.fetchedName = "next";
+    }
+
+    test("a load that outlives it leaves the map empty, and a call after it "
+        "gets its own result", () async {
+      final s = _State()..gate = Completer<void>();
+      final old = s.loadDeviceClasses();
+      await pumpEventQueue();
+      expect(s.fetches, 1);
+
+      changeAccount(s);
+      final oldGate = s.gate!;
+      s.gate = Completer<void>();
+      s.notifications = 0;
+      final current = s.loadDeviceClasses();
+      oldGate.complete();
+
+      expect(await old, isFalse);
+      expect(s.deviceClasses, isEmpty);
+      expect(s.notifications, 0);
+      await pumpEventQueue();
+      expect(s.fetches, 2, reason: "the new call fetched itself");
+      s.gate!.complete();
+      expect(await current, isTrue);
+      expect(s.deviceClasses.keys, ["next"]);
+    });
+
+    test("a fetch that fails after it neither serves the stored copy nor "
+        "reports", () async {
+      final s = _State()
+        ..fail = true
+        ..gate = Completer<void>();
+      final old = s.loadDeviceClasses();
+      await pumpEventQueue();
+
+      changeAccount(s);
+      s.gate!.complete();
+
+      expect(await old, isFalse);
+      expect(s.deviceClasses, isEmpty);
+      expect(s.reads, 0, reason: "the stored copy is the gone account's");
+      expect(shown, isEmpty);
+    });
+
+    test("a stored copy read across it is not served", () async {
+      final s = _State()
+        ..fail = true
+        ..readGate = Completer<void>();
+      final old = s.loadDeviceClasses();
+      await pumpEventQueue();
+      expect(s.reads, 1, reason: "the failed fetch fell back to the store");
+
+      changeAccount(s);
+      s.readGate!.complete();
+
+      expect(await old, isFalse);
+      expect(s.deviceClasses, isEmpty);
+      expect(shown, isEmpty);
+    });
+
+    test("a background refetch that outlives it leaves the map empty",
+        () async {
+      final s = _State()..gate = Completer<void>();
+      final old = s.refetchDeviceClasses();
+      await pumpEventQueue();
+
+      changeAccount(s);
+      s.notifications = 0;
+      s.gate!.complete();
+
+      expect(await old, isFalse);
+      expect(s.deviceClasses, isEmpty);
+      expect(s.notifications, 0);
+    });
   });
 }

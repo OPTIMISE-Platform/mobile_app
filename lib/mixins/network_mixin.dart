@@ -61,23 +61,43 @@ mixin NetworkMixin on ChangeNotifier {
 
   bool loadingNetworks() => _networksMutex.isLocked;
 
+  /// The account epoch the last load started under. A call made after an
+  /// account change that waited for a load of the previous account fetches
+  /// itself, since that load discarded its result.
+  int? _networksLoadEpoch;
+
   Future<void> loadNetworks(BuildContext context) async {
+    final epoch = AccountEpoch.current;
     final locked = _networksMutex.isLocked;
     await _networksMutex.acquire();
-    if (locked) {
+    // A call from before an account change loads nothing, and a call joins
+    // only a load of its own account.
+    if (epoch != AccountEpoch.current ||
+        (locked && _networksLoadEpoch == epoch)) {
       _networksMutex.release();
       return;
     }
+    _networksLoadEpoch = epoch;
     try {
       networks.clear();
       notifyListeners();
       try {
-        networks.addAll(await NetworksService.getNetworks());
+        final fetched = await NetworksService.getNetworks();
+        // A load that outlived its account leaves the next one's list, its
+        // gateways and its groups alone.
+        if (epoch != AccountEpoch.current) return;
+        networks.addAll(fetched);
       } catch (e, s) {
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not load networks', e, s);
+          return;
+        }
         ErrorReporter.report('Could not load networks', e, s);
       }
       _networkByLocalId = null; // networks changed — drop the cached lookup
       await mergeGatewaysWithNetworks();
+      // The probes take up to a second; the groups may be the next account's.
+      if (epoch != AccountEpoch.current) return;
       _assignNetworksToDevicesAndGroups();
       await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices);
       notifyListeners();
@@ -122,20 +142,43 @@ mixin NetworkMixin on ChangeNotifier {
 
   bool loadingLocations() => _locationsMutex.isLocked;
 
+  /// The account epoch the last load started under. A call made after an
+  /// account change that waited for a load of the previous account fetches
+  /// itself, since that load discarded its result.
+  int? _locationsLoadEpoch;
+
   Future<void> loadLocations() async {
+    final epoch = AccountEpoch.current;
     final locked = _locationsMutex.isLocked;
     await _locationsMutex.acquire();
-    if (locked) {
+    // A call from before an account change loads nothing, and a call joins
+    // only a load of its own account.
+    if (epoch != AccountEpoch.current ||
+        (locked && _locationsLoadEpoch == epoch)) {
       _locationsMutex.release();
       return;
     }
-    locations.clear();
-    _locationsByDeviceId = null;
-    notifyListeners();
+    _locationsLoadEpoch = epoch;
+    // Single release in the finally: loadingLocations() is read off the
+    // mutex, so a path out that skips it leaves the tab spinning for good.
     try {
-      locations.addAll(await Future.wait(await LocationService.getLocations()));
-    } catch (e, s) {
-      ErrorReporter.report('Could not load locations', e, s);
+      locations.clear();
+      _locationsByDeviceId = null;
+      notifyListeners();
+      try {
+        final fetched =
+            await Future.wait(await LocationService.getLocations());
+        // A load that outlived its account leaves the next one's list alone:
+        // AppState.init loads locations only into an empty list.
+        if (epoch != AccountEpoch.current) return;
+        locations.addAll(fetched);
+      } catch (e, s) {
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not load locations', e, s);
+          return;
+        }
+        ErrorReporter.report('Could not load locations', e, s);
+      }
     } finally {
       _locationsByDeviceId = null;
       _locationsMutex.release();

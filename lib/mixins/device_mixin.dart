@@ -32,6 +32,7 @@ import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/joined_load.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
@@ -200,13 +201,26 @@ mixin DeviceMixin on ChangeNotifier {
   }
 
   Future<bool> _loadDeviceClasses(bool fallbackToCache) async {
+    final epoch = AccountEpoch.current;
     await _deviceClassesMutex.acquire();
     try {
       try {
-        _setDeviceClasses(await fetchDeviceClasses(), stored: false);
+        final fetched = await fetchDeviceClasses();
+        // A fetch that outlived its account leaves the next one's map alone.
+        if (epoch != AccountEpoch.current) return false;
+        _setDeviceClasses(fetched, stored: false);
       } catch (e, s) {
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not get device classes', e, s);
+          return false;
+        }
         final stored =
             fallbackToCache ? await _readStoredDeviceClasses() : null;
+        // The stored copy read before the wipe is the gone account's.
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not get device classes', e, s);
+          return false;
+        }
         if (stored == null) {
           ErrorReporter.report('Could not get device classes', e, s);
           return false;
@@ -224,10 +238,12 @@ mixin DeviceMixin on ChangeNotifier {
   }
 
   Future<bool> _loadCachedDeviceClasses() async {
+    final epoch = AccountEpoch.current;
     List<DeviceClass>? stored;
     await _deviceClassesMutex.acquire();
     try {
       stored = await _readStoredDeviceClasses();
+      if (epoch != AccountEpoch.current) return false;
       if (stored != null) _setDeviceClasses(stored, stored: true);
     } finally {
       _deviceClassesMutex.release();
@@ -240,8 +256,11 @@ mixin DeviceMixin on ChangeNotifier {
   }
 
   Future<bool> _refetchDeviceClasses() async {
+    final epoch = AccountEpoch.current;
     try {
-      _setDeviceClasses(await fetchDeviceClasses(), stored: false);
+      final fetched = await fetchDeviceClasses();
+      if (epoch != AccountEpoch.current) return false;
+      _setDeviceClasses(fetched, stored: false);
     } catch (e, s) {
       ErrorReporter.log('Could not refetch device classes', e, s);
       return false;
@@ -286,15 +305,18 @@ mixin DeviceMixin on ChangeNotifier {
   /// nothing about whether this load would have succeeded.
   Future<bool> _loadDeviceTypes(Duration maxAge,
       void Function(DateTime storedAt)? serveStale, bool quiet) async {
+    final epoch = AccountEpoch.current;
     await _deviceTypesMutex.acquire();
     try {
       final fetched = await fetchDeviceTypes(maxAge, serveStale: serveStale);
+      if (epoch != AccountEpoch.current) return false;
       deviceTypes.clear();
       for (final e in fetched) {
         deviceTypes[e.id] = e;
       }
     } catch (e, s) {
-      if (quiet) {
+      // Not the next account's failure to be told about.
+      if (quiet || epoch != AccountEpoch.current) {
         ErrorReporter.log('Could not get device types', e, s);
       } else {
         ErrorReporter.report('Could not get device types', e, s);
@@ -315,22 +337,30 @@ mixin DeviceMixin on ChangeNotifier {
     bool hasMissing() => ids.any(
         (id) => !deviceTypes.containsKey(id) && !_unavailableDeviceTypeIds.contains(id));
     if (!hasMissing()) return;
+    final epoch = AccountEpoch.current;
     // Not via loadDeviceTypes: joining a load that is already running there
     // returns without fetching, and that load may have been served from cache.
     await _deviceTypesMutex.acquire();
     try {
-      if (!hasMissing()) return;
+      // [typeIds] belong to the account of [epoch]: after a change they say
+      // nothing about the next account's types, nor its retry state.
+      if (epoch != AccountEpoch.current || !hasMissing()) return;
       final retryAfter = _deviceTypesRetryAfter;
       if (retryAfter != null && DateTime.now().isBefore(retryAfter)) return;
       final List<DeviceType> fetched;
       try {
         fetched = await fetchDeviceTypes(Duration.zero);
       } catch (e, s) {
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not reload device types', e, s);
+          return;
+        }
         _deviceTypesRetryAfter = DateTime.now().add(deviceTypesRetryDelay);
         // Logged only: the devices are on screen already, just without states.
         ErrorReporter.log('Could not reload device types', e, s);
         return;
       }
+      if (epoch != AccountEpoch.current) return;
       _deviceTypesRetryAfter = null;
       deviceTypes.clear();
       for (final e in fetched) {
@@ -679,25 +709,45 @@ mixin DeviceMixin on ChangeNotifier {
   // Device groups
   // ---------------------------------------------------------------------------
 
+  /// The account epoch the last load started under. A call made after an
+  /// account change that waited for a load of the previous account fetches
+  /// itself, since that load discarded its result.
+  int? _deviceGroupsLoadEpoch;
+
   Future<void> loadDeviceGroups() async {
+    final epoch = AccountEpoch.current;
     final locked = _deviceGroupsMutex.isLocked;
     await _deviceGroupsMutex.acquire();
-    if (locked) {
+    // A call from before an account change loads nothing, and a call joins
+    // only a load of its own account.
+    if (epoch != AccountEpoch.current ||
+        (locked && _deviceGroupsLoadEpoch == epoch)) {
       _deviceGroupsMutex.release();
       return;
     }
-    deviceGroups.clear();
-    notifyListeners();
+    _deviceGroupsLoadEpoch = epoch;
+    // Single release in the finally: loadingDeviceGroups() is read off the
+    // mutex, so a path out that skips it leaves the list spinning for good.
     try {
-      deviceGroups.addAll(
-        await Future.wait(await DeviceGroupsService.getDeviceGroups()),
-      );
-    } catch (e, s) {
-      ErrorReporter.report('Could not load device groups', e, s);
+      deviceGroups.clear();
+      notifyListeners();
+      try {
+        final fetched =
+            await Future.wait(await DeviceGroupsService.getDeviceGroups());
+        // A load that outlived its account leaves the next one's list alone.
+        if (epoch != AccountEpoch.current) return;
+        deviceGroups.addAll(fetched);
+      } catch (e, s) {
+        if (epoch != AccountEpoch.current) {
+          ErrorReporter.log('Could not load device groups', e, s);
+          return;
+        }
+        ErrorReporter.report('Could not load device groups', e, s);
+      }
+      _deviceGroupsLoadedOnce = true;
     } finally {
       _deviceGroupsMutex.release();
     }
-    _deviceGroupsLoadedOnce = true;
     notifyListeners();
   }
 

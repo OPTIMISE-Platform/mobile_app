@@ -154,19 +154,22 @@ mixin NotificationMixin on ChangeNotifier {
     loadNotifications(context);
   }
 
-  /// The account epoch the last load started under. A caller that waited for
-  /// that load fetches itself when the account changed meanwhile, since the
-  /// load it waited for discarded its result.
+  /// The account epoch the last load started under. A call made after an
+  /// account change that waited for a load of the previous account fetches
+  /// itself, since that load discarded its result.
   int? _notificationsLoadEpoch;
 
   Future<void> loadNotifications(BuildContext? context) async {
+    final epoch = AccountEpoch.current;
     final locked = _notificationsMutex.isLocked;
     await _notificationsMutex.acquire();
-    if (locked && _notificationsLoadEpoch == AccountEpoch.current) {
+    // A call from before an account change loads nothing, and a call joins
+    // only a load of its own account.
+    if (epoch != AccountEpoch.current ||
+        (locked && _notificationsLoadEpoch == epoch)) {
       _notificationsMutex.release();
       return;
     }
-    final epoch = AccountEpoch.current;
     _notificationsLoadEpoch = epoch;
     await _storage.delete(key: messageKey);
 

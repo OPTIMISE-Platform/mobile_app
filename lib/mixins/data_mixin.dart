@@ -23,6 +23,7 @@ import 'package:mobile_app/services/aspects.dart';
 import 'package:mobile_app/services/characteristics.dart';
 import 'package:mobile_app/services/concepts.dart';
 import 'package:mobile_app/services/functions.dart';
+import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/joined_load.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
@@ -49,18 +50,21 @@ mixin DataMixin on ChangeNotifier {
 
   Future<bool> _loadAspects(Duration maxAge,
       void Function(DateTime storedAt)? serveStale, bool quiet) async {
+    final epoch = AccountEpoch.current;
     try {
       // Swap after the fetch: clearing first would leave the map visibly
       // empty for the whole request, clearing at all is what drops entries
       // deleted on the backend.
       final fetched = await AspectsService.getAspects(
           maxAge: maxAge, serveStale: serveStale);
+      // A fetch that outlived its account leaves the next one's map alone.
+      if (epoch != AccountEpoch.current) return false;
       aspects.clear();
       for (final e in fetched) {
         aspects[e.id] = e;
       }
     } catch (e, s) {
-      _reportLoadFailure('Could not load aspects', e, s, quiet);
+      _reportLoadFailure('Could not load aspects', e, s, quiet, epoch);
       return false;
     }
     notifyListeners();
@@ -75,15 +79,17 @@ mixin DataMixin on ChangeNotifier {
 
   Future<bool> _loadConcepts(Duration maxAge,
       void Function(DateTime storedAt)? serveStale, bool quiet) async {
+    final epoch = AccountEpoch.current;
     try {
       final fetched = await ConceptsService.getConcepts(
           maxAge: maxAge, serveStale: serveStale);
+      if (epoch != AccountEpoch.current) return false;
       concepts.clear();
       for (final e in fetched) {
         concepts[e.id] = e;
       }
     } catch (e, s) {
-      _reportLoadFailure('Could not get concepts', e, s, quiet);
+      _reportLoadFailure('Could not get concepts', e, s, quiet, epoch);
       return false;
     }
     notifyListeners();
@@ -98,15 +104,17 @@ mixin DataMixin on ChangeNotifier {
 
   Future<bool> _loadCharacteristics(Duration maxAge,
       void Function(DateTime storedAt)? serveStale, bool quiet) async {
+    final epoch = AccountEpoch.current;
     try {
       final fetched = await CharacteristicsService.getCharacteristics(
           maxAge: maxAge, serveStale: serveStale);
+      if (epoch != AccountEpoch.current) return false;
       characteristics.clear();
       for (final e in fetched) {
         characteristics[e.id] = e;
       }
     } catch (e, s) {
-      _reportLoadFailure('Could not get characteristics', e, s, quiet);
+      _reportLoadFailure('Could not get characteristics', e, s, quiet, epoch);
       return false;
     }
     notifyListeners();
@@ -121,15 +129,17 @@ mixin DataMixin on ChangeNotifier {
 
   Future<bool> _loadNestedFunctions(Duration maxAge,
       void Function(DateTime storedAt)? serveStale, bool quiet) async {
+    final epoch = AccountEpoch.current;
     try {
       final fetched = await FunctionsService.getFunctions(
           maxAge: maxAge, serveStale: serveStale);
+      if (epoch != AccountEpoch.current) return false;
       platformFunctions.clear();
       for (final e in fetched) {
         platformFunctions[e.id] = e;
       }
     } catch (e, s) {
-      _reportLoadFailure('Could not get nested functions', e, s, quiet);
+      _reportLoadFailure('Could not get nested functions', e, s, quiet, epoch);
       return false;
     }
     notifyListeners();
@@ -137,10 +147,11 @@ mixin DataMixin on ChangeNotifier {
   }
 
   /// [quiet] loads run in the background over data already on screen, so
-  /// their failure is logged only.
+  /// their failure is logged only, as is that of a load that outlived the
+  /// account of [epoch].
   void _reportLoadFailure(
-      String message, Object e, StackTrace s, bool quiet) {
-    if (quiet) {
+      String message, Object e, StackTrace s, bool quiet, int epoch) {
+    if (quiet || epoch != AccountEpoch.current) {
       ErrorReporter.log(message, e, s);
     } else {
       ErrorReporter.report(message, e, s);

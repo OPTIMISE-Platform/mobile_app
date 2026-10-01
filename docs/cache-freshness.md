@@ -74,7 +74,7 @@ due. The pass does nothing before `init` has finished and in local mode.
   runs, including one from `refreshCache` (login, Settings).
 - Loaders share a running call through `JoinedLoad`, so a call joining a
   running one gets that call's result, whatever `maxAge` or fallback it asked
-  for.
+  for. Only a call started under the current `AccountEpoch` is joined.
 - The device refresh upserts its chunks over the old rows and prunes the rows
   it did not fetch only at the end, so a refresh dropped half-way leaves the
   old rows plus the chunks already written, and stays due.
@@ -90,10 +90,20 @@ due. The pass does nothing before `init` has finished and in local mode.
   after its request and the persisted notifications, all through
   `AccountEpoch.writeIfCurrent`. An account change also clears the persisted
   notifications, which the notification list falls back to offline, and the
-  list in memory. An
-  in-memory swap by a load that outlives a logout is not dropped, except the
-  notification list, and a load joined across the change through `JoinedLoad`
-  returns the old account's result.
+  list in memory. The epoch does not know the account, so a save that returns
+  after a logout and a new sign-in of the same account is dropped too; that
+  row is missing from Isar until the next refresh or list fetch writes it.
+  Accepted: the window is one request long, and the login refresh refills it.
+- A load that outlives the change leaves the maps and lists in memory alone
+  and logs its failure instead of reporting it; a loader that reports success
+  returns `false`. It does not notify, except a network load dropped after its
+  gateway merge, which notifies from `mergeGatewaysWithNetworks`. A call made
+  after the change does not join it, neither through `JoinedLoad` nor through
+  the mutex of the device groups, networks, locations and notifications, but
+  loads for the new account. A call made before the change and still waiting
+  on that mutex loads nothing. An `init` that outlives the change leaves
+  `AppState` uninitialized, so the next account runs its own, and a Settings
+  refresh that outlives it neither fails nor announces a reload.
 - A notification load that outlives the change neither shows, stores nor falls
   back to the stored set, nor reports its failure; one that waited for it
   fetches for the new account. The stored set is never the fallback while
