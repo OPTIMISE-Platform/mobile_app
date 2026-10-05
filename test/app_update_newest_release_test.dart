@@ -17,11 +17,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/services/app_update.dart';
 
-Map<String, dynamic> _release(String tag, {bool apk = true}) => {
+Map<String, dynamic> _release(String tag,
+        {bool apk = true, bool manifest = false}) =>
+    {
       "tag_name": tag,
       "assets": [
         {"name": "LICENSE"},
         if (apk) {"name": "app-release.apk"},
+        if (manifest) {"name": "manifest.plist"},
       ],
     };
 
@@ -47,6 +50,17 @@ void main() {
       _release("0.2.0-dev.14+416"),
     ];
     expect(AppUpdater.newestRelease(releases)?["tag_name"], "0.2.0-dev.14+416");
+  });
+
+  test("looks for the asset it is given, so iOS skips releases without a manifest", () {
+    // The iOS build attaches its manifest after the release already exists.
+    final releases = [
+      _release("0.2.0-dev.16+418"),
+      _release("0.2.0-dev.15+417", manifest: true),
+    ];
+    expect(
+        AppUpdater.newestRelease(releases, asset: AppUpdater.manifestAsset)?["tag_name"],
+        "0.2.0-dev.15+417");
   });
 
   test("returns null when nothing qualifies", () {

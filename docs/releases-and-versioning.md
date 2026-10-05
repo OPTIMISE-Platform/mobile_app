@@ -7,8 +7,8 @@ commits decide the version, and nothing in the tree is bumped by hand.
 ## Scope
 
 Covers `.github/workflows/android-release.yml`, the script
-`.github/scripts/release-version.sh` it calls, the iOS build it runs for
-prereleases, and the release topics the app subscribes to. Not about the
+`.github/scripts/release-version.sh` it calls, the iOS build it runs next
+to the APK, and the release topics the app subscribes to. Not about the
 signing material itself — the keystore, `key.properties` and the iOS
 certificate and profile are reconstructed from repository secrets at build
 time and exist nowhere in the tree.
@@ -18,7 +18,7 @@ time and exist nowhere in the tree.
 | Push to | Result |
 |---|---|
 | `dev` | APK and ad hoc IPA, tag `0.1.0-dev.3+412`, GitHub release with `prerelease: true` |
-| `master` | APK, tag `0.1.0+420`, GitHub release marked latest |
+| `master` | APK and ad hoc IPA, tag `0.1.0+420`, GitHub release marked latest |
 | either, plus pull requests | `checks.yml`: analyzer, `flutter test`, the versioning script's tests |
 
 A merge from `dev` to `master` builds and releases on its own, with a new build
@@ -65,9 +65,10 @@ The tag exists from the moment the `version` job is done, so:
 ## iOS
 
 The `ios` job builds an ad hoc IPA and attaches it as `mobile_app.ipa` to the
-same release, for prereleases only; stable releases stay APK-only for now. It
+same release, followed by a `manifest.plist` for installing it over the air. It
 runs after the release job, also when that job failed, because a failed device
-notification leaves a complete release behind.
+notification leaves a complete release behind. Until the job is done, a
+release has no IPA yet, and the app on iOS does not offer it.
 
 The iOS version is the tag's version without `-dev.K`, since
 `CFBundleShortVersionString` only takes numbers; the build number is the same
@@ -79,6 +80,13 @@ profile, base64). The Xcode project names the profile `optimise_25`, so a
 renewed profile has to keep that name. An ad hoc build only installs on the
 devices listed in the profile; adding a device means a new profile and a new
 `IOS_PROVISIONING_PROFILE`.
+
+An iPhone installs a release by opening
+`itms-services://?action=download-manifest&url=<manifest asset URL, percent-encoded>`.
+The app does this from its update dialog (`AppUpdater.showUpdateDialog`); iOS
+then asks, downloads and replaces the app itself. The asset URLs redirect to
+`release-assets.githubusercontent.com`, which the installer follows for both
+files, so nothing besides GitHub has to serve them.
 
 A local build uses the same export options:
 

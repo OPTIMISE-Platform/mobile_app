@@ -32,6 +32,7 @@ import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:mobile_app/services/cache_helper.dart';
 
@@ -50,6 +51,15 @@ class AppUpdater {
   );
 
   static final updateSupported = _updateSupported();
+
+  static const apkAsset = "app-release.apk";
+  static const ipaAsset = "mobile_app.ipa";
+  static const manifestAsset = "manifest.plist";
+
+  /// The asset an update starts from. iOS installs ad hoc builds over the air
+  /// from a manifest that points at the IPA.
+  static String get _updateAsset => Platform.isIOS ? manifestAsset : apkAsset;
+  static String get _packageAsset => Platform.isIOS ? ipaAsset : apkAsset;
 
   static late int currentBuild;
   static late int latestBuild;
@@ -77,7 +87,7 @@ class AppUpdater {
   }
 
   static bool _updateSupported() {
-    if (Platform.isAndroid &&
+    if ((Platform.isAndroid || Platform.isIOS) &&
         dotenv.env["DISTRIBUTOR"] == "github" &&
         dotenv.env["GITHUB_REPO"] != null &&
         AppVersion.build != null) {
@@ -152,7 +162,8 @@ class AppUpdater {
               "Update check failed: $url ${e.message} (status ${e.response?.statusCode})");
           return null; // couldn't determine — surface as "check again later"
         }
-        final newest = newestRelease(resp.data ?? const []);
+        final newest =
+            newestRelease(resp.data ?? const [], asset: _updateAsset);
         if (newest == null) {
           _foundUpdateAt = DateTime.now();
           return _foundUpdate = false;
@@ -176,35 +187,41 @@ class AppUpdater {
       _foundUpdateAt = DateTime.now();
 
       if (latestBuild > currentBuild) {
-        final asset = (decoded["assets"] as List<dynamic>)
-            .firstWhere((element) => element["name"] == "app-release.apk");
+        // A release whose iOS build is still running or failed has no IPA yet.
+        final asset = _assetNamed(decoded, _updateAsset);
+        final package = _assetNamed(decoded, _packageAsset);
+        if (asset == null || package == null) return _foundUpdate = false;
         updateUrl = asset["browser_download_url"];
-        downloadSize = asset["size"];
-        updateDate = DateTime.parse(asset["updated_at"]);
+        downloadSize = package["size"];
+        updateDate = DateTime.parse(package["updated_at"]);
         return _foundUpdate = true;
       }
       return _foundUpdate = false;
     });
   }
 
-  /// The release with the highest build number that ships an APK. GitHub does
+  /// The release with the highest build number that ships [asset]. GitHub does
   /// not list releases newest first: `0.2.0-dev.9` comes before `dev.14`.
   @visibleForTesting
-  static Map<String, dynamic>? newestRelease(List<dynamic> releases) {
+  static Map<String, dynamic>? newestRelease(List<dynamic> releases,
+      {String asset = apkAsset}) {
     Map<String, dynamic>? newest;
     int? newestBuild;
     for (final release in releases.whereType<Map<String, dynamic>>()) {
       final build = _buildOf(release["tag_name"]);
-      final assets = release["assets"];
-      final hasApk = assets is List &&
-          assets.any((a) => a is Map && a["name"] == "app-release.apk");
-      if (build == null || !hasApk) continue;
+      if (build == null || _assetNamed(release, asset) == null) continue;
       if (newestBuild == null || build > newestBuild) {
         newest = release;
         newestBuild = build;
       }
     }
     return newest;
+  }
+
+  static Map<dynamic, dynamic>? _assetNamed(Map<dynamic, dynamic> release, String name) {
+    final assets = release["assets"];
+    if (assets is! List) return null;
+    return assets.whereType<Map>().where((a) => a["name"] == name).firstOrNull;
   }
 
   static int? _buildOf(Object? tag) => tag is String && tag.contains("+")
@@ -256,6 +273,12 @@ class AppUpdater {
               ],
             ));
     if (proceed != true) {
+      return;
+    }
+    if (Platform.isIOS) {
+      final link = Uri.parse(
+          "itms-services://?action=download-manifest&url=${Uri.encodeComponent(updateUrl)}");
+      if (!await launchUrl(link)) _logger.e("Can't open $link");
       return;
     }
     final stream = (await downloadUpdate()).asBroadcastStream();
