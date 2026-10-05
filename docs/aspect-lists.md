@@ -27,17 +27,29 @@ aspect names (`joinAspectNames`).
 
 ## Finding the controlling state
 
-`DeviceState.controlsFor` pairs a reading with its controls through
-`matchAspects`, in three tiers:
+Each control picks its readings, and `DeviceState.controlsFor` returns the
+controls that picked a reading. The readings a control C chooses from are the
+non-controlling states of its service group whose function relates to C's:
+the special function config's `getAllRelatedControllingFunctions`, else the
+controlling functions sharing the function's concept. Among them C picks:
 
-1. controls with the same aspect set (all of them, so two still report "more
-   than one controlling service");
-2. otherwise the one control whose non-empty set is a subset of the reading's;
-3. otherwise the first control with the same first aspect, which is what the
-   app picked before aspect lists.
+1. all readings with the same aspect set as C, so two readings of one relay
+   both pair and two controls on one set still report "more than one
+   controlling service";
+2. otherwise, if C has aspects, the readings with the smallest aspect set
+   containing C's, among readings whose set is not that of another control of
+   C's function; all of them if they share one set, none if several sets have
+   that size;
+3. a control without aspects picks only readings without aspects.
 
-A reading without aspects pairs only with a control without aspects. The
-detail page's timestamp lookup uses the same tiers.
+A control that picks no reading gets its own row on the detail page. The rule
+lives in `DeviceState.controlsAmong` and `pairedReadings`; `controlsFor` (an
+extension in `function_config.dart`) binds it to the function configs.
+
+The first-aspect rule from before aspect lists, `legacyMatchAspects` (equal
+set, else the unique subset, else the first candidate with the same first
+aspect), is used only by the detail page's timestamp lookup and the Android
+toggle fallback below.
 
 ## Commands
 
@@ -54,7 +66,8 @@ detail page's timestamp lookup uses the same tiers.
   in either form.
 - **Android device controls** keep their ids, which carry only the first
   aspect. `NativePipe.controlsForToggle` finds the reading by service and path
-  first; without one it uses only the tier-3 rule.
+  and pairs it through `controlsFor`; without one the entry picks the control
+  through `legacyMatchAspects` on its own aspect.
 - **Device groups cached by an earlier version** have criteria without
   `aspect_ids`. While the Settings marker `device_groups_cached_with_aspect_lists`
   is unset, groups served from the cache carry

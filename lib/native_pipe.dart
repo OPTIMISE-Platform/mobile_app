@@ -124,7 +124,7 @@ class NativePipe {
   /// path of its reading, which settle which state it is; the aspect rule of an
   /// old sensor pin only breaks a tie between readings at that place. Without
   /// such a reading, or when the tie stays, the entry itself picks the control
-  /// by its aspect, as it did before aspect lists.
+  /// by [DeviceState.legacyMatchAspects], as it did before aspect lists.
   static List<DeviceState> controlsForToggle(
       DeviceState entry, List<String>? entryAspectIds, List<DeviceState> states, String controllingFunction) {
     final samePlace = states
@@ -140,7 +140,11 @@ class NativePipe {
       1 => samePlace.single,
       _ => DeviceState.resolveAspects(samePlace, entry.aspectId, entryAspectIds),
     };
-    return (measurement ?? entry).controlsFor(states, controllingFunction);
+    if (measurement != null) return measurement.controlsFor(states, controllingFunction);
+    return DeviceState.legacyMatchAspects(
+        states.where((s) =>
+            s.isControlling && s.functionId == controllingFunction && s.serviceGroupKey == entry.serviceGroupKey),
+        entry.aspectIds);
   }
 
   static void handleDeviceStateUpdate(DeviceState state) async {

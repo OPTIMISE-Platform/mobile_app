@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:math';
+
 import 'package:json_annotation/json_annotation.dart';
 import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/device_command.dart';
@@ -90,18 +92,59 @@ class DeviceState {
     return command;
   }
 
-  /// The controlling states of [controllingFunctionId] in [states] that act on
-  /// this measurement: same service group, paired by [matchAspects].
-  List<DeviceState> controlsFor(Iterable<DeviceState> states, String controllingFunctionId) => matchAspects(
-      states.where((s) => s.isControlling && s.functionId == controllingFunctionId && s.serviceGroupKey == serviceGroupKey),
-      aspectIds);
+  /// The controls of [controllingFunctionId] in [states] that act on this
+  /// reading: those of its service group whose [pairedReadings] include it.
+  /// The readings competing for a control are those of the same service group
+  /// whose function [relatedControllingFunctions] relates to
+  /// [controllingFunctionId].
+  List<DeviceState> controlsAmong(Iterable<DeviceState> states, String controllingFunctionId,
+      List<String>? Function(String functionId) relatedControllingFunctions) {
+    final related = <String, bool>{};
+    bool isRelated(DeviceState s) => related.putIfAbsent(
+        s.functionId, () => relatedControllingFunctions(s.functionId)?.contains(controllingFunctionId) ?? false);
+    if (isControlling || !isRelated(this)) return const [];
+    final readings = [
+      this,
+      ...states.where((s) =>
+          !s.isControlling && !identical(s, this) && s.serviceGroupKey == serviceGroupKey && isRelated(s)),
+    ];
+    final controls = states
+        .where((c) => c.isControlling && c.functionId == controllingFunctionId && c.serviceGroupKey == serviceGroupKey)
+        .toList(growable: false);
+    return controls
+        .where((c) => pairedReadings(c, readings, controls).any((r) => identical(r, this)))
+        .toList(growable: false);
+  }
 
-  /// The [candidates] that belong to a state on [aspectIds], in tiers: all with
-  /// an equal aspect set; else the one whose non-empty set is a subset
-  /// (output [a, b], input [a]) if it is unique; else the first with the same
-  /// first aspect, the one state that first aspect stood for before aspect
-  /// lists. Without aspects only candidates without aspects match.
-  static List<DeviceState> matchAspects(Iterable<DeviceState> candidates, List<String> aspectIds) {
+  /// The [readings] that [control] acts on, where [controls] are all controls
+  /// of its function competing for them: all readings with its aspect set;
+  /// else, for a control with aspects, the readings with the smallest aspect
+  /// set containing its own, if that set is the only one of its size. Readings
+  /// whose set equals that of one of [controls] belong to that control alone.
+  static List<DeviceState> pairedReadings(
+      DeviceState control, Iterable<DeviceState> readings, Iterable<DeviceState> controls) {
+    final aspects = control.aspectIds.toSet();
+    final key = aspects.join(",");
+    final sets = [for (final r in readings) (reading: r, aspects: r.aspectIds.toSet())];
+    final exact = [for (final s in sets) if (s.aspects.join(",") == key) s.reading];
+    if (exact.isNotEmpty || aspects.isEmpty) return exact;
+    final settled = {for (final c in controls) c.aspectIds.toSet().join(",")};
+    final open = sets
+        .where((s) => s.aspects.containsAll(aspects) && !settled.contains(s.aspects.join(",")))
+        .toList(growable: false);
+    if (open.isEmpty) return const [];
+    final size = open.map((s) => s.aspects.length).reduce(min);
+    final smallest = open.where((s) => s.aspects.length == size).toList(growable: false);
+    if (smallest.map((s) => s.aspects.join(",")).toSet().length != 1) return const [];
+    return [for (final s in smallest) s.reading];
+  }
+
+  /// The [candidates] that belong to a state on [aspectIds] by the rule from
+  /// before aspect lists, for lookups that know only the first aspect or seek
+  /// no control: all with an equal aspect set; else the one whose non-empty
+  /// set is a subset if it is unique; else the first with the same first
+  /// aspect. Without aspects only candidates without aspects match.
+  static List<DeviceState> legacyMatchAspects(Iterable<DeviceState> candidates, List<String> aspectIds) {
     final key = aspectIdsKey(aspectIds);
     final exact = candidates.where((s) => s.aspectKey == key).toList(growable: false);
     if (exact.isNotEmpty || aspectIds.isEmpty) return exact;

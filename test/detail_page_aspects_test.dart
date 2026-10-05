@@ -143,4 +143,57 @@ void main() {
     expect(find.text("Switch on"), findsNothing);
     expect(find.text("Switch off"), findsNothing);
   });
+
+  testWidgets("a control that picks no reading keeps a row of its own", (tester) async {
+    final d = device();
+    final get = dotenv.env['FUNCTION_GET_ON_OFF_STATE']!;
+    final on = dotenv.env['FUNCTION_SET_ON_STATE']!;
+    final off = dotenv.env['FUNCTION_SET_OFF_STATE']!;
+    addFunction(get, "Power state");
+    addFunction(on, "Switch on");
+    addFunction(off, "Switch off");
+    // Both readings contain the controls' aspect and are equally small, so
+    // the controls cannot tell which one they switch.
+    d.states
+      ..add(state(d, get, ["air", "inside"], false, value: true))
+      ..add(state(d, get, ["air", "outside"], false, value: true))
+      ..add(state(d, on, ["air"], true))
+      ..add(state(d, off, ["air"], true));
+
+    await pumpGolden(tester, DetailPage(d, null), dark: false);
+    // After the page's own value load, which fails without a backend.
+    d.states[0].value = true;
+    d.states[1].value = true;
+    d.notifyStateChanged();
+    await tester.pump();
+
+    expect(find.text("Power state"), findsNWidgets(2));
+    expect(find.text("Switch on"), findsOneWidget);
+    expect(find.text("Switch off"), findsOneWidget);
+  });
+
+  testWidgets("a control on fewer aspects than a reading with an exact control keeps its own row", (tester) async {
+    final d = device();
+    final get = dotenv.env['FUNCTION_GET_ON_OFF_STATE']!;
+    final on = dotenv.env['FUNCTION_SET_ON_STATE']!;
+    final off = dotenv.env['FUNCTION_SET_OFF_STATE']!;
+    addFunction(get, "Power state");
+    addFunction(on, "Switch on");
+    addFunction(off, "Switch off");
+    d.states
+      ..add(state(d, get, ["device", "lamp"], false, value: true))
+      ..add(state(d, on, ["device", "lamp"], true))
+      ..add(state(d, off, ["device", "lamp"], true))
+      ..add(state(d, on, ["device"], true));
+
+    await pumpGolden(tester, DetailPage(d, null), dark: false);
+    // After the page's own value load, which fails without a backend.
+    d.states.first.value = true;
+    d.notifyStateChanged();
+    await tester.pump();
+
+    expect(find.text("Power state"), findsOneWidget);
+    expect(find.text("Switch off"), findsNothing);
+    expect(find.text("Switch on"), findsOneWidget, reason: "the control on [device] alone");
+  });
 }

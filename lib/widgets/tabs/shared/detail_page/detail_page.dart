@@ -105,7 +105,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
   _displayTimestamp(DeviceState element, List<DeviceState> states, BuildContext context) {
     try {
-      final state = DeviceState.matchAspects(
+      final state = DeviceState.legacyMatchAspects(
           states.where((state) =>
               !state.isControlling &&
               state.serviceId == element.serviceId &&

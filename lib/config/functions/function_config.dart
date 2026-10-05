@@ -26,6 +26,7 @@ import 'package:mobile_app/config/functions/set_on_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
 import 'package:mobile_app/models/characteristic.dart';
+import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/shared/math_list.dart';
 import 'package:mobile_app/config/functions/get_color.dart';
 import 'package:mobile_app/config/functions/get_on_off_state.dart';
@@ -51,6 +52,23 @@ Map<String?, FunctionConfig> _specialConfigs() {
     dotenv.env['FUNCTION_GET_UPPER_POWER_INJECTION_LIMIT']: FunctionConfigGetUpperPowerInjectionLimit(),
     dotenv.env['FUNCTION_GET_BATTERY_LEVEL']: FunctionConfigGetBatteryLevel(),
   };
+}
+
+/// The controlling functions that act on a reading of [functionId]. Builds no
+/// default config, whose init fails on a concept without its base
+/// characteristic; a special config answers even when it answers null.
+List<String>? relatedControllingFunctionsOf(String functionId) {
+  final special = functionConfigs[functionId];
+  return special != null
+      ? special.getAllRelatedControllingFunctions()
+      : FunctionConfigDefault.relatedControllingFunctions(functionId);
+}
+
+extension ControlPairing on DeviceState {
+  /// The controls of [controllingFunctionId] in [states] that act on this
+  /// reading, with readings related to controls through the function configs.
+  List<DeviceState> controlsFor(Iterable<DeviceState> states, String controllingFunctionId) =>
+      controlsAmong(states, controllingFunctionId, relatedControllingFunctionsOf);
 }
 
 String roundNumbersString(dynamic value) {
@@ -139,7 +157,10 @@ class FunctionConfigDefault extends FunctionConfig {
   }
 
   @override
-  List<String>? getAllRelatedControllingFunctions() {
+  List<String>? getAllRelatedControllingFunctions() => relatedControllingFunctions(functionId);
+
+  /// The controlling functions sharing the concept of [functionId].
+  static List<String>? relatedControllingFunctions(String functionId) {
     final conceptId = AppState().platformFunctions[functionId]?.concept_id;
     if (conceptId == null) {
       return null;

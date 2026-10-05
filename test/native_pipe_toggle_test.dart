@@ -17,8 +17,12 @@
 import "dart:convert";
 
 import "package:flutter_test/flutter_test.dart";
+import "package:mobile_app/app_state.dart";
 import "package:mobile_app/models/device_state.dart";
+import "package:mobile_app/models/function.dart";
 import "package:mobile_app/native_pipe.dart";
+
+import "golden_helper.dart";
 
 const _get = "urn:infai:ses:measuring-function:on-off";
 const _on = "urn:infai:ses:controlling-function:on";
@@ -36,6 +40,17 @@ DeviceState _platformEntry(DeviceState reading) {
 }
 
 void main() {
+  setUpAll(() async {
+    await setUpGoldenEnvironment();
+  });
+
+  setUp(() {
+    AppState().platformFunctions[_get] = PlatformFunction(_get, "on-off", "concept-on-off", "Power");
+    AppState().platformFunctions[_on] = PlatformFunction(_on, "on", "concept-on-off", "On");
+  });
+
+  tearDown(resetAppStateForGolden);
+
   group("NativePipe.controlsForToggle", () {
     test("service and path pick the reading the entry was made for", () {
       final single = _state(_get, ["a"], "s1", "single");
@@ -48,22 +63,26 @@ void main() {
       expect(NativePipe.controlsForToggle(_platformEntry(single), null, states, _on), [same(singleInput)]);
     });
 
-    test("readings sharing their first aspect toggle through their one input", () {
+    test("a found reading pairs as on the detail page, not by its first aspect", () {
       final ab = _state(_get, ["a", "b"], "s1", "ab");
       final ac = _state(_get, ["a", "c"], "s1", "ac");
       final input = _state(_on, ["a"], "s1", "in");
-      final states = [ab, ac, input];
 
-      expect(NativePipe.controlsForToggle(_platformEntry(ab), null, states, _on), [same(input)]);
-      expect(NativePipe.controlsForToggle(_platformEntry(ac), null, states, _on), [same(input)]);
+      expect(NativePipe.controlsForToggle(_platformEntry(ab), null, [ab, ac, input], _on), isEmpty,
+          reason: "the input on fewer aspects than both readings picks neither");
+      expect(NativePipe.controlsForToggle(_platformEntry(ab), null, [ab, input], _on), [same(input)]);
+      final reading = _state(_get, ["a"], "s1", "reading");
+      final states = [reading, _state(_on, ["a", "b"], "s2", "in-b"), _state(_on, ["a", "c"], "s3", "in-c")];
+      expect(NativePipe.controlsForToggle(_platformEntry(reading), null, states, _on), isEmpty,
+          reason: "controls on more aspects than the reading do not pair");
     });
 
-    test("controls sharing only the first aspect fire the first of them, as before", () {
-      final reading = _state(_get, ["a"], "s1", "reading");
+    test("an entry without a reading fires the first control sharing its first aspect, as before", () {
       final first = _state(_on, ["a", "b"], "s2", "in-b");
-      final states = [reading, first, _state(_on, ["a", "c"], "s3", "in-c")];
+      final entry = DeviceState(true, "s-old", "group-1", _get, "a", false, null, null, "device-1", "old", null);
 
-      expect(NativePipe.controlsForToggle(_platformEntry(reading), null, states, _on), [same(first)]);
+      expect(NativePipe.controlsForToggle(entry, null, [first, _state(_on, ["a", "c"], "s3", "in-c")], _on),
+          [same(first)]);
     });
 
     test("an entry whose service is gone does not borrow another reading's aspects", () {
