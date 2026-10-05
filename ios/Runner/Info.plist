@@ -33,7 +33,7 @@
 	<true/>
 	<key>NSBonjourServices</key>
 	<array>
-		<string>_snrgy._tcp</string>
+		<string>_snrgy-mgwcore._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Required to discover local network devices</string>
