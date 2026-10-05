@@ -212,17 +212,23 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width;
-    final height = MediaQuery.of(context).size.height;
-    const m = 115.0;
-    final s = min((width < height ? width : height) * 0.25, m);
-    final size = Size(s, s);
     pos = (pos +
         ((total - lastDraw).inMicroseconds / _ArrowPainter.loopTime.inMicroseconds)) % 0.9;
     lastDraw = total;
 
-    return Container(
-        height: s,
+    // The arrows are placed as fractions of the canvas width, which has to be
+    // the width the circles are laid out in: the card's, not the screen's.
+    return LayoutBuilder(builder: (context, constraints) {
+    final width = constraints.maxWidth;
+    final height = MediaQuery.of(context).size.height;
+    const m = 115.0;
+    final s = min((width < height ? width : height) * 0.25, m);
+    final size = Size(s, s);
+
+    // Align loosens the constraints; the height was the parent's all along.
+    // Inside a column widget there is no parent height.
+    return Align(alignment: Alignment.topCenter, child: Container(
+        height: constraints.hasBoundedHeight ? constraints.maxHeight : s,
         width: s * 4,
         padding: const EdgeInsets.only(
             top: Spacing.md,
@@ -250,7 +256,7 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
             // CustomPaint(size: MediaQuery.of(context).size, painter: _flowPaintAc)
           ]),
           CustomPaint(
-              size: Size(max(width, m * 4), max(width, 130 * 4)),
+              size: Size(s * 4, max(s * 4, 130 * 4)),
               painter: _ArrowPainter(
                   widget._smSePvFlow._solarToBattery,
                   widget._smSePvFlow._solarToHousehold,
@@ -262,7 +268,8 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
                   widget._smSePvFlow._chargingViaInverter,
                   pos
               ))
-        ]));
+        ])));
+    });
   }
 }
 

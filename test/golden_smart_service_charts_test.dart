@@ -21,6 +21,7 @@ import 'package:dio/dio.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/indicator.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/widget_info.dart';
@@ -59,6 +60,7 @@ void main() {
     Map<String, dynamic> widgetData, {
     required bool dark,
     Duration settle = const Duration(milliseconds: 100),
+    bool inCard = false,
   }) async {
     final w = (await SmartServiceModuleWidget.fromWidgetInfo(
         name, WidgetInfo.fromJson(widgetData)))!;
@@ -70,13 +72,20 @@ void main() {
     await tester.runAsync(() => w.refresh());
     await pumpGolden(
       tester,
-      Scaffold(body: Builder(builder: (c) => w.build(c, false))),
+      Scaffold(
+          body: Builder(
+              builder: (c) => inCard
+                  // The dashboard's card: its margin and inner padding.
+                  ? Card(
+                      margin: const EdgeInsets.symmetric(horizontal: Spacing.lg, vertical: Spacing.sm),
+                      child: Padding(padding: const EdgeInsets.all(Spacing.md), child: w.build(c, false)))
+                  : w.build(c, false))),
       dark: dark,
       settle: settle,
     );
     final suffix = dark ? "dark" : "light";
     await expectLater(find.byType(MaterialApp),
-        matchesGoldenFile("goldens/smart_service_${name}_$suffix.png"));
+        matchesGoldenFile("goldens/smart_service_$name${inCard ? "_card" : ""}_$suffix.png"));
   }
 
   // The two-digit texts on the chart's bottom axis, left to right, as
@@ -216,6 +225,17 @@ void main() {
           "batteryLevelRequest": request("/widget-data/pv-flow/battery"),
         },
       }, dark: dark);
+      // In the dashboard the card is narrower than the screen.
+      await renderWidget(tester, "pv_flow", {
+        "widget_type": "pv_flow",
+        "widget_data": {
+          "chargingViaInverter": false,
+          "solarGenerationRequest": request("/widget-data/pv-flow/solar"),
+          "chargePowerRequest": request("/widget-data/pv-flow/charge"),
+          "gridConsumptionRequests": [request("/widget-data/pv-flow/grid")],
+          "batteryLevelRequest": request("/widget-data/pv-flow/battery"),
+        },
+      }, dark: dark, inCard: true);
 
       resetAppStateForGolden();
       resetGoldenBackend();
