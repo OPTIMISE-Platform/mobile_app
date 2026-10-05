@@ -23,6 +23,7 @@ import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -50,10 +51,9 @@ class NativePipe {
             }
           });
           final resp = json.encode(devices
-              .map((e) => e.states)
-              .expand((e) => e)
-              .where((e) =>
-                  e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'])
+              .expand((d) => d.states.where((e) =>
+                  e.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'] &&
+                  isSwitchableOnOff(e, d.states)))
               .toList());
           return resp;
         case "setToggle":

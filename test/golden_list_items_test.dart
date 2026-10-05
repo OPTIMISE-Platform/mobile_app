@@ -68,6 +68,33 @@ void main() {
         "path",
         "group",
       ));
+      // Without a control the list shows no toggle.
+      d.states.add(DeviceState(
+        null,
+        "service-1",
+        "service-group-1",
+        dotenv.env["FUNCTION_SET_ON_STATE"]!,
+        "aspect-1",
+        true,
+        null,
+        null,
+        d.id,
+        "path",
+        "group",
+      ));
+      d.states.add(DeviceState(
+        null,
+        "service-1",
+        "service-group-1",
+        dotenv.env["FUNCTION_SET_OFF_STATE"]!,
+        "aspect-1",
+        true,
+        null,
+        null,
+        d.id,
+        "path",
+        "group",
+      ));
     }
     return d;
   }

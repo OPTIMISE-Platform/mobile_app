@@ -56,6 +56,32 @@ void main() {
         "path",
         "group",
       ));
+      device.states.add(DeviceState(
+        null,
+        "service-$serviceGroup",
+        serviceGroup,
+        dotenv.env["FUNCTION_SET_ON_STATE"]!,
+        "aspect-1",
+        true,
+        null,
+        null,
+        device.id,
+        "path",
+        "group",
+      ));
+      device.states.add(DeviceState(
+        null,
+        "service-$serviceGroup",
+        serviceGroup,
+        dotenv.env["FUNCTION_SET_OFF_STATE"]!,
+        "aspect-1",
+        true,
+        null,
+        null,
+        device.id,
+        "path",
+        "group",
+      ));
     }
     device.notifyStateChanged();
   }

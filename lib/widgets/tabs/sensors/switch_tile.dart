@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/config/functions/get_on_off_state.dart';
+import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
@@ -32,6 +33,21 @@ enum Unavailability { offline, notLocal }
 /// as a switch tile.
 bool isOnOffReading(String functionId) =>
     functionConfigs[functionId] is FunctionConfigGetOnOffState;
+
+/// Whether [state] is an on/off reading that a control among [states] can
+/// switch. The binary-state function also reads motion, contacts and button
+/// inputs, which are no switch.
+///
+/// A group pairs by device class, so any control in it counts; a device pairs
+/// by service group and aspects, as the toggle does.
+bool isSwitchableOnOff(DeviceState state, Iterable<DeviceState> states, {bool isGroup = false}) {
+  if (state.isControlling || !isOnOffReading(state.functionId)) return false;
+  final controls = functionConfigs[state.functionId]!.getAllRelatedControllingFunctions() ?? const [];
+  if (isGroup) {
+    return states.any((s) => s.isControlling && controls.contains(s.functionId));
+  }
+  return controls.any((f) => state.controlsFor(states, f).isNotEmpty);
+}
 
 /// Reads a device's boolean or a group's list of member values.
 ///

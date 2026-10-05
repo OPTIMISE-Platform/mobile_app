@@ -916,7 +916,13 @@ class _SensorValuesState extends State<SensorValues>
         final title =
             pin.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
         final icon = sensorIcon(pin.iconName);
-        final switchTile = !pin.isControlling && isOnOffReading(pin.functionId);
+        final states = device?.states ?? group?.states;
+        // Without a state yet the pin's function is all there is to go by.
+        final switchTile = !pin.isControlling &&
+            isOnOffReading(pin.functionId) &&
+            (state == null ||
+                states == null ||
+                isSwitchableOnOff(state, states, isGroup: group != null));
         final reading = onOffReadingOf(state?.value);
         final unavailability = device != null
             ? _unavailability(device)

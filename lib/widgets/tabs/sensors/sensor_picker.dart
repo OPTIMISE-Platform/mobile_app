@@ -567,7 +567,7 @@ class _ValuePickerState extends State<_ValuePicker> {
           ? const Icon(Icons.input)
           // The page shows an on/off reading as a switch, not a value with a
           // history.
-          : isOnOffReading(state.functionId)
+          : isSwitchableOnOff(state, _all, isGroup: widget.target.device == null)
           ? const Icon(Icons.toggle_on_outlined)
           : const Icon(Icons.show_chart),
       title: Text(sensorTitle(state)),

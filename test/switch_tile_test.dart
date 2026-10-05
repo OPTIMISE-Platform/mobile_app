@@ -63,6 +63,45 @@ void main() {
     });
   });
 
+  group('isSwitchableOnOff', () {
+    // The Shelly 1PM Gen4 reads its relay and its button input with the same
+    // binary-state function; only the relay has a control.
+    DeviceState state(String function, bool controlling, List<String> aspects, {String? groupId}) =>
+        DeviceState(null, 'svc', 'group-1', function, null, controlling, groupId, null,
+            groupId == null ? 'shelly' : null, 'path', null,
+            aspectIds: aspects);
+    // Built per test: the function ids come from the environment set up above.
+    List<DeviceState> shelly() => [
+          state(onOffFunction, false, ['device']),
+          state(onOffFunction, false, ['button']),
+          state(setOnFunction, true, ['device']),
+          state(setOffFunction, true, ['device']),
+        ];
+
+    test('a reading with a control on its aspect is a switch', () {
+      final device = shelly();
+      expect(isSwitchableOnOff(device[0], device), isTrue);
+    });
+
+    test('a reading no control pairs with is none', () {
+      final device = shelly();
+      expect(isSwitchableOnOff(device[1], device), isFalse);
+      expect(isSwitchableOnOff(device[0], [device[0]]), isFalse);
+    });
+
+    test('a control is no switch reading itself', () {
+      final device = shelly();
+      expect(isSwitchableOnOff(device[2], device), isFalse);
+    });
+
+    test('a group pairs with any control, since its criteria carry no aspect', () {
+      final reading = state(onOffFunction, false, [], groupId: 'g');
+      expect(isSwitchableOnOff(reading, [reading, state(setOnFunction, true, [], groupId: 'g')], isGroup: true),
+          isTrue);
+      expect(isSwitchableOnOff(reading, [reading], isGroup: true), isFalse);
+    });
+  });
+
   test('a toggle switches off what is on, and on what is off or mixed', () {
     expect(onOffTargetFunction(OnOffReading.on), setOffFunction);
     expect(onOffTargetFunction(OnOffReading.off), setOnFunction);

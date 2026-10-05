@@ -176,18 +176,15 @@ void main() {
     expect(reading.value, 5);
   });
 
-  testWidgets("a device type without the control toasts and sends nothing", (tester) async {
+  testWidgets("a device type without the control gets no toggle in the list", (tester) async {
+    // The binary-state function also reads motion, contacts and button inputs.
     final backend = FakeBackend();
     serveGoldenBackend(backend);
-    final (d, reading) = lamp(withControls: false);
-    final toggle = await mountToggle(tester, d);
+    final (d, _) = lamp(withControls: false);
+    await pumpGolden(tester, Scaffold(body: DeviceListItem(d, null, position: SlicePosition.only)), dark: false);
 
-    await tester.runAsync(toggle);
-    await tester.pump();
-
-    expect(toasts, ["Found no controlling service, check device type!"]);
+    expect(find.byType(IconButton), findsNothing);
     expect(backend.requests, isEmpty);
-    expect(reading.transitioning, isFalse);
   });
 
   testWidgets("the shared action resolves a reading's control and refreshes the reading", (tester) async {

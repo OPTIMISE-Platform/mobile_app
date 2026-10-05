@@ -32,6 +32,7 @@ import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 
@@ -68,8 +69,8 @@ class _DeviceListItemState extends State<DeviceListItem> {
       final device = widget._device;
       final List<Widget> trailingWidgets = [];
       final filteredStates = device.states.where((element) =>
-          !element.isControlling &&
-          element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE']);
+          element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'] &&
+          isSwitchableOnOff(element, device.states));
       filteredStates.forEach((element) {
         trailingWidgets.add(Container(
           width: MediaQuery.textScalerOf(context).scale(50),

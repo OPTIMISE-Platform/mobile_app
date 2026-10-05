@@ -93,7 +93,11 @@ a fresh value from the device.
   resolves the control from the reading; `toggleThroughControl` takes one the
   caller resolved (the sensors page's group tiles). Both show a spinner, toast
   a non-200 with the backend message, read the value back and return whether
-  that read-back succeeded.
+  that read-back succeeded. The device list, the sensors page and the Android
+  widget offer a toggle only where `isSwitchableOnOff`
+  (`lib/widgets/tabs/sensors/switch_tile.dart`) finds a control for the
+  reading: the binary-state function `FUNCTION_GET_ON_OFF_STATE` names also
+  reads motion, contacts and button inputs.
 - The Android widget (`lib/native_pipe.dart`) returns the responses as they
   are.
 

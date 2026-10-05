@@ -22,6 +22,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
+import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
@@ -94,9 +95,10 @@ void main() {
         ));
     semantics.dispose();
 
-    // A reading without exactly one control is passive and toasts nothing.
-    expect(labelOf(tester, 'Meter'), 'On');
-    expect(switchOf(tester, 'Meter').onChanged, isNull);
+    // A reading no control can switch is no switch tile: the binary-state
+    // function also reads motion, contacts and button inputs.
+    expect(inCard('Meter', find.byType(SwitchTileFooter)), findsNothing);
+    expect(inCard('Meter', find.byType(Switch)), findsNothing);
     await tester.tap(find.text('Meter'));
     await settle(tester);
     expect(backend.commandsFor('meter').map((c) => c['function_id']),
