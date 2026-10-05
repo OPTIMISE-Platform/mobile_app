@@ -649,6 +649,7 @@ mixin DeviceMixin on ChangeNotifier {
       }
       if (generation != _devicesGeneration) return;
       final newDevices = page.devices;
+      if (page.fromCache) forgetCachedConnectionStates(newDevices);
       totalDevices = page.total;
 
       _devicesLoadedOnce = true;
@@ -725,6 +726,17 @@ mixin DeviceMixin on ChangeNotifier {
       if (device.connection_state == d.connection_state) continue;
       device.connection_state = d.connection_state;
       device.notifyStateChanged();
+    }
+  }
+
+  /// Marks [devices] read from the cache as of unknown connection state. The
+  /// cache holds the state of its last refresh, and devices behind a gateway
+  /// never get the gateway's answer written back, so a cached "offline" showed
+  /// as a chip until [_refreshConnectionStatuses] took it back.
+  @visibleForTesting
+  static void forgetCachedConnectionStates(Iterable<DeviceInstance> devices) {
+    for (final d in devices) {
+      d.connection_state = DeviceConnectionStatus.unknown;
     }
   }
 

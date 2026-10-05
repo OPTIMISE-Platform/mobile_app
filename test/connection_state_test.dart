@@ -23,6 +23,17 @@ DeviceInstance _device(String id, DeviceConnectionStatus state) =>
     DeviceInstance(id, "local-$id", id, [], "dt", false, "owner", id, state);
 
 void main() {
+  test("a cached device's connection state counts as unknown until refreshed", () {
+    // A cached "offline" showed as a chip the refresh then took back.
+    final cached = [
+      _device("a", DeviceConnectionStatus.offline),
+      _device("b", DeviceConnectionStatus.online),
+    ];
+    DeviceMixin.forgetCachedConnectionStates(cached);
+    expect(cached.map((d) => d.connection_state),
+        everyElement(DeviceConnectionStatus.unknown));
+  });
+
   group("applyConnectionStates", () {
     test("copies the state onto the matching device", () {
       final target = [_device("a", DeviceConnectionStatus.online)];
