@@ -21,6 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/device_type.dart';
@@ -195,5 +196,35 @@ void main() {
     expect(find.text("Power state"), findsOneWidget);
     expect(find.text("Switch off"), findsNothing);
     expect(find.text("Switch on"), findsOneWidget, reason: "the control on [device] alone");
+  });
+
+  testWidgets("a group control on its aspects and the one on its device class are named apart", (tester) async {
+    final thermostat = DeviceClass("class-thermostat", "Thermostat", "");
+    AppState().deviceClasses[thermostat.id] = thermostat;
+    AppState().aspects["target"] = Aspect("target", "Target", null);
+    AppState().aspects["reading"] = Aspect("reading", "Reading", null);
+    const setTemperature = "$controllingFunctionPrefix:set-temperature";
+    addFunction(setTemperature, "Set-Temperature");
+    // A controlling function yields its device-class criterion and, since
+    // device-repository combines it with aspects, one per aspect.
+    final criteria = [
+      {"aspect_id": "", "device_class_id": thermostat.id, "function_id": setTemperature, "interaction": "request"},
+      {"aspect_id": "target", "aspect_ids": ["target"], "device_class_id": "", "function_id": setTemperature, "interaction": "request"},
+      {"aspect_id": "reading", "aspect_ids": ["reading"], "device_class_id": "", "function_id": setTemperature, "interaction": "request"},
+    ].map(DeviceGroupCriteria.fromJson).toList();
+    // The page waits until the members are among the loaded devices; group
+    // member ids are at least 57 characters long.
+    final memberId = "urn:infai:ses:device:${'0' * 36}";
+    AppState().devices.add(DeviceInstance(memberId, "thermostat-local", "Hall thermostat", null, "thermostat", false,
+        "owner-1", "Hall thermostat", DeviceConnectionStatus.online));
+    final group = DeviceGroup("group-1", "Thermostats", criteria, "", [memberId], null)..prepareStates();
+
+    await pumpGolden(tester, DetailPage(null, group), dark: false);
+
+    expect(find.text("Set-Temperature"), findsNWidgets(3));
+    expect(find.text("Thermostat"), findsOneWidget);
+    expect(find.text("Target"), findsOneWidget);
+    expect(find.text("Reading"), findsOneWidget);
+    expect(find.text("MISSING_ASPECT_NAME"), findsNothing);
   });
 }

@@ -24,6 +24,7 @@ import "package:mobile_app/models/aspect.dart";
 import "package:mobile_app/models/concept.dart";
 import "package:mobile_app/models/content.dart";
 import "package:mobile_app/models/content_variable.dart";
+import "package:mobile_app/models/device_class.dart";
 import "package:mobile_app/models/device_instance.dart";
 import "package:mobile_app/models/device_state.dart";
 import "package:mobile_app/models/device_type.dart";
@@ -397,6 +398,26 @@ void main() {
 
       expect(sensorSubtitle(inside, siblings, null), "Air, Inside");
       expect(sensorSubtitle(outside, siblings, null), "Air, Outside");
+    });
+
+    test("a group control without aspects is named by its device class", () {
+      AppState().aspects["water"] = aspects[1];
+      AppState().deviceClasses["class-1"] = DeviceClass("class-1", "Thermostat", "");
+      DeviceState groupControl(List<String> aspectIds, String? deviceClassId) =>
+          DeviceState(null, null, null, _control, null, true, "group-1", deviceClassId, null, null, null, aspectIds: aspectIds);
+      final byClass = groupControl([], "class-1");
+      final byAspect = groupControl(["water"], "");
+      final siblings = [byClass, byAspect];
+
+      expect(sensorSubtitle(byClass, siblings, null), "Thermostat");
+      expect(sensorSubtitle(byAspect, siblings, null), "Water");
+    });
+
+    test("an unknown device class gets its own placeholder", () {
+      final byClass = DeviceState(null, null, null, _control, null, true, "group-1", "class-gone", null, null, null,
+          aspectIds: const []);
+
+      expect(aspectsLabel(byClass, missing: "MISSING_ASPECT", missingClass: "MISSING_CLASS"), "MISSING_CLASS");
     });
   });
 

@@ -34,7 +34,6 @@ import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 
 import 'package:mobile_app/app_state.dart';
-import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -47,6 +46,7 @@ import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
+import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
@@ -128,9 +128,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
   String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device) {
     String subtitle = "";
     if (states.any((s) => s.functionId == element.functionId && s != element && s.aspectKey != element.aspectKey)) {
-      subtitle += element.aspectIds.isEmpty
-          ? "MISSING_ASPECT_NAME"
-          : joinAspectNames(AppState().aspects.values, element.aspectIds, missing: "MISSING_ASPECT_NAME");
+      subtitle += aspectsLabel(element, missing: "MISSING_ASPECT_NAME", missingClass: "MISSING_DEVICE_CLASS_NAME");
     }
     if (device != null &&
         element.serviceGroupKey != null &&

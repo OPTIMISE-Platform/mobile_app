@@ -23,7 +23,9 @@ sorted. `DeviceState.aspectIds` holds that list, `aspectId` is its first entry,
 States are de-duplicated by `aspectKey`, not by the first aspect: outputs
 `[air, inside]` and `[air, outside]` are two states. Row keys in the sensor
 picker and the detail page use `aspectKey` for the same reason. Labels join all
-aspect names (`joinAspectNames`).
+aspect names (`joinAspectNames`). A group row without aspects is labelled with
+the device class its criterion names (`aspectsLabel`): device-repository gives
+a controlling function a device-class criterion next to its aspect criteria.
 
 ## Finding the controlling state
 

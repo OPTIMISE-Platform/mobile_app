@@ -35,6 +35,19 @@ String sensorTitle(DeviceState state) {
   return function?.name ?? 'MISSING_FUNCTION_NAME';
 }
 
+/// The aspect names of [state]; for one without aspects, the name of the
+/// device class a group criterion names, as a group lists a control by both.
+/// An unknown or absent aspect contributes [missing], an unknown class
+/// [missingClass], or nothing when that is null.
+String aspectsLabel(DeviceState state, {String? missing, String? missingClass}) {
+  if (state.aspectIds.isNotEmpty) {
+    return joinAspectNames(AppState().aspects.values, state.aspectIds, missing: missing);
+  }
+  final classId = state.deviceClassId;
+  if (classId == null || classId.isEmpty) return missing ?? '';
+  return AppState().deviceClasses[classId]?.name ?? missingClass ?? '';
+}
+
 /// Disambiguating detail (aspect and/or service group), empty when the
 /// function name alone is already unique for [device].
 ///
@@ -51,7 +64,7 @@ String sensorSubtitle(
         s != state &&
         s.aspectKey != state.aspectKey,
   )) {
-    subtitle += joinAspectNames(AppState().aspects.values, state.aspectIds);
+    subtitle += aspectsLabel(state);
   }
   final groupKey = state.serviceGroupKey;
   if (device != null &&
