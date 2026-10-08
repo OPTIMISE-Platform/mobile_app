@@ -19,6 +19,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
@@ -155,6 +156,91 @@ void main() {
         ["a", "c"],
         ["a", "d"],
         [null, "c"],
+      ]);
+    });
+  });
+
+  group("DeviceGroup.shownStates", () {
+    const setOn = "$controllingFunctionPrefix:set-on";
+    setUp(() {
+      AppState().platformFunctions["f"] = PlatformFunction("f", "f", "concept", "F");
+      AppState().platformFunctions[setOn] = PlatformFunction(setOn, setOn, "concept", "Switch on");
+      for (final a in [
+        Aspect("air", "Air", [Aspect("inside", "Inside", null)]),
+        Aspect("device", "Device", null),
+        Aspect("lighting", "Lighting", null),
+      ]) {
+        AppState().aspects[a.id] = a;
+      }
+    });
+
+    Map<String, dynamic> row(String functionId, List<String> aspectIds, {String deviceClassId = ""}) => {
+          "aspect_id": aspectIds.isEmpty ? "" : ([...aspectIds]..sort()).first,
+          if (aspectIds.isNotEmpty) "aspect_ids": aspectIds,
+          "device_class_id": deviceClassId,
+          "function_id": functionId,
+          "interaction": "request",
+        };
+
+    List<List<String>> shown(List<Map<String, dynamic>> criteria) {
+      final group = DeviceGroup("group-1", "Living room lamps", criteria.map(DeviceGroupCriteria.fromJson).toList(), "", [], null)
+        ..prepareStates();
+      return group.shownStates.map((s) => [s.functionId, ...s.aspectIds]).toList();
+    }
+
+    test("the subsets of a combination are left out, per function", () {
+      expect(
+          shown([
+            row("f", ["device", "lighting"]),
+            row("f", ["device"]),
+            row("f", ["lighting"]),
+            row(setOn, ["device", "lighting"]),
+            row(setOn, ["device"]),
+            row(setOn, ["lighting"]),
+          ]),
+          [
+            ["f", "device", "lighting"],
+            [setOn, "device", "lighting"],
+          ]);
+    });
+
+    test("an ancestor aspect is left out next to its descendant", () {
+      expect(shown([row("f", ["air"]), row("f", ["inside"])]), [
+        ["f", "inside"],
+      ]);
+    });
+
+    test("unrelated aspects, rows without aspects and other device classes stay", () {
+      expect(
+          shown([
+            row(setOn, ["device"]),
+            row(setOn, ["lighting"]),
+            row("f", [], deviceClassId: "class-lamp"),
+            row("f", ["device"], deviceClassId: "class-lamp"),
+            row("f", ["device", "lighting"]),
+          ]),
+          [
+            [setOn, "device"],
+            [setOn, "lighting"],
+            ["f"],
+            ["f", "device"],
+            ["f", "device", "lighting"],
+          ]);
+    });
+
+    test("a control on a device class is left out next to controls of its function on aspects", () {
+      expect(
+          shown([
+            row(setOn, [], deviceClassId: "class-thermostat"),
+            row(setOn, ["device"]),
+            row("f", [], deviceClassId: "class-thermostat"),
+          ]),
+          [
+            [setOn, "device"],
+            ["f"],
+          ]);
+      expect(shown([row(setOn, [], deviceClassId: "class-thermostat")]), [
+        [setOn],
       ]);
     });
   });

@@ -27,6 +27,20 @@ aspect names (`joinAspectNames`). A group row without aspects is labelled with
 the device class its criterion names (`aspectsLabel`): device-repository gives
 a controlling function a device-class criterion next to its aspect criteria.
 
+## Group rows
+
+device-repository adds every subset of a variable's aspects, with each aspect
+also replaced by its ancestors, as a criterion of its own, so a group of lamps
+on `[device, lighting]` also has `[device]` and `[lighting]`. All of them become
+states, and pins and Android controls on any of them keep working.
+`DeviceGroup.shownStates` drops a state when another one of the same function,
+kind and device class is more specific: each of its aspects is one of the
+other's or an ancestor of one (`aspectsCover`), and not the other way round.
+States without aspects stay, except a control on a device class next to a
+control of its function on aspects, since it would act on all of them at once.
+The detail page and the sensor picker list only `shownStates`; values are still
+loaded for all states.
+
 ## Finding the controlling state
 
 Each control picks its readings, and `DeviceState.controlsFor` returns the

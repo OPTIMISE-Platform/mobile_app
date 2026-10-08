@@ -180,7 +180,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       if (device != null) {
         states = device.states;
       } else {
-        states = deviceGroup!.states;
+        states = deviceGroup!.shownStates;
       }
 
       final connectionStatus = device?.connection_state;

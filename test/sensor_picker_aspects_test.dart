@@ -22,6 +22,7 @@ import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/content.dart';
 import 'package:mobile_app/models/content_variable.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/sensor_pin.dart';
@@ -104,6 +105,67 @@ void main() {
     expect(rowKeys, hasLength(2));
     expect(rowKeys, everyElement(isNot(contains("#"))),
         reason: "each value needs its own row key, not one repeated by position");
+
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+  });
+
+  testWidgets("a group lists a value once on its most specific aspects", (tester) async {
+    await warmUpMgwStorage(tester);
+    final backend = FakeBackend();
+    backend.serveJson("GET", "/device-repository/device-groups", 200, []);
+    backend.serveJson("GET", "/device-repository/extended-hubs", 200, []);
+    backend.serveJson("GET", "/device-repository/device-types", 200, []);
+    backend.serveJson("GET", "/device-repository/user-device-types", 200, []);
+    backend.serveDevicesPaged([]);
+    serveGoldenBackend(backend);
+
+    late BuildContext capturedContext;
+    await pumpGolden(
+      tester,
+      Builder(builder: (context) {
+        capturedContext = context;
+        return const SizedBox();
+      }),
+      dark: false,
+    );
+    unawaited(pickSensors(capturedContext));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    // After the picker's own metadata load, which replaces what it cannot fetch.
+    AppState().platformFunctions["binary"] = PlatformFunction("binary", "binary", "", "Binary State");
+    for (final id in ["device", "lighting"]) {
+      AppState().aspects[id] = Aspect(id, id == "device" ? "Device" : "Lighting", null);
+    }
+    // device-repository adds the subsets of [device, lighting] as criteria of
+    // their own.
+    AppState().deviceGroups.add(DeviceGroup("lamps", "Living room lamps", [
+      for (final aspects in [
+        ["device", "lighting"],
+        ["device"],
+        ["lighting"],
+      ])
+        DeviceGroupCriteria.fromJson({
+          "aspect_id": aspects.first,
+          "aspect_ids": aspects,
+          "device_class_id": "",
+          "function_id": "binary",
+          "interaction": "request",
+        }),
+    ], "", [], null));
+
+    await tester.tap(find.text("Groups"));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await tester.tap(find.text("Living room lamps"));
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    expect(find.text("Binary State"), findsOneWidget);
 
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 50));

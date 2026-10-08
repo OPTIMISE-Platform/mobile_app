@@ -21,6 +21,7 @@ import 'package:isar_community/isar.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/models/network.dart';
@@ -131,6 +132,31 @@ class DeviceGroup {
         states.add(state);
       }
     }
+  }
+
+  /// [states] without those a more specific state of the same function, kind
+  /// and device class covers. device-repository adds every subset and ancestor
+  /// of a variable's aspects as a criterion of its own, so a group of lamps on
+  /// [device, lighting] also gets [device] and [lighting], which read the same
+  /// variable. A state without aspects is kept, except a control on a device
+  /// class next to controls of its function on aspects: it acts on all of them
+  /// at once.
+  List<DeviceState> get shownStates {
+    final aspects = AppState().aspects.values;
+    bool coveredClassControl(DeviceState s) =>
+        s.isControlling &&
+        (s.deviceClassId ?? "").isNotEmpty &&
+        states.any((o) => o.isControlling && o.functionId == s.functionId && o.aspectIds.isNotEmpty);
+    bool covers(DeviceState specific, DeviceState general) =>
+        specific.functionId == general.functionId &&
+        specific.isControlling == general.isControlling &&
+        specific.deviceClassId == general.deviceClassId &&
+        specific.aspectKey != general.aspectKey &&
+        aspectsCover(aspects, general.aspectIds, specific.aspectIds) &&
+        !aspectsCover(aspects, specific.aspectIds, general.aspectIds);
+    return states
+        .where((s) => s.aspectIds.isEmpty ? !coveredClassControl(s) : !states.any((o) => covers(o, s)))
+        .toList(growable: false);
   }
 
   List<CommandCallback> getStateFillFunctions([List<String>? limitToFunctionIds]) {

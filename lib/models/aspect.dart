@@ -40,6 +40,13 @@ String joinAspectNames(Iterable<Aspect> aspects, List<String> aspectIds, {String
   return names.join(", ");
 }
 
+/// Whether every aspect of [general] is one of [specific] or an ancestor of
+/// one, in the tree of [aspects].
+bool aspectsCover(Iterable<Aspect> aspects, List<String> general, List<String> specific) => general.every((g) {
+      final subAspects = _findAspect(aspects, g)?.sub_aspects ?? const <Aspect>[];
+      return specific.any((s) => s == g || _findAspect(subAspects, s) != null);
+    });
+
 Aspect? _findAspect(Iterable<Aspect> aspects, String id) {
   for (final a in aspects) {
     if (a.id == id) return a;

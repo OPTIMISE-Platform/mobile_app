@@ -17,6 +17,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/models/aspect.dart';
+import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
@@ -101,5 +103,48 @@ void main() {
         findsNothing);
     expect(buttonOf(tester, 'Switch on').onPressed, isNotNull);
     expect(buttonOf(tester, 'Switch off').onPressed, isNotNull);
+  });
+
+  testWidgets('a lamp group lists its on/off state once, on the combination',
+      (tester) async {
+    registerOnOffFunctions();
+    for (final id in ['device', 'lighting']) {
+      AppState().aspects[id] = Aspect(id, id, null);
+    }
+    // device-repository adds the subsets of [device, lighting] as criteria
+    // of their own, for the reading and both controls.
+    DeviceGroupCriteria criterion(String functionId, List<String> aspectIds) =>
+        DeviceGroupCriteria.fromJson({
+          'aspect_id': aspectIds.first,
+          'aspect_ids': aspectIds,
+          'device_class_id': '',
+          'function_id': functionId,
+          'interaction': 'request',
+        });
+    final memberId = 'urn:infai:ses:device:${'0' * 36}';
+    AppState().devices.add(DeviceInstance(memberId, 'lamp-local', 'Lamp', null,
+        'lamp', false, 'owner-1', 'Lamp', DeviceConnectionStatus.online));
+    final group = DeviceGroup('lamps', 'Living room lamps', [
+      for (final f in [onOffFunction, setOnFunction, setOffFunction])
+        for (final aspects in [
+          ['device', 'lighting'],
+          ['device'],
+          ['lighting'],
+        ])
+          criterion(f, aspects),
+    ], '', [memberId], null);
+    AppState().deviceGroups.add(group);
+    group.prepareStates();
+
+    await pumpGolden(tester, DetailPage(null, group), dark: false);
+    final reading = group.states.firstWhere((s) =>
+        s.functionId == onOffFunction && s.aspectIds.length == 2);
+    reading.value = [true];
+    group.notifyStateChanged();
+    await tester.pump();
+
+    expect(find.text('Power'), findsOneWidget);
+    expect(find.text('Switch on'), findsNothing);
+    expect(find.text('Switch off'), findsNothing);
   });
 }

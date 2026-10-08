@@ -436,6 +436,9 @@ abstract class _PickTarget {
 
   List<DeviceState> prepareStates();
 
+  /// The prepared states offered for picking.
+  List<DeviceState> shownStates(List<DeviceState> prepared);
+
   /// Only a device can disambiguate a value by service group.
   DeviceInstance? get device;
 }
@@ -457,6 +460,9 @@ class _DeviceTarget implements _PickTarget {
     if (deviceType != null) _device.prepareStates(deviceType);
     return _device.states;
   }
+
+  @override
+  List<DeviceState> shownStates(List<DeviceState> prepared) => prepared;
 }
 
 class _GroupTarget implements _PickTarget {
@@ -475,6 +481,9 @@ class _GroupTarget implements _PickTarget {
     _group.prepareStates();
     return _group.states;
   }
+
+  @override
+  List<DeviceState> shownStates(List<DeviceState> prepared) => _group.shownStates;
 }
 
 /// Lists the values of one device or group, each one checkable.
@@ -496,8 +505,10 @@ class _ValuePicker extends StatefulWidget {
 class _ValuePickerState extends State<_ValuePicker> {
   late final List<DeviceState> _all = widget.target.prepareStates();
 
+  late final List<DeviceState> _shown = widget.target.shownStates(_all);
+
   /// Readable measurements first, then controls (switches and other inputs).
-  late final List<DeviceState> _selectable = _all.toList()
+  late final List<DeviceState> _selectable = _shown.toList()
     ..sort((a, b) {
       if (a.isControlling != b.isControlling) {
         return a.isControlling ? 1 : -1;
@@ -554,7 +565,7 @@ class _ValuePickerState extends State<_ValuePicker> {
     final existing = widget.selection.isExisting(state, _all);
     final picked = existing || widget.selection.isPicked(pin);
 
-    var subtitle = sensorSubtitle(state, _all, widget.target.device);
+    var subtitle = sensorSubtitle(state, _shown, widget.target.device);
     if (existing) {
       subtitle = subtitle.isEmpty
           ? 'Already added'

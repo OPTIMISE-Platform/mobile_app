@@ -198,7 +198,7 @@ void main() {
     expect(find.text("Switch on"), findsOneWidget, reason: "the control on [device] alone");
   });
 
-  testWidgets("a group control on its aspects and the one on its device class are named apart", (tester) async {
+  testWidgets("a group lists a control on its aspects instead of the one on its device class", (tester) async {
     final thermostat = DeviceClass("class-thermostat", "Thermostat", "");
     AppState().deviceClasses[thermostat.id] = thermostat;
     AppState().aspects["target"] = Aspect("target", "Target", null);
@@ -221,8 +221,8 @@ void main() {
 
     await pumpGolden(tester, DetailPage(null, group), dark: false);
 
-    expect(find.text("Set-Temperature"), findsNWidgets(3));
-    expect(find.text("Thermostat"), findsOneWidget);
+    expect(find.text("Set-Temperature"), findsNWidgets(2));
+    expect(find.text("Thermostat"), findsNothing);
     expect(find.text("Target"), findsOneWidget);
     expect(find.text("Reading"), findsOneWidget);
     expect(find.text("MISSING_ASPECT_NAME"), findsNothing);
