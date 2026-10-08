@@ -176,11 +176,16 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
 
       final device = widget._device;
       final deviceGroup = widget._group;
-      late final List<DeviceState> states;
+      // Rows are the shown states; pairing and actions need all of them, so a
+      // control of a hidden reading stays with that reading.
+      final List<DeviceState> states;
+      final List<DeviceState> rows;
       if (device != null) {
         states = device.states;
+        rows = states;
       } else {
-        states = deviceGroup!.shownStates;
+        states = deviceGroup!.states;
+        rows = deviceGroup.shownStates;
       }
 
       final connectionStatus = device?.connection_state;
@@ -291,11 +296,11 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       KeyedList<String, ({Widget tile, String rowKey})> functionWidgets = KeyedList();
       final List<DeviceState> markedControllingStates = [];
 
-      for (var element in states.where((element) => !element.isControlling)) {
+      for (var element in rows.where((element) => !element.isControlling)) {
         if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
           continue;
         }
-        final subtitle = _getSubtitle(element, states, device);
+        final subtitle = _getSubtitle(element, rows, device);
         var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
@@ -396,9 +401,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         }
       }
 
-      for (var element in states.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
+      for (var element in rows.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
         var functionConfig = functionConfigs[element.functionId];
-        final subtitle = _getSubtitle(element, states, device);
+        final subtitle = _getSubtitle(element, rows, device);
 
         functionWidgets.insert(
           element.functionId,

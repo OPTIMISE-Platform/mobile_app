@@ -105,14 +105,15 @@ void main() {
     expect(buttonOf(tester, 'Switch off').onPressed, isNotNull);
   });
 
-  testWidgets('a lamp group lists its on/off state once, on the combination',
-      (tester) async {
+  /// A lamp group on [device, lighting]: device-repository adds the subsets as
+  /// criteria of their own, for the reading on all of them and for the
+  /// controls on [controlAspects].
+  Future<DeviceGroup> pumpLampGroup(
+      WidgetTester tester, List<List<String>> controlAspects) async {
     registerOnOffFunctions();
     for (final id in ['device', 'lighting']) {
       AppState().aspects[id] = Aspect(id, id, null);
     }
-    // device-repository adds the subsets of [device, lighting] as criteria
-    // of their own, for the reading and both controls.
     DeviceGroupCriteria criterion(String functionId, List<String> aspectIds) =>
         DeviceGroupCriteria.fromJson({
           'aspect_id': aspectIds.first,
@@ -125,26 +126,54 @@ void main() {
     AppState().devices.add(DeviceInstance(memberId, 'lamp-local', 'Lamp', null,
         'lamp', false, 'owner-1', 'Lamp', DeviceConnectionStatus.online));
     final group = DeviceGroup('lamps', 'Living room lamps', [
-      for (final f in [onOffFunction, setOnFunction, setOffFunction])
-        for (final aspects in [
-          ['device', 'lighting'],
-          ['device'],
-          ['lighting'],
-        ])
-          criterion(f, aspects),
+      for (final aspects in [
+        ['device', 'lighting'],
+        ['device'],
+        ['lighting'],
+      ])
+        criterion(onOffFunction, aspects),
+      for (final f in [setOnFunction, setOffFunction])
+        for (final aspects in controlAspects) criterion(f, aspects),
     ], '', [memberId], null);
     AppState().deviceGroups.add(group);
     group.prepareStates();
 
     await pumpGolden(tester, DetailPage(null, group), dark: false);
-    final reading = group.states.firstWhere((s) =>
-        s.functionId == onOffFunction && s.aspectIds.length == 2);
-    reading.value = [true];
+    // After the page's own value load, which fails without a backend.
+    for (final s in group.states.where((s) => s.functionId == onOffFunction)) {
+      s.value = [true];
+    }
     group.notifyStateChanged();
     await tester.pump();
+    return group;
+  }
+
+  testWidgets('a lamp group lists its on/off state once, on the combination',
+      (tester) async {
+    await pumpLampGroup(tester, [
+      ['device', 'lighting'],
+      ['device'],
+      ['lighting'],
+    ]);
 
     expect(find.text('Power'), findsOneWidget);
     expect(find.text('Switch on'), findsNothing);
     expect(find.text('Switch off'), findsNothing);
+  });
+
+  testWidgets(
+      'controls of the hidden subsets stay apart instead of joining the combination',
+      (tester) async {
+    await pumpLampGroup(tester, [
+      ['device'],
+      ['lighting'],
+    ]);
+
+    expect(find.text('Power'), findsOneWidget);
+    expect(find.descendant(of: rowOf('Power'), matching: find.byType(IconButton)),
+        findsNothing,
+        reason: 'two controls would make its button ambiguous');
+    expect(find.text('Switch on'), findsNWidgets(2));
+    expect(find.text('Switch off'), findsNWidgets(2));
   });
 }

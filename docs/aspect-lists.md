@@ -39,7 +39,9 @@ other's or an ancestor of one (`aspectsCover`), and not the other way round.
 States without aspects stay, except a control on a device class next to a
 control of its function on aspects, since it would act on all of them at once.
 The detail page and the sensor picker list only `shownStates`; values are still
-loaded for all states.
+loaded for all states, and the detail page pairs and acts over all of them, so
+controls on `[device]` and `[lighting]` without one on the combination stay
+with their hidden readings and get rows of their own.
 
 ## Finding the controlling state
 
