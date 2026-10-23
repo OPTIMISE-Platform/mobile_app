@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
 import 'package:json_annotation/json_annotation.dart';
 
 import 'package:mobile_app/shared/display_time.dart';
@@ -113,7 +115,21 @@ class SmartServiceExtendedParameter {
   }
 
   set value(dynamic v) {
-    characteristic?.value = v;
+    characteristic?.value = multiple ? _listOf(v) : v;
+  }
+
+  /// The automation-engine (since 2026-10-22) returns the value of a multiple
+  /// parameter of an instance as the JSON text of the list, where the former
+  /// smart-service-repository returned the list itself. The edit and upgrade
+  /// screens need the list.
+  static dynamic _listOf(dynamic v) {
+    if (v is! String) return v;
+    try {
+      final decoded = json.decode(v);
+      return decoded is List ? decoded : v;
+    } on FormatException {
+      return v;
+    }
   }
 
   String? get value_label {

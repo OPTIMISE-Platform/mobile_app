@@ -18,7 +18,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #
 # Placeholder for local builds only. Releases get their version from the tags,
 # see docs/releases-and-versioning.md; do not bump it here.
-version: 0.0.0+1
+version: 0.0.1+2
 
 
 environment:
