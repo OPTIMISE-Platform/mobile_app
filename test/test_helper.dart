@@ -59,10 +59,29 @@ Future<Isar> openTestIsar(List<CollectionSchema<dynamic>> schemas) async {
   // download lands - that is the repository root.
   final library = File('.dart_tool/isar/libisar-${Isar.version}.so');
   library.parent.createSync(recursive: true);
-  await Isar.initializeIsarCore(
-    libraries: {Abi.current(): library.path},
-    download: true,
-  );
+  if (library.existsSync()) {
+    await Isar.initializeIsarCore(libraries: {Abi.current(): library.path});
+  } else {
+    // A missing binary is downloaded, in CI whenever the cache of
+    // .dart_tool/isar has expired. Into a file of this process first: suites
+    // run in parallel, and Isar writes straight into the target and skips the
+    // download once the file exists, so another suite would load it half
+    // written. The rename is atomic.
+    final download = File('${library.path}.$pid');
+    // The test binding answers every HTTP request with 400; a suite that set
+    // it up before opening Isar could not download at all.
+    final testOverrides = HttpOverrides.current;
+    HttpOverrides.global = null;
+    try {
+      await Isar.initializeIsarCore(
+        libraries: {Abi.current(): download.path},
+        download: true,
+      );
+    } finally {
+      HttpOverrides.global = testOverrides;
+    }
+    download.renameSync(library.path);
+  }
   final db = await Isar.open(
     schemas,
     directory: Directory.systemTemp.createTempSync('mobile_app_isar').path,
