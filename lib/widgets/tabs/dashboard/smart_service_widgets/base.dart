@@ -34,6 +34,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/w
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/single_value.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/stacked_bar_chart.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/text.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/ventilation.dart';
 import 'package:mutex/mutex.dart';
 
 import 'package:mobile_app/models/smart_service.dart';
@@ -63,6 +64,7 @@ const SmSeWidgetType smSeBarChartType = "bar_chart";
 const SmSeWidgetType smSePieChartType = "pie_chart";
 const SmSeWidgetType smSeStackedBarChartType = "stacked_bar_chart";
 const SmSeWidgetType smSeBarChartEstimateType = "bar_chart_estimate";
+const SmSeWidgetType smSeVentilationType = "ventilation";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -191,6 +193,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeBarChartEstimateType:
         w = SmSeBarChartEstimate();
+        break;
+      case smSeVentilationType:
+        w = SmSeVentilation();
         break;
 
       // ADD NEW WIDGETS ABOVE
