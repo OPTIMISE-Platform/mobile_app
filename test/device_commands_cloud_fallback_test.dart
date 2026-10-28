@@ -21,12 +21,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:openidconnect/openidconnect.dart';
 
 import 'fake_backend.dart';
 import 'golden_helper.dart';
@@ -426,5 +430,145 @@ void main() {
         reason: "the availability interceptor rejects before the adapter");
     expect(result.single.status_code, 502);
     expect(result.single.message, ErrorReporter.offlineMessage);
+  });
+
+  test("a platform whose sign-in hangs holds no gateway value back",
+      () async {
+    final shown = <String>[];
+    ErrorReporter.present = shown.add;
+    Auth.headersOverride = null;
+    Auth.clientSetupTimeout = const Duration(milliseconds: 100);
+    // The probe after the setup's timeout confirms the outage.
+    ApiAvailableService.probeOverride = () async => false;
+    var setups = 0;
+    // As the discovery request does when the auth server drops connections.
+    Auth.createClientOverride = () {
+      setups++;
+      return Completer<OpenIdConnectClient>().future;
+    };
+    Auth().loggedIn = true;
+    addTearDown(() async {
+      Auth.createClientOverride = null;
+      Auth.clientSetupTimeout = const Duration(seconds: 5);
+      await Auth().resetForTest();
+      ErrorReporter.present = (_) {};
+    });
+    serveGatewayEndpoints();
+    backend.serveJson("POST", _gatewayBatch, 200, [
+      {"status_code": 200, "message": "on"}
+    ]);
+    backend.holds["POST $_platformBatch"] = Completer<void>();
+    final commands = [gatewayCommand("B"), platformCommand("A")];
+
+    for (var round = 0; round < 2; round++) {
+      final responses = <DeviceCommandResponse>[];
+      final ok = await DeviceCommandsService.runCommandsSecurely(
+              commands, responses)
+          .timeout(const Duration(seconds: 2));
+
+      expect(ok, isTrue);
+      expect(responses[0].status_code, 200);
+      expect(responses[0].message, "on");
+      expect(responses[1].status_code, 502);
+      expect(responses[1].message, ErrorReporter.offlineMessage);
+    }
+    expect(setups, 1, reason: "the outage keeps the second round off the setup");
+    expect(requestsTo("POST", _platformBatch), isEmpty);
+    expect(shown, isEmpty);
+  });
+
+  group("answers as they arrive", () {
+    test(
+        "a gateway answer is passed on before the platform answers, and "
+        "every index exactly once", () async {
+      serveGatewayEndpoints();
+      backend.serveJson("POST", _gatewayBatch, 200, [
+        {"status_code": 200, "message": "b"},
+        {"status_code": 513, "message": "not here"}
+      ]);
+      final platformHold = Completer<void>();
+      backend.holds["POST $_platformBatch"] = platformHold;
+      backend.failures["POST $_platformBatch"] =
+          DioExceptionType.connectionError;
+      final commands = [
+        platformCommand("A"),
+        gatewayCommand("B"),
+        gatewayCommand("C", sharesNetworkOf: "B"),
+      ];
+      final passed = <Map<int, DeviceCommandResponse>>[];
+
+      final running =
+          DeviceCommandsService.runCommands(commands, true, passed.add);
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (passed.isEmpty) {
+        if (DateTime.now().isAfter(deadline)) {
+          fail("the gateway answer waited for the platform");
+        }
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(passed.single.keys, [1]);
+      expect(passed.single[1]!.message, "b");
+
+      // A fails without an answer, which also refuses C's retry at once.
+      platformHold.complete();
+      final result = await running;
+
+      expect(passed.expand((p) => p.keys).toList()..sort(), [0, 1, 2],
+          reason: "each index once");
+      for (final p in passed) {
+        p.forEach((i, response) => expect(identical(result[i], response),
+            isTrue, reason: "index $i is passed as it is returned"));
+      }
+      expect(result[1].status_code, 200,
+          reason: "the platform's failure does not replace a gateway answer");
+      expect(result[1].message, "b");
+      expect(result[0].message, ErrorReporter.offlineMessage);
+      expect(result[2].message, ErrorReporter.offlineMessage);
+      expect(requestsTo("POST", _platformBatch), hasLength(1),
+          reason: "C's retry was refused, not sent");
+    });
+
+    test("a handler that throws does not keep the platform round back",
+        () async {
+      serveGatewayEndpoints();
+      backend.serveJson("POST", _gatewayBatch, 200, [
+        {"status_code": 200, "message": "b"},
+        {"status_code": 513, "message": "not here"}
+      ]);
+      backend.serveJson("POST", _platformBatch, 200, [
+        {"status_code": 200, "message": "c"}
+      ]);
+      final commands = [
+        gatewayCommand("B"),
+        gatewayCommand("C", sharesNetworkOf: "B"),
+      ];
+
+      final result = await DeviceCommandsService.runCommands(
+          commands, true, (_) => throw StateError("handler"));
+
+      expect(sentDeviceIds(requestsTo("POST", _platformBatch).single), ["C"]);
+      expect(result.map((r) => r.message), ["b", "c"]);
+    });
+
+    test("an unreachable platform is not asked, and the gateway still is",
+        () async {
+      ApiAvailableService.setUnreachableForTest(true);
+      serveGatewayEndpoints();
+      backend.serveJson("POST", _gatewayBatch, 200, [
+        {"status_code": 200, "message": "b"}
+      ]);
+      backend.serveJson("POST", _platformBatch, 200, [
+        {"status_code": 200, "message": "a"}
+      ]);
+
+      final result = await DeviceCommandsService.runCommands(
+              [platformCommand("A"), gatewayCommand("B")])
+          .timeout(const Duration(seconds: 2));
+
+      expect(requestsTo("POST", _platformBatch), isEmpty);
+      expect(result[0].status_code, 502);
+      expect(result[0].message, ErrorReporter.offlineMessage);
+      expect(result[1].message, "b");
+    });
   });
 }

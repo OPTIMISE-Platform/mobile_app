@@ -32,10 +32,19 @@ class ApiAvailableInterceptor extends Interceptor {
       RequestOptions options,
       RequestInterceptorHandler handler,
       ) {
-    if (!ApiAvailableService().isAvailable(options.path)) {
+    if (options.extra[ApiAvailableService.probeExtra] != true &&
+        !ApiAvailableService().isAvailable(options.path)) {
       handler.reject(DioException(requestOptions: options, type: DioExceptionType.unknown, error: ApiUnavailableException()), true);
     } else {
+      options.extra[ApiAvailableService.epochExtra] =
+          ApiAvailableService.reachabilityEpoch;
       handler.next(options);
     }
+  }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    ApiAvailableService().recordFailure(err);
+    handler.next(err);
   }
 }

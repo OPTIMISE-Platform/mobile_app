@@ -24,6 +24,7 @@ import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/mixins/network_mixin.dart';
 import 'package:mobile_app/mixins/notification_mixin.dart';
 import 'package:mobile_app/native_pipe.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -65,6 +66,13 @@ class AppState extends ChangeNotifier
 
   AppState._internal() {
     WidgetsBinding.instance.addObserver(this);
+    ApiAvailableService.platformUnreachable.addListener(notifyListeners);
+    ApiAvailableService.platformFound.listen((_) {
+      // The recheck timer can fire in the background; the resume refreshes then.
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+      _refreshAsOnResume();
+    });
     manageNetworkDiscovery();
     NativePipe.init();
   }
@@ -74,6 +82,18 @@ class AppState extends ChangeNotifier
     if (state != AppLifecycleState.resumed) return;
     handleQueuedMessages();
     manageNetworkDiscovery();
+    // A platform marked unreachable is probed first, so a stale mark does not
+    // refuse the refreshes. A probe that finds it starts them itself.
+    final epoch = ApiAvailableService.reachabilityEpoch;
+    unawaited(ApiAvailableService().recheckPlatform().whenComplete(() {
+      if (ApiAvailableService.reachabilityEpoch == epoch) _refreshAsOnResume();
+    }));
+  }
+
+  /// The refreshes of a resume, also run when the platform is found again.
+  void _refreshAsOnResume() {
+    // Refused anyway; platformFound runs this once the platform is back.
+    if (ApiAvailableService.isPlatformUnreachable) return;
     unawaited(CacheHelper.scheduleCacheUpdates().catchError(
         (Object e, StackTrace s) =>
             ErrorReporter.log('Could not refresh cache', e, s)));
@@ -369,6 +389,7 @@ class AppState extends ChangeNotifier
       ..write(deviceClasses.length)
       ..write(',')
       ..write(Settings.getLocalMode() ? '1' : '0')
+      ..write(ApiAvailableService.isPlatformUnreachable ? '1' : '0')
       ..write(',')
       ..write(Settings.getApiUrl() ?? '');
     return sb.toString();

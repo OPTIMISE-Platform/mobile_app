@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
@@ -51,6 +52,15 @@ void main() {
         ),
       );
 
+  testWidgets("the local mode banner stands in for the outage banner",
+      (tester) async {
+    await tester.runAsync(() => Settings.setLocalMode(true));
+    ApiAvailableService.setUnreachableForTest(true);
+    await pumpGolden(tester, appBarScreen(), dark: false);
+    expect(find.text(" Local Mode"), findsOneWidget);
+    expect(find.text(" Platform not reachable"), findsNothing);
+  });
+
   for (final dark in [false, true]) {
     final suffix = dark ? "dark" : "light";
 
@@ -69,6 +79,14 @@ void main() {
       await pumpGolden(tester, appBarScreen(), dark: dark);
       await expectLater(find.byType(MaterialApp),
           matchesGoldenFile("goldens/app_bar_local_mode_$suffix.png"));
+    });
+
+    testWidgets("app bar, platform not reachable ($suffix)", (tester) async {
+      await tester.runAsync(() => Settings.setLocalMode(false));
+      ApiAvailableService.setUnreachableForTest(true);
+      await pumpGolden(tester, appBarScreen(), dark: dark);
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/app_bar_platform_unreachable_$suffix.png"));
     });
 
     // The update check stops at updateSupported (Android only) before its

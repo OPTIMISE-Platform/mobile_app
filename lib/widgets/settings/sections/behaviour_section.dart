@@ -14,8 +14,11 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/widgets/settings/settings_section.dart';
 import 'package:mobile_app/widgets/settings/settings_toggle.dart';
@@ -55,6 +58,9 @@ SettingsSection behaviourSection(BuildContext context, AppState state) =>
             await settings_service.Settings.setLocalMode(v);
             state.notifyListeners();
             state.setAndGetDisabledTabs();
+            // Stops the rechecks in the local mode; after it, a mark left from
+            // before is checked now rather than on the next tick.
+            unawaited(ApiAvailableService().recheckPlatform());
           },
         ),
         GroupedListTile.insetNoLeading

@@ -133,14 +133,24 @@ class DeviceCommandCloud {
   }
 }
 
+/// Receives the answers that became final, by command index, as each batch
+/// of [DeviceCommandsService.runCommands] returns.
+typedef CommandAnswers = void Function(
+    Map<int, DeviceCommandResponse> answers);
+
 class DeviceCommandsService {
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
 
+  /// [onAnswers] gets every index exactly once, as soon as its answer is
+  /// final: a gateway answer before the platform round, and the 502 for an
+  /// unanswered command right before this returns. A handler that throws is
+  /// logged and changes nothing that is sent.
   static Future<List<DeviceCommandResponse>> runCommands(
       List<DeviceCommand> commands,
-      [bool preferEventValue = true]) async {
+      [bool preferEventValue = true,
+      CommandAnswers? onAnswers]) async {
     // Groups hold indices into [commands], so every answer lands at the index
     // of the command it belongs to, even if the same command is listed twice.
     final Map<Network?, List<int>> map = {};
@@ -157,6 +167,17 @@ class DeviceCommandsService {
     final List<DeviceCommandResponse?> resp =
         List.generate(commands.length, (index) => null);
 
+    // The first answer for an index is final; a later one is dropped.
+    void answer(List<int> indices, List<DeviceCommandResponse> values) {
+      final fresh = <int, DeviceCommandResponse>{};
+      for (int i = 0; i < indices.length && i < values.length; i++) {
+        if (resp[indices[i]] != null) continue;
+        resp[indices[i]] = values[i];
+        fresh[indices[i]] = values[i];
+      }
+      _announce(onAnswers, fresh);
+    }
+
     // Indices of gateway commands the platform answers instead.
     final List<int> cloudRetries = [];
 
@@ -170,7 +191,7 @@ class DeviceCommandsService {
         // A platform answer is final, 513 included: a command is never sent
         // twice.
         futures.add(_runOnPlatform(group, preferEventValue)
-            .then((value) => _assign(resp, indices, value)));
+            .then((value) => answer(indices, value)));
         return;
       }
       futures.add(DeviceCommandPath(gateway)
@@ -179,13 +200,17 @@ class DeviceCommandsService {
         cloudRetries.addAll(indices);
         return <DeviceCommandResponse>[];
       }).then((value) {
+        final answered = <int>[];
+        final answers = <DeviceCommandResponse>[];
         for (int i = 0; i < indices.length && i < value.length; i++) {
           if (value[i].status_code != leftToPlatformStatus) {
-            resp[indices[i]] = value[i];
+            answered.add(indices[i]);
+            answers.add(value[i]);
           } else {
             cloudRetries.add(indices[i]);
           }
         }
+        answer(answered, answers);
       }));
     });
     final DateTime start = DateTime.now();
@@ -193,12 +218,30 @@ class DeviceCommandsService {
     if (cloudRetries.isNotEmpty) {
       final retryRes = await _runOnPlatform(
           [for (final i in cloudRetries) commands[i]], preferEventValue);
-      _assign(resp, cloudRetries, retryRes);
+      answer(cloudRetries, retryRes);
     }
     _logger.d("runCommands ${DateTime.now().difference(start)}");
-    return resp
-        .map((e) => e ?? DeviceCommandResponse(502, "upstream reply null"))
-        .toList();
+    final unanswered = [
+      for (int i = 0; i < resp.length; i++)
+        if (resp[i] == null) i
+    ];
+    answer(
+        unanswered,
+        List.generate(unanswered.length,
+            (_) => DeviceCommandResponse(502, "upstream reply null")));
+    return resp.map((e) => e!).toList();
+  }
+
+  static void _announce(
+      CommandAnswers? onAnswers, Map<int, DeviceCommandResponse> answers) {
+    if (onAnswers == null || answers.isEmpty) return;
+    try {
+      onAnswers(answers);
+    } catch (e, s) {
+      // Thrown inside a batch's future, it would keep the platform round
+      // from being sent.
+      ErrorReporter.log("Could not take command answers", e, s);
+    }
   }
 
   /// Sends [commands] to the platform in one batch. A failed request answers
@@ -223,15 +266,6 @@ class DeviceCommandsService {
     final status = e.response?.statusCode;
     if (status != null) return "platform answered $status";
     return e.message ?? e.type.name;
-  }
-
-  /// Writes [value] to the [indices] it answers. A reply shorter than the
-  /// batch leaves the rest null, which [runCommands] reports as 502.
-  static void _assign(List<DeviceCommandResponse?> resp, List<int> indices,
-      List<DeviceCommandResponse> value) {
-    for (int i = 0; i < indices.length && i < value.length; i++) {
-      resp[indices[i]] = value[i];
-    }
   }
 
   /// Fills the responses list and returns whether that succeeded. A failure is

@@ -61,11 +61,14 @@ due. It arms no timer.
 
 ## On resume
 
-`AppState.didChangeAppLifecycleState(resumed)` calls
+`AppState.didChangeAppLifecycleState(resumed)` probes the platform if it is
+marked unreachable (`docs/platform-outage.md`), then calls
 `CacheHelper.scheduleCacheUpdates()` and the same background pass as at start,
 which on resume also loads every set whose last load failed (no stored time
 recorded), with `Duration.zero` and `serveStale` so its time is recorded once it
-succeeds. Both are no-ops while nothing is due. The pass does nothing before
+succeeds. Both are no-ops while nothing is due. A probe that finds the platform
+again, on resume or from the 60 s recheck, runs the same two calls once
+(`ApiAvailableService.platformFound`); the resume then leaves them to it. The pass does nothing before
 `init` has finished and in local mode. The Classes list asks for the same retry
 (`AppState.retryFailedMetadata`) only when it is opened without classes, not on
 resume or `refreshPressed`, so one resume retries a failing set once.

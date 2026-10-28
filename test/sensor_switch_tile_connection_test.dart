@@ -20,6 +20,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/device_connection_states.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_values.dart';
@@ -124,6 +125,10 @@ void main() {
       expect(device.connection_state, DeviceConnectionStatus.unknown);
       expect(seen.last, DeviceConnectionStatus.unknown);
       backend.failures.clear();
+      // The failure marked the platform unreachable; a probe finds it again.
+      expect(ApiAvailableService.isPlatformUnreachable, isTrue);
+      ApiAvailableService.probeOverride = () async => true;
+      await ApiAvailableService().recheckPlatform();
 
       backend.deviceRequests.clear();
       backend.states = ['offline'];

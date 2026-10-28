@@ -26,7 +26,10 @@ Covers `lib/shared/error_reporter.dart`, the two global handlers installed in
 - **`ErrorReporter.report`** is for a background failure the user should see.
   It collapses a burst: an identical message within five seconds is not shown
   again, and every failure whose cause is a missing connection is shown as one
-  shared message instead of once per endpoint.
+  shared message instead of once per endpoint. While the platform is marked
+  unreachable or the local mode is on, such a failure is only logged: the app
+  bar shows a banner instead (`docs/platform-outage.md`). `reportOffline`
+  follows the same rule.
 
 A widget that already shows its own message about the action calls both — its
 `Toast` and `ErrorReporter.log`. That is deliberate rather than a missed

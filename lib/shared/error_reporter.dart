@@ -22,6 +22,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 
 /// The one place that decides whether a failure in the state layer reaches the
@@ -71,10 +72,15 @@ class ErrorReporter {
   }
 
   /// Logs [message] with [error] and shows it unless it repeats what is
-  /// already on screen.
+  /// already on screen. A missing connection is not shown while the platform
+  /// is marked unreachable or the local mode is on: the app bar says so.
   static void report(String message, [Object? error, StackTrace? stack]) {
     log(message, error, stack);
-    _show(isOffline(error) ? offlineMessage : message);
+    if (!isOffline(error)) {
+      _show(message);
+    } else if (!ApiAvailableService.platformCallsOff) {
+      _show(offlineMessage);
+    }
   }
 
   /// Records a failure without putting anything on screen.
@@ -97,7 +103,7 @@ class ErrorReporter {
   /// which has no exception to inspect.
   static void reportOffline() {
     log(offlineMessage);
-    _show(offlineMessage);
+    if (!ApiAvailableService.platformCallsOff) _show(offlineMessage);
   }
 
   static void _show(String text) {

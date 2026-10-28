@@ -23,6 +23,7 @@ import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -45,6 +46,8 @@ class MgwDeviceManager {
             .onError((error, stackTrace) async {
           ExceptionLogElement.Log(error.toString());
           if (!Settings.getLocalMode()) {
+            // Refused anyway, and the app bar says why.
+            if (ApiAvailableService.isPlatformUnreachable) return;
             final deviceIds = devices.map((e) => e.id).toList();
             try {
               await DevicesService.getDevices(devices.length, 0,

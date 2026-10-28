@@ -25,6 +25,7 @@ import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_type.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_groups.dart';
@@ -698,16 +699,32 @@ mixin DeviceMixin on ChangeNotifier {
         if (type != null) d.prepareStates(type);
       }
     });
-    await _refreshConnectionStatuses(newDevices);
-    await typesReady;
-    try {
-      await loadStates(newDevices, [], [
-        dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
-      ]);
-    } catch (e, s) {
-      ErrorReporter.report('Could not load device states', e, s);
+    Future<void> load(List<DeviceInstance> devices) async {
+      if (devices.isEmpty) return;
+      await typesReady;
+      try {
+        await loadStates(devices, [], [
+          dotenv.env['FUNCTION_GET_ON_OFF_STATE'] ?? '',
+        ]);
+      } catch (e, s) {
+        ErrorReporter.report('Could not load device states', e, s);
+      }
+      // notifyListeners() is already called inside loadStates
     }
-    // notifyListeners() is already called inside loadStates
+
+    // Each part waits for its own connection states only, so a device behind
+    // a gateway does not wait for the platform's answer about the others.
+    final local = newDevices
+        .where((d) => d.network?.localGateways?.isNotEmpty == true)
+        .toList(growable: false);
+    final remote = newDevices
+        .where((d) => d.network?.localGateways?.isNotEmpty != true)
+        .toList(growable: false);
+    await Future.wait([
+      MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices)
+          .then((_) => load(local)),
+      _refreshPlatformConnectionStatuses(remote).then((_) => load(remote)),
+    ]);
   }
 
   /// Copies the connection state of [source] onto the matching entries of
@@ -732,7 +749,7 @@ mixin DeviceMixin on ChangeNotifier {
   /// Marks [devices] read from the cache as of unknown connection state. The
   /// cache holds the state of its last refresh, and devices behind a gateway
   /// never get the gateway's answer written back, so a cached "offline" showed
-  /// as a chip until [_refreshConnectionStatuses] took it back.
+  /// as a chip until a refresh took it back.
   @visibleForTesting
   static void forgetCachedConnectionStates(Iterable<DeviceInstance> devices) {
     for (final d in devices) {
@@ -740,49 +757,48 @@ mixin DeviceMixin on ChangeNotifier {
     }
   }
 
-  Future<void> _refreshConnectionStatuses(List<DeviceInstance> newDevices) async {
-    final futures = <Future>[
-      MgwDeviceManager.updateDeviceConnectionStatusFromMgw(newDevices),
-    ];
-    final outsideLocalNet = newDevices
-        .where((d) => d.network?.localGateways?.isNotEmpty != true)
-        .map((d) => d.id)
-        .toList(growable: false);
-
-    if (outsideLocalNet.isNotEmpty) {
-      final filter = DeviceSearchFilter('', deviceIds: outsideLocalNet);
-      futures.add(
-        DevicesService.getDevices(outsideLocalNet.length, 0, filter, null,
+  /// Asks the platform for the connection state of [devices], which no
+  /// gateway serves. Not while platform calls are off: a device read from the
+  /// cache then keeps its unknown state.
+  Future<void> _refreshPlatformConnectionStatuses(
+      List<DeviceInstance> devices) async {
+    if (devices.isEmpty || ApiAvailableService.platformCallsOff) return;
+    final ids = devices.map((d) => d.id).toList(growable: false);
+    final filter = DeviceSearchFilter('', deviceIds: ids);
+    final ds = await DevicesService.getDevices(ids.length, 0, filter, null,
             forceBackend: true)
-            .catchError((Object e, StackTrace s) async {
-          if (!Settings.getLocalMode()) {
-            ErrorReporter.report(
-                'Error refreshing device status, using cache', e, s);
-          }
-          final cached = (await DevicesService.getDevices(
-            outsideLocalNet.length, 0, filter, null,
-            forceBackend: false,
-          )).devices;
-          for (final d in cached) {
-            d.connection_state = DeviceConnectionStatus.unknown;
-          }
-          return DeviceInstanceWithTotal(cached, cached.length);
-        }).then((ds) => applyConnectionStates(newDevices, ds.devices)),
-      );
-    }
-    await Future.wait(futures);
+        .catchError((Object e, StackTrace s) async {
+      if (!Settings.getLocalMode()) {
+        ErrorReporter.report(
+            'Error refreshing device status, using cache', e, s);
+      }
+      final cached = (await DevicesService.getDevices(
+        ids.length, 0, filter, null,
+        forceBackend: false,
+      )).devices;
+      for (final d in cached) {
+        d.connection_state = DeviceConnectionStatus.unknown;
+      }
+      return DeviceInstanceWithTotal(cached, cached.length);
+    });
+    applyConnectionStates(devices, ds.devices);
   }
 
   // ---------------------------------------------------------------------------
   // States
   // ---------------------------------------------------------------------------
 
+  /// Each answer is handed to its state's callback as soon as its batch
+  /// returns, and the device or group it belongs to is notified, so values
+  /// from a gateway do not wait for the platform.
   Future<void> loadStates(
       List<DeviceInstance> devices,
       List<DeviceGroup> groups, [
         List<String>? limitToFunctionIds,
       ]) async {
     final commandCallbacks = <CommandCallback>[];
+    // The notifier of the device or group each command belongs to.
+    final owners = <void Function()>[];
 
     for (final device in devices) {
       final callbacks = device.getStateFillFunctions(limitToFunctionIds);
@@ -792,11 +808,14 @@ mixin DeviceMixin on ChangeNotifier {
         }
       } else {
         commandCallbacks.addAll(callbacks);
+        owners.addAll([for (final _ in callbacks) device.notifyStateChanged]);
       }
     }
     for (final group in groups) {
       group.prepareStates();
-      commandCallbacks.addAll(group.getStateFillFunctions(limitToFunctionIds));
+      final callbacks = group.getStateFillFunctions(limitToFunctionIds);
+      commandCallbacks.addAll(callbacks);
+      owners.addAll([for (final _ in callbacks) group.notifyStateChanged]);
     }
 
     if (commandCallbacks.isEmpty) {
@@ -804,27 +823,46 @@ mixin DeviceMixin on ChangeNotifier {
       return;
     }
 
-    List<DeviceCommandResponse> result;
+    // A callback runs once, with the first answer for its command.
+    final delivered = List<bool>.filled(commandCallbacks.length, false);
+    void deliver(int i, DeviceCommandResponse response) {
+      if (delivered[i]) return;
+      delivered[i] = true;
+      if (response.status_code == 200) {
+        commandCallbacks[i].callback(response.message);
+      } else {
+        _logger.e('${response.status_code}: ${response.message}');
+        commandCallbacks[i].callback(null);
+      }
+    }
+
+    List<DeviceCommandResponse>? result;
     try {
       result = await DeviceCommandsService.runCommands(
         commandCallbacks.map((e) => e.command).toList(growable: false),
+        true,
+        (answers) {
+          final touched = <void Function()>{};
+          answers.forEach((i, response) {
+            deliver(i, response);
+            touched.add(owners[i]);
+          });
+          for (final notify in touched) {
+            notify();
+          }
+        },
       );
     } catch (e, s) {
       // One catch: the two used to differ only in their message, and the one
       // on ApiUnavailableException never ran anyway - that exception only ever
       // arrives wrapped in a DioException.
       ErrorReporter.report('failed to loadStates', e, s);
-      result = List.filled(commandCallbacks.length, DeviceCommandResponse(200, null));
     }
 
-    assert(result.length == commandCallbacks.length);
+    assert(result == null || result.length == commandCallbacks.length);
+    // Only what was not handed over yet; after a failure that is null.
     for (var i = 0; i < commandCallbacks.length; i++) {
-      if (result[i].status_code == 200) {
-        commandCallbacks[i].callback(result[i].message);
-      } else {
-        _logger.e('${result[i].status_code}: ${result[i].message}');
-        commandCallbacks[i].callback(null);
-      }
+      deliver(i, result?[i] ?? DeviceCommandResponse(200, null));
     }
     _notifyEntities(devices, groups);
   }

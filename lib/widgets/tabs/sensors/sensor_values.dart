@@ -233,31 +233,43 @@ class _SensorValuesState extends State<SensorValues>
           .toSet()
           .toList();
       var devices = <DeviceInstance>[];
+      var local = <DeviceInstance>[];
+      var remote = <DeviceInstance>[];
+      Future<void> gatewayStates = Future.value();
+      Future<void> platformStates = Future.value();
       if (deviceIds.isNotEmpty) {
         final result = await loadPinnedDevices(deviceIds);
         devices = result.devices;
+        local = devices
+            .where((d) => d.network?.localGateways?.isNotEmpty == true)
+            .toList();
+        remote = devices
+            .where((d) => d.network?.localGateways?.isNotEmpty != true)
+            .toList();
         // Before the values, as in the device list: a device the cache still
         // calls offline would get no values, and one gone offline since a
-        // command.
-        await Future.wait([
-          refreshDeviceConnectionStates(
-            devices,
-            platformStatesFresh: !result.fromCache,
-          ),
-          AppState().ensureDeviceTypes(devices.map((d) => d.device_type_id)),
-        ]);
+        // command. Each part waits for its own states only.
+        gatewayStates = refreshGatewayConnectionStates(local);
+        platformStates = refreshPlatformConnectionStates(
+          remote,
+          platformStatesFresh: !result.fromCache,
+        );
+        await AppState().ensureDeviceTypes(
+          devices.map((d) => d.device_type_id),
+        );
         for (final device in devices) {
           final deviceType = AppState().deviceTypes[device.device_type_id];
           if (deviceType != null) device.prepareStates(deviceType);
         }
       }
+      _showNew(devices, groups);
 
       // Only request the functions actually pinned, not every state.
       final functionIds = pins.map((p) => p.functionId).toSet().toList();
-      final loadStartedAt = SwitchCommands.beginLoad();
-      await AppState().loadStates(devices, groups, functionIds);
-      // Also when unmounted: a group's states are shared with other pages.
-      SwitchCommands.reapply(_statesOf(devices, groups), loadStartedAt);
+      await Future.wait([
+        gatewayStates.then((_) => _loadStates(local, groups, functionIds)),
+        platformStates.then((_) => _loadStates(remote, const [], functionIds)),
+      ]);
       if (!mounted) return;
       setState(() {
         _loadedValues
@@ -282,6 +294,32 @@ class _SensorValuesState extends State<SensorValues>
         _loading = false;
       });
     }
+  }
+
+  /// Puts devices and groups that no card shows yet on screen before their
+  /// values, which then arrive as they are answered. One already shown keeps
+  /// its last values until the load ends.
+  void _showNew(List<DeviceInstance> devices, List<DeviceGroup> groups) {
+    if (!mounted) return;
+    final newDevices = devices.where((d) => !_devices.containsKey(d.id));
+    final newGroups = groups.where((g) => !_groups.containsKey(g.id));
+    if (newDevices.isEmpty && newGroups.isEmpty) return;
+    setState(() {
+      _devices.addEntries(newDevices.map((d) => MapEntry(d.id, d)));
+      _groups.addEntries(newGroups.map((g) => MapEntry(g.id, g)));
+    });
+  }
+
+  Future<void> _loadStates(
+    List<DeviceInstance> devices,
+    List<DeviceGroup> groups,
+    List<String> functionIds,
+  ) async {
+    if (devices.isEmpty && groups.isEmpty) return;
+    final loadStartedAt = SwitchCommands.beginLoad();
+    await AppState().loadStates(devices, groups, functionIds);
+    // Also when unmounted: a group's states are shared with other pages.
+    SwitchCommands.reapply(_statesOf(devices, groups), loadStartedAt);
   }
 
   /// Rewrites, in memory, the pins of [tab] written before aspect lists that

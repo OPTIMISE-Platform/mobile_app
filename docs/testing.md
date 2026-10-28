@@ -66,7 +66,10 @@ Golden diffs of a failed run land in `test/failures/`, which is ignored.
   each variant **fresh**: pumping light and then dark into the same tree would
   capture the theme cross-fade half done.
 - `serveGoldenBackend(backend)` / `resetGoldenBackend()` — route all HTTP
-  through a `FakeBackend` and fix the auth headers; reset in `tearDown`.
+  through a `FakeBackend` and fix the auth headers; reset in `tearDown`. The
+  reset also clears a platform outage that a failing route recorded: a
+  `connectionError` on a platform path marks the platform unreachable, after
+  which its requests are refused until a probe succeeds.
 - `warmUpMgwStorage(tester)` — opens the gateway storage once outside the fake
   test zone, before a screen that reaches it is pumped.
 - `resetAppStateForGolden()` — clears what a test filled into `AppState`.
@@ -139,6 +142,9 @@ All are `@visibleForTesting` and never set by production code.
 | `Auth.serverAvailableOverride` / `onLogoutForTest()` (`lib/services/auth.dart`) | Replace the server check of the logout and run the logout that follows a client event, so a test can log out offline |
 | `Auth.rememberAccountForTest(identity)` (`lib/services/auth.dart`) | Records a sign-in as every sign-in path does, switching the account when the identity's `sub` differs; an `OpenIdIdentity` with an unsigned id token carrying `sub` is enough |
 | `Auth.clientListenerRegistered` / `listenToClientEventsForTest(events)` (`lib/services/auth.dart`) | Whether the OIDC client's events have a listener, and a stream to listen to in place of a real client's, which only a real setup provides |
+| `Auth.createClientOverride` (`lib/services/auth.dart`) | Replaces `OpenIdConnectClient.create`; a `Fake implements OpenIdConnectClient` stands in for the client, a never-completing future for a hanging discovery request (`platform_outage_test.dart`) |
+| `Auth.clientSetupTimeout` / `tokenRefreshTimeout` / `monotonicNow` / `resetForTest()` (`lib/services/auth.dart`) | Shorten the bounds of client setup and refresh, step the clock of the 30 s setup retry, and forget the client and a failed setup without a logout |
+| `ApiAvailableService.probeOverride` / `recheckInterval` / `setUnreachableForTest` / `resetForTest()` / `rechecking` (`lib/services/api_available.dart`) | Replace the reachability probe, shorten its interval, set the outage state without the recheck timer, clear it, and tell whether the timer runs |
 | `CacheHelper.beforeAccountWipeForTest` / `afterAccountKeyForTest` (`lib/services/cache_helper.dart`) | Called before the cache clear of an account wipe, where throwing fails that part, and right after a switch wrote the new key |
 | `AppInitializer.openCache(open)` (`lib/app_initializer.dart`) | Opens Isar through `open` and retries a pending account wipe, as the start does |
 | `NotificationMixin.releaseTopicsSupported` (`lib/mixins/notification_mixin.dart`) | Whether the release topics are synced; Android only by default, so a test sets it to drive them |

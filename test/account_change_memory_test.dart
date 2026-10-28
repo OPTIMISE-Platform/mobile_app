@@ -31,6 +31,7 @@ import 'package:mobile_app/models/notification.dart' as app;
 import 'package:mobile_app/models/device_class.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/models/sensor_tab.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/device_classes.dart';
@@ -709,7 +710,11 @@ void main() {
       await AppState().initMessaging();
       expect(requestsTo("POST", "$tokens/token-a"), 1);
 
+      // The failure marked the platform unreachable; a probe finds it again.
+      expect(ApiAvailableService.isPlatformUnreachable, isTrue);
       backend.failures.remove("POST $tokens/token-a");
+      ApiAvailableService.probeOverride = () async => true;
+      await ApiAvailableService().recheckPlatform();
       messaging.refreshes.add("token-a");
       await _until(() => requestsTo("POST", "$tokens/token-a") == 2);
 

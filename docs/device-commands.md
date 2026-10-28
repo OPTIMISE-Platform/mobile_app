@@ -62,11 +62,22 @@ Commands are not idempotent, so a platform batch is never repeated. Its
 answers are written as they come, 513 included. A platform request that fails
 with a `DioException` answers 502 for each command; the message is
 `ErrorReporter.offlineMessage` when the platform could not be reached, which
-includes the availability interceptor's rejection in local mode, else
+includes the availability interceptor's rejection in local mode and while the
+platform is marked unreachable (`docs/platform-outage.md`), else
 `platform answered <status>`.
 
 Any other error from the platform path, such as a reply that is not a list,
 propagates out of `runCommands`.
+
+## Answers as they arrive
+
+`runCommands` takes an optional `onAnswers` handler. It gets every index
+exactly once, as soon as its answer is final: a gateway answer when the
+gateway batch returns, before the platform round, a platform answer when its
+batch returns, and the 502 of an unanswered command right before
+`runCommands` returns. The first answer for an index is the one returned. A
+handler that throws is logged and changes nothing that is sent. When
+`runCommands` throws, the answers already passed stand.
 
 ## Timeouts
 
@@ -87,8 +98,13 @@ a fresh value from the device.
   reported through `ErrorReporter` and the call returns false; a 502 is an
   ordinary response, which the widgets toast as
   `Error running command: <message>`.
-- `loadStates` (`lib/mixins/device_mixin.dart`) hands a 502 to the state's
-  callback as null and reports only an exception.
+- `loadStates` (`lib/mixins/device_mixin.dart`) hands each answer to its
+  state's callback as it arrives and notifies that device or group, a 502 as
+  null. It reports only an exception, after which the callbacks not yet
+  answered get null. The device list and the sensors page load the devices
+  behind a gateway once the gateway has given their connection state, and the
+  others once the platform has, each in its own `loadStates`; the sensors
+  page shows a device or group no card shows yet before its values.
 - `toggleDeviceState` (`lib/widgets/tabs/shared/device_state_action.dart`)
   resolves the control from the reading; `toggleThroughControl` takes one the
   caller resolved (the sensors page's group tiles). Both show a spinner, toast

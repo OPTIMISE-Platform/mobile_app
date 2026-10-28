@@ -22,6 +22,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -86,10 +87,12 @@ void serveGoldenBackend(FakeBackend backend,
   Auth.headersOverride = () async => headers;
 }
 
-/// Undoes [serveGoldenBackend].
+/// Undoes [serveGoldenBackend], and clears a platform outage a failing route
+/// recorded.
 void resetGoldenBackend() {
   AppHttpClientAdapter.testOverride = null;
   Auth.headersOverride = null;
+  ApiAvailableService.resetForTest();
 }
 
 /// `MgwStorage`'s first call opens a Hive box via path_provider, which - like

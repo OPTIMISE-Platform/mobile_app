@@ -18,6 +18,7 @@ import 'dart:math';
 
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -37,18 +38,45 @@ Future<void> refreshDeviceConnectionStates(
   bool platformStatesFresh = false,
 }) async {
   if (devices.isEmpty) return;
-  final outsideLocalNet = platformStatesFresh
-      ? const <DeviceInstance>[]
-      : devices
-            .where((d) => d.network?.localGateways?.isNotEmpty != true)
-            .toList(growable: false);
   await Future.wait([
-    MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices).catchError((
-      Object e,
-      StackTrace s,
-    ) {
-      ErrorReporter.log('Could not refresh the gateway device status', e, s);
-    }),
+    refreshGatewayConnectionStates(devices),
+    refreshPlatformConnectionStates(
+      devices,
+      platformStatesFresh: platformStatesFresh,
+    ),
+  ]);
+}
+
+/// The gateway part of [refreshDeviceConnectionStates]. Never throws.
+Future<void> refreshGatewayConnectionStates(List<DeviceInstance> devices) async {
+  if (devices.isEmpty) return;
+  await MgwDeviceManager.updateDeviceConnectionStatusFromMgw(devices).catchError((
+    Object e,
+    StackTrace s,
+  ) {
+    ErrorReporter.log('Could not refresh the gateway device status', e, s);
+  });
+}
+
+/// The platform part of [refreshDeviceConnectionStates], for the devices no
+/// gateway serves. While platform calls are off, their state becomes unknown
+/// without a request. Never throws.
+Future<void> refreshPlatformConnectionStates(
+  List<DeviceInstance> devices, {
+  bool platformStatesFresh = false,
+}) async {
+  if (platformStatesFresh) return;
+  final outsideLocalNet = devices
+      .where((d) => d.network?.localGateways?.isNotEmpty != true)
+      .toList(growable: false);
+  if (outsideLocalNet.isEmpty) return;
+  if (ApiAvailableService.platformCallsOff) {
+    for (final device in outsideLocalNet) {
+      _apply(device, DeviceConnectionStatus.unknown);
+    }
+    return;
+  }
+  await Future.wait([
     for (var i = 0; i < outsideLocalNet.length; i += _chunk)
       _refreshFromPlatform(
         outsideLocalNet.sublist(i, min(i + _chunk, outsideLocalNet.length)),

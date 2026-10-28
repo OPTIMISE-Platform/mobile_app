@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
@@ -294,7 +295,9 @@ class DeviceTabsState extends State<DeviceTabs> {
       ..write(',')
       ..write(state.deviceGroups.length)
       ..write(',')
-      ..write(state.networks.length);
+      ..write(state.networks.length)
+      // The app bar's banner.
+      ..write(ApiAvailableService.isPlatformUnreachable ? 'U' : '');
     // Shell-local state has to be part of the signature too: Selector returns
     // its cached subtree whenever the signature is unchanged, so a setState()
     // on this State alone would not reach the shell. Leaving showFab out is why

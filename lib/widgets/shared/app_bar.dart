@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/widgets/settings/settings.dart';
 import 'package:provider/provider.dart';
@@ -85,6 +86,28 @@ class MyAppBar {
     );
   }
 
+  /// Shown while the platform does not answer.
+  static PreferredSizeWidget? _platformUnreachable(BuildContext context) {
+    if (!ApiAvailableService.isPlatformUnreachable) return null;
+    return const PreferredSize(
+        preferredSize: Size(128, 23),
+        child: ColoredBox(
+            color: Colors.black,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  color: Colors.white,
+                ),
+                Text(
+                  " Platform not reachable",
+                  style: TextStyle(color: Colors.white),
+                )
+              ],
+            )));
+  }
+
   static Widget _updateIcon(BuildContext context) {
     bool? hasUpdate =
         AppUpdater.updateAvailableSync(cacheAge: const Duration(days: 1));
@@ -128,7 +151,7 @@ class MyAppBar {
       [List<Widget>? actions, Widget? leading, PreferredSizeWidget? bottomExtra]) {
     return AppBar(
       title: Text(_title, overflow: TextOverflow.fade),
-      // Local mode banner and a caller-supplied bottom (e.g. the Devices
+      // Local mode or outage banner and a caller-supplied bottom (e.g. the Devices
       // segment bar) stack in one PreferredSize; most call sites pass neither.
       bottom: _combinedBottom(context, bottomExtra),
       actions: actions,
@@ -138,14 +161,15 @@ class MyAppBar {
 
   static PreferredSizeWidget? _combinedBottom(
       BuildContext context, PreferredSizeWidget? extra) {
-    final localMode = _localMode(context);
-    if (localMode == null && extra == null) return null;
+    // The local mode asks nothing of the platform, so its banner wins.
+    final banner = _localMode(context) ?? _platformUnreachable(context);
+    if (banner == null && extra == null) return null;
     final height =
-        (localMode?.preferredSize.height ?? 0) + (extra?.preferredSize.height ?? 0);
+        (banner?.preferredSize.height ?? 0) + (extra?.preferredSize.height ?? 0);
     return PreferredSize(
       preferredSize: Size.fromHeight(height),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (localMode != null) localMode,
+        if (banner != null) banner,
         if (extra != null) extra,
       ]),
     );

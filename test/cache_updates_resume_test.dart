@@ -31,6 +31,7 @@ import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/models/location.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/notification.dart';
+import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -140,14 +141,27 @@ void main() {
   test("a failed background refresh is logged, an explicit one reported",
       () async {
     await _refreshedNow(overdue: {"devices"});
-    backend.failures["GET $_devicesPath"] = DioExceptionType.connectionError;
+    backend.serveJson("GET", _devicesPath, 500, null);
 
     await CacheHelper.scheduleCacheUpdates();
     expect(deviceRequests(), 1);
     expect(shown, isEmpty);
 
     expect(await CacheHelper.refreshCache(includeMetadata: false), isFalse);
-    expect(shown, [ErrorReporter.offlineMessage]);
+    expect(shown, ["Could not get devices"]);
+  });
+
+  test("an explicit refresh in an outage is not toasted, the app bar says it",
+      () async {
+    await _refreshedNow(overdue: {"devices"});
+    backend.failures["GET $_devicesPath"] = DioExceptionType.connectionError;
+
+    await CacheHelper.scheduleCacheUpdates();
+    expect(ApiAvailableService.isPlatformUnreachable, isTrue);
+
+    expect(await CacheHelper.refreshCache(includeMetadata: false), isFalse);
+    expect(deviceRequests(), 1, reason: "refused while unreachable");
+    expect(shown, isEmpty);
   });
 
   test("a refresh started before an account change does not land after it",

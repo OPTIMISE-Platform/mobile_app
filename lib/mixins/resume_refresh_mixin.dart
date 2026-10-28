@@ -14,10 +14,14 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
+import 'package:mobile_app/services/api_available.dart';
 
 /// Calls [onResumed] when the app returns to the foreground while this widget
-/// is the current route.
+/// is the current route, and when the platform is found again after an outage
+/// while it is on screen.
 ///
 /// Fourteen widgets each registered the lifecycle observer themselves and
 /// repeated the same three-part condition, and only one of them checked
@@ -36,20 +40,34 @@ mixin ResumeRefreshMixin<T extends StatefulWidget> on State<T> {
   /// on the current route, so it never has to guard against either.
   void onResumed();
 
+  StreamSubscription<void>? _platformFound;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(_resumeObserver);
+    _platformFound = ApiAvailableService.platformFound.listen((_) {
+      // The recheck timer can fire in the background; the resume reloads then.
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+      _reloadIfCurrent();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(_resumeObserver);
+    _platformFound?.cancel();
     super.dispose();
   }
 
   void _onLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || !mounted) return;
+    if (state != AppLifecycleState.resumed) return;
+    _reloadIfCurrent();
+  }
+
+  void _reloadIfCurrent() {
+    if (!mounted) return;
     if (ModalRoute.of(context)?.isCurrent != true) return;
     onResumed();
   }
