@@ -38,4 +38,25 @@ class DbQueryService {
     final decoded = resp.data![0];
     return List<List<dynamic>>.generate(decoded.length, (i) => decoded[i] as List<dynamic>);
   }
+
+  /// The newest value of [columnName] in the export [exportId], or null when
+  /// the export has no row. Unlike [query], it does not need a time range, so a
+  /// value that has not changed for a long time is still found.
+  static Future<dynamic> lastValue(String exportId, String columnName) async {
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/last-values';
+    final headers = await Auth().getHeaders();
+
+    final dio = await DioFactory.create(DioConfig.standard);
+    final resp = await dio.post<List<dynamic>>(url,
+        options: Options(headers: headers),
+        data: json.encode([
+          {"exportId": exportId, "columnName": columnName}
+        ]));
+    if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
+    }
+    if (resp.data!.isEmpty) return null;
+    final pair = resp.data!.first as Map<String, dynamic>?;
+    return pair?["value"];
+  }
 }

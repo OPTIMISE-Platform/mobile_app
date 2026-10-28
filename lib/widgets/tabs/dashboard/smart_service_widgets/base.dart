@@ -18,6 +18,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/automation_suggestions.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart_estimate.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
@@ -65,6 +66,7 @@ const SmSeWidgetType smSePieChartType = "pie_chart";
 const SmSeWidgetType smSeStackedBarChartType = "stacked_bar_chart";
 const SmSeWidgetType smSeBarChartEstimateType = "bar_chart_estimate";
 const SmSeWidgetType smSeVentilationType = "ventilation";
+const SmSeWidgetType smSeAutomationSuggestionsType = "automation_suggestions";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -196,6 +198,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeVentilationType:
         w = SmSeVentilation();
+        break;
+      case smSeAutomationSuggestionsType:
+        w = SmSeAutomationSuggestions();
         break;
 
       // ADD NEW WIDGETS ABOVE
