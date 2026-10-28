@@ -27,6 +27,7 @@ import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
+import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/widgets/tabs/gateways/details.dart';
 import 'package:mobile_app/widgets/tabs/gateways/mgw_status_panel.dart';
 import 'package:mobile_app/widgets/tabs/gateways/unpair_dialog.dart';
@@ -62,12 +63,25 @@ final _rejected = MgwReport(
   retriedWithFreshLogin: true,
 );
 
+const _modulesPath = "/core/api/module-manager/modules-reduced";
+
 void main() {
+  late FakeBackend backend;
+
   setUpAll(() async {
     await setUpGoldenEnvironment();
   });
 
   setUp(() {
+    // An open panel of a reachable gateway reads its module list; both modules
+    // are there, so only the notice test sees a notice.
+    backend = FakeBackend()
+      ..serveJson("GET", _modulesPath, 200, [
+        {"id": "github.com/SENERGY-Platform/mgw-device-command"},
+        {"id": "github.com/SENERGY-Platform/mgw-last-value-module"},
+      ]);
+    serveGoldenBackend(backend);
+    MgwStorage.restartForTest();
     AppState().networks.add(Network("network-1", "Ground floor", false, [], [],
         DeviceConnectionStatus.online, "hash-1", "owner-1"));
   });
@@ -81,6 +95,7 @@ void main() {
 
   Future<void> open(WidgetTester tester, bool dark,
       void Function(BuildContext) show) async {
+    await warmUpMgwStorage(tester);
     await pumpGolden(
       tester,
       Scaffold(
@@ -113,6 +128,20 @@ void main() {
             matchesGoldenFile("goldens/mgw_status_sheet_${name}_$suffix.png"));
       });
     }
+
+    testWidgets("status sheet without Device Command ($suffix)", (tester) async {
+      backend.serveJson("GET", _modulesPath, 200,
+          [{"id": "github.com/SENERGY-Platform/mgw-last-value-module"}]);
+      MgwReachability.forget();
+      MgwReachability.probeOverride = (_) async => _ok;
+      await open(tester, dark, (context) => showMgwStatusSheet(context, _mgw));
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text("Device Command is not installed"), findsOneWidget);
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/mgw_status_sheet_no_device_command_$suffix.png"));
+    });
 
     testWidgets("unpair dialog ($suffix)", (tester) async {
       await open(tester, dark, (context) => confirmRemovePairing(context, _mgw));

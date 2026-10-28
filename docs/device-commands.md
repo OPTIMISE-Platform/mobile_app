@@ -79,6 +79,20 @@ batch returns, and the 502 of an unanswered command right before
 handler that throws is logged and changes nothing that is sent. When
 `runCommands` throws, the answers already passed stand.
 
+## Gateway without the module
+
+A gateway without the `mgw-device-command` module fails the endpoint lookup,
+so every read goes to the platform and is missing while the platform is
+unreachable (`docs/platform-outage.md`). Device Command also needs
+`mgw-last-value-module`; without it, it returns no values for event services.
+
+`MgwStatusPanel` (`lib/widgets/tabs/gateways/mgw_status_panel.dart`) reads the
+gateway's module list once its status is ok and shows a notice when Device
+Command is missing, or when only Last Value is. It reads the list again on
+"Check again". A list that cannot be read shows no notice and no toast; only
+`ErrorReporter.log`. The panel is the gateway page and the status sheet of a
+network row; the gateway list asks for nothing per row.
+
 ## Timeouts
 
 The batch endpoint waits up to 10 s for the devices (`commandTimeoutSeconds`,

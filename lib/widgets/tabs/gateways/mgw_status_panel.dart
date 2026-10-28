@@ -18,7 +18,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/mgw.dart';
+import 'package:mobile_app/models/mgw_module.dart';
+import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/mgw/advertisements.dart';
+import 'package:mobile_app/services/mgw/module_manager.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/shared/display_time.dart';
@@ -158,6 +161,31 @@ abstract final class MgwStatusText {
     }
   }
 
+  static const lastValueModuleId =
+      "github.com/SENERGY-Platform/mgw-last-value-module";
+
+  /// The notice for the module the gateway lacks, or null when it has what
+  /// the device commands need. Last Value is only asked about once Device
+  /// Command is there: without Device Command it changes nothing.
+  static ({String title, String message})? moduleNotice(List<Module> modules) {
+    bool has(String id) => modules.any((m) => m.id == id);
+    if (!has(DeviceCommandPath.deviceManagerModuleName)) {
+      return (
+        title: "Device Command is not installed",
+        message: "Device values are read from the platform and are missing "
+            "while it is unreachable."
+      );
+    }
+    if (!has(lastValueModuleId)) {
+      return (
+        title: "Last Value is not installed",
+        message: "Without it, Device Command returns no values for event "
+            "services."
+      );
+    }
+    return null;
+  }
+
   /// Null when the authenticated request carried no session.
   static String? session(MgwReport report) {
     if (report.retriedWithFreshLogin) {
@@ -200,6 +228,14 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   /// The failure of the last action, with the title it is shown under.
   ({String title, PairingFailure failure})? _problem;
 
+  /// What the last module list says is missing; null while it loads, when
+  /// nothing is missing and when the list could not be read.
+  ({String title, String message})? _moduleNotice;
+
+  /// The gateway the module list was requested for, and which request counts.
+  String? _modulesFor;
+  int _moduleLoad = 0;
+
   bool get _checking => _running > 0;
 
   @override
@@ -214,6 +250,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       _running++;
       _probe(false);
     }
+    _syncModules();
     MgwReachability.revision.addListener(_onReachabilityChanged);
   }
 
@@ -230,6 +267,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       return;
     }
     _report = MgwReachability.cachedReportOf(gateway);
+    _syncModules();
     if (_report == null) _check();
   }
 
@@ -241,7 +279,37 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       _check();
     } else {
       setState(() => _report = cached);
+      // A check of this panel reads the modules itself once it is done.
+      if (!_checking) _syncModules();
     }
+  }
+
+  /// Reads the module list once the gateway answers, for a gateway not read
+  /// yet or when [repeat] asks for it; drops the notice when it does not.
+  void _syncModules({bool repeat = false}) {
+    final key = MgwReachability.cacheKeyFor(gateway);
+    if (_report?.status != MgwStatus.ok) {
+      _moduleLoad++;
+      _modulesFor = null;
+      _moduleNotice = null;
+    } else if (repeat || _modulesFor != key) {
+      _loadModules(key);
+    }
+  }
+
+  /// A list that cannot be read is logged and shows nothing: the notice says
+  /// what is missing, and nothing is known.
+  Future<void> _loadModules(String key) async {
+    final load = ++_moduleLoad;
+    _modulesFor = key;
+    ({String title, String message})? notice;
+    try {
+      notice = MgwStatusText.moduleNotice(
+          await MgwModuleService(gateway).getModules());
+    } catch (e, s) {
+      ErrorReporter.log("Could not load the modules of the gateway", e, s);
+    }
+    if (mounted && load == _moduleLoad) setState(() => _moduleNotice = notice);
   }
 
   Future<void> _check({bool force = false}) async {
@@ -254,7 +322,10 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   Future<void> _probe(bool force) async {
     try {
       final report = await MgwReachability.check(gateway, force: force);
-      if (mounted) setState(() => _report = report);
+      if (mounted) {
+        setState(() => _report = report);
+        _syncModules(repeat: force);
+      }
     } finally {
       _running--;
       if (mounted) setState(() {});
@@ -485,6 +556,14 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
           const SizedBox(height: Spacing.md),
           for (final (label, value) in _details(report))
             _DetailRow(label: label, value: value),
+        ],
+        if (_moduleNotice != null) ...[
+          const SizedBox(height: Spacing.md),
+          MgwErrorBlock(
+            title: _moduleNotice!.title,
+            message: _moduleNotice!.message,
+            margin: EdgeInsets.zero,
+          ),
         ],
         if (_problem != null) ...[
           const SizedBox(height: Spacing.md),

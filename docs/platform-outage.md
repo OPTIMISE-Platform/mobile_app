@@ -53,7 +53,9 @@ Both only in the foreground; in the background the next resume does it.
   serves keeps the unknown state of a cached device. Its read commands still go
   through `DeviceCommandsService.runCommands`, where the interceptor refuses
   them before any I/O and each is answered with the offline 502
-  (`docs/device-commands.md`).
+  (`docs/device-commands.md`). A gateway without the Device Command module
+  leaves every read to the platform, so none is answered; the gateway panel
+  says when the module is missing.
 - The app bar shows "Platform not reachable"; in the local mode its own banner
   stands in.
 
