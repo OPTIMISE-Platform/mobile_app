@@ -27,6 +27,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/expandable_fab.dart';
@@ -67,19 +68,7 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
-      // The where() used to sit here, filtering the futures rather than their
-      // results — always true. The null results are dropped below.
-      final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)));
-      _smartServiceWidgets = {};
-      items.forEach((element) {
-        if (element == null) return;
-        _smartServiceWidgets![element.id] = element;
-      });
-      if (mounted) setState(() {});
-      _refresh();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
     _tabController = TabController(
       initialIndex: 0,
       length: 0,
@@ -440,7 +429,30 @@ class DashboardState extends State<Dashboard> with ResumeRefreshMixin, TickerPro
     setState(() {});
   }
 
+  /// Lists the widget modules again. A widget is a module of its smart service
+  /// instance: one created since the last listing appears, one deleted with its
+  /// instance disappears. Known widgets keep their object and thereby their state.
+  /// When the listing fails, the widgets known so far stay.
+  Future<void> _syncWidgets() async {
+    final List<SmartServiceModule> modules;
+    try {
+      modules = await SmartServiceService.getModules(type: smartServiceModuleTypeWidget);
+    } catch (e, s) {
+      ErrorReporter.log("Could not list the widget modules", e, s);
+      return;
+    }
+    final known = _smartServiceWidgets ?? {};
+    final items = await Future.wait(modules.map((e) async => await SmartServiceModuleWidget.fromModule(e)));
+    final next = <String, SmartServiceModuleWidget>{};
+    for (final item in items) {
+      if (item == null) continue;
+      next[item.id] = known[item.id] ?? item;
+    }
+    _smartServiceWidgets = next;
+  }
+
   _refresh() async {
+    await _syncWidgets();
     List<SmartServiceModuleWidget?> items = _smartServiceWidgets?.values.toList() ?? [];
     if ((_tabController?.index ?? 0) < _dashboards.length) {
       items = _getTabWidgets(_tabController?.index ?? 0);
