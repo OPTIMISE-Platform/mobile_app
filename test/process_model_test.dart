@@ -150,7 +150,7 @@ void main() {
   });
 
   test("an incident names its step and time, falling back to the element id", () {
-    final named = ProcessIncident({
+    const named = ProcessIncident({
       "message": "x",
       "element_id": "Task_1",
       "element_name": "Read sensor",
@@ -158,8 +158,8 @@ void main() {
     });
     expect(named.step, "Read sensor");
     expect(named.time, DateTime.utc(2026, 11, 6, 10));
-    expect(ProcessIncident({"element_id": "Task_1"}).step, "Task_1");
-    expect(ProcessIncident({}).step, "");
-    expect(ProcessIncident({}).time, isNull);
+    expect(const ProcessIncident({"element_id": "Task_1"}).step, "Task_1");
+    expect(const ProcessIncident({}).step, "");
+    expect(const ProcessIncident({}).time, isNull);
   });
 }

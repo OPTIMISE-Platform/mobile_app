@@ -567,13 +567,15 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                         padding: const EdgeInsets.only(left: Spacing.lg, right: Spacing.lg, top: Spacing.xs),
                         child: Align(
                           alignment: Alignment.centerLeft,
-                          child: Text(
-                            "Last message ${relativeTime(lastMessage, now: stateTimeNow())}",
-                            key: const Key('detailPageLastMessage'),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          child: MinuteTicker(
+                            builder: (context) => Text(
+                              "Last message ${relativeTime(lastMessage, now: stateTimeNow())}",
+                              key: const Key('detailPageLastMessage'),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                            ),
                           ),
                         ),
                       ),

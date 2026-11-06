@@ -14,6 +14,8 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_app/shared/relative_time.dart';
 import 'package:mobile_app/theme.dart';
@@ -24,6 +26,38 @@ import 'package:mobile_app/theme.dart';
 DateTime Function() stateTimeClock = DateTime.now;
 
 DateTime stateTimeNow() => stateTimeClock();
+
+/// Rebuilds [builder] once a minute while it is on screen, so a relative time
+/// keeps up with the clock on a page that stays open without a reload.
+class MinuteTicker extends StatefulWidget {
+  final WidgetBuilder builder;
+
+  const MinuteTicker({super.key, required this.builder});
+
+  @override
+  State<MinuteTicker> createState() => _MinuteTickerState();
+}
+
+class _MinuteTickerState extends State<MinuteTicker> {
+  late final Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context);
+}
 
 /// "12 min ago" for the time a reading was received. With [tappable], a tap
 /// switches to the absolute time and back.
@@ -47,7 +81,9 @@ class _StateTimeCaptionState extends State<StateTimeCaption> {
   bool _absolute = false;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => MinuteTicker(builder: _build);
+
+  Widget _build(BuildContext context) {
     final now = stateTimeNow();
     final text = Text(
       _absolute

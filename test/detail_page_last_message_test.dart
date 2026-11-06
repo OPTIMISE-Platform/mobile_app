@@ -69,6 +69,17 @@ void main() {
     expect(find.text('12 min ago'), findsOneWidget);
     expect(find.text('39 min ago'), findsOneWidget);
 
+    // An open page keeps up with the clock: a minute later every relative
+    // time has moved on without a reload.
+    stateTimeClock = () => DateTime.utc(2026, 11, 6, 16, 4, 59);
+    await tester.pump(const Duration(minutes: 1));
+    expect(find.text('Last message 17 min ago'), findsOneWidget);
+    expect(find.text('17 min ago'), findsOneWidget);
+    expect(find.text('44 min ago'), findsOneWidget);
+    stateTimeClock = () => DateTime.utc(2026, 11, 6, 15, 59, 59);
+    await tester.pump(const Duration(minutes: 1));
+    expect(find.text('Last message 12 min ago'), findsOneWidget);
+
     // A tap on the caption switches that row to the absolute time.
     await tester.tap(find.text('39 min ago'));
     await tester.pump();
