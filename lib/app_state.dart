@@ -422,6 +422,7 @@ class AppState extends ChangeNotifier
               deviceClasses.isEmpty && !DeviceClassesService.isAvailable();
           break;
         case tabSmartServices:
+        case tabProcesses:
         case tabDashboard:
           navItem.disabled = !SmartServiceService.isAvailable();
           break;

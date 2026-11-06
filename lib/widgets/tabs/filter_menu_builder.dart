@@ -32,7 +32,8 @@ class _FilterOption {
 
 /// Builds and appends the filter [PopupMenuButton] to [actions].
 ///
-/// Hidden for [tabGroups], [tabSmartServices], and [tabDashboard].
+/// Hidden for [tabGroups], [tabSmartServices], [tabProcesses] and
+/// [tabDashboard].
 class FilterMenuBuilder {
   FilterMenuBuilder({
     required this.navigationIndex,
@@ -55,7 +56,7 @@ class FilterMenuBuilder {
   /// Called after the user closes a filter dialog so the screen refreshes.
   final VoidCallback onFilterApplied;
 
-  static const _hiddenTabs = {tabGroups, tabSmartServices, tabDashboard};
+  static const _hiddenTabs = {tabGroups, tabSmartServices, tabProcesses, tabDashboard};
 
   bool get _isVisible => !_hiddenTabs.contains(navigationIndex);
 

@@ -25,6 +25,7 @@ const tabNetworks = 5;
 const tabClasses = 6;
 const tabSmartServices = 7;
 const tabSensors = 8;
+const tabProcesses = 9;
 
 List<NavigationItem> navItems = [
   NavigationItem("Favorites",tabFavorites, Icons.star_border),
@@ -36,6 +37,7 @@ List<NavigationItem> navItems = [
   NavigationItem("Networks",tabNetworks, Icons.hub_outlined),
   NavigationItem("Classes",tabClasses, Icons.category),
   NavigationItem("Services",tabSmartServices, Icons.auto_fix_high),
+  NavigationItem("Processes",tabProcesses, Icons.account_tree_outlined),
 ];
 
 class NavigationItem {
@@ -65,7 +67,20 @@ const List<int> deviceSegmentTabs = [
   tabClasses,
 ];
 
+/// The Services bar tab's segments, in display order. [tabSmartServices] is
+/// the first segment and also stands for the bar tab itself.
+const List<int> serviceSegmentTabs = [
+  tabSmartServices,
+  tabProcesses,
+];
+
+/// The segment bar that [viewIndex] belongs to, null for a view without one.
+List<int>? segmentsForView(int viewIndex) {
+  if (deviceSegmentTabs.contains(viewIndex)) return deviceSegmentTabs;
+  if (serviceSegmentTabs.contains(viewIndex)) return serviceSegmentTabs;
+  return null;
+}
+
 /// The bar tab that shows [viewIndex]: itself for the five bar tabs, or the
-/// Devices tab for the four views folded into its segment bar.
-int barTabForView(int viewIndex) =>
-    deviceSegmentTabs.contains(viewIndex) ? tabDevices : viewIndex;
+/// first segment of the segment bar it is folded into.
+int barTabForView(int viewIndex) => segmentsForView(viewIndex)?.first ?? viewIndex;

@@ -25,6 +25,7 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/devices/device_list.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
+import 'package:mobile_app/widgets/tabs/processes/processes_list.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_values.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instances.dart';
 import 'package:provider/provider.dart';
@@ -125,6 +126,7 @@ class DeviceTabsState extends State<DeviceTabs> {
     if (!isInitialLoad &&
         index != tabDashboard &&
         index != tabSmartServices &&
+        index != tabProcesses &&
         index != tabSensors) {
       // defer search on initial load — data isn't ready yet anyway
 
@@ -162,9 +164,10 @@ class DeviceTabsState extends State<DeviceTabs> {
     switchScreen(tabIndex, false);
   }
 
-  /// Handles a tap on one of the Devices tab's [deviceSegmentTabs]. Re-tapping
-  /// the active segment leaves a drill-down instead of reloading, the same
-  /// way [_onBarTap] does for the bar itself.
+  /// Handles a tap on one of the segments of a segment bar
+  /// ([deviceSegmentTabs], [serviceSegmentTabs]). Re-tapping the active
+  /// segment leaves a drill-down instead of reloading, the same way
+  /// [_onBarTap] does for the bar itself.
   void _onSegmentTap(int segmentIndex, List<bool> disabled) {
     if (disabled[segmentIndex]) {
       Toast.showToastNoContext("Currently unavailable");
@@ -223,13 +226,15 @@ class DeviceTabsState extends State<DeviceTabs> {
     );
   }
 
-  /// The Devices tab's secondary tab bar (All/Locations/Groups/Networks/
-  /// Classes), shown under the app bar only while one of its segments is the
-  /// active view.
-  PreferredSizeWidget? _buildDeviceSegmentBar(
+  /// The secondary tab bar of the Devices tab (All/Locations/Groups/Networks/
+  /// Classes) or of the Services tab (Smart Services/Processes), shown under
+  /// the app bar only while one of its segments is the active view.
+  PreferredSizeWidget? _buildSegmentBar(
       BuildContext context, List<bool> disabled) {
-    if (!deviceSegmentTabs.contains(_navigationIndex)) return null;
-    return _DeviceSegmentBar(
+    final segments = segmentsForView(_navigationIndex);
+    if (segments == null) return null;
+    return _SegmentBar(
+      segments: segments,
       current: _navigationIndex,
       disabled: disabled,
       onSelected: (segmentIndex) => _onSegmentTap(segmentIndex, disabled),
@@ -347,7 +352,7 @@ class DeviceTabsState extends State<DeviceTabs> {
               floatingActionButton:
               showFab ? _buildFab(context) : null,
               appBar: appBar.getAppBar(context, actions, leadingAction,
-                  _buildDeviceSegmentBar(context, disabled)),
+                  _buildSegmentBar(context, disabled)),
               body: _buildTabBody(),
               bottomNavigationBar: _buildNavigationBar(context, disabled),
             ),
@@ -419,6 +424,8 @@ class DeviceTabsState extends State<DeviceTabs> {
         return const DeviceListFavorites();
       case tabSmartServices:
         return const SmartServicesInstances();
+      case tabProcesses:
+        return const ProcessesList();
       case tabDashboard:
         return const Dashboard();
       case tabSensors:
@@ -441,17 +448,19 @@ class DeviceTabsState extends State<DeviceTabs> {
   }
 }
 
-/// Secondary tab bar for the Devices tab's five segments. A plain [Row] of
+/// Secondary tab bar for the segments of the Devices and Services tabs. A plain [Row] of
 /// hand-styled tabs, not Flutter's [TabBar]: a disabled segment still needs
 /// its tap, to show the "unavailable" toast, without a [TabController]
 /// animating to it first.
-class _DeviceSegmentBar extends StatelessWidget implements PreferredSizeWidget {
-  const _DeviceSegmentBar({
+class _SegmentBar extends StatelessWidget implements PreferredSizeWidget {
+  const _SegmentBar({
+    required this.segments,
     required this.current,
     required this.disabled,
     required this.onSelected,
   });
 
+  final List<int> segments;
   final int current;
   final List<bool> disabled;
   final void Function(int segmentIndex) onSelected;
@@ -479,7 +488,7 @@ class _DeviceSegmentBar extends StatelessWidget implements PreferredSizeWidget {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            children: deviceSegmentTabs
+            children: segments
                 .map((segmentIndex) => _segmentTab(
                     segmentIndex, selectedColor, unselectedColor, disabledColor))
                 .toList(),
@@ -494,9 +503,12 @@ class _DeviceSegmentBar extends StatelessWidget implements PreferredSizeWidget {
     // tabDevices is this segment bar's own "All" - the shared NavigationItem
     // name ("Devices") is already the main bar tab's label and would
     // otherwise show twice.
-    final label = segmentIndex == tabDevices
-        ? "All"
-        : navItems.firstWhere((n) => n.index == segmentIndex).name;
+    final label = switch (segmentIndex) {
+      tabDevices => "All",
+      // The bar tab's own label is "Services".
+      tabSmartServices => "Smart Services",
+      _ => navItems.firstWhere((n) => n.index == segmentIndex).name,
+    };
     final isSelected = segmentIndex == current;
     final isDisabled = disabled[segmentIndex];
     final color = isDisabled
