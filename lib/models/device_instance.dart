@@ -111,6 +111,7 @@ class DeviceInstance {
         continue;
       }
       states[i].transitioning = true;
+      states[i].lastMessageTime = null;
       result.add(CommandCallback(states[i].toCommand(), (value) {
         if (value is List && value.length == 1) {
           states[i].value = value[0];
@@ -119,7 +120,7 @@ class DeviceInstance {
         }
         states[i].transitioning = false;
         NativePipe.handleDeviceStateUpdate(states[i]);
-      }));
+      }, onTime: (time) => states[i].lastMessageTime = time));
     }
     return result;
   }
@@ -163,5 +164,9 @@ class CommandCallback {
   DeviceCommand command;
   Function(dynamic value) callback;
 
-  CommandCallback(this.command, this.callback);
+  /// Called after [callback] with the time of the stored value the answer
+  /// came from, null when it carries none.
+  void Function(DateTime? time)? onTime;
+
+  CommandCallback(this.command, this.callback, {this.onTime});
 }

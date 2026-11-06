@@ -59,4 +59,29 @@ class DbQueryService {
     final pair = resp.data!.first as Map<String, dynamic>?;
     return pair?["value"];
   }
+
+  /// The newest time and value of each of [columns], in order; an entry is null
+  /// when the platform has no row for it. One unknown column fails the whole
+  /// request with a non-200 answer.
+  static Future<List<({DateTime? time, dynamic value})?>> lastValues(
+      List<({String deviceId, String serviceId, String columnName})> columns) async {
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/last-values';
+    final headers = await Auth().getHeaders();
+
+    final dio = await DioFactory.create(DioConfig.standard);
+    final resp = await dio.post<List<dynamic>>(url,
+        options: Options(headers: headers),
+        data: json.encode([
+          for (final c in columns) {"deviceId": c.deviceId, "serviceId": c.serviceId, "columnName": c.columnName}
+        ]));
+    if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
+    }
+    return [
+      for (final entry in resp.data!)
+        entry is Map<String, dynamic>
+            ? (time: DateTime.tryParse('${entry["time"]}'), value: entry["value"])
+            : null
+    ];
+  }
 }

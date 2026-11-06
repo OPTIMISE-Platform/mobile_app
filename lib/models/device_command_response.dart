@@ -23,7 +23,15 @@ class DeviceCommandResponse {
   int status_code;
   dynamic message;
 
-  DeviceCommandResponse(this.status_code, this.message);
+  /// RFC 3339 time of the stored value the answer was read from; absent for a
+  /// live device answer and for group commands.
+  String? time;
+
+  DeviceCommandResponse(this.status_code, this.message, {this.time});
+
+  /// [time] parsed, null when absent or not a valid timestamp.
+  DateTime? get lastMessageTime => time == null ? null : DateTime.tryParse(time!);
+
   factory DeviceCommandResponse.fromJson(Map<String, dynamic> json) => _$DeviceCommandResponseFromJson(json);
   Map<String, dynamic> toJson() => _$DeviceCommandResponseToJson(this);
 }

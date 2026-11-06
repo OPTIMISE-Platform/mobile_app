@@ -20,12 +20,17 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/device_class.dart';
+import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_type.dart';
+import 'package:dio/dio.dart';
+import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/db_query.dart';
 import 'package:mobile_app/services/device_classes.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_groups.dart';
@@ -37,6 +42,7 @@ import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/joined_load.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
+import 'package:mobile_app/shared/semaphore.dart';
 import 'package:mutex/mutex.dart';
 
 mixin DeviceMixin on ChangeNotifier {
@@ -52,6 +58,14 @@ mixin DeviceMixin on ChangeNotifier {
 
   final List<DeviceInstance> devices = [];
   final _devicesMutex = Mutex();
+
+  /// Columns last-values refused on their own (`device|service|path`); left
+  /// out of later requests, since one of them fails a whole request.
+  final Set<String> _refusedTimeColumns = {};
+
+  /// Columns a time request is running for; a load meanwhile does not ask
+  /// for them again.
+  final Set<String> _timeColumnsInFlight = {};
   bool _allDevicesLoaded = false;
   bool _devicesLoadedOnce = false;
   int _deviceOffset = 0;
@@ -829,7 +843,9 @@ mixin DeviceMixin on ChangeNotifier {
       if (delivered[i]) return;
       delivered[i] = true;
       if (response.status_code == 200) {
+        // After the value: setting a value drops its time.
         commandCallbacks[i].callback(response.message);
+        commandCallbacks[i].onTime?.call(response.lastMessageTime ?? _liveAnswerTime(commandCallbacks[i].command));
       } else {
         _logger.e('${response.status_code}: ${response.message}');
         commandCallbacks[i].callback(null);
@@ -865,6 +881,116 @@ mixin DeviceMixin on ChangeNotifier {
       deliver(i, result?[i] ?? DeviceCommandResponse(200, null));
     }
     _notifyEntities(devices, groups);
+    // After the values are shown, and not awaited: a time never delays them.
+    unawaited(loadMissingStateTimes(devices, limitToFunctionIds));
+  }
+
+  /// Asks the platform for the time of the stored value of every reading of
+  /// [devices] that has a value but no time after a load. A failure leaves the
+  /// times empty and changes no value.
+  ///
+  /// Readings of a pure request service are left out: their time is the time
+  /// of the answer, and the stored row may still be an older one.
+  Future<void> loadMissingStateTimes(List<DeviceInstance> devices, [List<String>? limitToFunctionIds]) async {
+    if (ApiAvailableService.platformCallsOff) return;
+    final states = [
+      for (final device in devices)
+        for (final s in device.states)
+          if (!s.isControlling &&
+              s.value != null &&
+              s.lastMessageTime == null &&
+              s.deviceId != null &&
+              s.serviceId != null &&
+              s.path != null &&
+              !_isRequestOnly(device, s.serviceId!) &&
+              !_refusedTimeColumns.contains(_timeColumnKey(s)) &&
+              !_timeColumnsInFlight.contains(_timeColumnKey(s)) &&
+              (limitToFunctionIds == null || limitToFunctionIds.contains(s.functionId)))
+            s
+    ];
+    if (states.isEmpty) return;
+    final keys = [for (final s in states) _timeColumnKey(s)];
+    final writes = [for (final s in states) s.valueWrites];
+    _timeColumnsInFlight.addAll(keys);
+    final List<DateTime?>? times;
+    try {
+      times = await _lastValueTimes(states);
+    } finally {
+      _timeColumnsInFlight.removeAll(keys);
+    }
+    if (times == null) return;
+    for (var i = 0; i < states.length; i++) {
+      // A value written meanwhile is newer than the row this time belongs to.
+      if (states[i].valueWrites == writes[i]) states[i].lastMessageTime ??= times[i];
+    }
+    for (final d in {for (final s in states) s.deviceInstance}) {
+      d?.notifyStateChanged();
+    }
+  }
+
+  static String _timeColumnKey(DeviceState s) => '${s.deviceId}|${s.serviceId}|${s.path}';
+
+  /// A request service answers only when asked, so an answer without a stored
+  /// time was just sent by the device: its time is now.
+  DateTime? _liveAnswerTime(DeviceCommand command) {
+    final device = command.deviceInstance, serviceId = command.service_id;
+    if (device == null || serviceId == null || command.group_id != null) return null;
+    return _isRequestOnly(device, serviceId) ? DateTime.now().toUtc() : null;
+  }
+
+  bool _isRequestOnly(DeviceInstance device, String serviceId) =>
+      deviceTypes[device.device_type_id]?.services.where((s) => s.id == serviceId).firstOrNull?.interaction == 'request';
+
+  /// 400 for an unknown column, 404 for a device the account no longer
+  /// reaches: either fails the whole request for one entry.
+  static bool _refusesOneEntry(int? status) => status == 400 || status == 404;
+
+  static int? _statusOf(Object e) => switch (e) {
+        DioException(:final response) => response?.statusCode,
+        UnexpectedStatusCodeException(:final code) => code,
+        _ => null,
+      };
+
+  /// One request for all [states]. If one entry can fail the whole request
+  /// ([_refusesOneEntry]), each state is asked alone (at most 4 at a time), so
+  /// that entry costs only its own time. Null when nothing was read.
+  Future<List<DateTime?>?> _lastValueTimes(List<DeviceState> states) async {
+    Future<List<DateTime?>> query(List<DeviceState> part) async {
+      final answers = await DbQueryService.lastValues([
+        for (final s in part) (deviceId: s.deviceId!, serviceId: s.serviceId!, columnName: s.path!)
+      ]);
+      if (answers.length != part.length) {
+        throw StateError('last-values answered ${answers.length} entries for ${part.length} columns');
+      }
+      return [for (final a in answers) a?.time];
+    }
+
+    try {
+      return await query(states);
+    } catch (e, s) {
+      if (!_refusesOneEntry(_statusOf(e)) || states.length == 1) {
+        if (_refusesOneEntry(_statusOf(e))) _refusedTimeColumns.add(_timeColumnKey(states.single));
+        ErrorReporter.log('Could not load the time of the last messages', e, s);
+        return null;
+      }
+    }
+    final times = List<DateTime?>.filled(states.length, null);
+    final limiter = Semaphore(4);
+    await Future.wait([
+      for (var i = 0; i < states.length; i++)
+        limiter.withResource(() async {
+          try {
+            times[i] = (await query([states[i]])).single;
+          } catch (e, s) {
+            if (_refusesOneEntry(_statusOf(e))) {
+              _refusedTimeColumns.add(_timeColumnKey(states[i]));
+            } else {
+              ErrorReporter.log('Could not load the time of a last message', e, s);
+            }
+          }
+        }),
+    ]);
+    return times;
   }
 
   /// Signals only the affected devices/groups (not the whole AppState) so their

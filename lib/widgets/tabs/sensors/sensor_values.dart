@@ -41,6 +41,7 @@ import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_icons.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_picker.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_sparkline.dart';
+import 'package:mobile_app/widgets/tabs/shared/state_time.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
@@ -1073,16 +1074,21 @@ class _SensorValuesState extends State<SensorValues>
                             alignment: switchTile
                                 ? Alignment.bottomLeft
                                 : Alignment.bottomRight,
-                            child: switchTile
-                                ? SwitchTileFooter(
-                                    reading: reading,
-                                    unavailable: unavailability,
-                                    busy: state != null &&
-                                        (state.transitioning ||
-                                            SwitchCommands.isRunning(state)),
-                                    onToggle: toggle,
-                                  )
-                                : _buildValue(state, device, group),
+                            child: _withTime(
+                              state,
+                              device,
+                              leftAligned: switchTile,
+                              child: switchTile
+                                  ? SwitchTileFooter(
+                                      reading: reading,
+                                      unavailable: unavailability,
+                                      busy: state != null &&
+                                          (state.transitioning ||
+                                              SwitchCommands.isRunning(state)),
+                                      onToggle: toggle,
+                                    )
+                                  : _buildValue(state, device, group),
+                            ),
                           ),
                         ),
                       ],
@@ -1094,6 +1100,38 @@ class _SensorValuesState extends State<SensorValues>
           ),
         );
       },
+    );
+  }
+
+  /// [child] with the time of the reading's last message below it. Groups
+  /// show nothing: their members' times differ.
+  Widget _withTime(
+    DeviceState? state,
+    DeviceInstance? device, {
+    required bool leftAligned,
+    required Widget child,
+  }) {
+    final time = state?.lastMessageTime;
+    if (device == null ||
+        state == null ||
+        time == null ||
+        state.transitioning ||
+        SwitchCommands.isRunning(state)) {
+      return child;
+    }
+    // Flexible keeps the value inside the height left by the caption, so its
+    // FittedBox still shrinks at a large text scale.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          leftAligned ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+      children: [
+        Flexible(child: child),
+        StateTimeCaption(
+          time,
+          textAlign: leftAligned ? TextAlign.start : TextAlign.end,
+        ),
+      ],
     );
   }
 

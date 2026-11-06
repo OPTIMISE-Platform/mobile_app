@@ -11,6 +11,7 @@ DeviceCommandResponse _$DeviceCommandResponseFromJson(
 ) => DeviceCommandResponse(
   (json['status_code'] as num).toInt(),
   json['message'],
+  time: json['time'] as String?,
 );
 
 Map<String, dynamic> _$DeviceCommandResponseToJson(
@@ -18,4 +19,5 @@ Map<String, dynamic> _$DeviceCommandResponseToJson(
 ) => <String, dynamic>{
   'status_code': instance.status_code,
   'message': instance.message,
+  'time': instance.time,
 };

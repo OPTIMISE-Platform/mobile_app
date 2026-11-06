@@ -93,6 +93,25 @@ Command is missing, or when only Last Value is. It reads the list again on
 `ErrorReporter.log`. The panel is the gateway page and the status sheet of a
 network row; the gateway list asks for nothing per row.
 
+## Time of the last message
+
+An answer may carry `time` (RFC 3339), set by device-command only when the
+value came from the stored last values; a live device answer and a group
+command carry none. `loadStates` puts it on the reading as
+`DeviceState.lastMessageTime`; a successful answer of a pure request service
+without `time` was just sent by the device and gets the time of the answer.
+Writing a value drops its time. Other readings with a value that still have
+no time after the load are asked from the platform in one `POST /db/v3/last-values`
+(`DbQueryService.lastValues`), after the values are shown and not awaited by
+`loadStates`, and skipped while platform calls are off
+(`docs/platform-outage.md`). One unknown column fails that whole request with
+400 (real device types have them, e.g. a flat output named `value`), so a 400
+is followed by one request per reading, at most four at a time; a column
+refused on its own is left out until the app restarts. Other errors are only
+logged. A time never changes a value or a status.
+The detail page and the sensor cards show it (`StateTimeCaption`); a group
+shows none.
+
 ## Timeouts
 
 The batch endpoint waits up to 10 s for the devices (`commandTimeoutSeconds`,

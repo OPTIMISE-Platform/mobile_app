@@ -159,6 +159,7 @@ All are `@visibleForTesting` and never set by production code.
 | `ErrorReporter.present` / `clock` / `resetForTest()` (`lib/shared/error_reporter.dart`) | Silence or capture toasts; move time past the window in which a repeated toast is suppressed |
 | `loadPinnedDevices` (`lib/widgets/tabs/sensors/sensor_values.dart`) | Replaces the sensors page's fetch of pinned devices, so a test can mark them `fromCache` |
 | `SwitchCommands.resetForTest()` (`lib/widgets/tabs/sensors/switch_commands.dart`) | Clears the static in-flight guard and the stored read-backs of the switch tiles |
+| `stateTimeClock` (`lib/widgets/tabs/shared/state_time.dart`) | Fixes the "now" of the last-message captions and of the detail page's "Last message" line |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
 
 Rendered times go through `toDisplayTime()`. A new widget that shows a local

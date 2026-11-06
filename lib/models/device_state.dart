@@ -32,9 +32,29 @@ part 'device_state.g.dart';
 
 @JsonSerializable()
 class DeviceState {
-  dynamic value;
+  dynamic _value;
+
+  /// Writing a value drops [lastMessageTime], which belongs to the value it
+  /// was loaded with; a load sets the time again after the value.
+  dynamic get value => _value;
+  set value(dynamic value) {
+    _value = value;
+    lastMessageTime = null;
+    _valueWrites++;
+  }
+
+  int _valueWrites = 0;
+
+  /// Counts the writes of [value], so a time that arrives late can tell
+  /// whether the value it was asked for is still the one shown.
+  int get valueWrites => _valueWrites;
+
   String functionId;
   bool isControlling, transitioning = false;
+
+  /// When the platform or gateway received [value]; null when unknown.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  DateTime? lastMessageTime;
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   DeviceInstance? _deviceInstance;
@@ -74,9 +94,10 @@ class DeviceState {
 
   /// [aspectId] is used only when [aspectIds] is null or empty, which is the
   /// case for entries written before aspect lists existed.
-  DeviceState(this.value, this.serviceId, this.serviceGroupKey, this.functionId, String? aspectId, this.isControlling, this.groupId, this.deviceClassId,
+  DeviceState(dynamic value, this.serviceId, this.serviceGroupKey, this.functionId, String? aspectId, this.isControlling, this.groupId, this.deviceClassId,
       this.deviceId, this.path, this.serviceGroupName, {List<String>? aspectIds})
-      : aspectIds = List.unmodifiable(effectiveAspectIds(aspectId, aspectIds)) {
+      : _value = value,
+        aspectIds = List.unmodifiable(effectiveAspectIds(aspectId, aspectIds)) {
     name = deviceInstance?.display_name ?? deviceGroup?.name;
   }
 

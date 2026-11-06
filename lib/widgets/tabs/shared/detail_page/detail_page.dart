@@ -47,8 +47,10 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
+import 'package:mobile_app/widgets/tabs/shared/state_time.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/relative_time.dart';
 
 class DetailPage extends StatefulWidget {
   final DeviceInstance? _device;
@@ -116,6 +118,21 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
     } catch (e) {
       _logger.w("Could not display timestamp: $e");
     }
+  }
+
+  /// The row's subtitle with the time the reading was received as its last
+  /// line, when that is known. Under the title rather than next to the value,
+  /// where a ListTile leaves no height for a second line.
+  Widget? _subtitleWithTime(String subtitle, DeviceState element) {
+    final time = element.transitioning ? null : element.lastMessageTime;
+    if (time == null) return subtitle.isEmpty ? null : Text(subtitle);
+    final caption = StateTimeCaption(time, tappable: true, textAlign: TextAlign.start);
+    if (subtitle.isEmpty) return caption;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [Text(subtitle), caption],
+    );
   }
 
   String _getTitle(DeviceState element) {
@@ -336,7 +353,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           builder: (context) => Chart(element),
                         )),
                 title: Text(_getTitle(element)),
-                subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                subtitle: _subtitleWithTime(subtitle, element),
                 trailing: Container(
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                   padding: const EdgeInsets.only(right: 12),
@@ -364,7 +381,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           builder: (context) => Chart(element),
                         )),
                 title: Text(_getTitle(element)),
-                subtitle: subtitle.isEmpty ? null : Text(subtitle),
+                subtitle: _subtitleWithTime(subtitle, element),
                 trailing: element.transitioning
                     ? Container(
                         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
@@ -491,6 +508,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
             ].join(" · ")
           : state.devices.map((e) => e.displayName).join(", ");
 
+      final lastMessage = newestTime(rows.where((s) => !s.isControlling).map((s) => s.lastMessageTime));
+
       return Scaffold(
           floatingActionButton: deviceGroup == null || !DeviceGroupsService.isCreateEditDeleteAvailable()
               ? null
@@ -543,6 +562,21 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                             ),
                       trailing: Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.end, children: trailingHeader),
                     ),
+                    if (lastMessage != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: Spacing.lg, right: Spacing.lg, top: Spacing.xs),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            "Last message ${relativeTime(lastMessage, now: stateTimeNow())}",
+                            key: const Key('detailPageLastMessage'),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
                     if (list.isNotEmpty || deviceGroup != null) const SizedBox(height: Spacing.lg),
                   ],
                   sections: [
