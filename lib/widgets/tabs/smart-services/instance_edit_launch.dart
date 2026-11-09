@@ -21,8 +21,8 @@ import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/multi_select_field.dart';
-import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_editor.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_model.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/heating_zone_editor.dart';
 
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
@@ -64,16 +64,22 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   /// The option's kind, which the backend uses to tell apart equally labelled options.
   static String? _group(SmartServiceParameterOption o) => o.kind.isEmpty ? null : o.kind;
 
-  /// The weekly plan editor in place of the text field. A stored plan it cannot
+  /// The `setback` parameter as the form holds it now, which zones without their own use.
+  dynamic _globalSetback() {
+    final value = parameters!.where((o) => o.id == "setback").firstOrNull?.value;
+    return value is num || (value is String && value.trim().isNotEmpty) ? value : 17;
+  }
+
+  /// The zone editor in place of the text field; the thermostats are those the form holds right now. A stored plan it cannot
   /// read is shown with its raw text and left untouched.
   Widget _heatingEditor(SmartServiceExtendedParameter p) {
     // Only a new launch falls back to the default; an existing instance's
     // empty or non-string value is shown as it is.
     final stored = p.value;
     final raw = stored is String && stored.isNotEmpty ? stored : (widget.instance == null ? p.default_value?.toString() : null);
-    final HeatingSchedule plan;
+    final HeatingPlan plan;
     try {
-      plan = HeatingSchedule.parse(raw ?? "", 0);
+      plan = HeatingPlan.parse(raw ?? "", _globalSetback());
     } on HeatingScheduleException catch (e) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(p.label),
@@ -81,11 +87,18 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
         SelectableText(raw ?? stored?.toString() ?? ""),
       ]);
     }
+    List<HeatingThermostat> thermostats;
+    try {
+      thermostats = parseHeatingThermostats(parameters!.where((o) => o.id == "thermostats").firstOrNull?.value);
+    } on HeatingScheduleException {
+      thermostats = const [];
+    }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(p.label),
-      HeatingScheduleEditor(
+      HeatingZoneEditor(
         key: ValueKey("heating-${p.id}"),
         initial: plan,
+        thermostats: thermostats,
         showSetback: false,
         onChanged: (changed) {
           if (changed != null) p.value = changed.serialise();

@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-// Dashboard widget of the Heizungssteuerung: current target, next switch point and the week.
+// Dashboard widget of the Heizungssteuerung: per zone the current target, next switch point and the week.
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
@@ -27,14 +27,19 @@ import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_editor.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_model.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/heating_zone_editor.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_parameters.dart';
 
 class SmSeHeatingSchedule extends SmartServiceModuleWidget {
-  static const _fullUnits = 13.0;
+  static const _legacyUnits = 13.0;
+  static const _zoneUnits = 11.0;
+  static const _frameUnits = 3.0;
   static const _messageUnits = 3.0;
 
   SmartServiceInstance? _instance;
-  HeatingSchedule? _schedule;
+  HeatingPlan? _plan;
+  List<HeatingThermostat> _thermostats = const [];
+  List<HeatingZone>? _zones;
   String? _error;
 
   /// The stored schedule text when it cannot be read, so the user sees what is there.
@@ -50,7 +55,11 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   Future<void> configure(dynamic data) async {}
 
   @override
-  double get height => _schedule == null ? _messageUnits : _fullUnits;
+  double get height {
+    final zones = _zones;
+    if (zones == null) return _plan == null ? _messageUnits : _messageUnits + 1;
+    return _plan!.legacy ? _legacyUnits : _frameUnits + _zoneUnits * zones.length;
+  }
 
   @override
   Widget buildInternal(BuildContext context, bool parentFlexible) {
@@ -61,6 +70,9 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   @override
   Future<void> refreshInternal() async {
     _raw = null;
+    _plan = null;
+    _zones = null;
+    _thermostats = const [];
     try {
       final instance = await SmartServiceService.getInstance(instance_id);
       _instance = instance;
@@ -68,16 +80,16 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
       final schedule = params.where((p) => p.id == "schedule").firstOrNull?.value;
       final setback = params.where((p) => p.id == "setback").firstOrNull?.value;
       try {
-        _schedule = HeatingSchedule.parse(schedule is String ? schedule : "", setback);
+        _plan = HeatingPlan.parse(schedule is String ? schedule : "", setback);
+        _thermostats = parseHeatingThermostats(params.where((p) => p.id == "thermostats").firstOrNull?.value);
+        _zones = _plan!.resolve(_thermostats);
         _error = null;
       } on HeatingScheduleException catch (e) {
-        _schedule = null;
         _raw = schedule?.toString();
-        _error = "The stored plan cannot be read: $e";
+        _error = "The stored plan cannot be used: $e";
       }
     } catch (e, s) {
       ErrorReporter.log("Could not load the heating plan", e, s);
-      _schedule = null;
       _error = _describe(e, "load the heating plan");
     }
   }
@@ -93,14 +105,15 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   }
 
   Future<void> _edit(BuildContext context) async {
-    final schedule = _schedule ?? const HeatingSchedule(HeatingSchedule.defaultWindows, 17);
+    final current = _plan;
+    if (current == null) return;
     final dashboard = context.findAncestorStateOfType<DashboardState>();
-    final plan = await Navigator.push<HeatingSchedule>(
-        context, MaterialPageRoute(builder: (_) => HeatingScheduleEditPage(initial: schedule)));
+    final plan = await Navigator.push<HeatingPlan>(
+        context, MaterialPageRoute(builder: (_) => HeatingZonesEditPage(initial: current, thermostats: _thermostats)));
     final instance = _instance;
     if (plan == null || instance == null) return;
     try {
-      await saveHeatingSchedule(instance, plan);
+      await saveHeatingPlan(instance, plan);
     } catch (e, s) {
       ErrorReporter.log("Could not save the heating plan", e, s);
       Toast.showToastNoContext(_describe(e, "save the heating plan"));
@@ -119,8 +132,9 @@ class _HeatingBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = module;
     final theme = Theme.of(context);
-    final plan = m._schedule;
-    if (plan == null) {
+    final zones = m._zones;
+    final plan = m._plan;
+    if (zones == null || plan == null) {
       return Padding(
         padding: const EdgeInsets.all(Spacing.md),
         child: SingleChildScrollView(
@@ -128,13 +142,13 @@ class _HeatingBody extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(m._error ?? "No heating plan loaded."),
             if (m._raw != null) Text(m._raw!, style: theme.textTheme.bodySmall),
+            if (plan != null) _editButton(context),
           ]),
         ),
       );
     }
 
     final now = DateTime.now().toUtc();
-    final next = plan.nextSwitch(now);
     return Padding(
       padding: const EdgeInsets.all(Spacing.md),
       child: SingleChildScrollView(
@@ -144,25 +158,45 @@ class _HeatingBody extends StatelessWidget {
           children: [
             Text(m._instance?.name ?? "Heating", style: theme.textTheme.titleSmall),
             const SizedBox(height: Spacing.xxs),
-            Text(formatHeatingTemperature(plan.target(now)), style: theme.textTheme.headlineMedium),
-            SizedBox(
-              height: 20,
-              child: next == null ? null : Text(_nextLine(now, next), style: theme.textTheme.bodyMedium),
-            ),
-            // Room for the line about the heat-up time (SNRGY-3607).
-            const SizedBox(height: Spacing.sm),
-            _WeekOverview(plan: plan, now: now),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                icon: const Icon(Icons.edit),
-                label: const Text("Edit plan"),
-                onPressed: () => m._edit(context),
-              ),
-            ),
+            for (final zone in zones) _zoneBlock(context, zone, now, named: !plan.legacy),
+            _editButton(context),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _editButton(BuildContext context) => Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          icon: const Icon(Icons.edit),
+          label: const Text("Edit plan"),
+          onPressed: () => module._edit(context),
+        ),
+      );
+
+  /// A legacy plan has one unnamed zone and shows no zone header.
+  Widget _zoneBlock(BuildContext context, HeatingZone zone, DateTime now, {required bool named}) {
+    final theme = Theme.of(context);
+    final next = zone.schedule.nextSwitch(now);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (named) ...[
+          Text(zone.name, style: theme.textTheme.titleSmall),
+          Text(zone.thermostats.map((t) => t.label).join(", "),
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall),
+        ],
+        Text(formatHeatingTemperature(zone.schedule.target(now)), style: theme.textTheme.headlineMedium),
+        SizedBox(
+          height: 20,
+          child: next == null ? null : Text(_nextLine(now, next), style: theme.textTheme.bodyMedium),
+        ),
+        // Room for the line about the heat-up time (SNRGY-3607).
+        const SizedBox(height: Spacing.sm),
+        _WeekOverview(plan: zone.schedule, now: now),
+        const SizedBox(height: Spacing.sm),
+      ],
     );
   }
 

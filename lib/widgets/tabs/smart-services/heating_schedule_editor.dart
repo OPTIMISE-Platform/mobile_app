@@ -14,9 +14,7 @@
  *  limitations under the License.
  */
 
-// Editor of the Heizungssteuerung weekly plan, used by the dashboard widget
-// (as a full-screen page) and by the instance edit screen (in place of the
-// text field of the schedule parameter).
+// Editor of the weekly plan of one Heizungssteuerung zone; heating_zone_editor.dart builds the zone editor on it.
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/theme.dart';
@@ -32,7 +30,7 @@ const heatingRestartNote = "Saving restarts the heating control and sets the tem
 
 /// One [step] up or down from the nearest multiple of [step], kept in 5..30.
 /// Stored values off the grid or out of range change only through this.
-double _move(double value, int direction, double step) =>
+double heatingMove(double value, int direction, double step) =>
     ((value / step).round() * step + direction * step).clamp(heatingMinTemperature, heatingMaxTemperature);
 
 String formatHeatingTemperature(double t) => t == t.roundToDouble() ? "${t.toInt()} °C" : "$t °C";
@@ -138,10 +136,10 @@ class _HeatingScheduleEditorState extends State<HeatingScheduleEditor> {
             const SizedBox(height: Spacing.md),
             Text("Setback temperature", style: theme.textTheme.titleSmall),
             const Text("Applies outside every time window."),
-            _stepper(
+            heatingStepper(
               formatHeatingTemperature(_setback),
-              onMinus: _setback > heatingMinTemperature ? () => _changed(() => _setback = _move(_setback, -1, 1)) : null,
-              onPlus: _setback < heatingMaxTemperature ? () => _changed(() => _setback = _move(_setback, 1, 1)) : null,
+              onMinus: _setback > heatingMinTemperature ? () => _changed(() => _setback = heatingMove(_setback, -1, 1)) : null,
+              onPlus: _setback < heatingMaxTemperature ? () => _changed(() => _setback = heatingMove(_setback, 1, 1)) : null,
             ),
           ],
         ],
@@ -186,10 +184,10 @@ class _HeatingScheduleEditorState extends State<HeatingScheduleEditor> {
                 const SizedBox(width: Spacing.sm),
                 Expanded(child: _timeField("To", row.to, () => _pick(row, false))),
               ]),
-            _stepper(
+            heatingStepper(
               formatHeatingTemperature(row.temperature),
-              onMinus: row.temperature > heatingMinTemperature ? () => _changed(() => row.temperature = _move(row.temperature, -1, _step)) : null,
-              onPlus: row.temperature < heatingMaxTemperature ? () => _changed(() => row.temperature = _move(row.temperature, 1, _step)) : null,
+              onMinus: row.temperature > heatingMinTemperature ? () => _changed(() => row.temperature = heatingMove(row.temperature, -1, _step)) : null,
+              onPlus: row.temperature < heatingMaxTemperature ? () => _changed(() => row.temperature = heatingMove(row.temperature, 1, _step)) : null,
             ),
             if (problem != null) Text(problem, style: TextStyle(color: theme.colorScheme.error)),
           ],
@@ -202,57 +200,11 @@ class _HeatingScheduleEditorState extends State<HeatingScheduleEditor> {
         onPressed: onTap,
         child: Text("$label ${formatHeatingMinutes(minutes)}"),
       );
-
-  Widget _stepper(String text, {VoidCallback? onMinus, VoidCallback? onPlus}) => Row(children: [
-        IconButton(tooltip: "Decrease", icon: const Icon(Icons.remove), onPressed: onMinus),
-        Text(text),
-        IconButton(tooltip: "Increase", icon: const Icon(Icons.add), onPressed: onPlus),
-      ]);
 }
 
-/// The full-screen editor of the widget. Pops with the new plan after the user
-/// confirmed the restart note, or with null when cancelled.
-class HeatingScheduleEditPage extends StatefulWidget {
-  final HeatingSchedule initial;
-
-  const HeatingScheduleEditPage({super.key, required this.initial});
-
-  @override
-  State<HeatingScheduleEditPage> createState() => _HeatingScheduleEditPageState();
-}
-
-class _HeatingScheduleEditPageState extends State<HeatingScheduleEditPage> {
-  late HeatingSchedule? _current = widget.initial;
-
-  Future<void> _save() async {
-    final plan = _current;
-    if (plan == null) return;
-    final confirmed = await showAdaptiveDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog.adaptive(
-        title: const Text("Save the heating plan?"),
-        content: const Text(heatingRestartNote),
-        actions: [
-          TextButton(child: const Text("Cancel"), onPressed: () => Navigator.pop(dialogContext, false)),
-          TextButton(child: const Text("Save"), onPressed: () => Navigator.pop(dialogContext, true)),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    Navigator.pop(context, plan);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Heating plan"),
-        actions: [TextButton(onPressed: _current == null ? null : _save, child: const Text("Save"))],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.md),
-        children: [HeatingScheduleEditor(initial: widget.initial, onChanged: (p) => setState(() => _current = p))],
-      ),
-    );
-  }
-}
+/// A temperature value between a minus and a plus button.
+Widget heatingStepper(String text, {VoidCallback? onMinus, VoidCallback? onPlus}) => Row(children: [
+      IconButton(tooltip: "Decrease", icon: const Icon(Icons.remove), onPressed: onMinus),
+      Text(text),
+      IconButton(tooltip: "Increase", icon: const Icon(Icons.add), onPressed: onPlus),
+    ]);

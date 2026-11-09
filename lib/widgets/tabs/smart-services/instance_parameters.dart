@@ -40,10 +40,13 @@ void copyInstanceValues(List<SmartServiceExtendedParameter> parameters, SmartSer
 
 /// Re-reads the instance first, because the PUT replaces every parameter; no release id, since the
 /// release parameters always describe the current version.
-Future<void> saveHeatingSchedule(SmartServiceInstance instance, HeatingSchedule schedule) async {
+Future<void> saveHeatingPlan(SmartServiceInstance instance, HeatingPlan plan) async {
   final current = await SmartServiceService.getInstance(instance.id);
   final parameters = await loadInstanceParameters(current);
-  parameters.firstWhere((p) => p.id == "schedule").value = schedule.serialise();
-  parameters.firstWhere((p) => p.id == "setback").value = schedule.setback.round();
+  // The thermostats may have changed since the plan was edited; a plan that no longer fits must not be sent.
+  final problem = plan.problem(parseHeatingThermostats(parameters.firstWhere((p) => p.id == "thermostats").value));
+  if (problem != null) throw HeatingScheduleException("The plan no longer fits the thermostats. $problem");
+  parameters.firstWhere((p) => p.id == "schedule").value = plan.serialise();
+  parameters.firstWhere((p) => p.id == "setback").value = plan.setback.round();
   await SmartServiceService.updateInstanceParameters(current.id, parameters.map((e) => e.toSmartServiceParameter()).toList());
 }

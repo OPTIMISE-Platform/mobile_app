@@ -14,6 +14,9 @@
  *  limitations under the License.
  */
 
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/smart_service.dart';
@@ -48,5 +51,45 @@ void main() {
     await show(instance: _instance());
     expect(find.text("Add time window"), findsNothing);
     expect(find.textContaining("The stored plan cannot be read"), findsOneWidget);
+  });
+
+  testWidgets("the zone editor offers the thermostats the form holds now", (tester) async {
+    String option(String id, String label) =>
+        json.encode({"device_selection": {"device_id": id, "service_id": null, "path": null}, "label": label});
+    final options = [option("urn:infai:ses:device:a", "Living room"), option("urn:infai:ses:device:b", "Bathroom")];
+    final thermostats = SmartServiceExtendedParameter("thermostats", "Thermostats", "", [options[0]], null, true,
+        [for (final o in options) SmartServiceParameterOption("device", json.decode(o)["label"], o, null, null)], ContentVariable.string, null, null, null, false);
+    final schedule = SmartServiceExtendedParameter("schedule", "Schedule", "", '{"zones":[{"name":"Bad","devices":["urn:infai:ses:device:a"],"windows":[]}]}',
+        null, false, null, ContentVariable.string, null, null, null, false);
+
+    await pumpGolden(tester, SmartServicesReleaseLaunch(_release(), instance: _instance(), parameters: [thermostats, schedule]), dark: false);
+    await tester.pump();
+    await tester.pump();
+    expect(find.widgetWithText(CheckboxListTile, "Living room"), findsOneWidget);
+    expect(find.widgetWithText(CheckboxListTile, "Bathroom"), findsNothing);
+
+    // selecting the second thermostat in the form shows it in the zone editor
+    thermostats.characteristic!.value = [options[0], options[1]];
+    await pumpGolden(tester, SmartServicesReleaseLaunch(_release(), instance: _instance(), parameters: [thermostats, schedule]), dark: false);
+    await tester.pump();
+    await tester.pump();
+    expect(find.widgetWithText(CheckboxListTile, "Bathroom"), findsOneWidget);
+  });
+
+  testWidgets("an own setback of a zone starts at the setback of the form, not at 0", (tester) async {
+    final schedule = SmartServiceExtendedParameter("schedule", "Schedule", "", '{"windows":[]}', null, false, null, ContentVariable.string, null, null, null, false);
+    final option = json.encode({"device_selection": {"device_id": "urn:infai:ses:device:a", "service_id": null, "path": null}, "label": "A"});
+    final thermostats = SmartServiceExtendedParameter("thermostats", "Thermostats", "", [option], null, true,
+        [SmartServiceParameterOption("device", "A", option, null, null)], ContentVariable.string, null, null, null, false);
+    final setback = SmartServiceExtendedParameter("setback", "Setback", "", 17, null, false, null, ContentVariable.integer, null, null, null, false);
+
+    await pumpGolden(tester, SmartServicesReleaseLaunch(_release(), instance: _instance(), parameters: [thermostats, schedule, setback]), dark: false);
+    await tester.pump();
+    await tester.pump();
+    final own = find.byType(Switch).last; // no window, so the last switch is the own setback
+    await tester.ensureVisible(own);
+    await tester.tap(own);
+    await tester.pump();
+    expect(schedule.value, '{"zones":[{"name":"Alle","windows":[],"setback":17}]}');
   });
 }

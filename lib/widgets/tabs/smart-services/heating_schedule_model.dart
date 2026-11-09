@@ -50,7 +50,7 @@ class HeatingWindow {
         "weekdays": weekdays,
         "from": formatHeatingMinutes(from),
         "to": formatHeatingMinutes(to),
-        "temperature": temperature == temperature.roundToDouble() ? temperature.toInt() : temperature,
+        "temperature": _jsonNumber(temperature),
       };
 
   /// The minute ranges this window covers on weekday [day] (0 = Monday).
@@ -178,9 +178,15 @@ class HeatingSchedule {
 
   double _targetAt(int day, int minute) => _coveringAt(day, minute) ?? setback;
 
-  static double _setback(dynamic v) {
+  /// A finite number, or a string of one as the process script reads it; null otherwise.
+  static double? _number(dynamic v) {
     final n = v is num ? v.toDouble() : (v is String ? double.tryParse(v.trim()) : null);
-    if (n == null || !n.isFinite) throw HeatingScheduleException("The setback temperature is not a number: $v");
+    return n != null && n.isFinite ? n : null;
+  }
+
+  static double _setback(dynamic v) {
+    final n = _number(v);
+    if (n == null) throw HeatingScheduleException("The setback temperature is not a number: $v");
     return n;
   }
 
@@ -198,9 +204,9 @@ class HeatingSchedule {
     } else {
       throw HeatingScheduleException("Window $n: weekdays must be a list");
     }
-    final t = w["temperature"];
-    if (t is! num || !t.isFinite) throw HeatingScheduleException("Window $n: temperature is not a number");
-    return HeatingWindow(days, _minutes(w["from"], n), _minutes(w["to"], n), t.toDouble());
+    final t = _number(w["temperature"]);
+    if (t == null) throw HeatingScheduleException("Window $n: temperature is not a number");
+    return HeatingWindow(days, _minutes(w["from"], n), _minutes(w["to"], n), t);
   }
 
   static final _time = RegExp(r'^(\d{1,2}):(\d{2})$');
@@ -214,6 +220,9 @@ class HeatingSchedule {
     throw HeatingScheduleException("Window $n: time hh:mm expected, not $v");
   }
 }
+
+/// Integral values are written without a fraction.
+num _jsonNumber(double v) => v == v.roundToDouble() ? v.toInt() : v;
 
 /// "HH:MM" of a minute of the day; 1440 is "24:00".
 String formatHeatingMinutes(int minutes) =>
@@ -239,3 +248,174 @@ Duration heatingOffset(DateTime utc) {
 /// The Berlin wall clock at [utc], as a DateTime whose UTC fields carry it.
 /// Weekday: Monday is 1 as in DateTime.
 DateTime heatingLocalTime(DateTime utc) => utc.toUtc().add(heatingOffset(utc));
+
+/// A thermostat of the `thermostats` parameter; [label] is what the user picked it by.
+class HeatingThermostat {
+  final String id, label;
+
+  const HeatingThermostat(this.id, this.label);
+}
+
+/// The thermostats of the `thermostats` parameter value: a list, or a JSON text of one, whose
+/// options are maps or JSON texts of maps `{"device_selection":{"device_id":..},"label":..}`.
+/// Options without a device id are skipped and a device counts once, as in the process script.
+List<HeatingThermostat> parseHeatingThermostats(dynamic value) {
+  try {
+    dynamic raw = value;
+    if (raw is String) raw = raw.trim().isEmpty ? null : json.decode(raw);
+    if (raw == null) return const [];
+    if (raw is! List) throw HeatingScheduleException("The thermostats must be a list");
+    final out = <HeatingThermostat>[];
+    for (var o in raw) {
+      if (o is String) o = json.decode(o);
+      final selection = o is Map ? o["device_selection"] : null;
+      final id = selection is Map ? selection["device_id"] : null;
+      if (id is! String || id.isEmpty || out.any((t) => t.id == id)) continue;
+      final label = o["label"];
+      out.add(HeatingThermostat(id, label is String && label.isNotEmpty ? label : id));
+    }
+    return out;
+  } on FormatException catch (e) {
+    throw HeatingScheduleException("The thermostats are not valid JSON: ${e.message}");
+  }
+}
+
+/// One zone of a stored plan. A null [devices] makes it the rest zone, which takes every selected
+/// thermostat no other zone names; a null [setback] means the plan's.
+class HeatingZoneDef {
+  final String name;
+  final List<dynamic>? devices;
+  final List<HeatingWindow> windows;
+  final double? setback;
+
+  const HeatingZoneDef(this.name, this.devices, this.windows, this.setback);
+}
+
+/// A zone with the thermostats it controls; it gets a process of its own.
+class HeatingZone {
+  final String name;
+  final List<HeatingThermostat> thermostats;
+  final HeatingSchedule schedule;
+
+  const HeatingZone(this.name, this.thermostats, this.schedule);
+}
+
+/// The `schedule` parameter: either the legacy shape `{"windows":[..]}` (one zone "Alle" with every
+/// thermostat) or `{"zones":[..]}`. Both stay valid; the service reads either.
+class HeatingPlan {
+  final List<HeatingZoneDef> zones;
+  final double setback;
+
+  /// Set by [parse] when the text had the legacy shape.
+  final bool legacy;
+
+  static const legacyZoneName = "Alle";
+
+  const HeatingPlan(this.zones, this.setback, {this.legacy = false});
+
+  /// Throws [HeatingScheduleException] when the text or the setback is invalid.
+  factory HeatingPlan.parse(String text, dynamic setback) {
+    final sb = HeatingSchedule._setback(setback);
+    final dynamic decoded;
+    try {
+      decoded = json.decode(text);
+    } on FormatException catch (e) {
+      throw HeatingScheduleException("The plan is not valid JSON: ${e.message}");
+    }
+    final zones = decoded is Map ? decoded["zones"] : null;
+    if (zones is List) {
+      return HeatingPlan([for (var i = 0; i < zones.length; i++) _zone(zones[i], i + 1)], sb);
+    }
+    final windows = decoded is Map ? decoded["windows"] : null;
+    if (windows is! List) throw HeatingScheduleException("The plan needs a list \"zones\" or \"windows\"");
+    final list = [for (var i = 0; i < windows.length; i++) HeatingSchedule._window(windows[i], i + 1)];
+    return HeatingPlan([HeatingZoneDef(legacyZoneName, null, list, null)], sb, legacy: true);
+  }
+
+  static HeatingZoneDef _zone(dynamic z, int n) {
+    if (z is! Map) throw HeatingScheduleException("Zone $n: an object is expected");
+    final rawName = z["name"];
+    final name = rawName is String && rawName.trim().isNotEmpty ? rawName.trim() : "Zone $n";
+    try {
+      final windows = z["windows"];
+      if (windows is! List) throw HeatingScheduleException("The zone needs a list \"windows\"");
+      final devices = z["devices"];
+      if (devices != null && devices is! List) throw HeatingScheduleException("The devices must be a list of device ids");
+      return HeatingZoneDef(
+        name,
+        devices as List?,
+        [for (var i = 0; i < windows.length; i++) HeatingSchedule._window(windows[i], i + 1)],
+        z["setback"] == null ? null : HeatingSchedule._setback(z["setback"]),
+      );
+    } on HeatingScheduleException catch (e) {
+      throw HeatingScheduleException("$name: $e");
+    }
+  }
+
+  /// One rest zone without an own setback, named "Alle" or not at all, is written as the legacy
+  /// shape, which older app versions read; anything else as zones.
+  String serialise() {
+    final only = zones.length == 1 ? zones.single : null;
+    if (only != null && only.devices == null && only.setback == null && (only.name.trim().isEmpty || only.name == legacyZoneName)) {
+      return json.encode({"windows": zones.single.windows});
+    }
+    return json.encode({
+      "zones": [
+        for (final z in zones)
+          {
+            "name": z.name,
+            if (z.devices != null) "devices": z.devices,
+            "windows": z.windows,
+            if (z.setback != null) "setback": _jsonNumber(z.setback!),
+          }
+      ]
+    });
+  }
+
+  /// What keeps the plan from being saved over [selected], or null: a zone name used twice
+  /// (empty names count as "Zone N") or a failing [resolve].
+  String? problem(List<HeatingThermostat> selected) {
+    final names = [for (final (i, z) in zones.indexed) z.name.trim().isEmpty ? "Zone ${i + 1}" : z.name.trim()];
+    if (names.toSet().length != names.length) return "Zone names must be unique.";
+    try {
+      resolve(selected);
+    } on HeatingScheduleException catch (e) {
+      return "$e.";
+    }
+    return null;
+  }
+
+  /// The zones that get a process, in plan order, as the process script resolves them. Throws
+  /// [HeatingScheduleException] for a device in two zones, a second rest zone, or no zone with a
+  /// selected thermostat.
+  List<HeatingZone> resolve(List<HeatingThermostat> selected) {
+    final taken = <String, String>{};
+    var rest = -1;
+    final devices = <List<HeatingThermostat>>[];
+    for (final (i, z) in zones.indexed) {
+      final mine = <HeatingThermostat>[];
+      if (z.devices == null) {
+        if (rest >= 0) throw HeatingScheduleException("Only one zone may take all other thermostats");
+        rest = i;
+      } else {
+        // Entries that are not text cannot name a thermostat; they are kept but not resolved.
+        for (final d in z.devices!.whereType<String>()) {
+          final other = taken[d];
+          if (other != null) throw HeatingScheduleException("Thermostat $d is in $other and ${z.name}");
+          taken[d] = z.name;
+          // A device taken out of the selection drops out of its zone.
+          final t = selected.where((t) => t.id == d).firstOrNull;
+          if (t != null) mine.add(t);
+        }
+      }
+      devices.add(mine);
+    }
+    if (rest >= 0) devices[rest].addAll(selected.where((t) => !taken.containsKey(t.id)));
+    final out = [
+      for (final (i, z) in zones.indexed)
+        if (devices[i].isNotEmpty) HeatingZone(z.name, devices[i], HeatingSchedule(z.windows, z.setback ?? setback))
+    ];
+    if (out.isEmpty) throw HeatingScheduleException("No zone has a selected thermostat");
+    return out;
+  }
+}
