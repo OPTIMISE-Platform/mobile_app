@@ -24,22 +24,20 @@ void main() {
 
   final now = DateTime.utc(2026, 11, 6, 15, 30);
 
-  test("under a second is just now, including up to a minute ahead", () {
-    expect(relativeTime(now, now: now), "just now");
+  test("under 30 seconds is < 30 seconds ago, including up to a minute ahead", () {
+    expect(relativeTime(now, now: now), "< 30 seconds ago");
     expect(
-        relativeTime(now.subtract(const Duration(milliseconds: 999)), now: now),
-        "just now");
+        relativeTime(now.subtract(const Duration(seconds: 29, milliseconds: 999)), now: now),
+        "< 30 seconds ago");
     expect(relativeTime(now.add(const Duration(seconds: 30)), now: now),
-        "just now");
+        "< 30 seconds ago");
     expect(relativeTime(now.add(const Duration(seconds: 60)), now: now),
-        "just now");
+        "< 30 seconds ago");
   });
 
-  test("seconds up to the minute", () {
-    expect(relativeTime(now.subtract(const Duration(seconds: 1)), now: now),
-        "1 second ago");
-    expect(relativeTime(now.subtract(const Duration(seconds: 3)), now: now),
-        "3 seconds ago");
+  test("seconds from 30 up to the minute", () {
+    expect(relativeTime(now.subtract(const Duration(seconds: 30)), now: now),
+        "30 seconds ago");
     expect(
         relativeTime(now.subtract(const Duration(seconds: 59, milliseconds: 999)),
             now: now),
@@ -82,12 +80,15 @@ void main() {
     expect(relativeTime(DateTime.utc(2026, 11, 7, 8, 0), now: now), "07.11 08:00");
   });
 
-  test("the phrasing next changes at a whole second of the age in the first "
-      "minute, then at a whole minute", () {
+  test("the phrasing next changes at 30 s, then at every whole second of the "
+      "age up to the minute, then at a whole minute", () {
     Duration until(Duration age) =>
         untilRelativeTimeChanges(now.subtract(age), now: now);
-    expect(until(Duration.zero), const Duration(seconds: 1));
+    expect(until(Duration.zero), const Duration(seconds: 30));
     expect(until(const Duration(milliseconds: 2400)),
+        const Duration(milliseconds: 27600));
+    expect(until(const Duration(seconds: 30)), const Duration(seconds: 1));
+    expect(until(const Duration(milliseconds: 31400)),
         const Duration(milliseconds: 600));
     expect(until(const Duration(seconds: 59, milliseconds: 500)),
         const Duration(milliseconds: 500));
@@ -96,9 +97,9 @@ void main() {
         const Duration(seconds: 40));
     expect(until(const Duration(hours: 3, seconds: 5)),
         const Duration(seconds: 55));
-    // A time just ahead of now counts up to "just now" in seconds as well.
+    // A time just ahead of now stays "< 30 seconds ago" until it is 30 s old.
     expect(until(const Duration(milliseconds: -300)),
-        const Duration(milliseconds: 300));
+        const Duration(milliseconds: 30300));
   });
 
   test("each change of the phrasing in the first minutes is a wake-up", () {
@@ -106,20 +107,24 @@ void main() {
     // without skipping a second.
     final t = now;
     var at = t;
+    var wakeUps = 0;
     final seen = <String>[relativeTime(t, now: at)];
     while (at.difference(t) < const Duration(minutes: 3)) {
       at = at.add(untilRelativeTimeChanges(t, now: at));
+      wakeUps++;
       final phrase = relativeTime(t, now: at);
       if (phrase != seen.last) seen.add(phrase);
     }
     expect(seen, [
-      "just now",
-      "1 second ago",
-      for (var i = 2; i < 60; i++) "$i seconds ago",
+      "< 30 seconds ago",
+      for (var i = 30; i < 60; i++) "$i seconds ago",
       "1 min ago",
       "2 min ago",
       "3 min ago",
     ]);
+    // No wake-up while the phrasing stands still: one to reach 30 s, one per
+    // second up to the minute, one per minute.
+    expect(wakeUps, 1 + 30 + 2);
   });
 
   test("clockOrDate", () {

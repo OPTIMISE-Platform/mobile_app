@@ -36,6 +36,12 @@ import 'package:provider/provider.dart';
 import 'fake_backend.dart';
 import 'test_helper.dart';
 
+/// A [Text] that says [text]. Unlike `find.text` it also finds a relative time
+/// set by relativeTimeText, whose transparent reserved room is part of its
+/// plain text but not of what it says.
+Finder findShownText(String text) =>
+    find.byWidgetPredicate((w) => w is Text && (w.semanticsLabel ?? w.data) == text);
+
 /// Phone-sized surface at devicePixelRatio 1, so the golden PNGs stay small.
 const goldenSurfaceSize = Size(412, 915);
 

@@ -107,8 +107,8 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 100)));
     await tester.pump();
 
-    expect(inCard('Fan', find.text('12 min ago')), findsOneWidget);
-    expect(inCard('Lamp', find.text('2 h ago')), findsOneWidget);
+    expect(inCard('Fan', findShownText('12 min ago')), findsOneWidget);
+    expect(inCard('Lamp', findShownText('2 h ago')), findsOneWidget);
     expect(inCard('Hall', find.textContaining('ago')), findsNothing);
     // Even a group state that carries a time shows none on its card.
     final group = AppState().deviceGroups.single;
@@ -133,6 +133,6 @@ void main() {
     await tester.pump();
     FlutterError.onError = oldOnError;
     expect(errors.map((e) => e.exceptionAsString()), isEmpty);
-    expect(inCard('Fan', find.text('12 min ago')), findsOneWidget);
+    expect(inCard('Fan', findShownText('12 min ago')), findsOneWidget);
   });
 }

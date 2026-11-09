@@ -18,20 +18,19 @@ import 'package:mobile_app/shared/display_time.dart';
 import 'package:mobile_app/shared/formats.dart';
 
 /// Short, human phrasing of [t] relative to [now] (default: the current time):
-/// "just now", "5 seconds ago", "5 min ago", "3 h ago", "yesterday 14:02",
-/// else a date.
+/// "< 30 seconds ago", "45 seconds ago", "5 min ago", "3 h ago",
+/// "yesterday 14:02", else a date.
 ///
 /// Calendar days are compared in display time. A [t] up to a minute in the
-/// future is "just now", since clocks of phone and platform differ by a few
-/// seconds. A [t] further ahead is not phrased relatively but shown as a
+/// future is "< 30 seconds ago", since clocks of phone and platform differ by
+/// a few seconds. A [t] further ahead is not phrased relatively but shown as a
 /// clock time, with the date when it is not today.
 String relativeTime(DateTime t, {DateTime? now}) {
   final at = toDisplayTime(t);
   final ref = toDisplayTime(now ?? DateTime.now());
   final diff = ref.difference(at);
   if (diff.isNegative && diff.inSeconds < -60) return clockOrDate(t, now: now);
-  if (diff.inSeconds < 1) return "just now";
-  if (diff.inSeconds == 1) return "1 second ago";
+  if (diff.inSeconds < 30) return "< 30 seconds ago";
   if (diff.inSeconds < 60) return "${diff.inSeconds} seconds ago";
   if (diff.inMinutes < 60) return "${diff.inMinutes} min ago";
   // Calendar dates in UTC: a local midnight difference is 23 h on the day the
@@ -45,17 +44,17 @@ String relativeTime(DateTime t, {DateTime? now}) {
 }
 
 /// How long after [now] the phrasing of [relativeTime] for [t] can next
-/// change: at the next whole second of its age while that is counted in
-/// seconds, else at the next whole minute.
+/// change: when the age reaches 30 s while it is "< 30 seconds ago", at the
+/// next whole second of the age while that is counted in seconds, else at the
+/// next whole minute.
 ///
 /// An hour count changes at a whole minute of the age as well. A calendar
 /// day changes at midnight, which this shows at most a minute late.
 Duration untilRelativeTimeChanges(DateTime t, {required DateTime now}) {
+  const second = Duration.microsecondsPerSecond, minute = Duration.microsecondsPerMinute;
   final age = now.difference(t).inMicroseconds;
-  final step = age > -Duration.microsecondsPerMinute &&
-          age < Duration.microsecondsPerMinute
-      ? Duration.microsecondsPerSecond
-      : Duration.microsecondsPerMinute;
+  if (age > -minute && age < 30 * second) return Duration(microseconds: 30 * second - age);
+  final step = age > -minute && age < minute ? second : minute;
   // Dart's % is never negative for a positive divisor, which also aligns an
   // age just ahead of now.
   return Duration(microseconds: step - age % step);

@@ -68,27 +68,28 @@ void main() {
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
     await tester.pump();
 
-    expect(find.text('Last message 3 seconds ago'), findsOneWidget);
-    expect(find.text('3 seconds ago'), findsOneWidget);
-    expect(find.text('19 min ago'), findsOneWidget);
+    expect(findShownText('Last message < 30 seconds ago'), findsOneWidget);
+    expect(findShownText('< 30 seconds ago'), findsOneWidget);
+    expect(findShownText('19 min ago'), findsOneWidget);
 
     for (var s = 4; s < 60; s++) {
       await tick();
-      expect(find.text('Last message $s seconds ago'), findsOneWidget);
-      expect(find.text('$s seconds ago'), findsOneWidget);
+      final phrase = s < 30 ? '< 30 seconds ago' : '$s seconds ago';
+      expect(findShownText('Last message $phrase'), findsOneWidget);
+      expect(findShownText(phrase), findsOneWidget);
     }
     await tick();
-    expect(find.text('Last message 1 min ago'), findsOneWidget);
-    expect(find.text('1 min ago'), findsOneWidget);
+    expect(findShownText('Last message 1 min ago'), findsOneWidget);
+    expect(findShownText('1 min ago'), findsOneWidget);
     // The other value counts its own minutes: 15:40:59 turns 20 minutes old
     // at 16:00:59, three seconds later.
-    expect(find.text('19 min ago'), findsOneWidget);
+    expect(findShownText('19 min ago'), findsOneWidget);
     await tick();
     await tick();
-    expect(find.text('19 min ago'), findsOneWidget);
+    expect(findShownText('19 min ago'), findsOneWidget);
     await tick();
-    expect(find.text('20 min ago'), findsOneWidget);
-    expect(find.text('Last message 1 min ago'), findsOneWidget);
+    expect(findShownText('20 min ago'), findsOneWidget);
+    expect(findShownText('Last message 1 min ago'), findsOneWidget);
 
     // A new message for one value restarts its time and the header's, the
     // other value keeps its own.
@@ -96,14 +97,15 @@ void main() {
     d.states[1].lastMessageTime = clock;
     d.notifyStateChanged();
     await tester.pump();
-    expect(find.text('Last message just now'), findsOneWidget);
-    expect(find.text('just now'), findsOneWidget);
-    expect(find.text('1 min ago'), findsOneWidget);
+    expect(findShownText('Last message < 30 seconds ago'), findsOneWidget);
+    expect(findShownText('< 30 seconds ago'), findsOneWidget);
+    expect(findShownText('1 min ago'), findsOneWidget);
+    for (var s = 1; s < 30; s++) {
+      await tick();
+    }
+    expect(findShownText('Last message < 30 seconds ago'), findsOneWidget);
     await tick();
-    expect(find.text('Last message 1 second ago'), findsOneWidget);
-    expect(find.text('1 second ago'), findsOneWidget);
-    expect(find.text('1 min ago'), findsOneWidget);
-    await tick();
-    expect(find.text('2 seconds ago'), findsOneWidget);
+    expect(findShownText('Last message 30 seconds ago'), findsOneWidget);
+    expect(findShownText('30 seconds ago'), findsOneWidget);
   });
 }

@@ -569,8 +569,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           alignment: Alignment.centerLeft,
                           child: RelativeTimeTicker(
                             time: lastMessage,
-                            builder: (context) => Text(
-                              "Last message ${relativeTime(lastMessage, now: stateTimeNow())}",
+                            builder: (context) => relativeTimeText(
+                              relativeTime(lastMessage, now: stateTimeNow()),
+                              prefix: "Last message ",
                               key: const Key('detailPageLastMessage'),
                               style: Theme.of(context)
                                   .textTheme

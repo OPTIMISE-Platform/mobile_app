@@ -76,7 +76,7 @@ void main() {
     await mountSensorPage(tester, pins);
 
     // TalkBack reads one node per tile: title, state, the time of the last
-    // message (a request service's live answer is "just now") and the toggle.
+    // message (a request service's live answer is "< 30 seconds ago") and the toggle.
     final semantics = tester.ensureSemantics();
     expect(tester.getSemantics(inCard('Fan', find.byType(Switch))).id,
         tester.getSemantics(find.text('Fan')).id,
@@ -84,7 +84,7 @@ void main() {
     expect(
         tester.getSemantics(find.text('Fan')),
         matchesSemantics(
-          label: 'Bathroom fan\nFan\nOn\njust now',
+          label: 'Bathroom fan\nFan\nOn\n< 30 seconds ago',
           hasToggledState: true,
           isToggled: true,
           hasEnabledState: true,

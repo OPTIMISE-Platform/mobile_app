@@ -28,7 +28,7 @@ DateTime Function() stateTimeClock = DateTime.now;
 DateTime stateTimeNow() => stateTimeClock();
 
 /// Rebuilds [builder] whenever the [relativeTime] phrasing of [time] changes
-/// while it is on screen: every second in the first minute, then every
+/// while it is on screen: at 30 s, every second up to the minute, then every
 /// minute. A relative time so keeps up with the clock on a page that stays
 /// open without a reload.
 class RelativeTimeTicker extends StatefulWidget {
@@ -53,7 +53,7 @@ class _RelativeTimeTickerState extends State<RelativeTimeTicker> {
   @override
   void didUpdateWidget(RelativeTimeTicker oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // A new message restarts the count at "just now".
+    // A new message restarts the count at "< 30 seconds ago".
     if (oldWidget.time != widget.time) _schedule();
   }
 
@@ -74,6 +74,46 @@ class _RelativeTimeTickerState extends State<RelativeTimeTicker> {
 
   @override
   Widget build(BuildContext context) => widget.builder(context);
+}
+
+final _countedPhrase = RegExp(r'^(< )?(\d{1,2}) (seconds|min|h)( ago)$');
+
+/// [phrase], a [relativeTime], after [prefix], set so its words keep their
+/// place while the count changes: digits are of equal width, the count takes
+/// the room of two digits, and a count of seconds also the room of the "< "
+/// of "< 30 seconds ago". Only a change of unit moves the text. Screen readers
+/// read [prefix] and [phrase] as they are; the reserved room is transparent.
+Text relativeTimeText(
+  String phrase, {
+  String prefix = '',
+  Key? key,
+  TextStyle? style,
+  TextAlign? textAlign,
+  int? maxLines,
+  TextOverflow? overflow,
+}) {
+  final match = _countedPhrase.firstMatch(phrase);
+  if (match == null) {
+    return Text(prefix + phrase,
+        key: key, style: style, textAlign: textAlign, maxLines: maxLines, overflow: overflow);
+  }
+  final below = match.group(1), count = match.group(2)!, unit = match.group(3)!;
+  const hidden = TextStyle(color: Colors.transparent);
+  return Text.rich(
+    TextSpan(children: [
+      if (prefix.isNotEmpty) TextSpan(text: prefix),
+      if (unit == 'seconds') TextSpan(text: '< ', style: below == null ? hidden : null),
+      if (count.length < 2) const TextSpan(text: '0', style: hidden),
+      TextSpan(text: '$count $unit'),
+      TextSpan(text: match.group(4)),
+    ]),
+    key: key,
+    semanticsLabel: prefix + phrase,
+    style: (style ?? const TextStyle()).copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+    textAlign: textAlign,
+    maxLines: maxLines,
+    overflow: overflow,
+  );
 }
 
 /// "12 min ago" for the time a reading was received. With [tappable], a tap
@@ -103,7 +143,7 @@ class _StateTimeCaptionState extends State<StateTimeCaption> {
 
   Widget _build(BuildContext context) {
     final now = stateTimeNow();
-    final text = Text(
+    final text = relativeTimeText(
       _absolute
           ? clockOrDate(widget.time, now: now)
           : relativeTime(widget.time, now: now),
