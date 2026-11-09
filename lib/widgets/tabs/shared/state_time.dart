@@ -27,31 +27,48 @@ DateTime Function() stateTimeClock = DateTime.now;
 
 DateTime stateTimeNow() => stateTimeClock();
 
-/// Rebuilds [builder] once a minute while it is on screen, so a relative time
-/// keeps up with the clock on a page that stays open without a reload.
-class MinuteTicker extends StatefulWidget {
+/// Rebuilds [builder] whenever the [relativeTime] phrasing of [time] changes
+/// while it is on screen: every second in the first minute, then every
+/// minute. A relative time so keeps up with the clock on a page that stays
+/// open without a reload.
+class RelativeTimeTicker extends StatefulWidget {
+  final DateTime time;
   final WidgetBuilder builder;
 
-  const MinuteTicker({super.key, required this.builder});
+  const RelativeTimeTicker({super.key, required this.time, required this.builder});
 
   @override
-  State<MinuteTicker> createState() => _MinuteTickerState();
+  State<RelativeTimeTicker> createState() => _RelativeTimeTickerState();
 }
 
-class _MinuteTickerState extends State<MinuteTicker> {
-  late final Timer _timer;
+class _RelativeTimeTickerState extends State<RelativeTimeTicker> {
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() {});
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(RelativeTimeTicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // A new message restarts the count at "just now".
+    if (oldWidget.time != widget.time) _schedule();
+  }
+
+  void _schedule() {
+    _timer?.cancel();
+    _timer = Timer(untilRelativeTimeChanges(widget.time, now: stateTimeNow()), () {
+      if (!mounted) return;
+      setState(() {});
+      _schedule();
     });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -81,7 +98,8 @@ class _StateTimeCaptionState extends State<StateTimeCaption> {
   bool _absolute = false;
 
   @override
-  Widget build(BuildContext context) => MinuteTicker(builder: _build);
+  Widget build(BuildContext context) =>
+      RelativeTimeTicker(time: widget.time, builder: _build);
 
   Widget _build(BuildContext context) {
     final now = stateTimeNow();
