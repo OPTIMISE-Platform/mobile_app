@@ -31,7 +31,6 @@ import 'package:mobile_app/shared/math_list.dart';
 import 'package:mobile_app/config/functions/get_color.dart';
 import 'package:mobile_app/config/functions/get_on_off_state.dart';
 import 'package:mobile_app/config/functions/get_power_injection_limit.dart';
-import 'package:mobile_app/config/functions/get_temperature.dart';
 
 Map<String?, FunctionConfig> functionConfigs = _specialConfigs();
 
@@ -47,7 +46,6 @@ Map<String?, FunctionConfig> _specialConfigs() {
     dotenv.env['FUNCTION_SET_COLOR']: FunctionConfigSetColor()..init(),
     dotenv.env['FUNCTION_GET_COLOR']: FunctionConfigGetColor()..init(),
     dotenv.env['FUNCTION_GET_TIMESTAMP']: FunctionConfigGetTimestamp()..init(),
-    dotenv.env['FUNCTION_GET_TEMPERATURE']: FunctionConfigGetTemperature()..init(),
     dotenv.env['FUNCTION_GET_LOWER_POWER_INJECTION_LIMIT']: FunctionConfigGetLowerPowerInjectionLimit(),
     dotenv.env['FUNCTION_GET_UPPER_POWER_INJECTION_LIMIT']: FunctionConfigGetUpperPowerInjectionLimit(),
     dotenv.env['FUNCTION_GET_BATTERY_LEVEL']: FunctionConfigGetBatteryLevel(),

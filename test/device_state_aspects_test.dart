@@ -270,10 +270,10 @@ void main() {
     });
 
     test("a special config that relates no control keeps its readings unpaired, whatever the concept", () {
-      final temperature = dotenv.env["FUNCTION_GET_TEMPERATURE"]!;
-      AppState().platformFunctions[temperature] =
-          PlatformFunction(temperature, "temperature", "concept-temperature", "Temperature");
-      final reading = _state(temperature, ["air"]);
+      final timestamp = dotenv.env["FUNCTION_GET_TIMESTAMP"]!;
+      AppState().platformFunctions[timestamp] =
+          PlatformFunction(timestamp, "timestamp", "concept-temperature", "Timestamp");
+      final reading = _state(timestamp, ["air"]);
 
       expect(reading.controlsFor([reading, _state(_control, ["air"])], _control), isEmpty);
     });

@@ -227,4 +227,51 @@ void main() {
     expect(find.text("Reading"), findsOneWidget);
     expect(find.text("MISSING_ASPECT_NAME"), findsNothing);
   });
+
+  testWidgets("a group folds each temperature control into the reading on its aspects", (tester) async {
+    final thermostat = DeviceClass("class-thermostat", "Thermostat", "");
+    AppState().deviceClasses[thermostat.id] = thermostat;
+    for (final id in ["air", "indoor", "reading", "target"]) {
+      AppState().aspects[id] = Aspect(id, id, null);
+    }
+    final getTemperature = dotenv.env["FUNCTION_GET_TEMPERATURE"]!;
+    const setTemperature = "$controllingFunctionPrefix:set-temperature";
+    AppState().platformFunctions[getTemperature] =
+        PlatformFunction(getTemperature, "Get-Temperature", "concept-temperature", "Get-Temperature");
+    AppState().platformFunctions[setTemperature] =
+        PlatformFunction(setTemperature, "Set-Temperature", "concept-temperature", "Set-Temperature");
+    // The criteria of a group of thermostats with a target temperature and an
+    // external reading, both readable and settable: each variable's aspects,
+    // each of them alone, and the controlling function's device class.
+    Map<String, dynamic> criterion(String functionId, List<String> aspectIds, String interaction) => {
+          "aspect_id": aspectIds.isEmpty ? "" : ([...aspectIds]..sort()).first,
+          if (aspectIds.isNotEmpty) "aspect_ids": aspectIds,
+          "device_class_id": aspectIds.isEmpty ? thermostat.id : "",
+          "function_id": functionId,
+          "interaction": interaction,
+        };
+    final aspectSets = [
+      ["air", "indoor", "target"],
+      ["air", "indoor", "reading"],
+      ["air"],
+      ["indoor"],
+      ["reading"],
+      ["target"],
+    ];
+    final criteria = [
+      for (final a in aspectSets) criterion(getTemperature, a, "event"),
+      for (final a in aspectSets) criterion(setTemperature, a, "request"),
+      criterion(setTemperature, [], "request"),
+    ].map(DeviceGroupCriteria.fromJson).toList();
+    final memberId = "urn:infai:ses:device:${'0' * 36}";
+    AppState().devices.add(DeviceInstance(memberId, "thermostat-local", "Hall thermostat", null, "thermostat", false,
+        "owner-1", "Hall thermostat", DeviceConnectionStatus.online));
+    final group = DeviceGroup("group-1", "Thermostats", criteria, "", [memberId], null)..prepareStates();
+
+    await pumpGolden(tester, DetailPage(null, group), dark: false);
+
+    expect(find.text("Get-Temperature"), findsNWidgets(2));
+    expect(find.text("Set-Temperature"), findsNothing,
+        reason: "each control acts on the reading with its aspect set and is part of that row");
+  });
 }
