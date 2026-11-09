@@ -59,8 +59,13 @@ Golden diffs of a failed run land in `test/failures/`, which is ignored.
   `.env.example` (`.env` is not in the repository), Settings in a temp Hive
   with the account `test-account` (sensor tabs, dashboards and favorites are
   per account), mocked secure storage and toast channel, silenced
-  `ErrorReporter`, Roboto and MaterialIcons loaded from the Flutter SDK, and
-  UTC as display time zone.
+  `ErrorReporter`, Roboto and MaterialIcons loaded from the Flutter SDK, UTC
+  as display time zone, and `OfflineLiveConnection` as `LiveConnection.factory`:
+  a connection that never connects, so a screen that watches live values opens
+  no MQTT connection whose timers outlive the test.
+- `findShownText(text)` — finds a `Text` by what it says. A relative time set
+  by `relativeTimeText` carries transparent reserved room in its plain text,
+  which `find.text` would have to match as well.
 - `pumpGolden(tester, widget, dark: ...)` — mounts the widget under the app's
   providers and themes on a 412×915 surface at device pixel ratio 1. It mounts
   each variant **fresh**: pumping light and then dark into the same tree would
@@ -161,6 +166,9 @@ All are `@visibleForTesting` and never set by production code.
 | `SwitchCommands.resetForTest()` (`lib/widgets/tabs/sensors/switch_commands.dart`) | Clears the static in-flight guard and the stored read-backs of the switch tiles |
 | `stateTimeClock` (`lib/widgets/tabs/shared/state_time.dart`) | Fixes the "now" of the last-message captions and of the detail page's "Last message" line |
 | `sparklineClock` (`lib/widgets/tabs/sensors/sensor_sparkline.dart`) | Fixes `loadSparklineValues`' "now", so a fixture's history points land inside its 2h window on every run |
+| `LiveConnection.factory` (`lib/live/mqtt_connection.dart`) | Makes the MQTT connections; `test/live_values_test.dart` has a fake that records subscriptions, delivers messages and emits connection states |
+| `LiveValues(...)` constructor arguments / `outagesForTest` (`lib/live/live_values.dart`) | A separate instance with its own clock, certificate, TLS context, gateway login, client id, cloud endpoint, protocol and device loaders; and the outage list set directly, for the banner |
+| `ClientCertificates.clock` / `dio` / `headers` / `apiUrl` / `device` / `replacedForHostname` (`lib/live/client_certificate.dart`) | Move the time past half of a validity, answer the CA through a `FakeBackend`, fix manufacturer and model, and forget the once-per-run hostname replacement |
 
 Rendered times go through `toDisplayTime()`. A new widget that shows a local
 time and calls `.toLocal()` directly produces goldens that differ between a

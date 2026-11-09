@@ -59,6 +59,13 @@ Both only in the foreground; in the background the next resume does it.
 - The app bar shows "Platform not reachable"; in the local mode its own banner
   stands in.
 
+## Live connections
+
+A live MQTT connection that is down never sets the state: it would refuse
+every platform request although only the broker is missing. The app bar
+shows a banner of its own below this one instead, and leaves the platform out
+of it while "Platform not reachable" shows (`docs/live-values.md`).
+
 ## Bounds in Auth
 
 `OpenIdConnectClient.create` fetches the discovery document through
