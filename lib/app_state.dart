@@ -24,6 +24,7 @@ import 'package:mobile_app/mixins/device_mixin.dart';
 import 'package:mobile_app/mixins/network_mixin.dart';
 import 'package:mobile_app/mixins/notification_mixin.dart';
 import 'package:mobile_app/native_pipe.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/cache_helper.dart';
@@ -67,6 +68,8 @@ class AppState extends ChangeNotifier
   AppState._internal() {
     WidgetsBinding.instance.addObserver(this);
     ApiAvailableService.platformUnreachable.addListener(notifyListeners);
+    // The app bar shows the live outages below the platform banner.
+    LiveValues.instance.outages.addListener(notifyListeners);
     ApiAvailableService.platformFound.listen((_) {
       // The recheck timer can fire in the background; the resume refreshes then.
       final lifecycle = WidgetsBinding.instance.lifecycleState;

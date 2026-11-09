@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -33,6 +34,7 @@ void main() {
   });
 
   tearDown(() {
+    LiveValues.instance.outagesForTest = const [];
     resetAppStateForGolden();
     resetGoldenBackend();
   });
@@ -61,8 +63,33 @@ void main() {
     expect(find.text(" Platform not reachable"), findsNothing);
   });
 
+  testWidgets("missing live values stack below the outage banner, without the platform it explains",
+      (tester) async {
+    await tester.runAsync(() => Settings.setLocalMode(false));
+    ApiAvailableService.setUnreachableForTest(true);
+    LiveValues.instance.outagesForTest = const [
+      (routeKey: LiveValues.cloudRoute, gatewayName: null),
+      (routeKey: "gateway:p", gatewayName: "Keller"),
+    ];
+    await pumpGolden(tester, appBarScreen(), dark: false);
+    expect(find.text(" Platform not reachable"), findsOneWidget);
+    expect(find.text(" No live values from Keller"), findsOneWidget);
+    ApiAvailableService.setUnreachableForTest(false);
+  });
+
   for (final dark in [false, true]) {
     final suffix = dark ? "dark" : "light";
+
+    testWidgets("app bar, local mode, no live values ($suffix)", (tester) async {
+      await tester.runAsync(() => Settings.setLocalMode(true));
+      LiveValues.instance.outagesForTest = const [
+        (routeKey: LiveValues.cloudRoute, gatewayName: null),
+        (routeKey: "gateway:p", gatewayName: "Keller"),
+      ];
+      await pumpGolden(tester, appBarScreen(), dark: dark);
+      await expectLater(find.byType(MaterialApp),
+          matchesGoldenFile("goldens/app_bar_local_mode_live_outage_$suffix.png"));
+    });
 
     testWidgets("app bar ($suffix)", (tester) async {
       // Hive's write Future never resolves inside testWidgets' fake-async

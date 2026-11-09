@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/widgets/settings/settings.dart';
@@ -108,6 +109,54 @@ class MyAppBar {
             )));
   }
 
+  /// The banner text for live sources without a connection, null for none.
+  /// A missing platform connection is left out while the platform banner
+  /// shows: it explains that one already.
+  static String? liveOutageText(List<LiveOutage> outages, {required bool platformUnreachable}) {
+    final names = [
+      for (final outage in outages)
+        if (outage.gatewayName != null)
+          outage.gatewayName!
+        else if (!platformUnreachable)
+          "the platform",
+    ];
+    if (names.isEmpty) return null;
+    final sources = names.length == 1
+        ? names.single
+        : "${names.sublist(0, names.length - 1).join(", ")} and ${names.last}";
+    return " No live values from $sources";
+  }
+
+  /// Shown while a view wants live values from a source it has had no
+  /// connection to for [LiveValues.outageAfter].
+  static PreferredSizeWidget? _liveOutage() {
+    final text = liveOutageText(LiveValues.instance.outages.value,
+        platformUnreachable: ApiAvailableService.isPlatformUnreachable);
+    if (text == null) return null;
+    return PreferredSize(
+        preferredSize: const Size(128, 23),
+        child: ColoredBox(
+            color: Colors.black,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.sensors_off_outlined,
+                  color: Colors.white,
+                ),
+                Flexible(
+                  child: Text(
+                    text,
+                    key: const Key('liveOutageBanner'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                )
+              ],
+            )));
+  }
+
   static Widget _updateIcon(BuildContext context) {
     bool? hasUpdate =
         AppUpdater.updateAvailableSync(cacheAge: const Duration(days: 1));
@@ -161,17 +210,21 @@ class MyAppBar {
 
   static PreferredSizeWidget? _combinedBottom(
       BuildContext context, PreferredSizeWidget? extra) {
-    // The local mode asks nothing of the platform, so its banner wins.
+    // The local mode asks nothing of the platform, so its banner wins. Missing
+    // live values go below either, a gateway can fail in both.
     final banner = _localMode(context) ?? _platformUnreachable(context);
-    if (banner == null && extra == null) return null;
+    final live = _liveOutage();
+    final parts = [
+      if (banner != null) banner,
+      if (live != null) live,
+      if (extra != null) extra,
+    ];
+    if (parts.isEmpty) return null;
     final height =
-        (banner?.preferredSize.height ?? 0) + (extra?.preferredSize.height ?? 0);
+        parts.fold<double>(0, (sum, part) => sum + part.preferredSize.height);
     return PreferredSize(
       preferredSize: Size.fromHeight(height),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (banner != null) banner,
-        if (extra != null) extra,
-      ]),
+      child: Column(mainAxisSize: MainAxisSize.min, children: parts),
     );
   }
 }

@@ -17,8 +17,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:logger/logger.dart';
@@ -58,6 +58,11 @@ class LiveHandle {
     _release();
   }
 }
+
+/// A live source a view wants but has had no connection to for
+/// [LiveValues.outageAfter]: the platform when [gatewayName] is null, else the
+/// paired gateway of that name.
+typedef LiveOutage = ({String routeKey, String? gatewayName});
 
 /// Keeps the readings of the watched devices current from MQTT events.
 ///
@@ -132,6 +137,19 @@ class LiveValues with WidgetsBindingObserver {
   bool _paused = false;
   String? _account;
 
+  /// How long a wanted connection may be down before it counts as an outage.
+  /// Covers a first connect and a reconnect after a short drop.
+  static const outageAfter = Duration(seconds: 10);
+
+  final _outages = ValueNotifier<List<LiveOutage>>(const []);
+
+  /// The sources whose connection a view wants and has been down for
+  /// [outageAfter], the platform first. Empty while the app is paused.
+  ValueListenable<List<LiveOutage>> get outages => _outages;
+
+  /// Sets [outages] directly, for tests of the banner.
+  @visibleForTesting
+  set outagesForTest(List<LiveOutage> value) => _outages.value = value;
 
   /// Whether a connection of [routeKey] exists; for tests and diagnostics.
   @visibleForTesting
@@ -282,12 +300,15 @@ class LiveValues with WidgetsBindingObserver {
           conn.retry?.cancel();
           conn.retry = null;
           conn.connection.disconnect();
+          _clearOutage(conn);
         }
+        _publishOutages();
       case AppLifecycleState.resumed:
         _paused = false;
         _checkAccount();
         _rerouteAll();
         for (final conn in _conns.values.toList()) {
+          _down(conn);
           _connect(conn);
         }
       default:
@@ -308,8 +329,12 @@ class LiveValues with WidgetsBindingObserver {
     _account ??= Settings.getAccount();
     final conn = _Conn(route, LiveConnection.factory());
     conn.messageSub = conn.connection.messages.listen((m) => _onMessage(conn, m.$1, m.$2));
-    conn.stateSub = conn.connection.states.listen((s) => _logger.d('Live ${route.key}: ${s.name}'));
+    conn.stateSub = conn.connection.states.listen((s) {
+      _logger.d('Live ${route.key}: ${s.name}');
+      s == LiveConnectionState.connected ? _up(conn) : _down(conn);
+    });
     _conns[route.key] = conn;
+    _down(conn);
     if (!_paused) _connect(conn);
     return conn;
   }
@@ -321,6 +346,52 @@ class LiveValues with WidgetsBindingObserver {
     conn.stateSub?.cancel();
     conn.connection.disconnect();
     if (identical(_conns[conn.route.key], conn)) _conns.remove(conn.route.key);
+    _clearOutage(conn);
+    _publishOutages();
+  }
+
+  // ---- outages -----------------------------------------------------------
+
+  /// [conn] has no connection: an outage once it stays so for [outageAfter].
+  /// Not while paused, when no connection is wanted.
+  void _down(_Conn conn) {
+    if (conn.closed || _paused || conn.outage || conn.downTimer != null) return;
+    conn.downTimer = Timer(outageAfter, () {
+      conn.downTimer = null;
+      if (conn.closed || _paused) return;
+      conn.outage = true;
+      _logger.d('Live ${conn.route.key}: no connection for ${outageAfter.inSeconds} s');
+      _publishOutages();
+    });
+  }
+
+  void _up(_Conn conn) {
+    _clearOutage(conn);
+    _publishOutages();
+  }
+
+  static void _clearOutage(_Conn conn) {
+    conn.downTimer?.cancel();
+    conn.downTimer = null;
+    conn.outage = false;
+  }
+
+  void _publishOutages() {
+    final outages = <LiveOutage>[
+      for (final conn in _conns.values)
+        if (conn.outage) (routeKey: conn.route.key, gatewayName: _nameOf(conn.route.gateway)),
+    ]..sort((a, b) => (a.gatewayName ?? '').compareTo(b.gatewayName ?? ''));
+    if (listEquals(outages, _outages.value)) return;
+    _outages.value = List.unmodifiable(outages);
+  }
+
+  /// As the gateway list shows it.
+  static String? _nameOf(MGW? gateway) {
+    if (gateway == null) return null;
+    for (final name in [gateway.mDNSServiceName, gateway.hostname, gateway.ip]) {
+      if (name.isNotEmpty) return name;
+    }
+    return 'gateway';
   }
 
   /// Parameters for the next attempt of [route]; null when the cloud
@@ -622,6 +693,11 @@ class _Conn {
   Timer? retry;
   int failures = 0;
   bool closed = false;
+
+  /// Runs while the connection is wanted but down, until it counts as an
+  /// [outage].
+  Timer? downTimer;
+  bool outage = false;
 
   _Conn(this.route, this.connection);
 }

@@ -45,6 +45,7 @@ import 'golden_helper.dart';
 /// delivers the messages a test pushes.
 class FakeConnection extends LiveConnection {
   final incoming = StreamController<(String, Uint8List)>.broadcast();
+  final stateEvents = StreamController<LiveConnectionState>.broadcast();
   final subscribed = <String>{};
   final subscribeCalls = <String>[];
   final unsubscribeCalls = <String>[];
@@ -62,6 +63,9 @@ class FakeConnection extends LiveConnection {
   Stream<(String, Uint8List)> get messages => incoming.stream;
 
   @override
+  Stream<LiveConnectionState> get states => stateEvents.stream;
+
+  @override
   Future<LiveConnectionState> connect(String host, int port,
       {SecurityContext? context,
       String? username,
@@ -75,6 +79,7 @@ class FakeConnection extends LiveConnection {
     this.username = username;
     this.password = password;
     hasContext = context != null;
+    stateEvents.add(outcome);
     return outcome;
   }
 
@@ -91,7 +96,10 @@ class FakeConnection extends LiveConnection {
   }
 
   @override
-  void disconnect() => disconnectCalls++;
+  void disconnect() {
+    disconnectCalls++;
+    stateEvents.add(LiveConnectionState.disconnected);
+  }
 
   void send(String topic, String payload) => incoming.add((topic, Uint8List.fromList(utf8.encode(payload))));
 }
@@ -148,6 +156,7 @@ void main() {
   late Map<String, DeviceInstance> knownDevices;
   Completer<void>? deviceGate;
   late Object? Function() contextFailure;
+  late LiveConnectionState outcomeOfNew;
 
   setUp(() async {
     FlutterSecureStorage.setMockInitialValues({});
@@ -158,8 +167,9 @@ void main() {
     protocolLoads = {};
     now = DateTime.utc(2026, 11, 9, 12);
     cloudOn = true;
+    outcomeOfNew = LiveConnectionState.connected;
     LiveConnection.factory = () {
-      final c = FakeConnection();
+      final c = FakeConnection()..outcome = outcomeOfNew;
       made.add(c);
       return c;
     };
@@ -737,6 +747,92 @@ void main() {
 
       expect(extra.value, 'x-value');
       expect(meta.valueWrites, 0);
+    });
+  });
+
+  group('outages', () {
+    const platform = (routeKey: LiveValues.cloudRoute, gatewayName: null);
+    final gateway = (routeKey: LiveValues.gatewayRoute('pair-1'), gatewayName: 'svc');
+
+    testWidgets('a connection that does not come up is an outage after 10 s, and none once it is up', (tester) async {
+      outcomeOfNew = LiveConnectionState.disconnected;
+      live.watch(cloudDevice);
+      await tester.pump(const Duration(seconds: 9));
+      expect(live.outages.value, isEmpty);
+      await tester.pump(const Duration(seconds: 1));
+      expect(live.outages.value, [platform]);
+
+      made.single.stateEvents.add(LiveConnectionState.connected);
+      await tester.pump();
+      expect(live.outages.value, isEmpty);
+    });
+
+    testWidgets('a drop that is over within 10 s is no outage', (tester) async {
+      live.watch(cloudDevice);
+      await tester.pump();
+      made.single.stateEvents.add(LiveConnectionState.disconnected);
+      await tester.pump(const Duration(seconds: 6));
+      made.single.stateEvents.add(LiveConnectionState.connecting);
+      await tester.pump(const Duration(seconds: 3));
+      made.single.stateEvents.add(LiveConnectionState.connected);
+      await tester.pump(const Duration(seconds: 20));
+      expect(live.outages.value, isEmpty);
+    });
+
+    testWidgets('a refused login and a missing certificate count as well', (tester) async {
+      outcomeOfNew = LiveConnectionState.refusedNotAuthorized;
+      live.watch(gatewayDevice);
+      await tester.pump(const Duration(seconds: 10));
+      expect(live.outages.value, [gateway]);
+      live.accountChanged();
+
+      live = LiveValues(
+        certificate: () async => null,
+        cloudEndpoint: () => (host: 'mqtt.test', port: 28888),
+        clientId: ([suffix = '']) async => 'optimise-app-test',
+      );
+      live.watch(cloudDevice);
+      await tester.pump(const Duration(seconds: 10));
+      expect(live.outages.value, [platform]);
+      live.accountChanged();
+      await tester.pump(const Duration(minutes: 5));
+    });
+
+    testWidgets('outages of the platform and a gateway are both listed, the platform first', (tester) async {
+      outcomeOfNew = LiveConnectionState.disconnected;
+      live.watch(gatewayDevice);
+      await tester.pump(const Duration(seconds: 5));
+      live.watch(cloudDevice);
+      await tester.pump(const Duration(seconds: 10));
+      expect(live.outages.value, [platform, gateway]);
+    });
+
+    testWidgets('the last release ends the outage of its connection', (tester) async {
+      outcomeOfNew = LiveConnectionState.disconnected;
+      final handle = live.watch(cloudDevice);
+      await tester.pump(const Duration(seconds: 10));
+      expect(live.outages.value, [platform]);
+      handle.release();
+      expect(live.outages.value, isEmpty);
+    });
+
+    testWidgets('paused ends the outages and starts no wait, resumed starts it again', (tester) async {
+      outcomeOfNew = LiveConnectionState.disconnected;
+      live.watch(cloudDevice);
+      await tester.pump(const Duration(seconds: 10));
+      expect(live.outages.value, [platform]);
+
+      live.didChangeAppLifecycleState(AppLifecycleState.paused);
+      expect(live.outages.value, isEmpty);
+      await tester.pump(const Duration(minutes: 1));
+      expect(live.outages.value, isEmpty, reason: 'no connection is wanted in the background');
+
+      live.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump(const Duration(seconds: 9));
+      expect(live.outages.value, isEmpty);
+      await tester.pump(const Duration(seconds: 1));
+      expect(live.outages.value, [platform]);
+      live.accountChanged();
     });
   });
 
