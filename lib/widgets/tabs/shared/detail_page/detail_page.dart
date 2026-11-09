@@ -49,6 +49,7 @@ import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 import 'package:mobile_app/widgets/tabs/shared/state_time.dart';
+import 'package:mobile_app/widgets/tabs/shared/value_change.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/relative_time.dart';
@@ -363,8 +364,12 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   padding: const EdgeInsets.only(right: 12),
                   child: element.transitioning
                       ? const DelayedCircularProgressIndicator()
-                      : functionConfig.displayValue(element.value, context) ??
-                          Text("${formatValue(element.value)} $unit", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      : ValueChange(
+                          value: element.value,
+                          child: functionConfig.displayValue(element.value, context) ??
+                              Text("${formatValue(element.value)} $unit",
+                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        ),
                 ),
               ),
             ),

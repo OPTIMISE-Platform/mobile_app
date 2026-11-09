@@ -23,6 +23,7 @@ import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/models/sensor_tab.dart';
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/value_change_style.dart';
 import 'package:path_provider/path_provider.dart';
 
 class Settings {
@@ -55,6 +56,8 @@ class Settings {
   static const _legacySensorTabsKey = "sensor_tabs";
 
   static const _initialTabKey = "initial_tab";
+
+  static const _valueChangeStyleKey = "value_change_style";
 
   static const _hapticFeedBackEnabledKey = "haptic_feedback_enabled";
 
@@ -332,6 +335,17 @@ class Settings {
   static Future<void> setInitialTab(int index) async {
     checkInit();
     await _box?.put(_initialTabKey, index.toString()).then((v) => _box?.flush());
+  }
+
+  /// How a reading marks a new value; [ValueChangeStyle.flash] until chosen.
+  static ValueChangeStyle getValueChangeStyle() {
+    checkInit();
+    return ValueChangeStyle.parse(_box!.get(_valueChangeStyleKey));
+  }
+
+  static Future<void> setValueChangeStyle(ValueChangeStyle style) async {
+    checkInit();
+    await _box?.put(_valueChangeStyleKey, style.name).then((v) => _box?.flush());
   }
 
   static bool getHapticFeedBackEnabled() {

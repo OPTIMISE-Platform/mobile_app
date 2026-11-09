@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
+import 'package:mobile_app/shared/value_change_style.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/settings/refresh_cache_tile.dart';
 import 'package:mobile_app/widgets/settings/settings_section.dart';
@@ -36,7 +37,20 @@ String _initialTabName() {
       .name;
 }
 
-/// Start page, number formatting, units, cache refresh and the colour theme.
+String _valueChangeLabel(ValueChangeStyle style) => switch (style) {
+      ValueChangeStyle.flash => "Flash",
+      ValueChangeStyle.arrow => "Arrow",
+      ValueChangeStyle.slide => "Slide",
+    };
+
+String _valueChangeHint(ValueChangeStyle style) => switch (style) {
+      ValueChangeStyle.flash => "The value lights up briefly",
+      ValueChangeStyle.arrow => "An arrow shows whether it rose or fell",
+      ValueChangeStyle.slide => "The new value slides in",
+    };
+
+/// Start page, value changes, number formatting, units, cache refresh and the
+/// colour theme.
 SettingsSection appearanceSection(BuildContext context, AppState state) {
   final children = <(Widget, double)>[
     (
@@ -78,6 +92,43 @@ SettingsSection appearanceSection(BuildContext context, AppState state) {
                         ))
                     .toList(),
               ),
+            ),
+          ),
+          actions: [
+            TextButton(
+                child: const Text("Cancel"),
+                onPressed: () => Navigator.pop(dialogContext)),
+          ],
+        ),
+      ),
+    ),
+    GroupedListTile.insetNoLeading),
+    (
+    ListTile(
+      title: const Text("Value Changes"),
+      subtitle: Text(_valueChangeLabel(settings_service.Settings.getValueChangeStyle())),
+      onTap: () => showAdaptiveDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog.adaptive(
+          title: const Text("Value Changes"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: ValueChangeStyle.values
+                  .map((style) => ListTile(
+                        title: Text(_valueChangeLabel(style)),
+                        subtitle: Text(_valueChangeHint(style)),
+                        trailing: settings_service.Settings.getValueChangeStyle() == style
+                            ? const Icon(Icons.check)
+                            : null,
+                        onTap: () async {
+                          await settings_service.Settings.setValueChangeStyle(style);
+                          AppState().notifyListeners();
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                        },
+                      ))
+                  .toList(),
             ),
           ),
           actions: [

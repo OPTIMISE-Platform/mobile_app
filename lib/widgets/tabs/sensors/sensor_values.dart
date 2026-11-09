@@ -43,6 +43,7 @@ import 'package:mobile_app/widgets/tabs/sensors/sensor_icons.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_picker.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_sparkline.dart';
 import 'package:mobile_app/widgets/tabs/shared/state_time.dart';
+import 'package:mobile_app/widgets/tabs/shared/value_change.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
@@ -1435,13 +1436,16 @@ class _SensorValuesState extends State<SensorValues>
     }
 
     final unit = sensorUnit(state);
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerRight,
-      child: Text(
-        '${formatValue(state.value)}${unit.isEmpty ? '' : ' $unit'}',
-        maxLines: 1,
-        style: Theme.of(context).textTheme.headlineMedium,
+    return ValueChange(
+      value: state.value,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Text(
+          '${formatValue(state.value)}${unit.isEmpty ? '' : ' $unit'}',
+          maxLines: 1,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
       ),
     );
   }
