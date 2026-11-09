@@ -27,6 +27,7 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/display_time.dart';
+import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/http_client_adapter.dart';
 import 'package:mobile_app/theme.dart' show MyTheme;
@@ -41,6 +42,18 @@ import 'test_helper.dart';
 /// plain text but not of what it says.
 Finder findShownText(String text) =>
     find.byWidgetPredicate((w) => w is Text && (w.semanticsLabel ?? w.data) == text);
+
+/// A live connection that never connects; the default in widget tests.
+class OfflineLiveConnection extends LiveConnection {
+  @override
+  Future<LiveConnectionState> connect(String host, int port,
+          {SecurityContext? context,
+          String? username,
+          String? password,
+          required String clientId,
+          Future<LiveConnectParams> Function()? refresh}) async =>
+      LiveConnectionState.disconnected;
+}
 
 /// Phone-sized surface at devicePixelRatio 1, so the golden PNGs stay small.
 const goldenSurfaceSize = Size(412, 915);
@@ -57,6 +70,9 @@ Future<void> setUpGoldenEnvironment() async {
         envString: await File(".env.example").readAsString());
   }
   await Settings.init();
+  // A screen that watches live values would otherwise open a real MQTT
+  // connection, whose connect timer outlives the test.
+  LiveConnection.factory = OfflineLiveConnection.new;
   // The sensor tabs, dashboards and favorites are stored per account.
   if (Settings.getAccount() == null) await Settings.setAccount("test-account");
   FlutterSecureStorage.setMockInitialValues({});

@@ -21,6 +21,7 @@ import 'package:mobile_app/mixins/resume_refresh_mixin.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -89,6 +90,11 @@ class _SensorValuesState extends State<SensorValues>
   /// values we show.
   final Map<String, DeviceInstance> _devices = {};
 
+  /// Live watches of the devices in [_devices], by id, each with the device
+  /// object it was made for: a load replaces the objects, and an update must
+  /// reach the one on screen. See [_syncLive].
+  final Map<String, (DeviceInstance, LiveHandle)> _live = {};
+
   /// Device groups of the selected tab by id, for pins that target a group.
   final Map<String, DeviceGroup> _groups = {};
   bool _loading = false;
@@ -135,6 +141,10 @@ class _SensorValuesState extends State<SensorValues>
     _fabSubscription?.cancel();
     _refreshSubscription?.cancel();
     _switchSubscription?.cancel();
+    for (final entry in _live.values) {
+      entry.$2.release();
+    }
+    _live.clear();
     super.dispose();
   }
 
@@ -204,6 +214,7 @@ class _SensorValuesState extends State<SensorValues>
         _error = null;
         _loading = false;
       });
+      _syncLive();
       return;
     }
     setState(() {
@@ -286,6 +297,7 @@ class _SensorValuesState extends State<SensorValues>
           ..addEntries(groups.map((g) => MapEntry(g.id, g)));
         _loading = false;
       });
+      _syncLive();
       unawaited(_loadSparklines(_upgradeLegacyPins(tab, pins)));
     } catch (e, s) {
       ErrorReporter.log('Could not load sensor values', e, s);
@@ -309,6 +321,27 @@ class _SensorValuesState extends State<SensorValues>
       _devices.addEntries(newDevices.map((d) => MapEntry(d.id, d)));
       _groups.addEntries(newGroups.map((g) => MapEntry(g.id, g)));
     });
+    _syncLive();
+  }
+
+  /// Makes the live watches match [_devices]. A reloaded object is watched
+  /// before the old one is released, so a reload keeps the subscription and
+  /// the connection. Groups are not watched; their values come from the group
+  /// load.
+  void _syncLive() {
+    final released = <LiveHandle>[];
+    for (final id in _live.keys.toList()) {
+      if (!_devices.containsKey(id)) released.add(_live.remove(id)!.$2);
+    }
+    for (final device in _devices.values) {
+      final current = _live[device.id];
+      if (current != null && identical(current.$1, device)) continue;
+      if (current != null) released.add(current.$2);
+      _live[device.id] = (device, LiveValues.instance.watch(device));
+    }
+    for (final handle in released) {
+      handle.release();
+    }
   }
 
   Future<void> _loadStates(

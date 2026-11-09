@@ -24,6 +24,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/config/functions/get_timestamp.dart';
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -68,6 +69,9 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
   );
 
   StreamSubscription? _refreshSubscription;
+
+  /// Keeps the values of a device page current while it is open; null for a group.
+  LiveHandle? _live;
 
   _refresh(BuildContext context) async {
     late final List<DeviceState> states;
@@ -614,6 +618,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
     if ((widget._device == null && widget._group == null) || (widget._device != null && widget._group != null)) {
       throw ArgumentException("Must set ONE of device or group");
     }
+    final device = widget._device;
+    if (device != null) _live = LiveValues.instance.watch(device);
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context));
     _refreshSubscription = AppState().refreshPressed.listen((_) {
       if (!mounted) return;
@@ -624,6 +630,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
   @override
   void dispose() {
     _refreshSubscription?.cancel();
+    _live?.release();
     super.dispose();
   }
 

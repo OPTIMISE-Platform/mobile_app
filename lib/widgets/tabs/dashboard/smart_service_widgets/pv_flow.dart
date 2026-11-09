@@ -19,6 +19,8 @@ import 'dart:math';
 import 'package:arrow_path/arrow_path.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:mobile_app/live/live_values.dart';
+import 'package:mobile_app/live/raw_value_source.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/shared/request.dart';
 
@@ -87,13 +89,17 @@ class SmSePvFlow extends SmartServiceModuleWidget {
     }
   }
 
+  // The last value of every request, from the last load or live message.
+  double? _solarGeneration, _chargePower, _dischargePower, _batteryLevel;
+  final Map<Request, double> _gridValues = Map.identity();
+
   @override
   Future<void> refreshInternal() async {
     final List<Future> futures = [];
     double? solarGeneration;
     double? chargePower;
     double? dischargePower;
-    double gridConsumption = 0.0;
+    final grid = <Request, double>{};
     double? batteryLevel;
 
     futures.add(solarGenerationRequest
@@ -110,7 +116,7 @@ class SmSePvFlow extends SmartServiceModuleWidget {
         Future.value(null));
     for (final req in gridConsumptionRequests) {
       futures.add(req.perform().then((value) {
-        gridConsumption += double.parse(value.data);
+        grid[req] = double.parse(value.data);
       }));
     }
     futures.add(batteryLevelRequest
@@ -119,6 +125,49 @@ class SmSePvFlow extends SmartServiceModuleWidget {
         Future.value(null));
 
     await Future.wait(futures);
+
+    _solarGeneration = solarGeneration;
+    _chargePower = chargePower;
+    _dischargePower = dischargePower;
+    _batteryLevel = batteryLevel;
+    _gridValues
+      ..clear()
+      ..addAll(grid);
+    computeFlow();
+  }
+
+  /// Takes a live value of [request] and recomputes the flow. Ignores a request
+  /// that is none of this widget's.
+  @visibleForTesting
+  void setRequestValue(Request request, double value) {
+    if (identical(request, solarGenerationRequest)) {
+      _solarGeneration = value;
+    } else if (identical(request, chargePowerRequest)) {
+      _chargePower = value;
+    } else if (identical(request, dischargePowerRequest)) {
+      _dischargePower = value;
+    } else if (identical(request, batteryLevelRequest)) {
+      _batteryLevel = value;
+    } else if (gridConsumptionRequests.any((r) => identical(r, request))) {
+      _gridValues[request] = value;
+    } else {
+      return;
+    }
+    computeFlow();
+  }
+
+  /// The flows between solar, battery, household and grid, from the last
+  /// values of all requests.
+  @visibleForTesting
+  void computeFlow() {
+    final solarGeneration = _solarGeneration;
+    var chargePower = _chargePower;
+    var dischargePower = _dischargePower;
+    final batteryLevel = _batteryLevel;
+    double gridConsumption = 0.0;
+    for (final value in _gridValues.values) {
+      gridConsumption += value;
+    }
 
     if ((chargePower ?? 0) < 0) {
       dischargePower = (chargePower ?? 0) * -1;
@@ -165,8 +214,55 @@ class SmSePvFlow extends SmartServiceModuleWidget {
       _batteryToGrid =
           (dischargePower ?? 0) - (_batteryToHousehold ?? 0);
     }
-    return;
   }
+
+  /// The computed flows by name, for tests.
+  @visibleForTesting
+  Map<String, double?> get flows => {
+        'solar': _flowPaintSolar._value,
+        'household': _flowPaintHousehold._value,
+        'grid': _flowPaintGrid._value,
+        'battery': _flowPaintBattery._value,
+        'solarToBattery': _solarToBattery,
+        'solarToHousehold': _solarToHousehold,
+        'solarToGrid': _solarToGrid,
+        'gridToHousehold': _gridToHousehold,
+        'batteryToHousehold': _batteryToHousehold,
+        'batteryToGrid': _batteryToGrid,
+        'householdToBattery': _householdToBattery,
+      };
+
+  /// Watches every request that reads a device value the platform's
+  /// `raw-value` endpoint would return; the handles are for the caller to
+  /// release.
+  List<LiveHandle> watchLive() {
+    final requests = <Request>[
+      if (solarGenerationRequest != null) solarGenerationRequest!,
+      if (chargePowerRequest != null) chargePowerRequest!,
+      if (dischargePowerRequest != null) dischargePowerRequest!,
+      ...gridConsumptionRequests,
+      if (batteryLevelRequest != null) batteryLevelRequest!,
+    ];
+    final handles = <LiveHandle>[];
+    for (final request in requests) {
+      final source = RawValueSource.fromUrl(request.url);
+      if (source == null) continue;
+      handles.add(live.watchRaw(source, (value, time) {
+        final number = value is num
+            ? value.toDouble()
+            : value is String
+                ? double.tryParse(value)
+                : null;
+        if (number == null || !number.isFinite) return;
+        setRequestValue(request, number);
+      }));
+    }
+    return handles;
+  }
+
+  /// Where the live values come from; the app's, unless a test brings its own.
+  @visibleForTesting
+  LiveValues live = LiveValues.instance;
 }
 
 class _SmSePvFlowStateful extends StatefulWidget {
@@ -192,10 +288,15 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
     });
   }
 
+  List<LiveHandle> _live = const [];
+
   @override
   void initState() {
     super.initState();
     _ticker.start();
+    // The ticker rebuilds every frame, which repaints with the new values.
+    final flow = widget._smSePvFlow;
+    if (!flow.preview) _live = flow.watchLive();
   }
 
   @override
@@ -206,6 +307,9 @@ class _SmSePvFlowStatefulState extends State<_SmSePvFlowStateful>
 
   @override
   void dispose() {
+    for (final handle in _live) {
+      handle.release();
+    }
     _ticker.stop();
     super.dispose();
   }

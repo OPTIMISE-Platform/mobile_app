@@ -24,11 +24,27 @@ class Concept {
   String id, name, base_characteristic_id;
   List<Characteristic> characteristics;
 
-  Concept(this.id, this.name, this.base_characteristic_id, this.characteristics);
+  /// Null in cache entries written before the field existed.
+  List<ConceptConversion>? conversions;
+
+  Concept(this.id, this.name, this.base_characteristic_id, this.characteristics, [this.conversions]);
   factory Concept.fromJson(Map<String, dynamic> json) => _$ConceptFromJson(json);
   Map<String, dynamic> toJson() => _$ConceptToJson(this);
 
   Characteristic getBaseCharacteristic() {
     return characteristics.firstWhere((element) => element.id == base_characteristic_id);
   }
+}
+
+/// One edge of the conversion graph between the characteristics of a concept.
+/// [formula] maps the variable [placeholder_name] from [from] to [to].
+@JsonSerializable()
+class ConceptConversion {
+  String from, to;
+  int distance;
+  String formula, placeholder_name;
+
+  ConceptConversion(this.from, this.to, this.distance, this.formula, this.placeholder_name);
+  factory ConceptConversion.fromJson(Map<String, dynamic> json) => _$ConceptConversionFromJson(json);
+  Map<String, dynamic> toJson() => _$ConceptConversionToJson(this);
 }

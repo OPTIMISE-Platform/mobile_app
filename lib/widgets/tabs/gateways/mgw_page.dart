@@ -19,8 +19,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
+import 'package:mobile_app/navigator_key.dart';
 import 'package:mobile_app/services/mgw/advertisements.dart';
 import 'package:mobile_app/services/mgw/discovery.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
@@ -230,6 +232,11 @@ Future<void> _applyPairing(AppState appState) async {
   await appState.mergeGatewaysWithNetworks();
 }
 
+/// Asks the broker of a gateway whether it takes this phone. A test replaces it.
+@visibleForTesting
+Future<LiveConnectionState> Function(MGW gateway,
+    {String? username, String? password}) brokerProbe = probeMgwBroker;
+
 /// Pairs with [mgw] and stores it in place of [replacing]: the entry as stored
 /// on success, the failure otherwise.
 Future<({MGW? stored, PairingFailure? failure})> pairAndStore(
@@ -239,10 +246,165 @@ Future<({MGW? stored, PairingFailure? failure})> pairAndStore(
     _logger.d("Try to pair token based");
     final stored = await PairWithGateway(mgw, replacing: replacing);
     await _applyPairing(appState);
+    unawaited(_checkBrokerLogin(stored));
     return (stored: stored, failure: null);
   } catch (e, s) {
     ErrorReporter.log("Pairing with ${mgw.ip} failed", e, s);
     return (stored: null, failure: PairingFailure.of(e));
+  }
+}
+
+/// Asks the broker of a freshly paired gateway whether it wants a login, and
+/// shows the login dialog when it does. Nothing waits for it: the pairing page
+/// has usually closed by then, so the dialog goes on the app's navigator.
+Future<void> _checkBrokerLogin(MGW gateway) async {
+  final LiveConnectionState state;
+  try {
+    state = await brokerProbe(gateway);
+  } catch (e, s) {
+    ErrorReporter.log("Could not check the broker of ${gateway.ip}", e, s);
+    return;
+  }
+  if (state != LiveConnectionState.refusedNotAuthorized) return;
+  final context = navigatorKey.currentState?.overlay?.context;
+  if (context == null || !context.mounted) return;
+  await showBrokerLoginDialog(context, gateway);
+}
+
+/// Asks for the login of the message broker of [gateway]: true when saved, null
+/// or false when not.
+Future<bool?> showBrokerLoginDialog(BuildContext context, MGW gateway) =>
+    showDialog<bool>(
+      context: context,
+      builder: (_) => _BrokerLoginDialog(gateway: gateway),
+    );
+
+/// Owns the text controllers, see [_HostDialog] for why.
+class _BrokerLoginDialog extends StatefulWidget {
+  const _BrokerLoginDialog({required this.gateway});
+
+  final MGW gateway;
+
+  @override
+  State<_BrokerLoginDialog> createState() => _BrokerLoginDialogState();
+}
+
+class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
+  final _username = TextEditingController();
+  final _password = TextEditingController();
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefill();
+  }
+
+  @override
+  void dispose() {
+    _username.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _prefill() async {
+    final stored = await loadMgwBrokerCredentials(widget.gateway.pairingId);
+    if (!mounted || stored == null || _username.text.isNotEmpty) return;
+    _username.text = stored.username;
+  }
+
+  /// Checks the login with the broker, then stores it. A login the broker
+  /// refuses stays in the dialog; any other answer stores it, since a broker
+  /// that cannot be reached now may still take it later.
+  Future<void> _save() async {
+    final username = _username.text;
+    final password = _password.text;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    var state = LiveConnectionState.disconnected;
+    try {
+      state = await brokerProbe(widget.gateway,
+          username: username, password: password);
+    } catch (e, s) {
+      ErrorReporter.log("Could not check the broker login", e, s);
+    }
+    // Closed meanwhile: the user cancelled, so nothing is stored.
+    if (!mounted) return;
+    if (state == LiveConnectionState.refusedNotAuthorized) {
+      setState(() {
+        _saving = false;
+        _error = "The broker refused this login.";
+      });
+      return;
+    }
+    try {
+      await saveMgwBrokerCredentials(
+          widget.gateway.pairingId, username, password);
+    } catch (e, s) {
+      ErrorReporter.log("Could not save the broker login", e, s);
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = "Could not save the login.";
+        });
+      }
+      return;
+    }
+    if (mounted) Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text("Broker login"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text("The gateway's message broker asks for a login. Live "
+              "values from this gateway need it."),
+          const SizedBox(height: Spacing.lg),
+          TextField(
+            controller: _username,
+            autofocus: true,
+            textInputAction: TextInputAction.next,
+            decoration: const InputDecoration(labelText: "Username"),
+          ),
+          const SizedBox(height: Spacing.md),
+          TextField(
+            controller: _password,
+            obscureText: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+            decoration: const InputDecoration(labelText: "Password"),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: Spacing.md),
+            Text(_error!,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.error)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Cancel"),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text("Save"),
+        ),
+      ],
+    );
   }
 }
 

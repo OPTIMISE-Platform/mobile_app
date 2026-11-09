@@ -49,6 +49,8 @@ import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/locations.dart';
+import 'package:mobile_app/live/client_certificate.dart';
+import 'package:mobile_app/live/live_values.dart';
 
 class CacheHelper {
   static String bodyCacheIDBuilder(RequestOptions request) {
@@ -126,6 +128,13 @@ class CacheHelper {
     // reads it, and the tabs that remount on the epoch, see the new account.
     AccountEpoch.advance();
     await _logged(() => Settings.setAccount(account));
+    // After the key, not before: a view that remounts on the epoch and watches
+    // while the key is still being written would read the old account and
+    // open its connection with the old certificate. Called here, that
+    // connection is dropped again. Views that mounted in this window and
+    // watched hold handles that are dead afterwards (see LiveValues
+    // accountChanged); the tabs are rebuilt by the notifyListeners below.
+    LiveValues.instance.accountChanged();
     afterAccountKeyForTest?.call();
     await AppState().onLogout();
     AppState().notifyListeners();
@@ -184,6 +193,9 @@ class CacheHelper {
     // the next refill waits up to a day - three services read their (now
     // empty) collection as the answer rather than as a cache miss.
     await part(Settings.clearCacheUpdated);
+    // The live client key and certificate of the account that was left. The
+    // wipe does not know it, so every account but the signed-in one goes.
+    await part(() => ClientCertificates.forgetAllBut(Settings.getAccount()));
     if (complete) await part(() => Settings.setAccountWipePending(false));
   }
 

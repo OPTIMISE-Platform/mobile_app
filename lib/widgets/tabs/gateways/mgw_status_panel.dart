@@ -603,14 +603,21 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
             style: theme.textTheme.bodySmall
                 ?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: Spacing.sm),
-        Align(
-          alignment: AlignmentDirectional.centerStart,
-          child: TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: scheme.error),
-            onPressed: _pairing ? null : _remove,
-            icon: const Icon(Icons.link_off),
-            label: const Text("Remove pairing"),
-          ),
+        Wrap(
+          spacing: Spacing.sm,
+          children: [
+            TextButton.icon(
+              onPressed: _pairing ? null : () => showBrokerLoginDialog(context, gateway),
+              icon: const Icon(Icons.key),
+              label: const Text("Broker login"),
+            ),
+            TextButton.icon(
+              style: TextButton.styleFrom(foregroundColor: scheme.error),
+              onPressed: _pairing ? null : _remove,
+              icon: const Icon(Icons.link_off),
+              label: const Text("Remove pairing"),
+            ),
+          ],
         ),
       ],
     );

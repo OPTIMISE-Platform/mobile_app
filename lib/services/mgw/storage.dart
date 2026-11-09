@@ -21,6 +21,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive/hive.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/auth_service.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
@@ -432,6 +433,7 @@ class MgwStorage {
       // removal can be tried again instead of leaving its secret behind.
       if (!storedMGWs.any((m) => m.pairingId == entry.pairingId)) {
         await _secure.delete(key: credentialsKeyOf(entry.pairingId));
+        await deleteMgwBrokerCredentials(entry.pairingId);
         await MgwService.ResetSessionData(entry.pairingId);
       }
       if (storedMGWs.isEmpty) await _clearSharedSecrets();
@@ -443,10 +445,16 @@ class MgwStorage {
   /// Never throws: it cleans up after a change that already succeeded or
   /// failed for another reason.
   static Future<void> _dropSecretsQuietly(String pairingId) async {
+    // Each on its own: a failing first deletion must not keep the second.
     try {
       await _secure.delete(key: credentialsKeyOf(pairingId));
     } catch (e, s) {
       ErrorReporter.log("Could not drop the credentials of a gateway pairing", e, s);
+    }
+    try {
+      await deleteMgwBrokerCredentials(pairingId);
+    } catch (e, s) {
+      ErrorReporter.log("Could not drop the broker login of a gateway pairing", e, s);
     }
     await MgwService.ResetSessionData(pairingId);
   }

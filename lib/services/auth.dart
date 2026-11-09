@@ -37,6 +37,8 @@ import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
 import 'package:openidconnect/openidconnect.dart';
 import 'package:mobile_app/services/cache_helper.dart';
+import 'package:mobile_app/live/client_certificate.dart';
+import 'package:mobile_app/live/live_values.dart';
 
 class Auth extends ChangeNotifier {
   static final _instance = Auth._internal();
@@ -691,6 +693,17 @@ class Auth extends ChangeNotifier {
     _sessionChanges++;
     _signedOut = true;
     AccountEpoch.advance();
+    LiveValues.instance.accountChanged();
+    // The live client certificate logs into the broker as this user until it
+    // expires; it must not outlive the session.
+    final account = Settings.getAccount();
+    if (account != null) {
+      try {
+        await ClientCertificates.forget(account);
+      } catch (e, s) {
+        ErrorReporter.log("Could not delete the live client certificate", e, s);
+      }
+    }
     await CacheHelper.clearCache();
     await AppState().onLogout();
     if (_client != null) {
