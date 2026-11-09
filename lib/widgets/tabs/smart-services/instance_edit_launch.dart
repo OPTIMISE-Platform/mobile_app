@@ -21,6 +21,8 @@ import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/services/smart_service.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/widgets/shared/multi_select_field.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_editor.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_model.dart';
 
 import 'package:mobile_app/models/smart_service.dart';
 import 'package:mobile_app/theme.dart';
@@ -62,9 +64,42 @@ class _SmartServicesReleaseLaunchState extends State<SmartServicesReleaseLaunch>
   /// The option's kind, which the backend uses to tell apart equally labelled options.
   static String? _group(SmartServiceParameterOption o) => o.kind.isEmpty ? null : o.kind;
 
+  /// The weekly plan editor in place of the text field. A stored plan it cannot
+  /// read is shown with its raw text and left untouched.
+  Widget _heatingEditor(SmartServiceExtendedParameter p) {
+    // Only a new launch falls back to the default; an existing instance's
+    // empty or non-string value is shown as it is.
+    final stored = p.value;
+    final raw = stored is String && stored.isNotEmpty ? stored : (widget.instance == null ? p.default_value?.toString() : null);
+    final HeatingSchedule plan;
+    try {
+      plan = HeatingSchedule.parse(raw ?? "", 0);
+    } on HeatingScheduleException catch (e) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(p.label),
+        Text("The stored plan cannot be read: $e", style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        SelectableText(raw ?? stored?.toString() ?? ""),
+      ]);
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(p.label),
+      HeatingScheduleEditor(
+        key: ValueKey("heating-${p.id}"),
+        initial: plan,
+        showSetback: false,
+        onChanged: (changed) {
+          if (changed != null) p.value = changed.serialise();
+          setState(() {});
+        },
+      ),
+    ]);
+  }
+
   Widget _getEditWidget(int i, {int? sub}) {
     final p = parameters![i];
     final dynamic subValue = sub != null ? (p.value as List)[sub] : null;
+
+    if (widget.release.name == heatingReleaseName && p.id == "schedule") return _heatingEditor(p);
 
     if (p.characteristic_id != null && p.characteristic != null) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(p.label), p.characteristic!.build(context, setState)]);

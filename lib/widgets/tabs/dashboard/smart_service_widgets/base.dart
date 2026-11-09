@@ -22,6 +22,7 @@ import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/automati
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/bar_chart_estimate.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/column.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/flip.dart';
+import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/heating_schedule.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/icon.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/image.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/line_chart.dart';
@@ -67,6 +68,7 @@ const SmSeWidgetType smSeStackedBarChartType = "stacked_bar_chart";
 const SmSeWidgetType smSeBarChartEstimateType = "bar_chart_estimate";
 const SmSeWidgetType smSeVentilationType = "ventilation";
 const SmSeWidgetType smSeAutomationSuggestionsType = "automation_suggestions";
+const SmSeWidgetType smSeHeatingScheduleType = "heating_schedule";
 
 /// EXTEND THIS CLASS TO ADD NEW WIDGETS
 abstract class SmartServiceModuleWidget {
@@ -201,6 +203,9 @@ abstract class SmartServiceModuleWidget {
         break;
       case smSeAutomationSuggestionsType:
         w = SmSeAutomationSuggestions();
+        break;
+      case smSeHeatingScheduleType:
+        w = SmSeHeatingSchedule();
         break;
 
       // ADD NEW WIDGETS ABOVE

@@ -26,6 +26,7 @@ import 'package:mobile_app/widgets/shared/expandable_text.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_edit_launch.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/instance_parameters.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
 class SmartServicesInstanceDetails extends StatefulWidget {
@@ -92,12 +93,7 @@ class _SmartServicesInstanceDetailsState extends State<SmartServicesInstanceDeta
           onPressed: () async {
             try {
               final release = await SmartServiceService.getRelease(widget.instance.release_id);
-              final parameters = await SmartServiceService.getReleaseParameters(widget.instance.release_id);
-              for (SmartServiceExtendedParameter p in parameters) {
-                final existing = widget.instance.parameters!.firstWhere((extisting) => p.id == extisting.id);
-                p.value = existing.value;
-                p.value_label = existing.value_label;
-              }
+              final parameters = await loadInstanceParameters(widget.instance);
               if (!mounted) return;
               await Navigator.push(
                   this.context,
