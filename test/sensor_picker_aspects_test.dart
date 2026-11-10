@@ -94,8 +94,8 @@ void main() {
     }
 
     expect(find.text("Temperature"), findsNWidgets(2));
-    expect(find.text("Air, Inside · Already added"), findsOneWidget);
-    expect(find.text("Air, Outside"), findsOneWidget);
+    expect(find.text("Inside · Already added"), findsOneWidget);
+    expect(find.text("Outside"), findsOneWidget);
     final rowKeys = tester
         .widgetList(find.byWidgetPredicate((w) => w.key is ValueKey<(String, String)>))
         .map((w) => (w.key! as ValueKey<(String, String)>).value)

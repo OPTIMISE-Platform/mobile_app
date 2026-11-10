@@ -47,6 +47,7 @@ import 'package:mobile_app/widgets/tabs/shared/value_change.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 import 'package:mobile_app/shared/unavailability.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -429,6 +430,20 @@ class _SensorValuesState extends State<SensorValues>
     return _devices[pin.deviceId]?.displayName ?? 'Unknown device';
   }
 
+  /// The title of a pin's card: its alias, else the detail page's label of the
+  /// value, with what tells it from its siblings appended.
+  String _titleOf(SensorPin pin, DeviceState? state) => pin.alias ?? _defaultTitleOf(pin, state);
+
+  String _defaultTitleOf(SensorPin pin, DeviceState? state) {
+    if (state == null) return 'Unavailable';
+    final device = pin.isGroup ? null : _devices[pin.deviceId];
+    final group = pin.isGroup ? _groups[pin.groupId] : null;
+    final states = device?.states ?? group?.states;
+    if (states == null) return sensorTitle(state);
+    final shown = device?.states ?? group!.shownStates;
+    return joinedLabel(sensorLabel(state, shown, device, states: states, isGroup: group != null));
+  }
+
   /// The card's small top line: what the user typed, or the owner's name.
   String _subtitleOf(SensorPin pin) => pin.subtitle ?? _ownerName(pin);
 
@@ -596,7 +611,7 @@ class _SensorValuesState extends State<SensorValues>
       items: current.pins,
       label: (p) {
         final state = _stateFor(p);
-        return p.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
+        return _titleOf(p, state);
       },
       icon: (p) => sensorIcon(p.iconName),
       // The card's own subtitle even when hidden there — this list needs
@@ -643,7 +658,7 @@ class _SensorValuesState extends State<SensorValues>
       initialIconName: pin.iconName,
       // Both fields fall back to what the card would show on its own, so the
       // hints double as a preview of leaving them empty.
-      nameHint: state != null ? sensorTitle(state) : 'Title',
+      nameHint: state != null ? _defaultTitleOf(pin, state) : 'Title',
       nameRequired: false,
       withSubtitle: true,
       initialSubtitle: pin.subtitle ?? '',
@@ -987,8 +1002,7 @@ class _SensorValuesState extends State<SensorValues>
     return ListenableBuilder(
       listenable: _notifierFor(pin),
       builder: (context, _) {
-        final title =
-            pin.alias ?? (state != null ? sensorTitle(state) : 'Unavailable');
+        final title = _titleOf(pin, state);
         final icon = sensorIcon(pin.iconName);
         final states = device?.states ?? group?.states;
         // Without a state yet the pin's function is all there is to go by.
@@ -1326,18 +1340,19 @@ class _SensorValuesState extends State<SensorValues>
     // A group has no connection state of its own, so it never shows the
     // unavailability icons — its members' reachability isn't known here.
     final states = device?.states ?? group?.states;
+    final role = states == null ? null : binaryRoleOf(state, states, isGroup: group != null);
     if (states == null || !_hasControls(state, states, group != null)) {
-      return _buildValueDisplay(state) ?? _placeholder;
+      return _buildValueDisplay(state, role) ?? _placeholder;
     }
 
     // Unreachable device: show why it can't be controlled, using the same icons
     // the device list uses. Checked before the value, which is null for an
     // offline device and would otherwise fall through to the placeholder.
     if (device != null && _isUnavailable(device)) {
-      return _buildUnavailableValue(state, device.connection_state);
+      return _buildUnavailableValue(state, device.connection_state, role);
     }
 
-    final display = _buildValueDisplay(state);
+    final display = _buildValueDisplay(state, role);
     if (display == null) return _placeholder;
     final action = _actionFor(state, device, group);
     if (action == null) return display;
@@ -1354,6 +1369,7 @@ class _SensorValuesState extends State<SensorValues>
   Widget _buildUnavailableValue(
     DeviceState state,
     DeviceConnectionStatus? connectionStatus,
+    BinaryRole? role,
   ) {
     final offline = connectionStatus == DeviceConnectionStatus.offline;
     final warning = Icon(
@@ -1361,7 +1377,7 @@ class _SensorValuesState extends State<SensorValues>
       color: context.appColors.warnInk,
     );
     if (state.isControlling || state.value == null) return warning;
-    final display = _buildValueDisplay(state);
+    final display = _buildValueDisplay(state, role);
     if (display == null) return warning;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1374,13 +1390,18 @@ class _SensorValuesState extends State<SensorValues>
   }
 
   /// The value itself, or null when there is nothing to show yet.
-  Widget? _buildValueDisplay(DeviceState state) {
-    // Some functions render as an icon/custom widget (e.g. on/off) rather than
-    // a bare number — prefer that, as the detail page does.
-    final custom = functionConfigs[state.functionId]?.displayValue(
-      state.value,
-      context,
-    );
+  Widget? _buildValueDisplay(DeviceState state, BinaryRole? role) {
+    // A read-only on/off reading is text: the power icon is for the switch
+    // that acts on it, which has its own tile.
+    final readOnlyOnOff = !state.isControlling && state.value != null && isOnOffReading(state.functionId);
+    // Some functions render as an icon/custom widget rather than a bare
+    // number — prefer that, as the detail page does.
+    final custom = readOnlyOnOff
+        ? null
+        : functionConfigs[state.functionId]?.displayValue(
+            state.value,
+            context,
+          );
     if (custom != null) return custom;
 
     // A control without its own reading has nothing to display but its action.
@@ -1397,7 +1418,7 @@ class _SensorValuesState extends State<SensorValues>
         fit: BoxFit.scaleDown,
         alignment: Alignment.centerRight,
         child: Text(
-          '${formatValue(state.value)}${unit.isEmpty ? '' : ' $unit'}',
+          readOnlyOnOff ? binaryValueText(role, state.value) : formatValueWithUnit(state.value, unit),
           maxLines: 1,
           style: Theme.of(context).textTheme.headlineMedium,
         ),

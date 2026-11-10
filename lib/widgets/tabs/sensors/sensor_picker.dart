@@ -31,6 +31,7 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 
 /// Lets the user pick devices or device groups and check off as many of their
@@ -513,8 +514,16 @@ class _ValuePickerState extends State<_ValuePicker> {
       if (a.isControlling != b.isControlling) {
         return a.isControlling ? 1 : -1;
       }
-      return sensorTitle(a).compareTo(sensorTitle(b));
+      return _label(a).title.compareTo(_label(b).title);
     });
+
+  // Each label scans all shown states, so it is computed once per state.
+  final _labels = <DeviceState, ({String title, String subtitle})>{};
+
+  ({String title, String subtitle}) _label(DeviceState state) => _labels.putIfAbsent(
+      state,
+      () => sensorLabel(state, _shown, widget.target.device,
+          states: _all, isGroup: widget.target.device == null));
 
   @override
   Widget build(BuildContext context) {
@@ -565,7 +574,8 @@ class _ValuePickerState extends State<_ValuePicker> {
     final existing = widget.selection.isExisting(state, _all);
     final picked = existing || widget.selection.isPicked(pin);
 
-    var subtitle = sensorSubtitle(state, _shown, widget.target.device);
+    final label = _label(state);
+    var subtitle = label.subtitle;
     if (existing) {
       subtitle = subtitle.isEmpty
           ? 'Already added'
@@ -581,7 +591,7 @@ class _ValuePickerState extends State<_ValuePicker> {
           : isSwitchableOnOff(state, _all, isGroup: widget.target.device == null)
           ? const Icon(Icons.toggle_on_outlined)
           : const Icon(Icons.show_chart),
-      title: Text(sensorTitle(state)),
+      title: Text(label.title),
       subtitle: subtitle.isEmpty ? null : Text(subtitle),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,

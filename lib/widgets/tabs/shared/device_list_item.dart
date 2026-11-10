@@ -34,6 +34,7 @@ import 'package:mobile_app/widgets/shared/slice_position.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 import 'package:mobile_app/shared/unavailability.dart';
 
@@ -92,14 +93,14 @@ class _DeviceListItemState extends State<DeviceListItem> {
                           )))
                   : IconButton(
                       splashRadius: 25,
-                      tooltip: AppState()
-                          .platformFunctions[functionConfigs[
-                                  dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
-                              ?.getRelatedControllingFunction(element.value)]
-                          ?.display_name,
-                      icon: functionConfigs[
-                                  dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
-                              ?.displayValue(element.value, context) ??
+                      tooltip: toggleTooltipOf(
+                          element,
+                          AppState()
+                              .platformFunctions[functionConfigs[
+                                      dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
+                                  ?.getRelatedControllingFunction(element.value)]
+                              ?.display_name),
+                      icon: toggleIconOf(element, context) ??
                           const Icon(Icons.help_outline),
                       onPressed: unavailable
                           ? null

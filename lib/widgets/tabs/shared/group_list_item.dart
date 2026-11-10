@@ -18,7 +18,6 @@ import 'package:mobile_app/shared/devices_label.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -31,6 +30,7 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_list_item.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 import 'package:mobile_app/shared/unavailability.dart';
@@ -96,9 +96,8 @@ class GroupListItem extends StatelessWidget {
     } else {
       button = IconButton(
         splashRadius: 25,
-        tooltip: AppState().platformFunctions[control.functionId]?.display_name,
-        icon: functionConfigs[reading.functionId]?.displayValue(reading.value, context) ??
-            const Icon(Icons.help_outline),
+        tooltip: toggleTooltipOf(reading, AppState().platformFunctions[control.functionId]?.display_name),
+        icon: toggleIconOf(reading, context) ?? const Icon(Icons.help_outline),
         onPressed: () => SwitchCommands.run(
           reading,
           () => toggleThroughControl(
