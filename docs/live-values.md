@@ -66,14 +66,19 @@ For each state of the event's service that is not controlling and not
 transitioning, `extractValue` reads the value at the state's path from the
 segment of its content (`json` or `plain-text`) and converts it from the
 characteristic of the content variable to the preferred characteristic of
-the function (`Settings.getFunctionPreferredCharacteristicId`; none keeps
-the raw value). Then the value is set, then `lastMessageTime`, then the
+the function (`Settings.getFunctionPreferredCharacteristicId`), without one
+to the base characteristic of the function's concept: device-command answers
+a command without a characteristic in the base, so a loaded and a live value
+are in the same unit (a lamp's mired arrives as Kelvin). A function of an
+unknown concept, or a variable without a characteristic and no preference,
+keeps the raw value. Then the value is set, then `lastMessageTime`, then the
 native pipe is told, and the device notifies once. Setting the value first
 keeps a late-loaded time from replacing the live one.
 
-A value that cannot be converted, or is not finite after conversion, leaves
-the state as it is. Structured values (a map or list with a characteristic of
-its own) and `xml` content are not updated live and keep their loaded value.
+A value that cannot be converted to the preferred characteristic, or is not
+finite after conversion, leaves the state as it is; when there is no
+preference and the conversion to the base fails, the raw value is kept. Structured values (a map or list with a
+characteristic of its own) and `xml` content are not updated live and keep their loaded value.
 
 A gateway with `LDH_ID_PREFIX` set publishes the local id without the prefix,
 which the app does not know; such a gateway gives no live values.

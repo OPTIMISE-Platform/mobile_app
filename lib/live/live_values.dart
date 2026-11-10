@@ -39,6 +39,7 @@ import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/protocols.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/characteristic_conversion.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 
 /// What [LiveValues.watch] returns; [release] gives the device back.
@@ -616,19 +617,27 @@ class LiveValues with WidgetsBindingObserver {
   static bool _finite(dynamic value) => value is! num || value.isFinite;
 
   /// The value in the characteristic the user chose for the function of
-  /// [state]; null (not wrapped) when it cannot be converted, or when the
-  /// result is NaN or infinite.
+  /// [state], else in the concept's base characteristic, the one a command
+  /// answer without a characteristic is in; null (not wrapped) when [value] is
+  /// not finite, or a conversion to the chosen characteristic fails or is not
+  /// finite. A failed conversion to the base keeps [value].
   ({dynamic value})? _toPreferred(DeviceState state, dynamic value, String? from) {
     if (!_finite(value)) return null;
     final preferred = Settings.getFunctionPreferredCharacteristicId(state.functionId);
-    if (preferred == null || preferred == from) return (value: value);
+    final target = preferred ?? baseCharacteristicIdOf(state.functionId);
+    // An unknown concept, or a variable without a characteristic and no
+    // preference, leaves nothing to convert between.
+    if (target == null || target == from || (from == null && preferred == null)) return (value: value);
     if (from == null) {
       _logger.d('Live: ${state.functionId} has no characteristic to convert from');
       return null;
     }
     final conceptId = AppState().platformFunctions[state.functionId]?.concept_id;
-    final converted = _convert(value, from, preferred, conceptId);
-    if (converted == null || !_finite(converted.value)) return null;
+    final converted = _convert(value, from, target, conceptId);
+    if (converted == null || !_finite(converted.value)) {
+      // Without a preference the base conversion is only a courtesy: keep the raw value.
+      return preferred == null ? (value: value) : null;
+    }
     return converted;
   }
 

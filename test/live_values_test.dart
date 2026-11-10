@@ -471,7 +471,47 @@ void main() {
       await pumpEventQueue();
 
       expect(temp.value, 212);
-      expect(hum.value, 40, reason: 'a function without a preferred characteristic stays raw');
+      expect(hum.value, 40, reason: 'a function of an unknown concept stays raw');
+    });
+
+    test('without a preferred characteristic in the base characteristic, as a command answer is', () async {
+      // The variable is in char-c; the concept's base is char-f.
+      AppState().platformFunctions['fn-temp'] = PlatformFunction('fn-temp', 'temp', 'concept-1', 'Temperature');
+      AppState().concepts['concept-1'] = Concept('concept-1', 'temperature', 'char-f', [],
+          [ConceptConversion('char-c', 'char-f', 1, 'x * 9 / 5 + 32', 'x')]);
+      live.watch(cloudDevice);
+      await pumpEventQueue();
+
+      made.single.send(cloudEvent, reading(100, 40));
+      await pumpEventQueue();
+
+      expect(temp.value, 212);
+    });
+
+    test('without a preferred characteristic, a value already in the base stays as it is', () async {
+      AppState().platformFunctions['fn-temp'] = PlatformFunction('fn-temp', 'temp', 'concept-1', 'Temperature');
+      AppState().concepts['concept-1'] = Concept('concept-1', 'temperature', 'char-c', [],
+          [ConceptConversion('char-c', 'char-f', 1, 'x * 9 / 5 + 32', 'x')]);
+      live.watch(cloudDevice);
+      await pumpEventQueue();
+
+      made.single.send(cloudEvent, reading(100, 40));
+      await pumpEventQueue();
+
+      expect(temp.value, 100);
+    });
+
+    test('without a preferred characteristic and no path to the base, the raw value is kept', () async {
+      AppState().platformFunctions['fn-temp'] = PlatformFunction('fn-temp', 'temp', 'concept-1', 'Temperature');
+      AppState().concepts['concept-1'] = Concept('concept-1', 'temperature', 'char-f', [], []);
+      live.watch(cloudDevice);
+      await pumpEventQueue();
+
+      made.single.send(cloudEvent, reading(100, 40));
+      await pumpEventQueue();
+
+      expect(temp.value, 100);
+      expect(temp.valueWrites, 1);
     });
 
     test('a value that cannot be converted leaves its state unchanged and the others are still updated', () async {
