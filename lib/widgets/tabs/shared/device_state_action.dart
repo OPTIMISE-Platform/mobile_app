@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
+import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_command_response.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -119,7 +120,14 @@ Future<void> performDeviceStateAction({
 
   dynamic input;
   if (AppState().concepts[function.concept_id]?.getBaseCharacteristic().hasInput() ?? false) {
-    Widget? content = functionConfig.build(context, setState, transitioningStates.length == 1 ? states[transitioningStates[0]].value : null);
+    dynamic current = transitioningStates.length == 1 ? states[transitioningStates[0]].value : null;
+    // A group reads one value per device. The dialog offers the value they
+    // share, none when they differ. A list-typed value is a list already, so
+    // for a group of one device it cannot be told apart and stays as it is.
+    if (isGroup && current is List && functionConfig.characteristic?.type != ContentVariable.list) {
+      current = commonValue(current);
+    }
+    Widget? content = functionConfig.build(context, setState, current);
     if (content == null) {
       const err = "Function Config missing build()";
       Toast.showToastNoContext(err);

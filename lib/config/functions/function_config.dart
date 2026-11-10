@@ -94,6 +94,17 @@ String formatValue(dynamic value) {
   }
 }
 
+/// The value all devices of a group report in [values], or null when they
+/// differ. Devices without a reading (null) are skipped, as in [formatValue].
+/// Structures compare by their fields; nested ones count as different.
+dynamic commonValue(List<dynamic> values) {
+  final known = values.where((e) => e != null);
+  if (known.isEmpty) return null;
+  final first = known.first;
+  bool same(dynamic e) => e == first || (e is Map && first is Map && mapEquals(e, first));
+  return known.every(same) ? first : null;
+}
+
 abstract class FunctionConfig {
   String functionId = "";
   late final Characteristic? characteristic;
@@ -109,12 +120,13 @@ abstract class FunctionConfig {
     return characteristic?.value;
   }
 
+  /// The input for a command, starting from the current [value]. Null starts
+  /// empty, also for a config kept across dialogs that still holds the last
+  /// input.
   @nonVirtual
   Widget? build(BuildContext context, StateSetter setState, [dynamic value]) {
-    if (value != null) {
-      characteristic?.value = value;
-    }
-    return characteristic?.build(context, setState);
+    characteristic?.value = value;
+    return characteristic?.build(context, setState, focusInput: true);
   }
 
   init() {

@@ -52,13 +52,17 @@ class Characteristic {
   );
 
   final List<Widget> _fields = [];
+  bool _focusInput = false;
 
-  Widget build(BuildContext context, StateSetter setState, {bool skipConfig = false}) {
+  /// [focusInput] focuses the first text field with its text selected, so the
+  /// keyboard opens and typing replaces the current value.
+  Widget build(BuildContext context, StateSetter setState, {bool skipConfig = false, bool focusInput = false}) {
     if (!skipConfig && characteristicConfigs.containsKey(id)) {
       return characteristicConfigs[id]!(context, this, setState);
     }
 
     _fields.clear();
+    _focusInput = focusInput;
     _walkTree(context, "", this, value ?? value, setState);
 
     final column = Column(
@@ -373,29 +377,60 @@ class Characteristic {
     }
   }
 
-  TextFormField defaultTextFormField(Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator,
+  Widget defaultTextFormField(Characteristic characteristic, dynamic value, String path, String? Function(String?)? validator,
       dynamic Function(String?) parse, StateSetter setState,
       [TextInputType? keyboardType]) {
-    return TextFormField(
-      decoration: InputDecoration(
-        labelText: characteristic.name,
-        suffixText: characteristic.display_unit,
-      ),
-      initialValue: value?.toString(),
-      keyboardType: keyboardType,
-      autovalidateMode: AutovalidateMode.always,
-      validator: validator,
-      onChanged: (value) {
-        try {
-          _insertValueIntoResult(parse(value), path, setState);
-        } catch (e) {
-          _logger.d("error parsing user input");
-        }
-      },
-    );
+    TextFormField field([TextEditingController? controller]) => TextFormField(
+          decoration: InputDecoration(
+            labelText: characteristic.name,
+            suffixText: characteristic.display_unit,
+          ),
+          controller: controller,
+          initialValue: controller == null ? value?.toString() : null,
+          // With several fields the first one added to the tree takes the focus.
+          autofocus: controller != null,
+          keyboardType: keyboardType,
+          autovalidateMode: AutovalidateMode.always,
+          validator: validator,
+          onChanged: (value) {
+            try {
+              _insertValueIntoResult(parse(value), path, setState);
+            } catch (e) {
+              _logger.d("error parsing user input");
+            }
+          },
+        );
+    return _focusInput ? _SelectedText(text: value?.toString() ?? "", builder: field) : field();
   }
 
   bool hasInput() {
     return type != "";
   }
+}
+
+/// Holds a controller that starts with all of [text] selected, for a field
+/// that opens focused. TextField.selectAllOnFocus does not apply when the
+/// focus comes from autofocus; a preset selection is kept.
+class _SelectedText extends StatefulWidget {
+  const _SelectedText({required this.text, required this.builder});
+
+  final String text;
+  final Widget Function(TextEditingController controller) builder;
+
+  @override
+  State<_SelectedText> createState() => _SelectedTextState();
+}
+
+class _SelectedTextState extends State<_SelectedText> {
+  late final TextEditingController _controller = TextEditingController.fromValue(
+      TextEditingValue(text: widget.text, selection: TextSelection(baseOffset: 0, extentOffset: widget.text.length)));
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(_controller);
 }
