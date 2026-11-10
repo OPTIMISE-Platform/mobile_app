@@ -37,11 +37,12 @@ final _logger = Logger(printer: SimplePrinter());
 /// config). [states] must be all states of the device or group, since related
 /// controlling and measuring states are looked up in it.
 ///
-/// [isGroup] selects how affected measurements are determined: for groups all
-/// related controlling functions count, for a single device only the one
-/// matching the current value. [setState] is handed to the function config's
-/// input builder, [notifyEntity] signals the owning device/group so its widgets
-/// rebuild.
+/// The measurements refreshed afterwards are those the control pairs with
+/// ([ControlPairing.controlsFor]). For a control that pairs with none,
+/// [isGroup] selects them: for groups all related controlling functions count,
+/// for a single device only the one matching the current value. [setState] is
+/// handed to the function config's input builder, [notifyEntity] signals the
+/// owning device/group so its widgets rebuild.
 Future<void> performDeviceStateAction({
   required BuildContext context,
   required DeviceConnectionStatus? connectionStatus,
@@ -73,11 +74,17 @@ Future<void> performDeviceStateAction({
   if (element.transitioning) {
     return; // avoid double presses
   }
-  final List<CommandCallback> commandCallbacks = [];
-  final List<int> transitioningStates = [];
+  // The readings the control acts on. A control that pairs with none keeps a
+  // row of its own and refreshes every reading of a related function in its
+  // service group instead.
+  final List<int> paired = [];
+  final List<int> related = [];
   for (var i = 0; i < states.length; i++) {
-    if (states[i].isControlling) {
+    if (states[i].isControlling || states[i].serviceGroupKey != element.serviceGroupKey) {
       continue;
+    }
+    if (states[i].controlsFor(states, element.functionId).any((c) => identical(c, element))) {
+      paired.add(i);
     }
     var measuringFunctionConfig = functionConfigs[states[i].functionId];
     measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
@@ -88,24 +95,26 @@ Future<void> performDeviceStateAction({
     } else {
       refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
     }
-    refreshingMeasurementFunctionIds ??= [];
-
-    if (element.serviceGroupKey == states[i].serviceGroupKey && refreshingMeasurementFunctionIds.contains(element.functionId)) {
-      transitioningStates.add(i);
-      commandCallbacks.add(CommandCallback(states[i].toCommand(), (value) {
-        states[i].transitioning = false;
-        value = value as DeviceCommandResponse;
-        if (value.status_code != 200) {
-          _logger.e("${value.status_code}: ${value.message}");
-          return;
-        }
-        if (value.message is List && value.message.length == 1) {
-          states[i].value = value.message[0];
-        } else {
-          states[i].value = value.message;
-        }
-      }));
+    if (refreshingMeasurementFunctionIds?.contains(element.functionId) ?? false) {
+      related.add(i);
     }
+  }
+  final List<int> transitioningStates = paired.isNotEmpty ? paired : related;
+  final List<CommandCallback> commandCallbacks = [];
+  for (final i in transitioningStates) {
+    commandCallbacks.add(CommandCallback(states[i].toCommand(), (value) {
+      states[i].transitioning = false;
+      value = value as DeviceCommandResponse;
+      if (value.status_code != 200) {
+        _logger.e("${value.status_code}: ${value.message}");
+        return;
+      }
+      if (value.message is List && value.message.length == 1) {
+        states[i].value = value.message[0];
+      } else {
+        states[i].value = value.message;
+      }
+    }));
   }
 
   dynamic input;

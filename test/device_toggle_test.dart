@@ -213,4 +213,56 @@ void main() {
     expect(d.states.map((s) => s.transitioning), everyElement(isFalse));
     expect(toasts, isEmpty);
   });
+
+  testWidgets("setting a temperature refreshes only the reading on the control's aspects", (tester) async {
+    final getTemperature = dotenv.env['FUNCTION_GET_TEMPERATURE']!;
+    const setTemperature = "$controllingFunctionPrefix:set-temperature";
+    // Both share a concept, so every temperature reading relates to the control.
+    // The concept itself is unknown, so the action asks for no input.
+    for (final f in [
+      PlatformFunction(getTemperature, "Get-Temperature", "concept-temperature", "Get-Temperature"),
+      PlatformFunction(setTemperature, "Set-Temperature", "concept-temperature", "Set-Temperature"),
+    ]) {
+      AppState().platformFunctions[f.id] = f;
+    }
+    final backend = FakeBackend();
+    backend.serveJson("POST", _batch, 200, [
+      {"status_code": 200, "message": [22.0]}
+    ]);
+    serveGoldenBackend(backend);
+    final d = DeviceInstance("device-1", "device-1-local", "Radiator thermostat", null, "device-type-1", false,
+        "owner-1", "Radiator thermostat", DeviceConnectionStatus.online);
+    DeviceState temperature(String functionId, List<String> aspectIds, bool controlling, {dynamic value}) =>
+        DeviceState(value, "service-1", "group-1", functionId, null, controlling, null, null, d.id, "path", "group",
+            aspectIds: aspectIds)
+          ..deviceInstance = d;
+    // A thermostat with a target temperature and an external reading, each
+    // with its own control.
+    final target = temperature(getTemperature, ["air", "indoor", "target"], false, value: 20.0);
+    final measured = temperature(getTemperature, ["air", "indoor", "reading"], false, value: 21.0);
+    final setTarget = temperature(setTemperature, ["air", "indoor", "target"], true);
+    d.states.addAll([target, measured, setTarget, temperature(setTemperature, ["air", "indoor", "reading"], true)]);
+    await pumpGolden(tester, const Scaffold(), dark: false);
+    final context = tester.element(find.byType(Scaffold));
+
+    await tester.runAsync(() => performDeviceStateAction(
+          context: context,
+          connectionStatus: d.connection_state,
+          element: setTarget,
+          states: d.states,
+          isGroup: false,
+          setState: (fn) => fn(),
+          notifyEntity: d.notifyStateChanged,
+        ));
+
+    final batches = backend.requests.where((r) => r.uri.path == _batch).toList();
+    expect(batches, hasLength(2));
+    final refreshed = jsonDecode(batches.last.data as String) as List;
+    expect(refreshed.map((c) => "${c["function_id"]} ${(c["aspect_ids"] as List).join(",")}"),
+        ["$getTemperature air,indoor,target"]);
+    expect(target.value, 22.0);
+    expect(measured.value, 21.0);
+    expect(d.states.map((s) => s.transitioning), everyElement(isFalse));
+    expect(toasts, isEmpty);
+  });
 }
