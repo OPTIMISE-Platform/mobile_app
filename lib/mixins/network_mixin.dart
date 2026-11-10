@@ -43,6 +43,9 @@ mixin NetworkMixin on ChangeNotifier {
   /// change. Avoids an O(networks) scan per device in the DeviceInstance
   /// constructor — which also runs on every Isar cache read.
   Map<String, Network>? _networkByLocalId;
+  // The number of networks the lookup was built from: a network added to the
+  // list directly, without the loader, must not be missed.
+  int _networksIndexed = -1;
 
   final List<Location> locations = [];
   final _locationsMutex = Mutex();
@@ -119,10 +122,13 @@ mixin NetworkMixin on ChangeNotifier {
   }
 
   /// O(1) local_id -> Network lookup backed by [_networkByLocalId].
-  Network? networkForLocalId(String localId) =>
-      (_networkByLocalId ??= _buildNetworkByLocalId())[localId];
+  Network? networkForLocalId(String localId) {
+    final index = _networksIndexed == networks.length ? _networkByLocalId : null;
+    return (index ?? (_networkByLocalId = _buildNetworkByLocalId()))[localId];
+  }
 
   Map<String, Network> _buildNetworkByLocalId() {
+    _networksIndexed = networks.length;
     final map = <String, Network>{};
     for (final network in networks) {
       final ids = network.device_local_ids;

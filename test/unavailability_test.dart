@@ -78,6 +78,13 @@ void main() {
     expect(deviceUnavailability(d), Unavailability.notLocal);
   });
 
+  test('a network added after a lookup is found', () {
+    // A lookup before the network exists builds the index without it.
+    expect(AppState().networkForLocalId('fan-local'), isNull);
+    AppState().networks.add(networkOfFan(gateway: true));
+    expect(fan(DeviceConnectionStatus.online).network?.id, 'network-1');
+  });
+
   test('a device behind a local gateway is available in local mode', () async {
     AppState().networks.add(networkOfFan(gateway: true));
     final d = fan(DeviceConnectionStatus.online);
