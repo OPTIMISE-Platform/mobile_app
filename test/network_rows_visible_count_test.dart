@@ -81,8 +81,7 @@ void main() {
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    unawaited(
-        AppState().loadNetworks(tester.element(find.byType(DeviceListByNetwork))));
+    unawaited(AppState().loadNetworks());
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }

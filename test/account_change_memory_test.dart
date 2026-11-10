@@ -21,7 +21,6 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_initializer.dart';
@@ -50,9 +49,6 @@ Future<void> _until(bool Function() condition) async {
     await Future<void>.delayed(const Duration(milliseconds: 10));
   }
 }
-
-/// loadNetworks takes a context it does not read.
-class _Context extends Fake implements BuildContext {}
 
 /// Secure storage whose delete of the message queue fails.
 class _QueueUndeletable extends MapBase<String, String> {
@@ -259,7 +255,7 @@ void main() {
     await _until(() =>
         !AppState().loadingLocations() && AppState().locations.isNotEmpty);
     await AppState().loadDeviceGroups();
-    await AppState().loadNetworks(_Context());
+    await AppState().loadNetworks();
   }
 
   Map<String, Iterable<String>> loaded() => {

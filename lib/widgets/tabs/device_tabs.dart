@@ -264,7 +264,7 @@ class DeviceTabsState extends State<DeviceTabs> {
         // parallel — don't await sequentially
         Future.wait([
           state.loadDeviceGroups(),
-          state.loadNetworks(context)
+          state.loadNetworks()
         ]).then((_) {
           if (!mounted) return;
           switchScreen(_navigationIndex, true);

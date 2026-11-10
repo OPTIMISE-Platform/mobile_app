@@ -75,7 +75,7 @@ mixin NetworkMixin on ChangeNotifier {
   /// itself, since that load discarded its result.
   int? _networksLoadEpoch;
 
-  Future<void> loadNetworks(BuildContext context) async {
+  Future<void> loadNetworks() async {
     final epoch = AccountEpoch.current;
     final locked = _networksMutex.isLocked;
     await _networksMutex.acquire();

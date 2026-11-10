@@ -17,7 +17,6 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_class.dart';
@@ -52,9 +51,6 @@ typedef _Loader = ({
   // Serialized on a mutex rather than shared through JoinedLoad.
   bool mutex,
 });
-
-/// loadNetworks takes a context it does not read.
-class _Context extends Fake implements BuildContext {}
 
 final _loaders = <_Loader>[
   (
@@ -105,7 +101,7 @@ final _loaders = <_Loader>[
           }
         ],
     serveRest: (_) {},
-    load: () => AppState().loadNetworks(_Context()),
+    load: () => AppState().loadNetworks(),
     ids: () => AppState().networks.map((n) => n.id),
     mutex: true,
   ),
@@ -318,7 +314,7 @@ void main() {
     final probe = Completer<void>();
     backend.holds["GET /"] = probe;
 
-    final load = AppState().loadNetworks(_Context());
+    final load = AppState().loadNetworks();
     // The constructor's discovery may hold the probe too; the load is in its
     // merge once the networks are in.
     await _until(() =>

@@ -157,9 +157,91 @@ a fresh value from the device.
   configs in `functionConfigs` are shared instances that outlive a dialog, so
   `FunctionConfig.build` sets the start value on every call, `null`
   included; otherwise a dialog would open with the input of the one before.
-- The Android widget (`lib/native_pipe.dart`) returns the responses as they
-  are.
+- The Android device controls (`lib/native_pipe.dart`) answer a command with
+  its responses and the entry as it now is; see below.
 
 Both paths are driven through `FakeBackend` in
 `test/device_commands_cloud_fallback_test.dart`; the gateway is served at
 `gw.test`.
+
+## Android device controls
+
+`lib/native_pipe.dart` serves the Android controls (`ControlsProviderService`,
+`AppControlsProviderService.kt`) over the `flutter/controlMethodChannel`. It
+offers three kinds of control: the on/off reading of a device, that of a group,
+and a reading that exactly one control sets within a numeric range (a slider).
+The derivation, free of I/O, is in `lib/shared/device_controls.dart`: a device
+pairs reading and control as the detail page does, a group by
+`resolveGroupControl`, and the range comes from the characteristic of the
+control's function when it is a float or integer with a minimum and a maximum
+(step 1 for an integer, 0.5 for a float). `RangeTemplate` refuses a value
+outside the range and a step of zero, so a characteristic that does not fit is
+not offered, and the Kotlin side holds the value to the range.
+
+- **Routing.** A command is built from the states of the device or group read
+  from Isar and prepared there, never from the JSON the platform side sends:
+  only those states carry `deviceInstance` or `deviceGroup`, which is what
+  `runCommands` takes the network and so the gateway from. A group is read
+  after the networks are loaded, because it takes its network when it is
+  constructed. In the app's engine the pipe loads the networks first if there
+  are none; the metadata comes from the cache, the function configs are built
+  again after a load.
+- **Own engine.** With the app closed the service starts an engine with the
+  entrypoint `controlsMain` (`lib/main.dart`), not `main`: dotenv, Settings,
+  Isar, `Auth().init()`, the metadata and the networks from the cache, no
+  Firebase and no cache refresh, no view. The handler is set at once and holds
+  each call until that is done; a failed start is tried again by the next call.
+  What is loaded is read from the cache; a fetch happens for what it lacks. The
+  Hive boxes are opened as the app opens them. Setting `Auth().init()` up writes
+  the account to `settings.box` (`Settings.setAccount`), and constructing
+  `AppState` starts the gateway discovery, which stores a moved address in
+  `mgw.box`; the engine runs no other Hive write of its own.
+- **One engine at a time.** Service and app run in one process, and Hive's
+  file lock does not separate two Dart isolates in it: each would keep its own
+  copy of a box, read the other's changes only after a restart, and after a
+  compaction by one write into the replaced file. So when the app's engine
+  attaches the plugin (`MainActivity`), the service destroys its own engine and
+  answers through the app's from then on. A call running in the destroyed
+  engine fails, and the open controls panel gets no more updates until it is
+  opened again. With the app closed again the next call starts a new engine.
+- **Thermostats.** Temperature characteristics have no maximum on the
+  platform (Degree Celsius: minimum -273.15, no maximum), so a setpoint gets no
+  range of its own. A device of the class Thermostat
+  (`thermostatDeviceClass` in `lib/shared/device_controls.dart`), or a group
+  whose criteria name that class only, takes 5 to 30 °C (278.15 to 303.15 K)
+  for the control of the aspect Target (`targetAspect`). The range is a
+  constant of the app, not read from the device. A thermostat's other
+  temperature controls, such as the Aqara SRTS-A01's external temperature
+  input that pairs with its room temperature, get no slider, nor do other
+  devices with the same function and characteristic, such as a boiler's water
+  temperature. A group pairs a reading with its
+  control by aspect as the detail page does; a thermostat group has a
+  set-temperature control per aspect. Only when that finds none does the
+  group's single control of the function count.
+- **Stable ids.** Android stores the id of every control a user added, the
+  fields of `DeviceState` without value, `isControlling` and `transitioning`
+  (`DeviceState.getId()` in Kotlin). The fields that describe a control (`kind`,
+  `min`, `max`, `step`, `unit`, `integer`) are removed from the id as well, and
+  an on/off entry of a device carries the same id fields as before.
+  `test/device_controls_test.dart` compares them against the payload from
+  before. The answer to `getToggleStates` and to a command repeats the id
+  fields of the request unchanged.
+- **Setting a value.** `setValue` finds the reading and the control as above,
+  sends the control's command with the value held to the range (rounded for an
+  integer) and reads the reading back; when that fails the value that was set
+  stands in. `setToggle` sends the control of the new state and answers with
+  that state, as no reading has caught up. For a group an on/off control exists
+  only when there is one control for each direction.
+- **Updates.** `handleDeviceStateUpdate` passes a changed reading of a device on
+  as an event only when the platform side shows a control for it, that is when
+  `getToggleStates` was asked for that reading in this process (device id,
+  service, function, first aspect). Every reading the app loads or receives
+  live passes this hook, the device list's on/off readings of all devices
+  included, so the others return before any lookup. Groups send no events.
+- **Detail page.** A control of a group puts the group id in the intent extra
+  `org.infai.optimise.mobile_app.GroupDetailPage`; `openDetailPage` takes a
+  device id or `{groupId: ...}`.
+
+`test/native_pipe_controls_test.dart` (`isar` tag) drives the channel against a
+group and a device behind a gateway and checks that the commands go to the
+gateway with the group or device id.

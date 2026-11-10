@@ -19,11 +19,15 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:mobile_app/app.dart';
 import 'package:mobile_app/app_initializer.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/native_pipe.dart';
 import 'package:mobile_app/services/auth.dart';
+import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
+import 'package:mobile_app/shared/isar.dart';
 import 'package:provider/provider.dart';
 
 Future<void> main() async {
@@ -31,11 +35,18 @@ Future<void> main() async {
   // Timeline logging writes an event per HTTP request; only useful while
   // profiling, so keep it out of release builds.
   if (kDebugMode) HttpClient.enableTimelineLogging = true;
-  // Everything that escapes a catch is recorded here. Without it those
-  // failures reach the console only, and the diagnostics dump a user shares
-  // when something is wrong holds no trace of them. Neither handler shows
-  // anything: a framework error can repeat per frame and would bury the
-  // message that belongs to whatever the user just did.
+  _logUnhandledErrors();
+  runApp(
+    const _Bootstrap(),
+  );
+}
+
+/// Everything that escapes a catch is recorded here. Without it those
+/// failures reach the console only, and the diagnostics dump a user shares
+/// when something is wrong holds no trace of them. Neither handler shows
+/// anything: a framework error can repeat per frame and would bury the
+/// message that belongs to whatever the user just did.
+void _logUnhandledErrors() {
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     ErrorReporter.log("Unhandled framework error", details.exception,
@@ -46,9 +57,34 @@ Future<void> main() async {
     // Not claimed as handled - the platform still prints it as before.
     return false;
   };
-  runApp(
-    const _Bootstrap(),
-  );
+}
+
+/// The entrypoint of the engine the Android device controls start while the
+/// app is closed (`AppControlsProviderService.ensureFlutterReady`). It has no
+/// view, so it runs no app: only what the controls' commands need is set up,
+/// from the cache. No Firebase and no cache refresh, which would write what
+/// the app's own engine writes.
+///
+/// The pipe answers from the start and holds each call until [_prepareControls]
+/// is done. Hive boxes are opened as the app opens them, but nothing here sets
+/// out to write to them; see `docs/device-commands.md`.
+@pragma('vm:entry-point')
+Future<void> controlsMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  _logUnhandledErrors();
+  NativePipe.init(prepare: _prepareControls);
+}
+
+Future<void> _prepareControls() async {
+  await dotenv.load(fileName: '.env');
+  await Settings.init();
+  // Not AppInitializer.openCache, which also finishes a pending account wipe:
+  // that is a write, and the app does it on its own start. An instance the
+  // app's engine in this process opened is shared.
+  isar ??= await IsarService().db;
+  // Cloud commands take their headers from it.
+  await Auth().init();
+  await NativePipe.loadForControls();
 }
 
 class _Bootstrap extends StatefulWidget {

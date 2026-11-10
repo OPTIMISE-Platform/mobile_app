@@ -23,6 +23,7 @@ import android.os.Build
 import android.service.controls.Control
 import android.service.controls.DeviceTypes
 import android.service.controls.templates.ControlButton
+import android.service.controls.templates.RangeTemplate
 import android.service.controls.templates.ToggleTemplate
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -47,7 +48,27 @@ class DeviceState(id: String) {
     var isControlling: Boolean = false
     var transitioning: Boolean = false
 
+    // What the control is and, for a range, how it sets its value. Not part of
+    // the control id, see getId.
+    var kind: String? = null
+    var min: Double? = null
+    var max: Double? = null
+    var step: Double? = null
+    var unit: String? = null
+    var integer: Boolean = false
+
     companion object {
+        const val DETAIL_PAGE_EXTRA = "org.infai.optimise.mobile_app.DetailPage"
+        const val GROUP_DETAIL_PAGE_EXTRA = "org.infai.optimise.mobile_app.GroupDetailPage"
+        const val KIND_RANGE = "range"
+
+        // Fields of the tree that belong to the entry but not to the control id.
+        // Android stores the id of every control a user added, so the id must be
+        // the same string as before these fields existed: a new field is added at
+        // the end of getJSONTree and removed here.
+        private val NOT_IN_ID = listOf("value", "isControlling", "transitioning",
+                "kind", "min", "max", "step", "unit", "integer")
+
         fun fromJSONList(json: String): MutableList<DeviceState> {
             val arr = JsonParser.parseString(json).asJsonArray
             val l = mutableListOf<DeviceState>()
@@ -69,12 +90,10 @@ class DeviceState(id: String) {
 
     fun getId(): String {
         val tree = getJSONTree()
-        if (tree.has("value"))
-            tree.remove("value")
-        if (tree.has("isControlling"))
-            tree.remove("isControlling")
-        if (tree.has("transitioning"))
-            tree.remove("transitioning")
+        for (field in NOT_IN_ID) {
+            if (tree.has(field))
+                tree.remove(field)
+        }
         return tree.toString()
     }
 
@@ -113,67 +132,106 @@ class DeviceState(id: String) {
                 Log.w("DeviceState", "Value not primitive, cannot parse from JSON: " + base.get("value").toString())
             }
         }
+        if (base.get("kind") != null && !base.get("kind").isJsonNull)
+            kind = base.get("kind").asString
+        if (base.get("min") != null && !base.get("min").isJsonNull)
+            min = base.get("min").asDouble
+        if (base.get("max") != null && !base.get("max").isJsonNull)
+            max = base.get("max").asDouble
+        if (base.get("step") != null && !base.get("step").isJsonNull)
+            step = base.get("step").asDouble
+        if (base.get("unit") != null && !base.get("unit").isJsonNull)
+            unit = base.get("unit").asString
+        if (base.get("integer") != null && !base.get("integer").isJsonNull)
+            integer = base.get("integer").asBoolean
+    }
+
+    private fun isRange(): Boolean {
+        return kind == KIND_RANGE
     }
 
     @RequiresApi(Build.VERSION_CODES.M)
     private fun pi(context: Context): PendingIntent {
         val i = Intent(context, MainActivity::class.java)
-        i.putExtra("org.infai.optimise.mobile_app.DetailPage", this.deviceId)
-        for (key in i.extras!!.keySet()) {
-            Log.d("DeviceState", key + " --> " + this.deviceId)
+        // A control of a group opens the group, any other its device.
+        if (deviceId == null && groupId != null) {
+            i.putExtra(GROUP_DETAIL_PAGE_EXTRA, this.groupId)
+        } else {
+            i.putExtra(DETAIL_PAGE_EXTRA, this.deviceId)
         }
-        return PendingIntent.getActivity(context, deviceId.hashCode(), i, PendingIntent.FLAG_IMMUTABLE)
+        for (key in i.extras!!.keySet()) {
+            Log.d("DeviceState", key + " --> " + (this.deviceId ?: this.groupId))
+        }
+        return PendingIntent.getActivity(context, (deviceId ?: groupId).hashCode(), i, PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun title(): String {
+        return name ?: ""
+    }
+
+    // The service group of a device's reading; a group's has none, so it says
+    // that it is one.
+    private fun subtitle(): String {
+        return serviceGroupName ?: if (groupId != null) "Group" else ""
+    }
+
+    private fun deviceType(): Int {
+        return if (isRange()) DeviceTypes.TYPE_UNKNOWN else DeviceTypes.TYPE_SWITCH
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun statelessToggleControl(context: Context): Control {
-        var subtitle = ""
-        var title = ""
-        if (name != null) {
-            title = name!!
-        }
-        if (serviceGroupName != null) {
-            subtitle = serviceGroupName!!
-        }
-
-
+    fun statelessControl(context: Context): Control {
         return Control.StatelessBuilder(getId(), pi(context))
                 // Required: The name of the control
-                .setTitle(title)
+                .setTitle(title())
                 // Required: Usually the room where the control is located
-                .setSubtitle(subtitle)
+                .setSubtitle(subtitle())
                 // Required: Type of device, i.e., thermostat, light, switch
-                .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
+                .setDeviceType(deviceType())
                 .build()
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
-    fun statefulToggleControl(context: Context): Control {
-        var title = ""
-        var subtitle = ""
-        if (name != null) {
-            title = name!!
+    fun statefulControl(context: Context): Control {
+        val builder = Control.StatefulBuilder(getId(), pi(context))
+                .setTitle(title())
+                .setSubtitle(subtitle())
+                .setDeviceType(deviceType())
+        if (isRange()) {
+            applyRange(builder)
+        } else {
+            builder.setStatus(Control.STATUS_OK)
+                    .setControlTemplate(
+                            ToggleTemplate(
+                                    "", ControlButton(
+                                    value.toString().toBoolean(),
+                                    "Toggle switch"
+                            )
+                            )
+                    )
         }
-        if (serviceGroupName != null) {
-            subtitle = serviceGroupName!!
+        return builder.build()
+    }
+
+    // RangeTemplate throws when the current value lies outside the range or the
+    // step is not positive, so the value is held to the range and a range that
+    // cannot be built leaves the control without a template.
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun applyRange(builder: Control.StatefulBuilder) {
+        val lo = min?.toFloat()
+        val hi = max?.toFloat()
+        val stepValue = step?.toFloat()
+        if (lo == null || hi == null || stepValue == null || !lo.isFinite() || !hi.isFinite() || hi < lo || !(stepValue > 0f)) {
+            Log.w("DeviceState", "No usable range for " + getId())
+            builder.setStatus(Control.STATUS_UNKNOWN)
+            return
         }
-        return Control.StatefulBuilder(getId(), pi(context))
-                // Required: The name of the control
-                .setTitle(title)
-                // Required: Usually the room where the control is located
-                .setSubtitle(subtitle)
-                // Required: Type of device, i.e., thermostat, light, switch
-                .setDeviceType(DeviceTypes.TYPE_SWITCH) // For example, DeviceTypes.TYPE_THERMOSTAT
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(
-                        ToggleTemplate(
-                                "", ControlButton(
-                                value.toString().toBoolean(),
-                                "Toggle switch"
-                        )
-                        )
-                )
-                .build()
+        val current = (value as? Number)?.toFloat()?.takeIf { it.isFinite() }
+        // The unit may hold a percent sign, which the format would read as a
+        // conversion.
+        val format = "%." + (if (integer) 0 else 1) + "f" + (unit?.let { " " + it.replace("%", "%%") } ?: "")
+        builder.setStatus(if (current == null) Control.STATUS_UNKNOWN else Control.STATUS_OK)
+                .setControlTemplate(RangeTemplate("", lo, hi, (current ?: lo).coerceIn(lo, hi), stepValue, format))
     }
 
     fun toJSON(): String {
@@ -203,12 +261,25 @@ class DeviceState(id: String) {
             obj.add("name", JsonPrimitive(name))
         if (serviceGroupName != null)
             obj.add("serviceGroupName", JsonPrimitive(serviceGroupName))
-        if (value != null)
-            obj.add("value", JsonPrimitive(value as? Boolean))
-        if (isControlling != null)
-            obj.add("isControlling", JsonPrimitive(isControlling))
-        if (transitioning != null)
-            obj.add("transitioning", JsonPrimitive(transitioning))
+        when (val v = value) {
+            is Boolean -> obj.add("value", JsonPrimitive(v))
+            is Number -> obj.add("value", JsonPrimitive(v))
+            is String -> obj.add("value", JsonPrimitive(v))
+        }
+        obj.add("isControlling", JsonPrimitive(isControlling))
+        obj.add("transitioning", JsonPrimitive(transitioning))
+        // After everything that makes up the id, see NOT_IN_ID.
+        if (kind != null)
+            obj.add("kind", JsonPrimitive(kind))
+        if (min != null)
+            obj.add("min", JsonPrimitive(min))
+        if (max != null)
+            obj.add("max", JsonPrimitive(max))
+        if (step != null)
+            obj.add("step", JsonPrimitive(step))
+        if (unit != null)
+            obj.add("unit", JsonPrimitive(unit))
+        obj.add("integer", JsonPrimitive(integer))
         return obj
     }
 }

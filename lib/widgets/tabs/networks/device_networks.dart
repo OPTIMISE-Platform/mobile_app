@@ -55,7 +55,7 @@ class _DeviceListByNetworkState extends State<DeviceListByNetwork>
   _refresh() async {
     if (!mounted) return;
     if (_selected == null) {
-      AppState().loadNetworks(context);
+      AppState().loadNetworks();
     } else {
       AppState().searchDevices(
           (context.findAncestorStateOfType<State<DeviceTabs>>()

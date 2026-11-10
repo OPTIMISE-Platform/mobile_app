@@ -22,6 +22,7 @@ import android.service.controls.Control
 import android.service.controls.ControlsProviderService
 import android.service.controls.actions.BooleanAction
 import android.service.controls.actions.ControlAction
+import android.service.controls.actions.FloatAction
 import android.util.Log
 import androidx.annotation.RequiresApi
 import io.flutter.FlutterInjector
@@ -31,6 +32,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import com.google.gson.JsonParser
 import io.reactivex.processors.FlowableProcessor
 import io.reactivex.processors.ReplayProcessor
 import org.reactivestreams.FlowAdapters
@@ -44,6 +46,10 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
         var binaryMessenger: BinaryMessenger? = null
         const val TAG = "AppControlsProviderSe.."
         var updateProcessor: ReplayProcessor<Control> = ReplayProcessor.create()
+
+        // The engine the service started for itself while the app was not
+        // running (ensureFlutterReady). Null once the app's engine took over.
+        private var ownEngine: FlutterEngine? = null
     }
 
     override fun createPublisherForAllAvailable(): Flow.Publisher<Control> {
@@ -82,12 +88,25 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
         ensureFlutterReady()
 
         val state = DeviceState(controlId)
-        if (action is BooleanAction) {
-            state.value = action.newState
+        // A group's control is a toggle as well; Dart finds out what the id means.
+        val method = when (action) {
+            is BooleanAction -> {
+                state.value = action.newState
+                "setToggle"
+            }
+            is FloatAction -> {
+                state.value = action.newValue.toDouble()
+                "setValue"
+            }
+            else -> {
+                Log.w(TAG, "Unsupported action: $action")
+                consumer.accept(ControlAction.RESPONSE_FAIL)
+                return
+            }
         }
         MethodChannel(binaryMessenger!!, "flutter/controlMethodChannel")
                 .invokeMethod(
-                        "setToggle",
+                        method,
                         state.toJSON(),
                         ToggleResultHandler(baseContext, updateProcessor, state, consumer)
                 )
@@ -100,11 +119,24 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         Log.d(TAG, "Attached to engine")
         binaryMessenger = binding.binaryMessenger
+        // The app has started: its engine answers the controls from now on, and
+        // the service's own one stops. Both run in this process, and two Dart
+        // isolates keeping the same Hive boxes open lose each other's writes
+        // and read stale settings (docs/device-commands.md).
+        val own = ownEngine
+        if (own != null && own.dartExecutor !== binding.binaryMessenger) {
+            Log.d(TAG, "App engine attached, stopping the controls engine")
+            ownEngine = null
+            own.destroy()
+        }
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         Log.d(TAG, "Detached from engine")
-        binaryMessenger = null
+        // An engine that already took over stays.
+        if (binaryMessenger === binding.binaryMessenger) {
+            binaryMessenger = null
+        }
         updateProcessor.onComplete()
         updateProcessor = ReplayProcessor.create()
     }
@@ -117,8 +149,11 @@ class AppControlsProviderService : ControlsProviderService(), FlutterPlugin {
             loader.startInitialization(baseContext)
             loader.ensureInitializationComplete(baseContext, null)
             val engine = FlutterEngine(baseContext)
+            ownEngine = engine
             engine.plugins.add(AppControlsProviderService())
-            engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint(loader.findAppBundlePath(), "main"))
+            // Not main: that runs the whole app, which needs a view this engine
+            // does not have. controlsMain sets up what the controls need.
+            engine.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint(loader.findAppBundlePath(), "controlsMain"))
             Log.d(TAG, "Flutter Engine inited")
             Log.d(TAG, "Binary Messanger now: " + binaryMessenger.toString())
         }
@@ -133,7 +168,7 @@ private class StatelessResultHandler(
     override fun success(result: Any?) {
         val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
-            processor.onNext(state.statelessToggleControl(context))
+            processor.onNext(state.statelessControl(context))
         }
         processor.onComplete()
     }
@@ -163,7 +198,7 @@ private class ToggleStreamHandler(
                 if (!controlIds.contains(state.getId())) {
                     return
                 }
-                processor.onNext(state.statefulToggleControl(context))
+                processor.onNext(state.statefulControl(context))
             }
 
             else -> result.notImplemented()
@@ -179,7 +214,7 @@ private class StatefulResultHandler(
     override fun success(result: Any?) {
         val states = DeviceState.fromJSONList(result.toString())
         for (state in states) {
-            processor.onNext(state.statefulToggleControl(context))
+            processor.onNext(state.statefulControl(context))
         }
     }
 
@@ -200,27 +235,42 @@ private class ToggleResultHandler(
         val state: DeviceState,
         val consumer: Consumer<Int>,
 ) : MethodChannel.Result {
+    // The answer holds the command's responses and the entry as it is now, with
+    // the value read back for a range.
+    // An answer that cannot be read fails the action instead of leaving the
+    // system waiting for it.
     @RequiresApi(Build.VERSION_CODES.R)
     override fun success(result: Any?) {
-        val responses = DeviceCommandResponse.fromJSONList(result.toString())
-        for (response in responses) {
-            if (response.status_code == 200) {
-                val control = state.statefulToggleControl(context)
-                processor.onNext(control)
-                consumer.accept(ControlAction.RESPONSE_OK)
+        val control = try {
+            val answer = JsonParser.parseString(result.toString()).asJsonObject
+            val responses = DeviceCommandResponse.fromJSONList(answer.get("responses").toString())
+            if (responses.isEmpty() || responses.any { it.status_code != 200 }) {
+                null
             } else {
-                consumer.accept(ControlAction.RESPONSE_FAIL)
+                val updated = if (answer.has("state") && !answer.get("state").isJsonNull) DeviceState(answer.get("state").toString()) else state
+                updated.statefulControl(context)
             }
+        } catch (e: Exception) {
+            Log.e("ToggleResultHandler", "Unreadable answer: $result", e)
+            null
         }
+        if (control == null) {
+            consumer.accept(ControlAction.RESPONSE_FAIL)
+            return
+        }
+        processor.onNext(control)
+        consumer.accept(ControlAction.RESPONSE_OK)
     }
 
+    // Only this action fails; an error on the shared processor would end the
+    // updates of every control.
     override fun error(errorCode: String, errorMessage: String?, errorDetails: Any?) {
-        Log.e("StatelessResultHandler", "ERROR: ($errorCode) $errorMessage")
-        processor.onError(Throwable(errorCode))
+        Log.e("ToggleResultHandler", "ERROR: ($errorCode) $errorMessage")
+        consumer.accept(ControlAction.RESPONSE_FAIL)
     }
 
     override fun notImplemented() {
-        Log.e("StatelessResultHandler", "ERROR: Not Implemented")
-        processor.onError(Throwable("Not Implemented"))
+        Log.e("ToggleResultHandler", "ERROR: Not Implemented")
+        consumer.accept(ControlAction.RESPONSE_FAIL)
     }
 }

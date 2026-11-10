@@ -51,11 +51,15 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleIntent(intent: Intent) {
-        io.flutter.Log.d("MainActivity", "Extra org.infai.optimise.mobile_app.DetailPage: " + intent.getStringExtra("org.infai.optimise.mobile_app.DetailPage"))
+        val deviceId = intent.getStringExtra(DeviceState.DETAIL_PAGE_EXTRA)
+        val groupId = intent.getStringExtra(DeviceState.GROUP_DETAIL_PAGE_EXTRA)
+        io.flutter.Log.d("MainActivity", "Extras device: " + deviceId + ", group: " + groupId)
 
-        if (intent.getStringExtra("org.infai.optimise.mobile_app.DetailPage") != null) {
-            MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, "flutter/controlMethodChannel")
-                    .invokeMethod("openDetailPage", intent.getStringExtra("org.infai.optimise.mobile_app.DetailPage"))
+        val channel = MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, "flutter/controlMethodChannel")
+        if (groupId != null) {
+            channel.invokeMethod("openDetailPage", mapOf("groupId" to groupId))
+        } else if (deviceId != null) {
+            channel.invokeMethod("openDetailPage", deviceId)
         }
     }
 }
