@@ -37,7 +37,9 @@ The same choice as `DeviceCommandsService.runCommands`:
 - The device's network has a paired gateway with an address
   (`device.network?.localGateways?.firstOrNull`): the gateway's broker on port
   1883 without TLS, topic `event/<local_id>/+`, with the broker login of that
-  pairing if one is stored.
+  pairing if one is stored. The host is that of the stored address, without
+  its port and brackets (`gatewaySocketHost`); the port is the gateway's HTTP
+  port, not the broker's.
 - Otherwise the platform: the broker in `LIVE_MQTT_URL` (`ssl://host:port`)
   with the account's client certificate, topic
   `event/<owner_id>/<local_id>/+`. The owner in the topic is the device's
