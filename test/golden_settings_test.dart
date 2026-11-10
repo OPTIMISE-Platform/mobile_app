@@ -19,6 +19,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/widgets/settings/settings.dart';
 
@@ -45,4 +46,13 @@ void main() {
           find.byType(MaterialApp), matchesGoldenFile("goldens/settings_$suffix.png"));
     });
   }
+
+  // The test environment has no DISTRIBUTOR=github, like a Play build: the
+  // pre-release switch belongs to the GitHub updater and is left out.
+  testWidgets("no pre-release switch without the in-app updater", (tester) async {
+    expect(AppUpdater.updateSupported, isFalse);
+    await pumpGolden(tester, const Settings(), dark: false);
+    expect(find.text("Behaviour"), findsOneWidget);
+    expect(find.text("Get Pre-Releases"), findsNothing);
+  });
 }

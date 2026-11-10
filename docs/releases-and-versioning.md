@@ -8,7 +8,8 @@ commits decide the version, and nothing in the tree is bumped by hand.
 
 Covers `.github/workflows/android-release.yml`, the script
 `.github/scripts/release-version.sh` it calls, the iOS build it runs next
-to the APK, and the release topics the app subscribes to. Not about the
+to the APK, the release topics the app subscribes to, and the Google Play
+build. Not about the
 signing material itself — the keystore, `key.properties` and the iOS
 certificate and profile are reconstructed from repository secrets at build
 time and exist nowhere in the tree.
@@ -105,6 +106,32 @@ Stable releases go to `android`. Prereleases go to the topic in
 from before the prerelease topic existed listen on nothing else. Switching it to
 `android-prerelease` stops prerelease notices from reaching stable users, and
 is safe once the installed base carries the subscription.
+
+## Google Play
+
+A Play build is the same app with `DISTRIBUTOR=play` in `.env` instead of the
+`DISTRIBUTOR=github` the workflow writes. Every value other than `github`
+leaves out two things:
+
+- the in-app updater with its release topics and the "Get Pre-Releases" switch
+  (`AppUpdater.updateSupported`);
+- `REQUEST_INSTALL_PACKAGES`, which `android/app/build.gradle.kts` merges from
+  `android/app/src/github/AndroidManifest.xml` only for `github`.
+
+Google Play does not allow an app to update itself, and rejects the permission
+when it serves that purpose. A local build without `DISTRIBUTOR` set is
+therefore already a Play build.
+
+Play takes an App Bundle, built with the version of a tag:
+
+```bash
+flutter build appbundle --release --no-tree-shake-icons --build-name 0.3.0 --build-number 460
+```
+
+Play App Signing signs with the key from `sepl.keystore`, uploaded once, so a
+Play install and a GitHub APK carry the same signature and install over each
+other. Play accepts each `versionCode` once and only above the last upload;
+taking it from a tag keeps it unique across both channels.
 
 ## Keeping the Flutter version in step
 

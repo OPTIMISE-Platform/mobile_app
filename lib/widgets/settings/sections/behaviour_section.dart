@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/services/api_available.dart';
+import 'package:mobile_app/services/app_update.dart';
 import 'package:mobile_app/services/settings.dart' as settings_service;
 import 'package:mobile_app/widgets/settings/settings_section.dart';
 import 'package:mobile_app/widgets/settings/settings_toggle.dart';
@@ -27,18 +28,21 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 /// The on/off settings. Every row is a switch, so none has a leading widget.
 SettingsSection behaviourSection(BuildContext context, AppState state) =>
     SettingsSection.of("Behaviour", [
-      (
-        SettingsToggle(
-          title: "Get Pre-Releases",
-          value: settings_service.Settings.getPreReleaseMode(),
-          onChanged: (v) async {
-            await settings_service.Settings.setPreReleaseMode(v);
-            state.notifyListeners();
-            await state.syncReleaseTopics();
-          },
+      // Pre-releases come from the in-app updater, which only GitHub builds
+      // have; a Play install gets its test builds through its Play track.
+      if (AppUpdater.updateSupported)
+        (
+          SettingsToggle(
+            title: "Get Pre-Releases",
+            value: settings_service.Settings.getPreReleaseMode(),
+            onChanged: (v) async {
+              await settings_service.Settings.setPreReleaseMode(v);
+              state.notifyListeners();
+              await state.syncReleaseTopics();
+            },
+          ),
+          GroupedListTile.insetNoLeading
         ),
-        GroupedListTile.insetNoLeading
-      ),
       (
         SettingsToggle(
           title: "Vibration",

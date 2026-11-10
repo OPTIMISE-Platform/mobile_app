@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Only builds distributed through GitHub releases install their own
+         updates (AppUpdater, lib/services/app_update.dart). build.gradle.kts
+         merges this file when .env sets DISTRIBUTOR=github, the same condition
+         the updater checks. Google Play does not allow an app to update itself,
+         and rejects this permission when it is used for that. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+</manifest>

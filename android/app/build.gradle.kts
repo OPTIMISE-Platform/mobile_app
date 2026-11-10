@@ -14,6 +14,21 @@ if (keystorePropertiesFile.exists()) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
 
+// The distribution channel, read from the same .env the app reads at runtime.
+// Only "github" builds update themselves (AppUpdater._updateSupported), so only
+// they declare the permission to install packages; see src/github.
+// Only this one line is parsed, the way flutter_dotenv reads it: the last
+// assignment wins (the workflow appends one), an inline comment and quotes are
+// dropped. java.util.Properties would keep both, and fails on other values.
+val dotEnvFile = rootProject.file("../.env")
+val distributor = if (!dotEnvFile.exists()) null else dotEnvFile.readLines()
+    .map { it.trim() }
+    .lastOrNull { it.startsWith("DISTRIBUTOR=") }
+    ?.substringAfter("=")
+    ?.substringBefore(" #")
+    ?.trim()
+    ?.trim('"', '\'')
+
 android {
     namespace = "org.infai.optimise.mobile_app"
     compileSdk = 36
@@ -56,6 +71,14 @@ android {
         }
         getByName("profile") {
             resValue("string", "label", "\"OPTI P\"")
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        if (distributor == "github") {
+            variant.sources.manifests.addStaticManifestFile("src/github/AndroidManifest.xml")
         }
     }
 }

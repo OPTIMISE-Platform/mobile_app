@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- REQUEST_INSTALL_PACKAGES lives in src/github/AndroidManifest.xml. -->
     <!-- open_filex declares these for opening media from shared storage. The
          app only opens its downloaded update from the app's own files
          directory, which open_filex hands over through its FileProvider without

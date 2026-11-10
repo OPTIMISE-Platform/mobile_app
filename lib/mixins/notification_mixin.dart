@@ -112,9 +112,11 @@ mixin NotificationMixin on ChangeNotifier {
     }
   }
 
-  /// Release topics exist for Android only.
+  /// Release topics exist for Android only, and only for builds whose updater
+  /// acts on them: a Play install is updated by Play.
   @visibleForTesting
-  static bool Function() releaseTopicsSupported = () => Platform.isAndroid;
+  static bool Function() releaseTopicsSupported =
+      () => Platform.isAndroid && AppUpdater.updateSupported;
 
   static Future<void> queueRemoteMessage(RemoteMessage message) async {
     await _messageMutex.acquire();
