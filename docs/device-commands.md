@@ -147,6 +147,16 @@ a fresh value from the device.
   (`lib/widgets/tabs/sensors/switch_tile.dart`) finds a control for the
   reading: the binary-state function `FUNCTION_GET_ON_OFF_STATE` names also
   reads motion, contacts and button inputs.
+- A group's reading holds one value per device. `DeviceGroup.getStateFillFunctions`
+  and the read-back in `performDeviceStateAction` unwrap a one-element list,
+  so a group of one device holds that device's value, and a list-typed value
+  of such a group cannot be told apart from a list per device. The input
+  dialog of `performDeviceStateAction` offers a group the value all its
+  devices share (`commonValue` in `lib/config/functions/function_config.dart`,
+  none when they differ) and leaves list-typed values as they are. The
+  configs in `functionConfigs` are shared instances that outlive a dialog, so
+  `FunctionConfig.build` sets the start value on every call, `null`
+  included; otherwise a dialog would open with the input of the one before.
 - The Android widget (`lib/native_pipe.dart`) returns the responses as they
   are.
 
