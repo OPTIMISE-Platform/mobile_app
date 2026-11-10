@@ -85,6 +85,9 @@ jobs:
           echo '${{ secrets.KEY_PROPERTIES }}' | base64 -d > android/key.properties
           echo '${{ secrets.DOT_ENV }}' > .env
           echo "DISTRIBUTOR=github" >> .env
+          # Public platform function ids, kept here so DOT_ENV need not change.
+          echo "FUNCTION_SET_BRIGHTNESS=urn:infai:ses:controlling-function:6ce74d6d-7acb-40b7-aac7-49daca214e85" >> .env
+          echo "FUNCTION_SET_COLOR_TEMPERATURE=urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33" >> .env
       - name: "Build app"
         run: flutter build apk --no-tree-shake-icons --build-name "$NAME" --build-number "$BUILD"
       - name: "Create release"
@@ -137,6 +140,9 @@ jobs:
         run: |
           echo '${{ secrets.DOT_ENV }}' > .env
           echo "DISTRIBUTOR=github" >> .env
+          # Public platform function ids, kept here so DOT_ENV need not change.
+          echo "FUNCTION_SET_BRIGHTNESS=urn:infai:ses:controlling-function:6ce74d6d-7acb-40b7-aac7-49daca214e85" >> .env
+          echo "FUNCTION_SET_COLOR_TEMPERATURE=urn:infai:ses:controlling-function:11ede745-afb3-41a6-98fc-6942d0e9cb33" >> .env
       - name: "Install signing material"
         env:
           IOS_P12: ${{ secrets.IOS_P12 }}
