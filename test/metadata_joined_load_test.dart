@@ -41,6 +41,9 @@ class _State extends ChangeNotifier with DeviceMixin {
 
   @override
   Future<void> ensureInitialized() async {}
+
+  @override
+  Future<void> networksSettled() async {}
 }
 
 /// Each device-type fetch waits for its own completer in [pending] and
@@ -73,6 +76,9 @@ class _AccountState extends ChangeNotifier with DeviceMixin {
 
   @override
   Future<void> ensureInitialized() async {}
+
+  @override
+  Future<void> networksSettled() async {}
 }
 
 void main() {

@@ -45,6 +45,9 @@ class _State extends ChangeNotifier with DeviceMixin {
 
   @override
   Future<void> ensureInitialized() async {}
+
+  @override
+  Future<void> networksSettled() async {}
 }
 
 Future<_State> _loaded(List<String> backend) async {

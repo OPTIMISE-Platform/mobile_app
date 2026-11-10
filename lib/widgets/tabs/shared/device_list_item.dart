@@ -35,6 +35,7 @@ import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/unavailability.dart';
 
 class DeviceListItem extends StatefulWidget {
   final DeviceInstance _device;
@@ -67,6 +68,9 @@ class _DeviceListItemState extends State<DeviceListItem> {
         listenable: widget._device.stateNotifier,
         builder: (context, child) {
       final device = widget._device;
+      // Offline, or not served locally in local mode: the toggles, the expanded
+      // ones included, send nothing.
+      final unavailable = deviceUnavailability(device) != null;
       final List<Widget> trailingWidgets = [];
       final filteredStates = device.states.where((element) =>
           element.functionId == dotenv.env['FUNCTION_GET_ON_OFF_STATE'] &&
@@ -97,8 +101,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
                                   dotenv.env['FUNCTION_GET_ON_OFF_STATE']]
                               ?.displayValue(element.value, context) ??
                           const Icon(Icons.help_outline),
-                      onPressed: device.connection_state ==
-                              DeviceConnectionStatus.offline
+                      onPressed: unavailable
                           ? null
                           : () => toggleDeviceState(
                                 connectionStatus: device.connection_state,
@@ -111,8 +114,6 @@ class _DeviceListItemState extends State<DeviceListItem> {
       });
 
       final connectionStatus = device.connection_state;
-      final unavailable = connectionStatus == DeviceConnectionStatus.offline ||
-          device.network?.localGateways?.isNotEmpty != true && Settings.getLocalMode();
 
       final deviceType = AppState().deviceTypes[device.device_type_id];
       final deviceClass = deviceType == null
@@ -143,7 +144,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
             if (locationNames.isNotEmpty) Text(locationNames.join(", ")),
             if (locationNames.isNotEmpty && statusChipLabel != null)
               const Text("·"),
-            if (statusChipLabel != null) _StatusChip(statusChipLabel),
+            if (statusChipLabel != null) StatusChip(statusChipLabel),
           ],
         );
       }
@@ -192,7 +193,7 @@ class _DeviceListItemState extends State<DeviceListItem> {
         onLongPress: () => _toggleFavorite(device),
       ));
 
-      if (_expanded) {
+      if (_expanded && !unavailable) {
         columnWidgets.add(
           ListTile(
               title: Wrap(
@@ -248,9 +249,9 @@ class _DeviceListItemState extends State<DeviceListItem> {
 }
 
 /// The device's unavailability reason, shown in the subtitle line instead of
-/// the old trailing icon.
-class _StatusChip extends StatelessWidget {
-  const _StatusChip(this.label);
+/// the old trailing icon. Also used for a group's.
+class StatusChip extends StatelessWidget {
+  const StatusChip(this.label, {super.key});
 
   final String label;
 

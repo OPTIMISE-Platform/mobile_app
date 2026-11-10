@@ -48,6 +48,7 @@ import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/unavailability.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
 /// Fetches the pinned devices by id. Replaceable so a test can serve them as
@@ -998,9 +999,9 @@ class _SensorValuesState extends State<SensorValues>
                 isSwitchableOnOff(state, states, isGroup: group != null));
         final reading = onOffReadingOf(state?.value);
         final unavailability = device != null
-            ? _unavailability(device)
+            ? deviceUnavailability(device)
             : group != null
-            ? _groupUnavailability(group)
+            ? groupUnavailability(group)
             : null;
         final toggle = switchTile
             ? _switchActionFor(pin, state, device, group)
@@ -1221,55 +1222,9 @@ class _SensorValuesState extends State<SensorValues>
     return config.getRelatedControllingFunction(state.value) != null;
   }
 
-  /// The controlling state a group's measured value switches to, or null when it
-  /// can't be determined.
-  ///
-  /// Needed because [performDeviceStateAction] resolves a measurement's control
-  /// by aspect, which no group criterion satisfies. Handing it the control
-  /// directly puts it on its `isControlling` branch and skips that lookup.
-  ///
-  /// [target] replaces the controlling function the value selects.
-  DeviceState? _groupControlFor(
-    DeviceState state,
-    List<DeviceState> allStates, [
-    String? target,
-  ]) {
-    final config =
-        functionConfigs[state.functionId] ??
-        FunctionConfigDefault(state.functionId);
-    target ??= config.getRelatedControllingFunction(state.value);
-    if (target == null) return null;
-    final candidates = allStates
-        .where((s) => s.isControlling && s.functionId == target)
-        .toList(growable: false);
-    // More than one means the group spans device classes that each bring their
-    // own control; there is no single command to send, so leave it alone rather
-    // than switch an arbitrary subset.
-    if (candidates.length != 1) return null;
-    return candidates.first;
-  }
-
   /// Whether the device can't be reached right now — the same two cases the
   /// device list distinguishes.
-  bool _isUnavailable(DeviceInstance device) => _unavailability(device) != null;
-
-  Unavailability? _unavailability(DeviceInstance device) {
-    if (device.connection_state == DeviceConnectionStatus.offline) {
-      return Unavailability.offline;
-    }
-    if (device.network?.localGateways?.isNotEmpty != true &&
-        Settings.getLocalMode()) {
-      return Unavailability.notLocal;
-    }
-    return null;
-  }
-
-  /// A group outside a locally served network in local mode, which the
-  /// platform will not be asked for.
-  Unavailability? _groupUnavailability(DeviceGroup group) =>
-      Settings.getLocalMode() && group.network?.localGateways?.isNotEmpty != true
-      ? Unavailability.notLocal
-      : null;
+  bool _isUnavailable(DeviceInstance device) => deviceUnavailability(device) != null;
 
   /// What toggling an on/off tile does, or null when the tile is passive.
   ///
@@ -1304,8 +1259,8 @@ class _SensorValuesState extends State<SensorValues>
         ),
       );
     }
-    if (group == null || _groupUnavailability(group) != null) return null;
-    final control = _groupControlFor(state, group.states, target);
+    if (group == null || groupUnavailability(group) != null) return null;
+    final control = resolveGroupControl(state, group.states, target);
     if (control == null) return null;
     return () => SwitchCommands.run(
       state,
@@ -1332,10 +1287,10 @@ class _SensorValuesState extends State<SensorValues>
 
     // Act on the control itself. A device's measurement is handed over as it is,
     // because the shared action pairs it up the same way the detail page does; a
-    // group's measurement has to be resolved here (see [_groupControlFor]).
+    // group's measurement has to be resolved here (see [resolveGroupControl]).
     final DeviceState element;
     if (group != null && !state.isControlling) {
-      final control = _groupControlFor(state, states);
+      final control = resolveGroupControl(state, states);
       if (control == null) return null;
       element = control;
     } else {

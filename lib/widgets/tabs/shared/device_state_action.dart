@@ -228,6 +228,28 @@ DeviceState? resolveControllingState(DeviceState measurement, List<DeviceState> 
   return controllingStates.first;
 }
 
+/// The controlling state of a group that acts on its reading [state] given its
+/// current value, among all [states] of the group, or null when there is not
+/// exactly one. Without a toast, so a caller can leave a control passive.
+///
+/// A group's reading is not paired by aspect as a device's is
+/// ([resolveControllingState]), since no group criterion satisfies that
+/// lookup. Handing the result to [performDeviceStateAction] puts it on its
+/// `isControlling` branch and skips the lookup.
+///
+/// [target] replaces the controlling function the value selects.
+DeviceState? resolveGroupControl(DeviceState state, List<DeviceState> states, [String? target]) {
+  final config = functionConfigs[state.functionId] ?? FunctionConfigDefault(state.functionId);
+  target ??= config.getRelatedControllingFunction(state.value);
+  if (target == null) return null;
+  final candidates = states.where((s) => s.isControlling && s.functionId == target).toList(growable: false);
+  // More than one means the group spans device classes that each bring their
+  // own control; there is no single command to send, so leave it alone rather
+  // than switch an arbitrary subset.
+  if (candidates.length != 1) return null;
+  return candidates.first;
+}
+
 /// Toggles an on/off [measurement] through its controlling state, then reads
 /// the measurement back. Unlike [performDeviceStateAction] it asks for no input,
 /// refreshes only [measurement] (the one value a device list row shows) and

@@ -70,6 +70,9 @@ class _State extends ChangeNotifier with DeviceMixin {
 
   @override
   Future<void> ensureInitialized() async {}
+
+  @override
+  Future<void> networksSettled() async {}
 }
 
 /// Serves `/device-repository/v2/device-classes` from [all], at most [cap]

@@ -38,6 +38,7 @@ import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
 import 'package:mobile_app/services/mgw_device_manager.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/unavailability.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/joined_load.dart';
@@ -183,6 +184,10 @@ mixin DeviceMixin on ChangeNotifier {
   /// Implemented by [AppState] — called before loading devices to ensure
   /// device classes, types, and other metadata are loaded first.
   Future<void> ensureInitialized();
+
+  /// Implemented by [NetworkMixin] — waits for a running network load, which
+  /// assigns the gateways a command is routed through.
+  Future<void> networksSettled();
 
   // ---------------------------------------------------------------------------
   // Device classes
@@ -1036,6 +1041,9 @@ mixin DeviceMixin on ChangeNotifier {
         // A load that outlived its account leaves the next one's list alone.
         if (epoch != AccountEpoch.current) return;
         deviceGroups.addAll(fetched);
+        // Started, not awaited, as the device states are: each row's switch
+        // appears once its value arrives.
+        unawaited(_loadGroupStatesInBackground(fetched, epoch));
       } catch (e, s) {
         if (epoch != AccountEpoch.current) {
           ErrorReporter.log('Could not load device groups', e, s);
@@ -1048,6 +1056,34 @@ mixin DeviceMixin on ChangeNotifier {
       _deviceGroupsMutex.release();
     }
     notifyListeners();
+  }
+
+  /// Loads the on/off values of [groups] for their list rows. Only groups with
+  /// an on/off criterion are asked for, and none outside a locally served
+  /// network in local mode. Nothing is loaded once the account has changed.
+  ///
+  /// Waits for a network load running alongside, as at the app's start: the
+  /// gateways it assigns decide both whether a group is served locally and
+  /// where its command goes.
+  Future<void> _loadGroupStatesInBackground(
+      List<DeviceGroup> groups, int epoch) async {
+    final onOff = dotenv.env['FUNCTION_GET_ON_OFF_STATE'];
+    final withOnOff = groups
+        .where((g) => g.criteria?.any((c) => c.function_id == onOff) ?? false)
+        .toList(growable: false);
+    if (withOnOff.isEmpty) return;
+    await networksSettled();
+    await ensureInitialized();
+    if (epoch != AccountEpoch.current) return;
+    final loadable = withOnOff
+        .where((g) => groupUnavailability(g) == null)
+        .toList(growable: false);
+    if (loadable.isEmpty) return;
+    try {
+      await loadStates([], loadable, [onOff ?? '']);
+    } catch (e, s) {
+      ErrorReporter.report('Could not load device states', e, s);
+    }
   }
 
   // ---------------------------------------------------------------------------

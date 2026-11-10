@@ -62,6 +62,14 @@ mixin NetworkMixin on ChangeNotifier {
 
   bool loadingNetworks() => _networksMutex.isLocked;
 
+  /// Waits for a running network load, which assigns the gateways a command
+  /// is routed through. Returns at once when none runs.
+  Future<void> networksSettled() async {
+    if (!_networksMutex.isLocked) return;
+    await _networksMutex.acquire();
+    _networksMutex.release();
+  }
+
   /// The account epoch the last load started under. A call made after an
   /// account change that waited for a load of the previous account fetches
   /// itself, since that load discarded its result.

@@ -33,6 +33,7 @@ import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/unavailability.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
@@ -211,6 +212,11 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       }
 
       final connectionStatus = device?.connection_state;
+      // Local mode without a local gateway locks the controls too, not only an
+      // offline device.
+      final unavailability = device != null
+          ? deviceUnavailability(device)
+          : groupUnavailability(deviceGroup!);
       final appBar = MyAppBar(device?.displayName ?? deviceGroup!.name);
       if (state.devices.isEmpty) {
         state.loadDevices();
@@ -399,7 +405,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                     : functionConfig.displayValue(element.value, context) != null
                         ? IconButton(
                             icon: functionConfig.displayValue(element.value, context)!,
-                            onPressed: connectionStatus == DeviceConnectionStatus.offline
+                            onPressed: unavailability != null
                                 ? null
                                 : () => _performAction(
                                       connectionStatus,
@@ -409,7 +415,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                                     ),
                           )
                         : TextButton(
-                            onPressed: connectionStatus == DeviceConnectionStatus.offline
+                            onPressed: unavailability != null
                                 ? null
                                 : () => _performAction(
                                       connectionStatus,
@@ -450,7 +456,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                   : IconButton(
                       splashRadius: 25,
                       icon: functionConfig?.displayValue(element.value, context) ?? const Icon(Icons.input),
-                      onPressed: connectionStatus == DeviceConnectionStatus.offline
+                      onPressed: unavailability != null
                           ? null
                           : () => _performAction(
                                 connectionStatus,
@@ -489,6 +495,10 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       if (connectionStatus == DeviceConnectionStatus.offline) {
         trailingHeader.add(Tooltip(
             message: "Device is offline", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.error, color: context.appColors.warnInk)));
+      }
+      if (unavailability == Unavailability.notLocal) {
+        trailingHeader.add(Tooltip(
+            message: "Not local", triggerMode: TooltipTriggerMode.tap, child: Icon(Icons.lan_outlined, color: context.appColors.warnInk)));
       }
       if (device != null) {
         if (device.network?.localGateways?.isNotEmpty == true) {

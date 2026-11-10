@@ -21,13 +21,10 @@ import 'package:mobile_app/config/functions/get_on_off_state.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
+import 'package:mobile_app/shared/unavailability.dart';
 
 /// What the tile of an on/off reading shows.
 enum OnOffReading { on, off, mixed, unknown }
-
-/// Why a device cannot be switched right now, the two cases the device list
-/// tells apart.
-enum Unavailability { offline, notLocal }
 
 /// Whether [functionId] is the on/off reading, which the sensors page shows
 /// as a switch tile.
