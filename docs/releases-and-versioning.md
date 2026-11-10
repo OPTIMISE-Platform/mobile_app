@@ -20,7 +20,17 @@ time and exist nowhere in the tree.
 |---|---|
 | `dev` | APK and ad hoc IPA, tag `0.1.0-dev.3+412`, GitHub release with `prerelease: true` |
 | `master` | APK and ad hoc IPA, tag `0.1.0+420`, GitHub release marked latest |
-| either, plus pull requests | `checks.yml`: analyzer, `flutter test`, the versioning script's tests |
+| pull requests | `checks.yml`: analyzer, `flutter test`, the versioning script's tests |
+
+On `dev` and `master`, the release workflow runs `checks.yml` as its first job
+and goes on only when it passes:
+
+```
+checks ─▶ version ─┬─▶ release (APK, GitHub release, notification) ─┬─▶ ios-attach
+                   └─▶ ios (IPA, install manifest) ─────────────────┘
+```
+
+A failing check therefore reserves no tag and uses up no build number.
 
 A merge from `dev` to `master` builds and releases on its own, with a new build
 number, so stable users get an update. Prerelease users get it too, because its
@@ -54,7 +64,8 @@ is.
 
 ## When a run fails
 
-The tag exists from the moment the `version` job is done, so:
+A failure in `checks` ends the run before any tag exists; fix it and push
+again. The tag exists from the moment the `version` job is done, so:
 
 - **Build or notification failed**: use "Re-run failed jobs". It keeps the
   reserved version, and the release step leaves an existing release alone.
@@ -65,11 +76,13 @@ The tag exists from the moment the `version` job is done, so:
 
 ## iOS
 
-The `ios` job builds an ad hoc IPA and attaches it as `mobile_app.ipa` to the
-same release, followed by a `manifest.plist` for installing it over the air. It
-runs after the release job, also when that job failed, because a failed device
-notification leaves a complete release behind. Until the job is done, a
-release has no IPA yet, and the app on iOS does not offer it.
+The `ios` job builds an ad hoc IPA and a `manifest.plist` for installing it
+over the air, next to the Android build. `ios-attach` attaches both to the
+release as `mobile_app.ipa` and `manifest.plist`, the manifest last. It runs
+after the release job, also when that job failed, because a failed device
+notification leaves a complete release behind. Until it is done, a release has
+no IPA yet, and the app on iOS does not offer it. A failed iOS build does not
+hold up the Android release.
 
 The iOS version is the tag's version without `-dev.K`, since
 `CFBundleShortVersionString` only takes numbers; the build number is the same

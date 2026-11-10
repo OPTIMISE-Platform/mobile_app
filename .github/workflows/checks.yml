@@ -1,12 +1,11 @@
 name: 'Checks'
 
+# Pushes to dev and master run these from android-release.yml, which releases
+# only once they pass.
 on:
-  push:
-    branches:
-      - master
-      - dev
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   analyze-and-test:

@@ -18,7 +18,14 @@ env:
   PRERELEASE_TOPIC: android
 
 jobs:
+  checks:
+    # The same analyze and test run as for pull requests. A failure stops the
+    # release before a tag reserves a build number.
+    if: github.ref_name == 'dev' || github.ref_name == 'master'
+    uses: ./.github/workflows/checks.yml
+
   version:
+    needs: checks
     if: github.ref_name == 'dev' || github.ref_name == 'master'
     runs-on: ubuntu-latest
     # The build number is the highest tag plus one, so versions are handed out
@@ -106,17 +113,15 @@ jobs:
           MESSAGE: '{"topic": "${{ needs.version.outputs.prerelease == ''true'' && env.PRERELEASE_TOPIC || ''android'' }}", "data": {"type": "release_info"}}'
 
   ios:
-    # Runs after a failed release job as well: a failing device notification
-    # leaves a complete release behind, and without a release the upload fails
-    # visibly.
-    needs: [version, release]
-    if: ${{ !cancelled() && needs.version.outputs.skip != 'true' }}
+    # Builds next to the release job; ios-attach uploads the result once that
+    # job has created the release.
+    needs: version
+    if: needs.version.outputs.skip != 'true'
     runs-on: macos-15
     env:
       NAME: ${{ needs.version.outputs.name }}
       BUILD: ${{ needs.version.outputs.build }}
       TAG: ${{ needs.version.outputs.tag }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: "Select Xcode"
@@ -164,10 +169,8 @@ jobs:
           flutter build ipa --release --no-tree-shake-icons
           --build-name "${NAME%%-*}" --build-number "$BUILD"
           --export-options-plist ios/ExportOptions-adhoc.plist
-      - name: "Attach to release"
+      - name: "Write install manifest"
         shell: bash
-        # The app offers an iOS update once the manifest exists, so it goes up
-        # after the IPA it points at.
         run: |
           app=build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
           info() { /usr/libexec/PlistBuddy -c "Print :$1" "$app/Info.plist"; }
@@ -175,7 +178,7 @@ jobs:
           bundle_id=$(info CFBundleIdentifier)
           version=$(info CFBundleShortVersionString)
           title=$(info CFBundleDisplayName)
-          cat > "$RUNNER_TEMP/manifest.plist" <<EOF
+          cat > build/ios/ipa/manifest.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -208,12 +211,42 @@ jobs:
           </dict>
           </plist>
           EOF
-          plutil -lint "$RUNNER_TEMP/manifest.plist"
-          gh release upload "$TAG" build/ios/ipa/mobile_app.ipa --clobber
-          gh release upload "$TAG" "$RUNNER_TEMP/manifest.plist" --clobber
+          plutil -lint build/ios/ipa/manifest.plist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: |
+            build/ios/ipa/mobile_app.ipa
+            build/ios/ipa/manifest.plist
+          if-no-files-found: error
+          # Long enough to re-run a failed ios-attach on its own.
+          retention-days: 7
       - name: "Remove signing material"
         if: always()
         run: |
           security delete-keychain "$RUNNER_TEMP/signing.keychain-db" 2>/dev/null || true
           rm -f ~/Library/MobileDevice/"Provisioning Profiles"/adhoc.mobileprovision \
             ~/Library/Developer/Xcode/UserData/"Provisioning Profiles"/adhoc.mobileprovision
+
+  ios-attach:
+    # Runs after a failed release job as well: a failing device notification
+    # leaves a complete release behind, and without a release the upload fails
+    # visibly. A failed iOS build leaves the Android release alone.
+    needs: [version, release, ios]
+    if: ${{ !cancelled() && needs.version.outputs.skip != 'true' && needs.ios.result == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ios
+          path: ios
+      - name: "Attach to release"
+        # The app offers an iOS update once the manifest exists, so it goes up
+        # after the IPA it points at.
+        run: |
+          gh release upload "$TAG" ios/mobile_app.ipa --clobber
+          gh release upload "$TAG" ios/manifest.plist --clobber
