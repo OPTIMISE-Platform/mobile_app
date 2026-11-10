@@ -20,6 +20,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 
 import 'package:mobile_app/exceptions/argument_exception.dart';
+import 'package:mobile_app/shared/colour_value.dart';
 
 class FunctionConfigGetColor extends FunctionConfig {
   FunctionConfigGetColor() {
@@ -32,7 +33,7 @@ class FunctionConfigGetColor extends FunctionConfig {
 
   @override
   Widget? displayValue(value, BuildContext context) {
-    if (value is! Map<String, dynamic>) {
+    if (value is! Map && value is! String) {
       if (value is List) {
         if (value.every((element) => element.toString() == value[0].toString())) {
           return displayValue(value[0], context);
@@ -54,17 +55,15 @@ class FunctionConfigGetColor extends FunctionConfig {
       _logger.w("value is not map or list: $value");
       return null;
     }
-    if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      _logger.w("value does not contains keys r, b and g: $value");
+    final color = colourOf(value);
+    if (color == null) {
+      _logger.w("value is no color (r/g/b or h/s/b): $value");
       return null;
     }
     return Stack(
       alignment: AlignmentDirectional.center,
       children: [
-        Icon(
-          Icons.palette,
-          color: Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0),
-        ),
+        Icon(Icons.palette, color: color),
         const Icon(Icons.palette_outlined, color: Colors.grey),
       ],
     );
@@ -80,10 +79,9 @@ class FunctionConfigGetColor extends FunctionConfig {
     return [dotenv.env['FUNCTION_SET_COLOR'] ?? ''];
   }
 
-  Color _getColor(Map<String, dynamic> value) {
-    if (!value.containsKey("r") || !value.containsKey("b") || !value.containsKey("g")) {
-      throw ArgumentException("value does not contains keys r, b and g: $value");
-    }
-    return Color.fromARGB(255, value['r'] ?? 0, value['g'] ?? 0, value['b'] ?? 0);
+  Color _getColor(dynamic value) {
+    final color = colourOf(value);
+    if (color == null) throw ArgumentException("value is no color (r/g/b or h/s/b): $value");
+    return color;
   }
 }

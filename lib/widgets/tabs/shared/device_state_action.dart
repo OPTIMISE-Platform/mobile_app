@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:mobile_app/shared/characteristic_conversion.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/content_variable.dart';
@@ -44,6 +45,11 @@ final _logger = Logger(printer: SimplePrinter());
 /// for a single device only the one matching the current value. [setState] is
 /// handed to the function config's input builder, [notifyEntity] signals the
 /// owning device/group so its widgets rebuild.
+///
+/// A non-null [value] is sent as the input instead of asking in the dialog,
+/// for the inline controls of the detail page. It is dropped, not queued, when
+/// a reading the control acts on is still transitioning: commands are not
+/// idempotent, and the caller's control shows the reading again.
 Future<void> performDeviceStateAction({
   required BuildContext context,
   required DeviceConnectionStatus? connectionStatus,
@@ -52,6 +58,7 @@ Future<void> performDeviceStateAction({
   required bool isGroup,
   required StateSetter setState,
   required VoidCallback notifyEntity,
+  dynamic value,
 }) async {
   if (connectionStatus == DeviceConnectionStatus.offline) {
     Toast.showToastNoContext("Device is offline");
@@ -75,31 +82,7 @@ Future<void> performDeviceStateAction({
   if (element.transitioning) {
     return; // avoid double presses
   }
-  // The readings the control acts on. A control that pairs with none keeps a
-  // row of its own and refreshes every reading of a related function in its
-  // service group instead.
-  final List<int> paired = [];
-  final List<int> related = [];
-  for (var i = 0; i < states.length; i++) {
-    if (states[i].isControlling || states[i].serviceGroupKey != element.serviceGroupKey) {
-      continue;
-    }
-    if (states[i].controlsFor(states, element.functionId).any((c) => identical(c, element))) {
-      paired.add(i);
-    }
-    var measuringFunctionConfig = functionConfigs[states[i].functionId];
-    measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
-
-    List<String>? refreshingMeasurementFunctionIds;
-    if (isGroup) {
-      refreshingMeasurementFunctionIds = measuringFunctionConfig.getAllRelatedControllingFunctions();
-    } else {
-      refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
-    }
-    if (refreshingMeasurementFunctionIds?.contains(element.functionId) ?? false) {
-      related.add(i);
-    }
-  }
+  final (:paired, :related) = _readingsOf(element, states, isGroup);
   final List<int> transitioningStates = paired.isNotEmpty ? paired : related;
   final List<CommandCallback> commandCallbacks = [];
   for (final i in transitioningStates) {
@@ -119,14 +102,12 @@ Future<void> performDeviceStateAction({
   }
 
   dynamic input;
-  if (AppState().concepts[function.concept_id]?.getBaseCharacteristic().hasInput() ?? false) {
-    dynamic current = transitioningStates.length == 1 ? states[transitioningStates[0]].value : null;
-    // A group reads one value per device. The dialog offers the value they
-    // share, none when they differ. A list-typed value is a list already, so
-    // for a group of one device it cannot be told apart and stays as it is.
-    if (isGroup && current is List && functionConfig.characteristic?.type != ContentVariable.list) {
-      current = commonValue(current);
-    }
+  final hasInput = AppState().concepts[function.concept_id]?.getBaseCharacteristic().hasInput() ?? false;
+  if (hasInput && value != null) {
+    if (transitioningStates.any((i) => states[i].transitioning)) return;
+    input = value;
+  } else if (hasInput) {
+    final current = _dialogStartValue(element, transitioningStates, states, functionConfig, isGroup);
     Widget? content = functionConfig.build(context, setState, current);
     if (content == null) {
       const err = "Function Config missing build()";
@@ -196,6 +177,89 @@ Future<void> performDeviceStateAction({
     commandCallbacks[i].callback(responses[i]);
   }
   notifyEntity();
+}
+
+/// The indexes in [states] of the readings [control] acts on, and of those that
+/// relate to it by function. A control that pairs with none keeps a row of its
+/// own and refreshes every reading of a related function in its service group
+/// instead.
+({List<int> paired, List<int> related}) _readingsOf(DeviceState control, List<DeviceState> states, bool isGroup) {
+  final List<int> paired = [];
+  final List<int> related = [];
+  for (var i = 0; i < states.length; i++) {
+    if (states[i].isControlling || states[i].serviceGroupKey != control.serviceGroupKey) {
+      continue;
+    }
+    if (states[i].controlsFor(states, control.functionId).any((c) => identical(c, control))) {
+      paired.add(i);
+    }
+    var measuringFunctionConfig = functionConfigs[states[i].functionId];
+    measuringFunctionConfig ??= FunctionConfigDefault(states[i].functionId);
+
+    List<String>? refreshingMeasurementFunctionIds;
+    if (isGroup) {
+      refreshingMeasurementFunctionIds = measuringFunctionConfig.getAllRelatedControllingFunctions();
+    } else {
+      refreshingMeasurementFunctionIds = [measuringFunctionConfig.getRelatedControllingFunction(states[i].value) ?? ''];
+    }
+    if (refreshingMeasurementFunctionIds?.contains(control.functionId) ?? false) {
+      related.add(i);
+    }
+  }
+  return (paired: paired, related: related);
+}
+
+dynamic _startValue(List<int> readings, List<DeviceState> states, FunctionConfig config, bool isGroup) {
+  dynamic current = readings.length == 1 ? states[readings[0]].value : null;
+  // A group reads one value per device. The input starts with the value they
+  // share, none when they differ. A list-typed value is a list already, so
+  // for a group of one device it cannot be told apart and stays as it is.
+  if (isGroup && current is List && config.characteristic?.type != ContentVariable.list) {
+    current = commonValue(current);
+  }
+  return current;
+}
+
+/// The dialog's start value in the characteristic it works in: the reading
+/// is in its own function's characteristic, which may differ. Empty when there
+/// is no conversion, since a number in the wrong unit would be sent as is.
+dynamic _dialogStartValue(
+    DeviceState control, List<int> readings, List<DeviceState> states, FunctionConfig config, bool isGroup) {
+  final start = _startValue(readings, states, config, isGroup);
+  if (start == null || readings.length != 1) return start;
+  final reading = states[readings.single];
+  final from = readingCharacteristicId(reading.functionId);
+  final to = config.characteristic?.id;
+  if (from == null || to == null) return null;
+  final functions = AppState().platformFunctions;
+  return convertCharacteristic(start, from, to,
+          conceptIds: [functions[reading.functionId]?.concept_id, functions[control.functionId]?.concept_id])
+      ?.value;
+}
+
+/// The value the input of [control] starts with, in the characteristic of its
+/// function config: that of the one reading the control acts on, a group's as
+/// the value all devices share. Null when there is no single reading or no
+/// common value. The dialog of [performDeviceStateAction] and the inline
+/// controls of the detail page both start here, so both send the same payload.
+dynamic controlStartValue(DeviceState control, List<DeviceState> states, {required bool isGroup}) {
+  final FunctionConfig config;
+  try {
+    config = functionConfigs[control.functionId] ?? FunctionConfigDefault(control.functionId);
+  } catch (_) {
+    // A concept without its base characteristic has no input to start.
+    return null;
+  }
+  final (:paired, :related) = _readingsOf(control, states, isGroup);
+  return _startValue(paired.isNotEmpty ? paired : related, states, config, isGroup);
+}
+
+/// The readings in [states] that [control] acts on: those it pairs with, else
+/// those of a related function in its service group, as the readings that
+/// [performDeviceStateAction] marks as transitioning.
+List<DeviceState> readingsOfControl(DeviceState control, List<DeviceState> states, {required bool isGroup}) {
+  final (:paired, :related) = _readingsOf(control, states, isGroup);
+  return [for (final i in paired.isNotEmpty ? paired : related) states[i]];
 }
 
 /// The controlling state that acts on the readable [measurement] given its

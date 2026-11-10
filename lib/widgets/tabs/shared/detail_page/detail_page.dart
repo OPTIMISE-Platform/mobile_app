@@ -32,13 +32,15 @@ import 'package:mobile_app/services/device_groups.dart';
 import 'package:mobile_app/services/haptic_feedback_proxy.dart';
 import 'package:mobile_app/widgets/tabs/groups/group_edit_devices.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/inline_control.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
 import 'package:mobile_app/shared/unavailability.dart';
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/services/devices.dart';
-import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/keyed_list.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
@@ -48,7 +50,6 @@ import 'package:mobile_app/widgets/shared/favorize_button.dart';
 import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
-import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
 import 'package:mobile_app/widgets/tabs/shared/state_time.dart';
 import 'package:mobile_app/widgets/tabs/shared/value_change.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
@@ -99,8 +100,10 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
     widget._group?.notifyStateChanged();
   }
 
-  /// Delegates to the shared implementation, which the sensors page reuses.
-  _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states) =>
+  /// Delegates to the shared implementation, which the sensors page reuses. A
+  /// [value] is sent without asking in the dialog.
+  _performAction(DeviceConnectionStatus? connectionStatus, BuildContext context, DeviceState element, List<DeviceState> states,
+          [dynamic value]) =>
       performDeviceStateAction(
         context: context,
         connectionStatus: connectionStatus,
@@ -109,6 +112,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         isGroup: widget._group != null,
         setState: setState,
         notifyEntity: _notifyEntity,
+        value: value,
       );
 
   _displayTimestamp(DeviceState element, List<DeviceState> states, BuildContext context) {
@@ -141,29 +145,6 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
     );
   }
 
-  String _getTitle(DeviceState element) {
-    final function = AppState().platformFunctions[element.functionId];
-    String title = function?.display_name ?? "MISSING_FUNCTION_NAME";
-    if (title.isEmpty) title = function?.name ?? "MISSING_FUNCTION_NAME";
-    return title;
-  }
-
-  String _getSubtitle(DeviceState element, List<DeviceState> states, DeviceInstance? device) {
-    String subtitle = "";
-    if (states.any((s) => s.functionId == element.functionId && s != element && s.aspectKey != element.aspectKey)) {
-      subtitle += aspectsLabel(element, missing: "MISSING_ASPECT_NAME", missingClass: "MISSING_DEVICE_CLASS_NAME");
-    }
-    if (device != null &&
-        element.serviceGroupKey != null &&
-        element.serviceGroupKey != "" &&
-        states.any((s) => s.functionId == element.functionId && s != element && s.aspectKey == element.aspectKey)) {
-      if (subtitle.isNotEmpty) subtitle += ", ";
-      subtitle += (AppState().deviceTypes[device.device_type_id]?.service_groups?.firstWhere((g) => g.key == element.serviceGroupKey).name ??
-          "MISSING_SERVICE_GROUP_NAME");
-    }
-    return subtitle;
-  }
-
   /// Identifies a row across rebuilds, independent of its position in the
   /// (re-)sorted list. Both `prepareStates` implementations that build
   /// `states` (device_state.dart for a device, device_group.dart for a
@@ -177,6 +158,52 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         element.deviceClassId,
         element.isControlling,
       ].join("|");
+
+  /// Orders rows with the on/off functions first, the rest by function id.
+  List<Pair<String, ({Widget tile, String rowKey})>> _sorted(KeyedList<String, ({Widget tile, String rowKey})> rows) {
+    final list = rows.list();
+    list.sort((a, b) {
+      if (a.k == b.k) {
+        return 0;
+      }
+      if (a.k == dotenv.env['FUNCTION_SET_ON_STATE'] || a.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
+        return -2;
+      }
+      if (b.k == dotenv.env['FUNCTION_SET_ON_STATE'] || b.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
+        return 2;
+      }
+      if (a.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+        return -1;
+      }
+      if (b.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
+        return 1;
+      }
+      return a.k.compareTo(b.k);
+    });
+    return list;
+  }
+
+  ListSection<Pair<String, ({Widget tile, String rowKey})>> _section(
+          String id, String title, List<Pair<String, ({Widget tile, String rowKey})>> items) =>
+      ListSection<Pair<String, ({Widget tile, String rowKey})>>(
+        id: id,
+        title: title,
+        items: items,
+        keyOf: (row) => row.t.rowKey,
+        itemBuilder: (_, row, position) => GroupedListTile(
+          position: position,
+          hairlineInset: GroupedListTile.insetNoLeading,
+          child: row.t.tile,
+        ),
+      );
+
+  /// The value of a row without a control. An on/off reading is text, not the
+  /// power icon, which is for the switch that acts on it.
+  Widget _readOnlyValue(DeviceState element, FunctionConfig config, String unit, BuildContext context, BinaryRole? role) {
+    const style = TextStyle(fontSize: 18, fontWeight: FontWeight.bold);
+    if (isOnOffReading(element.functionId)) return Text(binaryValueText(role, element.value), style: style);
+    return config.displayValue(element.value, context) ?? Text(formatValueWithUnit(element.value, unit), style: style);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -210,6 +237,12 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         states = deviceGroup!.states;
         rows = deviceGroup.shownStates;
       }
+
+      // Cards take what belongs together; the rows they cover are left out below.
+      final isGroup = deviceGroup != null;
+      final light = lightCardOf(rows, states, isGroup: isGroup);
+      final climates = climateCardsOf(rows, states, isGroup: isGroup);
+      final covered = <DeviceState>{...?light?.covered, for (final c in climates) ...c.covered};
 
       final connectionStatus = device?.connection_state;
       // Local mode without a local gateway locks the controls too, not only an
@@ -321,14 +354,17 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
       }
       appBarActions.addAll(MyAppBar.getDefaultActions(context));
 
-      KeyedList<String, ({Widget tile, String rowKey})> functionWidgets = KeyedList();
-      final List<DeviceState> markedControllingStates = [];
+      // Rows with a control on top, read-only ones below.
+      final KeyedList<String, ({Widget tile, String rowKey})> controlWidgets = KeyedList();
+      final KeyedList<String, ({Widget tile, String rowKey})> readingWidgets = KeyedList();
+      final List<DeviceState> markedControllingStates = [...covered.where((s) => s.isControlling)];
 
       for (var element in rows.where((element) => !element.isControlling)) {
-        if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"]) {
+        if (element.functionId == dotenv.env["FUNCTION_GET_TIMESTAMP"] || covered.contains(element)) {
           continue;
         }
-        final subtitle = _getSubtitle(element, rows, device);
+        final label = detailLabel(element, rows, device, states: states, isGroup: isGroup);
+        final role = binaryRoleOf(element, states, isGroup: isGroup);
         var functionConfig = functionConfigs[element.functionId] ?? FunctionConfigDefault(element.functionId);
 
         final controllingFunctions = functionConfig.getAllRelatedControllingFunctions();
@@ -340,17 +376,11 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         if (controllingFunctions != null &&
             !unknownSwitch &&
             functionConfig.getRelatedControllingFunction(element.value) != null) {
-          controllingStates = controllingFunctions.expand((f) => element.controlsFor(states, f));
+          controllingStates = controllingFunctions.expand((f) => element.controlsFor(states, f)).toList();
         }
-        String? preferred = Settings.getFunctionPreferredCharacteristicId(element.functionId);
-        String? unit;
-        if (preferred != null) {
-          unit = state.characteristics[preferred]?.display_unit;
-        } else {
-          unit = state.concepts[state.platformFunctions[element.functionId]?.concept_id]?.getBaseCharacteristic().display_unit ?? "";
-        }
+        final unit = readingUnit(element.functionId);
         if (controllingFunctions == null || controllingFunctions.isEmpty || controllingStates == null || controllingStates.isEmpty) {
-          functionWidgets.insert(
+          readingWidgets.insert(
             element.functionId,
             (
               rowKey: _rowKey(element),
@@ -363,8 +393,8 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                         MaterialPageRoute(
                           builder: (context) => Chart(element),
                         )),
-                title: Text(_getTitle(element)),
-                subtitle: _subtitleWithTime(subtitle, element),
+                title: Text(label.title),
+                subtitle: _subtitleWithTime(label.subtitle, element),
                 trailing: Container(
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
                   padding: const EdgeInsets.only(right: 12),
@@ -372,9 +402,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                       ? const DelayedCircularProgressIndicator()
                       : ValueChange(
                           value: element.value,
-                          child: functionConfig.displayValue(element.value, context) ??
-                              Text("${formatValue(element.value)} $unit",
-                                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          child: _readOnlyValue(element, functionConfig, unit, context, role),
                         ),
                 ),
               ),
@@ -382,11 +410,14 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
           );
         } else {
           markedControllingStates.addAll(controllingStates);
-          functionWidgets.insert(
-            element.functionId,
-            (
-              rowKey: _rowKey(element),
-              tile: ListTile(
+          // On/off is a switch; a value control with one control is set in
+          // place when its characteristic allows, else it keeps the dialog.
+          final switchReading = isOnOffReading(element.functionId) ? onOffReadingOf(element.value) : null;
+          final control = switchReading == null && controllingStates.length == 1 ? controllingStates.first : null;
+          // In the control's characteristic; no conversion keeps the dialog.
+          final start = control == null ? null : inlineStartValue(control, states, isGroup: isGroup);
+          final spec = start == null ? null : inlineControlSpec(control!, start.value, reading: element);
+          ListTile tile(Widget? trailing) => ListTile(
                 onLongPress: () => _displayTimestamp(element, states, context),
                 onTap: device == null || element.value is! num
                     ? null
@@ -395,13 +426,34 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                         MaterialPageRoute(
                           builder: (context) => Chart(element),
                         )),
-                title: Text(_getTitle(element)),
-                subtitle: _subtitleWithTime(subtitle, element),
-                trailing: element.transitioning
-                    ? Container(
-                        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
-                        padding: const EdgeInsets.only(right: 12),
-                        child: const DelayedCircularProgressIndicator())
+                title: Text(label.title),
+                subtitle: _subtitleWithTime(label.subtitle, element),
+                trailing: trailing,
+              );
+          final Widget row;
+          if (spec != null) {
+            row = InlineControl(
+              spec: spec,
+              value: start!.value,
+              unit: controlUnit(control!),
+              busy: element.transitioning,
+              enabled: unavailability == null,
+              onSend: (value) => _performAction(connectionStatus, context, control, states, value),
+              tile: tile,
+            );
+          } else {
+            row = tile(element.transitioning
+                ? Container(
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),
+                    padding: const EdgeInsets.only(right: 12),
+                    child: const DelayedCircularProgressIndicator())
+                : switchReading != null
+                    ? Switch(
+                        value: switchReading == OnOffReading.on,
+                        // A group whose members disagree is neither on nor off.
+                        thumbIcon: switchReading == OnOffReading.mixed ? const WidgetStatePropertyAll(Icon(Icons.remove)) : null,
+                        onChanged: unavailability != null ? null : (_) => _performAction(connectionStatus, context, element, states),
+                      )
                     : functionConfig.displayValue(element.value, context) != null
                         ? IconButton(
                             icon: functionConfig.displayValue(element.value, context)!,
@@ -424,25 +476,23 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                                       states,
                                     ),
                             child: functionConfig.displayValue(element.value, context) ??
-                                Text(
-                                    "${formatValue(element.value)}${unit != "" ? " $unit" : ""}"),
-                          ),
-              ),
-            ),
-          );
+                                Text(formatValueWithUnit(element.value, unit)),
+                          ));
+          }
+          controlWidgets.insert(element.functionId, (rowKey: _rowKey(element), tile: row));
         }
       }
 
       for (var element in rows.where((element) => element.isControlling && !markedControllingStates.contains(element))) {
         var functionConfig = functionConfigs[element.functionId];
-        final subtitle = _getSubtitle(element, rows, device);
+        final label = detailLabel(element, rows, device, states: states, isGroup: isGroup);
 
-        functionWidgets.insert(
+        controlWidgets.insert(
           element.functionId,
           (
             rowKey: _rowKey(element),
             tile: ListTile(
-              title: Text(_getTitle(element)),
+              title: Text(label.title),
               onTap: device == null || element.value is! num
                   ? null
                   : () => Navigator.push(
@@ -450,7 +500,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                       MaterialPageRoute(
                         builder: (context) => Chart(element),
                       )),
-              subtitle: subtitle.isEmpty ? null : Text(subtitle),
+              subtitle: label.subtitle.isEmpty ? null : Text(label.subtitle),
               trailing: element.transitioning
                   ? Container(padding: const EdgeInsets.only(right: 12), child: const DelayedCircularProgressIndicator())
                   : IconButton(
@@ -470,25 +520,37 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         );
       }
 
-      final list = functionWidgets.list();
-      list.sort((a, b) {
-        if (a.k == b.k) {
-          return 0;
-        }
-        if (a.k == dotenv.env['FUNCTION_SET_ON_STATE'] || a.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
-          return -2;
-        }
-        if (b.k == dotenv.env['FUNCTION_SET_ON_STATE'] || b.k == dotenv.env['FUNCTION_SET_OFF_STATE']) {
-          return 2;
-        }
-        if (a.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
-          return -1;
-        }
-        if (b.k == dotenv.env['FUNCTION_GET_ON_OFF_STATE']) {
-          return 1;
-        }
-        return a.k.compareTo(b.k);
-      });
+      final cards = <Pair<String, ({Widget tile, String rowKey})>>[
+        if (light != null)
+          Pair('', (
+            rowKey: 'card|light',
+            tile: LightCard(
+              model: light,
+              states: states,
+              isGroup: isGroup,
+              enabled: unavailability == null,
+              onSend: (control, value) => _performAction(connectionStatus, context, control, states, value),
+              onTogglePower: () => _performAction(connectionStatus, context, light.power!, states),
+            ),
+          )),
+        for (final climate in climates)
+          Pair('', (
+            rowKey: 'card|climate|${_rowKey(climate.setpoint)}',
+            tile: ClimateCard(
+              model: climate,
+              states: states,
+              isGroup: isGroup,
+              enabled: unavailability == null,
+              setpointTitle: detailLabel(climate.setpoint, rows, device, states: states, isGroup: isGroup).title,
+              onSend: (control, value) => _performAction(connectionStatus, context, control, states, value),
+              onOpenMeasured: device == null || climate.measured == null
+                  ? null
+                  : () => Navigator.push(context, MaterialPageRoute(builder: (context) => Chart(climate.measured!))),
+            ),
+          )),
+      ];
+      final controlList = [...cards, ..._sorted(controlWidgets)];
+      final readingList = _sorted(readingWidgets);
 
       final List<Widget> trailingHeader = [];
 
@@ -600,19 +662,11 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
                           ),
                         ),
                       ),
-                    if (list.isNotEmpty || deviceGroup != null) const SizedBox(height: Spacing.lg),
+                    if (controlList.isNotEmpty || readingList.isNotEmpty || deviceGroup != null) const SizedBox(height: Spacing.lg),
                   ],
                   sections: [
-                    ListSection<Pair<String, ({Widget tile, String rowKey})>>(
-                      id: "states",
-                      items: list,
-                      keyOf: (row) => row.t.rowKey,
-                      itemBuilder: (_, row, position) => GroupedListTile(
-                        position: position,
-                        hairlineInset: GroupedListTile.insetNoLeading,
-                        child: row.t.tile,
-                      ),
-                    ),
+                    _section("control", "Control", controlList),
+                    _section("readings", "Readings", readingList),
                   ],
                   trailing: [
                     // Prevents FAB overlap; also drawn when

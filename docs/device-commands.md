@@ -157,12 +157,96 @@ a fresh value from the device.
   configs in `functionConfigs` are shared instances that outlive a dialog, so
   `FunctionConfig.build` sets the start value on every call, `null`
   included; otherwise a dialog would open with the input of the one before.
+  The start value is converted from the reading's characteristic into the
+  one the dialog works in; without a conversion the dialog starts empty, since
+  the number would otherwise be sent in the wrong unit.
 - The Android device controls (`lib/native_pipe.dart`) answer a command with
   its responses and the entry as it now is; see below.
 
 Both paths are driven through `FakeBackend` in
 `test/device_commands_cloud_fallback_test.dart`; the gateway is served at
 `gw.test`.
+
+## Inline controls on the detail page
+
+A reading merged with its control is set in the row when the control's
+characteristic allows (`lib/widgets/tabs/shared/detail_page/inline_control.dart`),
+else the row keeps the dialog button. Which control follows the characteristic
+of the control's function config, the one the dialog works in:
+
+- on/off reading with its controls: `Switch`, toggles through the control as before;
+- number with a finite minimum and maximum (`controlRange`): `Slider`, sends on
+  release;
+- temperature (Celsius, Fahrenheit, Kelvin of a concept that also lists one
+  of those) or setpoint (aspect Target) without a range: minus/plus buttons,
+  step 1 for an integer and 0.5 for a float, held to the bounds it has, sends
+  800 ms after the last tap; any other number without a range keeps the
+  dialog button with its value;
+- allowed values: `SegmentedButton` up to four, else a dropdown, sends on
+  selection; picking the shown value again sends nothing;
+- anything else, or a number with no start value: the dialog.
+
+The start value is `inlineStartValue`: `controlStartValue` (the one paired
+reading's value, a group's the value all devices share, none when they differ)
+converted from the reading's characteristic (its function's preferred one,
+else the concept's base) into the control's (`configCharacteristic`), with
+`LocalConverter` and the concepts' formulas. A reading shown in °F and a
+control in °C steps from the °C value, shown in °C. Without a conversion path
+the row keeps the dialog. The value goes through
+`performDeviceStateAction(value: ...)`, so the command, the read-back and the
+error toast are the dialog's, and the payload has the type the dialog's field
+produces.
+
+Commands are not idempotent, so a change is sent once and never queued. While a
+reading the control acts on is transitioning the control is disabled; a stepper
+change whose window ends then, or an action that finds such a reading, is
+dropped and the control shows the reading again. A refresh in the middle of a
+window drops the pending change the same way. A stepper change still inside its
+window when the row goes away (the page is closed) is sent then, once, unless
+the row is busy or disabled.
+
+## Cards on the detail page
+
+`lib/widgets/tabs/shared/detail_page/control_cards.dart` puts states that belong
+together in one card at the top of the Control section; the rows a card covers
+are not repeated. Both use the inline controls above and send through the same
+`performDeviceStateAction(value: ...)`.
+
+- **Light card**, when there is exactly one control of a kind for Set-Brightness,
+  Set-Color Temperature (`light_functions.dart`) or Set-Color, each with a
+  reading to show: the on/off switch, a brightness slider, a colour temperature
+  slider on a warm-to-cold gradient, and a colour wheel that opens on tap. A
+  kind that does not fit stays a row with its dialog, as does a group's kind
+  whose members disagree and a brightness or colour temperature without a
+  start value (`inlineStartValue`, also when it cannot be converted). An on/off
+  reading whose value is not on or off stays a row with its Set On/Off rows,
+  as an unknown switch does elsewhere. While a reading is loading the card
+  keeps it, with its control disabled.
+- **Climate card**, for a reading with the aspect Target that a numeric control
+  sets and that has a start value: the measured temperature (same function,
+  aspect Reading, else the first without Target) large, the read-only heating states as a chip, the setpoint
+  with minus/plus in 0.5 steps (1 for whole numbers), 5 to 30 for a Celsius
+  characteristic without a maximum (`thermostatSetpointRange`).
+
+Colour temperature is a slider wherever it is set, in a card or in a row:
+the characteristic's own range, else 2000 to 6500 K (153 to 500 mired). The
+value stays in the control's characteristic and is sent as the dialog would.
+
+Colours (`lib/shared/colour_value.dart`): the layout comes from the
+characteristic, h/s/b, r/g/b or the hex characteristic (`colourFormatOf`); a
+control or reading in another layout stays a row. The swatch is `colourOf` of
+the reading: hue and saturation at full value, since brightness is its own
+control. Touching the wheel only moves a draft, shown next to the "Apply"
+button; Apply sends it once in the control's layout (`colourPayload`). The
+lamp's brightness is read from the reading in the reading's own layout
+(`colourBrightnessOf`: b over its scale, or the HSV value of r/g/b and hex) and
+put on the control's scale. A lamp in white mode reports no colour; then the
+brightness reading, converted into the brightness control's range, stands in,
+else full brightness. Example for a control "HS + Brightness (0-254)": the
+reading `{h: 30, s: 100, b: 77}` on the same scale shows #FF8000, and hue 120
+at half saturation sends `{h: 120, s: 50, b: 77}`; a reading on 0..100 with
+`b: 50` sends `b: 127`. The wheel takes any drag that starts on it, so it is
+kept at 200 px to leave room to scroll.
 
 ## Android device controls
 

@@ -80,6 +80,10 @@ const _thermostatSetpoints = <String, (double, double)>{
   'urn:infai:ses:characteristic:75b2d113-1d03-4ef8-977a-8dbcbb31a683': (278.15, 303.15), // Kelvin
 };
 
+/// The setpoint range of a thermostat for a temperature characteristic, null
+/// for one the table does not list.
+(double, double)? thermostatSetpointRange(String characteristicId) => _thermostatSetpoints[characteristicId];
+
 /// Whether [device] is a thermostat, by the class of its device type.
 bool deviceIsThermostat(DeviceInstance device) =>
     AppState().deviceTypes[device.device_type_id]?.device_class_id == thermostatDeviceClass;

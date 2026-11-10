@@ -22,10 +22,58 @@ sorted. `DeviceState.aspectIds` holds that list, `aspectId` is its first entry,
 
 States are de-duplicated by `aspectKey`, not by the first aspect: outputs
 `[air, inside]` and `[air, outside]` are two states. Row keys in the sensor
-picker and the detail page use `aspectKey` for the same reason. Labels join all
-aspect names (`joinAspectNames`). A group row without aspects is labelled with
-the device class its criterion names (`aspectsLabel`): device-repository gives
-a controlling function a device-class criterion next to its aspect criteria.
+picker and the detail page use `aspectKey` for the same reason. The sensor
+cards label a state with all aspect names (`joinAspectNames`). A group row
+without aspects is labelled with the device class its criterion names
+(`aspectsLabel`): device-repository gives a controlling function a device-class
+criterion next to its aspect criteria.
+
+## Detail page rows
+
+The detail page (`detail_labels.dart`) shows rows with a control, a reading
+merged with its control or a control alone, under "Control", and read-only
+readings under "Readings". A read-only on/off reading is text ("On", "Off",
+"Heat"); an on/off reading with its controls is a switch. How a control is set
+in the row: `docs/device-commands.md`.
+
+A title is the function's display name without a leading "Get-" or "Set-". An
+on/off reading is titled by its role instead, decided by its aspects and in one
+table (`binaryTitles`, `binaryRoleOf`):
+
+| Aspects of the reading | Title |
+|---|---|
+| Button | Button input |
+| Heating, characteristic lists "off" (off/heat) | Heating enabled |
+| Heating otherwise (idle/heat) | Heating |
+| Lighting, or Device on a reading a Set Device On/Off control switches | Power |
+
+Role titles need no subtitle unless another row has the same one. Otherwise,
+when another shown state has the same function and another aspect set, the
+subtitle names the difference, first match wins:
+
+1. Role aspects: Target turns the title into "Target <title>", Button gives
+   "Button input" as subtitle.
+2. The aspects this state has that not all states of the function share, minus
+   Device: eight energy values over Electricity, Consumption or Generation and
+   Phase 1 to 3 or Total give "Consumption, Phase 2".
+3. The variable's name from `DeviceState.path`, e.g. "Running state".
+
+States that differ only by service group get the group's name.
+
+## Sensor cards, picker and list rows
+
+The sensors tab and its picker label a reading with `sensorLabel` (the detail
+page's `detailLabel`; a control keeps its plain function name), so titles,
+roles and disambiguation are the same as on the detail page. A card with no
+alias shows title and subtitle as "Title · Subtitle". Only the label changes: a
+pin is found by function, aspects, service group and kind as before. A read-only
+on/off reading on a card is its `binaryValueText`, never a power icon; values go
+through `formatValueWithUnit`. A switch keeps its tile.
+
+The quick toggle of a device or group row takes icon and tooltip from the
+reading's aspects (`toggleIconOf`, `toggleTooltipOf`): Heating gets a flame and
+"Heating on/off", Lighting a bulb and "Light on/off", everything else the power
+icon and the control's name.
 
 ## Group rows
 

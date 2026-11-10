@@ -81,6 +81,12 @@ class DeviceState {
 
   String? serviceId, serviceGroupKey, groupId, deviceClassId, deviceId, path, name, serviceGroupName;
 
+  /// The characteristic of the content variable this state was built from; null
+  /// for a group's states and for states built by hand. Tells apart values the
+  /// function does not, such as heating off/heat from idle/heat.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  String? characteristicId;
+
   /// The aspects of the content variable or criterion, sorted; empty when it
   /// names none.
   final List<String> aspectIds;
@@ -224,6 +230,7 @@ class StateHelper {
           states[i].isControlling, null, null, device.id, states[i].path, states[i].serviceGroupName,
           aspectIds: states[i].aspectIds);
       state.deviceInstance = device;
+      state.characteristicId = states[i].characteristicId;
       return state;
     });
   }
@@ -235,6 +242,7 @@ class StateHelper {
       final state = DeviceState(null, service.id, service.service_group_key, contentVariable.function_id!, null, isInput, null,
           null, device.id, path, serviceGroupName, aspectIds: contentVariable.effectiveAspects);
       state.deviceInstance = device;
+      state.characteristicId = contentVariable.characteristic_id;
       // Keyed on the whole aspect set: outputs [air, inside] and [air, outside]
       // share their first aspect and are still two values.
       final idx = states.indexWhere((element) => element.serviceGroupKey == service.service_group_key

@@ -63,7 +63,7 @@ void main() {
       DeviceState(value, "service-1", "group-1", functionId, null, controlling, null, null, d.id, "path", "group",
           aspectIds: aspectIds);
 
-  testWidgets("two readings sharing their first aspect get a row each, named by all aspects", (tester) async {
+  testWidgets("two readings sharing their first aspect get a row each, told apart by the aspect they do not share", (tester) async {
     final d = device();
     addFunction("temperature", "Temperature");
     d.states
@@ -74,8 +74,8 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.text("Temperature"), findsNWidgets(2));
-    expect(find.text("Air, Inside"), findsOneWidget);
-    expect(find.text("Air, Outside"), findsOneWidget);
+    expect(find.text("Inside"), findsOneWidget);
+    expect(find.text("Outside"), findsOneWidget);
     // A row key built from the first aspect alone is the same for both rows,
     // which SectionedListView can only resolve by position ("key#1").
     final rowKeys = tester
@@ -139,7 +139,7 @@ void main() {
     d.notifyStateChanged();
     await tester.pump();
 
-    expect(find.text("Power state"), findsOneWidget);
+    expect(find.text("Power"), findsOneWidget);
     // Paired controls are folded into the reading's row instead of listed.
     expect(find.text("Switch on"), findsNothing);
     expect(find.text("Switch off"), findsNothing);
@@ -193,7 +193,7 @@ void main() {
     d.notifyStateChanged();
     await tester.pump();
 
-    expect(find.text("Power state"), findsOneWidget);
+    expect(find.text("Power"), findsOneWidget);
     expect(find.text("Switch off"), findsNothing);
     expect(find.text("Switch on"), findsOneWidget, reason: "the control on [device] alone");
   });
@@ -221,10 +221,10 @@ void main() {
 
     await pumpGolden(tester, DetailPage(null, group), dark: false);
 
-    expect(find.text("Set-Temperature"), findsNWidgets(2));
+    expect(find.text("Target Temperature"), findsOneWidget);
+    expect(find.text("Temperature"), findsOneWidget);
     expect(find.text("Thermostat"), findsNothing);
-    expect(find.text("Target"), findsOneWidget);
-    expect(find.text("Reading"), findsOneWidget);
+    expect(find.text("Reading"), findsNothing, reason: "the setpoint's title tells the two apart");
     expect(find.text("MISSING_ASPECT_NAME"), findsNothing);
   });
 
@@ -270,7 +270,8 @@ void main() {
 
     await pumpGolden(tester, DetailPage(null, group), dark: false);
 
-    expect(find.text("Get-Temperature"), findsNWidgets(2));
+    expect(find.text("Target Temperature"), findsOneWidget);
+    expect(find.text("Temperature"), findsOneWidget);
     expect(find.text("Set-Temperature"), findsNothing,
         reason: "each control acts on the reading with its aspect set and is part of that row");
   });

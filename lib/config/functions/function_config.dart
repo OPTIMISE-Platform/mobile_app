@@ -107,7 +107,8 @@ dynamic commonValue(List<dynamic> values) {
 
 abstract class FunctionConfig {
   String functionId = "";
-  late final Characteristic? characteristic;
+  // Not final: [configCharacteristic] looks it up again while it is missing.
+  Characteristic? characteristic;
 
   String? getRelatedControllingFunction(dynamic value);
 
@@ -183,4 +184,13 @@ class FunctionConfigDefault extends FunctionConfig {
         .map((e) => e.id)
         .toList(growable: false);
   }
+}
+
+/// The characteristic [functionId]'s config works in. The shared configs are
+/// built on first use, which can be before the concepts are loaded; a missing
+/// characteristic is therefore looked up again.
+Characteristic? configCharacteristic(String functionId) {
+  final config = functionConfigs[functionId] ?? FunctionConfigDefault(functionId);
+  if (config.characteristic == null) config.init();
+  return config.characteristic;
 }

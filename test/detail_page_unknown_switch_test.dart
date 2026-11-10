@@ -63,7 +63,7 @@ void main() {
     d.notifyStateChanged();
     await tester.pump();
 
-    expect(find.descendant(of: rowOf('Power'), matching: find.byType(IconButton)),
+    expect(find.descendant(of: rowOf('Power'), matching: find.byType(Switch)),
         findsNothing,
         reason: 'the config would pick "switch on" for an unknown state');
     expect(find.descendant(of: rowOf('Power'), matching: find.byType(TextButton)),
@@ -75,7 +75,9 @@ void main() {
     reading.value = true;
     d.notifyStateChanged();
     await tester.pump();
-    expect(buttonOf(tester, 'Power').onPressed, isNotNull);
+    final power = tester.widget<Switch>(find.descendant(of: rowOf('Power'), matching: find.byType(Switch)));
+    expect(power.onChanged, isNotNull);
+    expect(power.value, isTrue);
     expect(find.text('Switch on'), findsNothing);
     expect(find.text('Switch off'), findsNothing);
   });
@@ -99,7 +101,7 @@ void main() {
     group.notifyStateChanged();
     await tester.pump();
 
-    expect(find.descendant(of: rowOf('Power'), matching: find.byType(IconButton)),
+    expect(find.descendant(of: rowOf('Power'), matching: find.byType(Switch)),
         findsNothing);
     expect(buttonOf(tester, 'Switch on').onPressed, isNotNull);
     expect(buttonOf(tester, 'Switch off').onPressed, isNotNull);

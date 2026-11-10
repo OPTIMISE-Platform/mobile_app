@@ -40,8 +40,8 @@ void main() {
   Finder rowOf(String title) =>
       find.ancestor(of: find.text(title), matching: find.byType(ListTile));
 
-  IconButton buttonOf(WidgetTester tester, String title) => tester.widget(
-      find.descendant(of: rowOf(title), matching: find.byType(IconButton)));
+  Switch buttonOf(WidgetTester tester, String title) => tester.widget(
+      find.descendant(of: rowOf(title), matching: find.byType(Switch)));
 
   /// The lan icon in the page header. The app bar shows one too in local mode.
   Finder headerLanIcon() => find.descendant(
@@ -83,7 +83,7 @@ void main() {
     d.notifyStateChanged();
     await tester.pump();
 
-    expect(buttonOf(tester, 'Power').onPressed, isNull,
+    expect(buttonOf(tester, 'Power').onChanged, isNull,
         reason: 'the reading switches through a control no gateway serves');
     expect(headerLanIcon(), findsOneWidget,
         reason: 'the header says why');
@@ -95,7 +95,7 @@ void main() {
     d.notifyStateChanged();
     await tester.pump();
 
-    expect(buttonOf(tester, 'Power').onPressed, isNotNull);
+    expect(buttonOf(tester, 'Power').onChanged, isNotNull);
   });
 
   testWidgets(
@@ -120,7 +120,7 @@ void main() {
     group.notifyStateChanged();
     await tester.pump();
 
-    expect(buttonOf(tester, 'Power').onPressed, isNull);
+    expect(buttonOf(tester, 'Power').onChanged, isNull);
     expect(headerLanIcon(), findsOneWidget);
   });
 }
