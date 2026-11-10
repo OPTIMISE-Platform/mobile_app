@@ -108,6 +108,16 @@ void main() {
       }
     });
 
+    test("a socket gets the host without port, brackets or zone escape", () {
+      expect(gatewaySocketHost("192.168.1.5:8081"), "192.168.1.5");
+      expect(gatewaySocketHost("192.168.1.5"), "192.168.1.5");
+      expect(gatewaySocketHost("mgw.local:8081"), "mgw.local");
+      expect(gatewaySocketHost("[fd00::5]:8081"), "fd00::5");
+      expect(gatewaySocketHost("fd00::5"), "fd00::5");
+      expect(gatewaySocketHost("[fe80::1%eth0]:8081"), "fe80::1%eth0");
+      expect(gatewaySocketHost("fe80::1%25"), "fe80::1%25");
+    });
+
     test("a raw zone 25 and its escaped form address the same host", () {
       // Interface 25: raw "%25", escaped "%2525".
       expect(gatewayAuthority("fe80::1%25"), "[fe80::1%2525]:8080");

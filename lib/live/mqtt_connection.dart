@@ -23,6 +23,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/mgw.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:uuid/uuid.dart';
@@ -333,7 +334,7 @@ Future<LiveConnectionState> probeMgwBroker(MGW mgw, {String? username, String? p
   final connection = LiveConnection.factory();
   try {
     return await connection.connect(
-      mgw.ip,
+      gatewaySocketHost(mgw.ip),
       mgwBrokerPort,
       username: username,
       password: password,

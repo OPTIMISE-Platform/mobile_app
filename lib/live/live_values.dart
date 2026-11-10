@@ -36,6 +36,7 @@ import 'package:mobile_app/models/protocol.dart';
 import 'package:mobile_app/models/service.dart';
 import 'package:mobile_app/native_pipe.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/protocols.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
@@ -419,7 +420,7 @@ class LiveValues with WidgetsBindingObserver {
         return;
       }
       final endpoint = conn.route.gateway != null
-          ? (host: conn.route.gateway!.ip, port: mgwBrokerPort)
+          ? (host: gatewaySocketHost(conn.route.gateway!.ip), port: mgwBrokerPort)
           : _cloudEndpoint();
       if (endpoint == null) return;
       final clientId = await _clientId(conn.route.gateway?.pairingId ?? '');

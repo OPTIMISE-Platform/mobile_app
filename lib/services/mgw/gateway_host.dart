@@ -68,6 +68,12 @@ String gatewayHostOnly(String host) {
   return h.replaceFirst(_explicitPort, "");
 }
 
+/// The host part of a stored gateway address for a plain socket, such as the
+/// message broker on its own port: no port, no brackets, and a zone id after a
+/// raw `%`.
+String gatewaySocketHost(String host) =>
+    gatewayHostOnly(host).replaceFirst("%25", "%");
+
 final _scheme = RegExp(r"^https?://", caseSensitive: false);
 final _bracketedInput = RegExp(r"^\[([^\]]+)\](?::(\d+))?$");
 final _hostInput = RegExp(r"^([^:]+)(?::(\d+))?$");

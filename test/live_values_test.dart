@@ -905,6 +905,26 @@ void main() {
       expect(parseLiveMqttUrl('nonsense'), isNull);
     });
 
+    test('a gateway stored with its port is reached on the broker port of its host', () async {
+      final network = AppState().networks.single;
+      network.localGateways = [
+        MGW('host', 'svc', 'core', '10.0.0.5:8081', networkId: 'net-1', pairingId: 'pair-1')
+      ];
+      live.watch(gatewayDevice);
+      await pumpEventQueue();
+
+      expect(made.single.host, '10.0.0.5');
+      expect(made.single.port, 1883);
+
+      LiveConnection.factory = () {
+        final c = FakeConnection();
+        made.add(c);
+        return c;
+      };
+      await probeMgwBroker(MGW('host', 'svc', 'core', '[fd00::5]:8081', pairingId: 'pair-9'));
+      expect(made.last.host, 'fd00::5');
+    });
+
     test('gateway broker logins are stored per pairing', () async {
       expect(await loadMgwBrokerCredentials('pair-1'), isNull);
       await saveMgwBrokerCredentials('pair-1', 'user', 'secret');
