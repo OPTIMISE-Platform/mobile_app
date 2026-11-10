@@ -233,11 +233,6 @@ Future<void> _applyPairing(AppState appState) async {
   await appState.mergeGatewaysWithNetworks();
 }
 
-/// Asks the broker of a gateway whether it takes this phone. A test replaces it.
-@visibleForTesting
-Future<LiveConnectionState> Function(MGW gateway,
-    {String? username, String? password}) brokerProbe = probeMgwBroker;
-
 /// Pairs with [mgw] and stores it in place of [replacing]: the entry as stored
 /// on success, the failure otherwise.
 Future<({MGW? stored, PairingFailure? failure})> pairAndStore(

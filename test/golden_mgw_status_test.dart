@@ -23,6 +23,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
@@ -81,12 +82,16 @@ void main() {
         {"id": "github.com/SENERGY-Platform/mgw-last-value-module"},
       ]);
     serveGoldenBackend(backend);
+    brokerProbe = (gw, {username, password}) async =>
+        LiveConnectionState.connected;
     MgwStorage.restartForTest();
     AppState().networks.add(Network("network-1", "Ground floor", false, [], [],
         DeviceConnectionStatus.online, "hash-1", "owner-1"));
   });
 
   tearDown(() {
+    brokerProbe = probeMgwBroker;
+    MgwStatusPanel.forgetBrokerChecks();
     MgwReachability.probeOverride = null;
     MgwReachability.forget();
     resetGoldenBackend();

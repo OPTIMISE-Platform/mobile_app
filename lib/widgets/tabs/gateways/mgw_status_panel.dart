@@ -14,13 +14,17 @@
  *  limitations under the License.
  */
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/mgw_module.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/mgw/advertisements.dart';
+import 'package:mobile_app/services/mgw/gateway_host.dart';
 import 'package:mobile_app/services/mgw/module_manager.dart';
 import 'package:mobile_app/services/mgw/reachability.dart';
 import 'package:mobile_app/services/mgw/storage.dart';
@@ -188,6 +192,30 @@ abstract final class MgwStatusText {
     return null;
   }
 
+  /// How the message broker answered a probe with the stored login
+  /// ([hasLogin]); [state] null when the probe itself failed.
+  static String broker(LiveConnectionState? state,
+      {required bool hasLogin, required String address}) {
+    switch (state) {
+      case LiveConnectionState.connected:
+        return hasLogin ? "Connected with the stored login" : "Connected";
+      case LiveConnectionState.refusedNotAuthorized:
+        return hasLogin
+            ? "Refused the stored login"
+            : "Asks for a login, none is stored";
+      case LiveConnectionState.refusedOther:
+        return "Refused the connection";
+      case LiveConnectionState.disconnected:
+      case LiveConnectionState.connecting:
+        return "Not answering at $address";
+      case null:
+        return "Could not be checked";
+    }
+  }
+
+  static const brokerOfForeign =
+      "Not checked, the address serves another network";
+
   /// Null when the authenticated request carried no session.
   static String? session(MgwReport report) {
     if (report.retriedWithFreshLogin) {
@@ -212,6 +240,17 @@ class MgwStatusPanel extends StatefulWidget {
 
   /// Called once the pairing was removed.
   final VoidCallback? onRemoved;
+
+  /// Broker answers by pairing and address, so reopening the panel within
+  /// [_brokerFresh] makes no new connection.
+  static final _brokerChecks = <String,
+      ({LiveConnectionState? state, bool hasLogin, DateTime at})>{};
+  static const _brokerFresh = Duration(minutes: 1);
+
+  @visibleForTesting
+  static void forgetBrokerChecks() => _brokerChecks.clear();
+
+  static String _brokerKey(MGW mgw) => "${mgw.pairingId}|${mgw.ip}";
 
   @override
   State<MgwStatusPanel> createState() => _MgwStatusPanelState();
@@ -238,6 +277,12 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   String? _modulesFor;
   int _moduleLoad = 0;
 
+  /// The last broker probe; null while none has answered.
+  ({LiveConnectionState? state, bool hasLogin})? _broker;
+  bool _brokerChecking = false;
+  int _brokerLoad = 0;
+  StreamSubscription<String>? _loginChanges;
+
   bool get _checking => _running > 0;
 
   @override
@@ -253,11 +298,17 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       _probe(false);
     }
     _syncModules();
+    _checkBroker();
+    // Also a login saved from the dialog that pairing opens on its own.
+    _loginChanges = mgwBrokerLoginChanges.listen((pairingId) {
+      if (mounted && pairingId == gateway.pairingId) _checkBroker(force: true);
+    });
     MgwReachability.revision.addListener(_onReachabilityChanged);
   }
 
   @override
   void dispose() {
+    _loginChanges?.cancel();
     MgwReachability.revision.removeListener(_onReachabilityChanged);
     super.dispose();
   }
@@ -270,6 +321,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
     }
     _report = MgwReachability.cachedReportOf(gateway);
     _syncModules();
+    _checkBroker();
     if (_report == null) _check();
   }
 
@@ -283,6 +335,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       setState(() => _report = cached);
       // A check of this panel reads the modules itself once it is done.
       if (!_checking) _syncModules();
+      if (_broker == null && !_brokerChecking) _checkBroker();
     }
   }
 
@@ -317,7 +370,54 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
   Future<void> _check({bool force = false}) async {
     if (_checking && !force) return;
     setState(() => _running++);
+    if (force) _checkBroker(force: true);
     await _probe(force);
+  }
+
+  /// Connects once to the gateway's message broker with the stored login,
+  /// unless an answer younger than [_brokerFresh] is known and not [force]d.
+  /// Not counted in [_running]: it may take 12 s and must not hold the actions.
+  /// Waits for the gateway's report, and is skipped while the address serves
+  /// another network, whose broker says nothing about this gateway.
+  Future<void> _checkBroker({bool force = false}) async {
+    final load = ++_brokerLoad;
+    final mgw = gateway;
+    final key = MgwStatusPanel._brokerKey(mgw);
+    final known = MgwStatusPanel._brokerChecks[key];
+    if (!force &&
+        known != null &&
+        DateTime.now().difference(known.at) < MgwStatusPanel._brokerFresh) {
+      setState(() {
+        _brokerChecking = false;
+        _broker = (state: known.state, hasLogin: known.hasLogin);
+      });
+      return;
+    }
+    if (_report == null || _report!.status == MgwStatus.foreign) {
+      setState(() => _brokerChecking = false);
+      return;
+    }
+    setState(() => _brokerChecking = true);
+    var hasLogin = false;
+    LiveConnectionState? state;
+    try {
+      final login = await readMgwBrokerCredentials(mgw.pairingId);
+      hasLogin = login != null;
+      state = await brokerProbe(mgw,
+          username: login?.username, password: login?.password);
+    } catch (e, s) {
+      ErrorReporter.log("Could not check the broker of ${mgw.ip}", e, s);
+    }
+    if (state != null) {
+      MgwStatusPanel._brokerChecks[key] = (state: state, hasLogin: hasLogin, at: DateTime.now());
+    } else {
+      MgwStatusPanel._brokerChecks.remove(key);
+    }
+    if (!mounted || load != _brokerLoad) return;
+    setState(() {
+      _brokerChecking = false;
+      _broker = (state: state, hasLogin: hasLogin);
+    });
   }
 
   /// Runs one check counted in [_running] by the caller.
@@ -327,6 +427,8 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
       if (mounted) {
         setState(() => _report = report);
         _syncModules(repeat: force);
+        // Waited for this report, or skipped for another network.
+        if (_broker == null && !_brokerChecking) _checkBroker();
       }
     } finally {
       _running--;
@@ -470,6 +572,7 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
     });
     // Storing it dropped the cached status and the merge after it probed the
     // gateway again, so this reads that answer instead of a second probe.
+    _checkBroker(force: true);
     await _check();
   }
 
@@ -559,6 +662,16 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
           for (final (label, value) in _details(report))
             _DetailRow(label: label, value: value),
         ],
+        _DetailRow(
+          label: "Message broker",
+          value: report?.status == MgwStatus.foreign
+              ? MgwStatusText.brokerOfForeign
+              : _brokerChecking || _broker == null
+              ? "Checking..."
+              : MgwStatusText.broker(_broker!.state,
+                  hasLogin: _broker!.hasLogin,
+                  address: "${gatewaySocketHost(mgw.ip)}:$mgwBrokerPort"),
+        ),
         if (_moduleNotice != null) ...[
           const SizedBox(height: Spacing.md),
           MgwErrorBlock(
@@ -609,7 +722,9 @@ class _MgwStatusPanelState extends State<MgwStatusPanel>
           spacing: Spacing.sm,
           children: [
             TextButton.icon(
-              onPressed: _pairing ? null : () => showBrokerLoginDialog(context, gateway),
+              onPressed: _pairing
+                  ? null
+                  : () => showBrokerLoginDialog(context, gateway),
               icon: const Icon(Icons.key),
               label: const Text("Broker login"),
             ),

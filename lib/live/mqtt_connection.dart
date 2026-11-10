@@ -303,19 +303,37 @@ Future<String> liveClientId([String suffix = '']) async =>
 /// Secure-storage key of the message broker login of the gateway [pairingId].
 String mgwBrokerCredentialsKey(String pairingId) => 'mgw-broker-credentials:$pairingId';
 
-Future<void> saveMgwBrokerCredentials(String pairingId, String username, String password) =>
-    _liveSecure.write(
-      key: mgwBrokerCredentialsKey(pairingId),
-      value: jsonEncode({'username': username, 'password': password}),
-    );
+final _brokerLoginChanges = StreamController<String>.broadcast();
 
-Future<({String username, String password})?> loadMgwBrokerCredentials(String pairingId) async {
+/// The pairing id of every gateway whose broker login was just stored.
+Stream<String> get mgwBrokerLoginChanges => _brokerLoginChanges.stream;
+
+Future<void> saveMgwBrokerCredentials(String pairingId, String username, String password) async {
+  await _liveSecure.write(
+    key: mgwBrokerCredentialsKey(pairingId),
+    value: jsonEncode({'username': username, 'password': password}),
+  );
+  _brokerLoginChanges.add(pairingId);
+}
+
+/// Null when none is stored or the stored value is unusable; throws when the
+/// storage cannot be read.
+Future<({String username, String password})?> readMgwBrokerCredentials(String pairingId) async {
+  final raw = await _liveSecure.read(key: mgwBrokerCredentialsKey(pairingId));
+  if (raw == null) return null;
   try {
-    final raw = await _liveSecure.read(key: mgwBrokerCredentialsKey(pairingId));
-    if (raw == null) return null;
     final json = jsonDecode(raw);
     if (json is! Map || json['username'] is! String || json['password'] is! String) return null;
     return (username: json['username'] as String, password: json['password'] as String);
+  } on FormatException {
+    return null;
+  }
+}
+
+/// As [readMgwBrokerCredentials], with an unreadable storage as null.
+Future<({String username, String password})?> loadMgwBrokerCredentials(String pairingId) async {
+  try {
+    return await readMgwBrokerCredentials(pairingId);
   } catch (_) {
     return null;
   }
@@ -330,6 +348,8 @@ const mgwBrokerPort = 1883;
 /// Connects once to the broker of [mgw], reports how it answered and
 /// disconnects. [LiveConnectionState.refusedNotAuthorized] means the broker asks for
 /// a login; [LiveConnectionState.disconnected], that it did not answer.
+var _probes = 0;
+
 Future<LiveConnectionState> probeMgwBroker(MGW mgw, {String? username, String? password}) async {
   final connection = LiveConnection.factory();
   try {
@@ -338,9 +358,14 @@ Future<LiveConnectionState> probeMgwBroker(MGW mgw, {String? username, String? p
       mgwBrokerPort,
       username: username,
       password: password,
-      clientId: await liveClientId('probe'),
+      // One id per probe: two probes at once would otherwise drop each other.
+      clientId: await liveClientId('probe${_probes++}'),
     );
   } finally {
     connection.disconnect();
   }
 }
+
+/// Asks the broker of a gateway whether it takes this phone. A test replaces it.
+Future<LiveConnectionState> Function(MGW gateway, {String? username, String? password}) brokerProbe =
+    probeMgwBroker;

@@ -158,6 +158,15 @@ A stored login makes the gateway's live connection, if it is down, reconnect
 with it at once instead of after the retry delay
 (`LiveValues.gatewayLoginChanged`).
 
+The status panel shows a "Message broker" row: a probe with the stored login
+once the gateway's report is known, on "Check again", after pairing again and
+whenever a login is stored (`mgwBrokerLoginChanges`), also from the dialog
+pairing opens. An answer is reused for a minute when the panel opens again.
+It tells a refused stored login from a missing one, names the address of a
+broker that does not answer, and probes nothing while the address serves
+another network. The probe does not hold the panel's actions. Each probe has a
+client id of its own (`-probe<n>`), so two at once do not drop each other.
+
 ## Tests
 
 Widget tests open no real connection: `setUpGoldenEnvironment` sets

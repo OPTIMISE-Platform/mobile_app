@@ -966,7 +966,12 @@ void main() {
 
     test('gateway broker logins are stored per pairing', () async {
       expect(await loadMgwBrokerCredentials('pair-1'), isNull);
+      final changed = <String>[];
+      final sub = mgwBrokerLoginChanges.listen(changed.add);
       await saveMgwBrokerCredentials('pair-1', 'user', 'secret');
+      await pumpEventQueue();
+      await sub.cancel();
+      expect(changed, ['pair-1'], reason: 'a stored login is announced');
       expect(await loadMgwBrokerCredentials('pair-1'), (username: 'user', password: 'secret'));
       expect(await loadMgwBrokerCredentials('pair-2'), isNull);
       await deleteMgwBrokerCredentials('pair-1');
@@ -992,8 +997,12 @@ void main() {
       expect(made.every((c) => c.disconnectCalls == 1), isTrue);
       // A probe must not take over the id of the live connection of the gateway.
       expect(made.first.clientId, startsWith('optimise-app-'));
-      expect(made.first.clientId, endsWith('-probe'));
-      expect(made.last.clientId, made.first.clientId, reason: 'the install id is made once');
+      expect(made.first.clientId, contains('-probe'));
+      String install(String id) => id.substring(0, id.lastIndexOf('-probe'));
+      expect(install(made.last.clientId!), install(made.first.clientId!),
+          reason: 'the install id is made once');
+      // Nor the id of another probe running at the same time.
+      expect(made.last.clientId, isNot(made.first.clientId));
     });
   });
 }
