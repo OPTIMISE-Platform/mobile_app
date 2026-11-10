@@ -44,9 +44,11 @@ Future<void> showMgwStatusSheet(BuildContext context, MGW mgw) =>
       useSafeArea: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(14))),
+      // useSafeArea leaves the bottom inset to the sheet, so the content keeps
+      // clear of the system navigation bar itself.
       builder: (sheetContext) => SingleChildScrollView(
-        padding:
-            const EdgeInsets.fromLTRB(Spacing.xl, 0, Spacing.xl, Spacing.xl),
+        padding: EdgeInsets.fromLTRB(Spacing.xl, 0, Spacing.xl,
+            Spacing.xl + MediaQuery.viewPaddingOf(sheetContext).bottom),
         child: _MgwStatusSheet(
           initial: mgw,
           onRemoved: () => Navigator.pop(sheetContext),

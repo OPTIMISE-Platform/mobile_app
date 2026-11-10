@@ -273,6 +273,40 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
+  testWidgets("the sheet keeps its content above the system navigation bar",
+      (tester) async {
+    await warmUpMgwStorage(tester);
+    await tester.runAsync(() => MgwStorage.ReplacePairedMGWs([_mgw]));
+    await pumpGolden(
+        tester,
+        Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => showMgwStatusSheet(context, _mgw),
+                child: const Text("Open"),
+              ),
+            ),
+          ),
+        ),
+        dark: false);
+    // pumpGolden sets a pixel ratio of 1, so the inset is in logical pixels.
+    const navigationBar = 48.0;
+    tester.view.padding = const FakeViewPadding(bottom: navigationBar);
+    tester.view.viewPadding = const FakeViewPadding(bottom: navigationBar);
+    addTearDown(() {
+      tester.view.resetPadding();
+      tester.view.resetViewPadding();
+    });
+    await tester.tap(find.text("Open"));
+    await settle(tester);
+
+    final screen = tester.getSize(find.byType(MaterialApp));
+    expect(tester.getRect(find.byType(MgwStatusPanel)).bottom,
+        lessThanOrEqualTo(screen.height - navigationBar));
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets("pairing and binding anew replaces the stored entry, at the "
       "address it has now", (tester) async {
     advertise("network-2");
