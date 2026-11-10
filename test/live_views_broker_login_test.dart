@@ -112,16 +112,62 @@ void main() {
     final stored = await tester.runAsync(() => loadMgwBrokerCredentials('pair-1'));
     expect(stored?.username, 'user');
     expect(stored?.password, 'secret');
+    // fluttertoast keeps a timer for how long the toast shows.
+    await tester.pump(const Duration(seconds: 3));
   });
 
-  testWidgets('an answer other than a refusal stores the login and closes the dialog', (tester) async {
-    brokerProbe = (gw, {username, password}) async => LiveConnectionState.disconnected;
+  testWidgets('a broker that does not answer stores the login and says it is unchecked', (tester) async {
+    brokerProbe = (gw, {username, password}) async {
+      probes.add((username, password));
+      return LiveConnectionState.disconnected;
+    };
     await openDialog(tester);
 
     await fill(tester, 'user', 'secret');
     await tapSave(tester);
 
+    expect(find.text('Broker login'), findsOneWidget, reason: 'the outcome is shown in the dialog');
+    expect(find.textContaining('10.0.0.5:1883 did not answer'), findsOneWidget);
+    final stored = await tester.runAsync(() => loadMgwBrokerCredentials('pair-1'));
+    expect(stored?.username, 'user');
+
+    // Checking again probes again; an accepted login then closes the dialog.
+    brokerProbe = (gw, {username, password}) async {
+      probes.add((username, password));
+      return LiveConnectionState.connected;
+    };
+    await tester.tap(find.widgetWithText(FilledButton, 'Check again'));
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(probes, [('user', 'secret'), ('user', 'secret')]);
     expect(find.text('Broker login'), findsNothing);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('a refusal for another reason stores the login and says so', (tester) async {
+    brokerProbe = (gw, {username, password}) async => LiveConnectionState.refusedOther;
+    await openDialog(tester);
+
+    await fill(tester, 'user', 'secret');
+    await tapSave(tester);
+
+    expect(find.textContaining('for a reason other than the login'), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Close'), findsOneWidget);
+    final stored = await tester.runAsync(() => loadMgwBrokerCredentials('pair-1'));
+    expect(stored?.username, 'user');
+  });
+
+  testWidgets('a check that fails in the app stores the login and says so', (tester) async {
+    brokerProbe = (gw, {username, password}) async => throw StateError('no storage');
+    await openDialog(tester);
+
+    await fill(tester, 'user', 'secret');
+    await tapSave(tester);
+
+    expect(find.textContaining('error in the app'), findsOneWidget);
+    expect(find.textContaining('did not answer'), findsNothing);
     final stored = await tester.runAsync(() => loadMgwBrokerCredentials('pair-1'));
     expect(stored?.username, 'user');
   });

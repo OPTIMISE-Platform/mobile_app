@@ -19,6 +19,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/live/live_values.dart';
 import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
@@ -272,7 +273,7 @@ Future<void> _checkBrokerLogin(MGW gateway) async {
 }
 
 /// Asks for the login of the message broker of [gateway]: true when saved, null
-/// or false when not.
+/// or false when not. The dialog tells whether the broker accepted it.
 Future<bool?> showBrokerLoginDialog(BuildContext context, MGW gateway) =>
     showDialog<bool>(
       context: context,
@@ -293,7 +294,10 @@ class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _saving = false;
+  // Set once a login is stored that the broker could not confirm.
+  bool _saved = false;
   String? _error;
+  String? _notice;
 
   @override
   void initState() {
@@ -315,16 +319,18 @@ class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
   }
 
   /// Checks the login with the broker, then stores it. A login the broker
-  /// refuses stays in the dialog; any other answer stores it, since a broker
-  /// that cannot be reached now may still take it later.
+  /// refuses stays in the dialog. Any other answer stores it, since a broker
+  /// that cannot be reached now may still take it later; only an accepted login
+  /// closes the dialog, every other outcome is shown in it.
   Future<void> _save() async {
     final username = _username.text;
     final password = _password.text;
     setState(() {
       _saving = true;
       _error = null;
+      _notice = null;
     });
-    var state = LiveConnectionState.disconnected;
+    LiveConnectionState? state;
     try {
       state = await brokerProbe(widget.gateway,
           username: username, password: password);
@@ -353,12 +359,36 @@ class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
       }
       return;
     }
-    if (mounted) Navigator.pop(context, true);
+    LiveValues.instance.gatewayLoginChanged(widget.gateway.pairingId);
+    if (!mounted) return;
+    if (state == LiveConnectionState.connected) {
+      Toast.showToastNoContext("Connected to the gateway's message broker.");
+      Navigator.pop(context, true);
+      return;
+    }
+    final broker = "${gatewaySocketHost(widget.gateway.ip)}:$mgwBrokerPort";
+    setState(() {
+      _saving = false;
+      _saved = true;
+      _notice = switch (state) {
+        LiveConnectionState.refusedOther =>
+          "Login saved, but the broker at $broker refused the connection "
+              "for a reason other than the login. Live values from this "
+              "gateway stay unavailable until the broker accepts it.",
+        null => "Login saved, but it could not be checked because of an "
+            "error in the app.",
+        _ => "Login saved, but the broker at $broker did not answer, so the "
+            "login could not be checked. Live values use it as soon as the "
+            "broker is reachable.",
+      };
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.textTheme.bodyMedium
+        ?.copyWith(color: theme.colorScheme.onSurfaceVariant);
     return AlertDialog(
       title: const Text("Broker login"),
       content: Column(
@@ -379,21 +409,29 @@ class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
             controller: _password,
             obscureText: true,
             textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _save(),
+            onSubmitted: (_) => _saving ? null : _save(),
             decoration: const InputDecoration(labelText: "Password"),
           ),
+          if (_saving) ...[
+            const SizedBox(height: Spacing.md),
+            Text("Checking the login with the broker...", style: muted),
+          ],
           if (_error != null) ...[
             const SizedBox(height: Spacing.md),
             Text(_error!,
                 style: theme.textTheme.bodyMedium
                     ?.copyWith(color: theme.colorScheme.error)),
           ],
+          if (_notice != null) ...[
+            const SizedBox(height: Spacing.md),
+            Text(_notice!, style: muted),
+          ],
         ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text("Cancel"),
+          onPressed: () => Navigator.pop(context, _saved ? true : null),
+          child: Text(_saved ? "Close" : "Cancel"),
         ),
         FilledButton(
           onPressed: _saving ? null : _save,
@@ -401,7 +439,7 @@ class _BrokerLoginDialogState extends State<_BrokerLoginDialog> {
               ? const SizedBox.square(
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text("Save"),
+              : Text(_saved ? "Check again" : "Save"),
         ),
       ],
     );

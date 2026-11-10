@@ -269,6 +269,16 @@ class LiveValues with WidgetsBindingObserver {
     }
   }
 
+  /// The broker login of the gateway [pairingId] was stored: its connection, if
+  /// one is wanted and not up, reconnects with it now instead of after the
+  /// retry delay. One that is up keeps running.
+  void gatewayLoginChanged(String pairingId) {
+    final conn = _conns[gatewayRoute(pairingId)];
+    if (conn == null || conn.closed || _paused) return;
+    if (conn.connection.state == LiveConnectionState.connected) return;
+    _connect(conn);
+  }
+
   /// Drops every connection and subscription; call when the signed-in account
   /// changes. The next [watch] uses the new account's certificate.
   void accountChanged() {

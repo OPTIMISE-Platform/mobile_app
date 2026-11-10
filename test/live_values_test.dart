@@ -58,6 +58,10 @@ class FakeConnection extends LiveConnection {
   String? password;
   bool hasContext = false;
   LiveConnectionState outcome = LiveConnectionState.connected;
+  LiveConnectionState current = LiveConnectionState.disconnected;
+
+  @override
+  LiveConnectionState get state => current;
 
   @override
   Stream<(String, Uint8List)> get messages => incoming.stream;
@@ -79,6 +83,7 @@ class FakeConnection extends LiveConnection {
     this.username = username;
     this.password = password;
     hasContext = context != null;
+    current = outcome;
     stateEvents.add(outcome);
     return outcome;
   }
@@ -98,6 +103,7 @@ class FakeConnection extends LiveConnection {
   @override
   void disconnect() {
     disconnectCalls++;
+    current = LiveConnectionState.disconnected;
     stateEvents.add(LiveConnectionState.disconnected);
   }
 
@@ -747,6 +753,39 @@ void main() {
 
       expect(extra.value, 'x-value');
       expect(meta.valueWrites, 0);
+    });
+  });
+
+  group('gateway login', () {
+    test('a stored login reconnects the gateway connection at once with it', () async {
+      var login = (username: 'user', password: 'old');
+      live.accountChanged();
+      live = LiveValues(
+        gatewayLogin: (_) async => login,
+        clientId: ([suffix = '']) async => 'optimise-app-test',
+        cloudEndpoint: () => null,
+      );
+      outcomeOfNew = LiveConnectionState.refusedNotAuthorized;
+      live.watch(gatewayDevice);
+      await pumpEventQueue();
+      final conn = made.single;
+      expect((conn.connectCalls, conn.password), (1, 'old'));
+
+      login = (username: 'user', password: 'new');
+      live.gatewayLoginChanged('pair-1');
+      await pumpEventQueue();
+      expect((conn.connectCalls, conn.password), (2, 'new'));
+
+      // A connection that is up keeps running.
+      conn.current = LiveConnectionState.connected;
+      live.gatewayLoginChanged('pair-1');
+      await pumpEventQueue();
+      expect(conn.connectCalls, 2);
+
+      // Another gateway's login leaves this connection alone.
+      live.gatewayLoginChanged('pair-2');
+      await pumpEventQueue();
+      expect(conn.connectCalls, 2);
     });
   });
 

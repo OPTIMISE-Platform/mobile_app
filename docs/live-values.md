@@ -150,6 +150,14 @@ name or password", a dialog asks for a login, which is stored under
 unpaired. The gateway's status panel opens the same dialog for a pairing that
 exists already.
 
+Saving checks the login with a probe first. An accepted login closes the
+dialog with a toast; a refused one stays in the dialog and is not stored. Any
+other outcome (no answer, a refusal for another reason) stores the login and
+says so in the dialog, with the broker's address and a "Check again" button.
+A stored login makes the gateway's live connection, if it is down, reconnect
+with it at once instead of after the retry delay
+(`LiveValues.gatewayLoginChanged`).
+
 ## Tests
 
 Widget tests open no real connection: `setUpGoldenEnvironment` sets
