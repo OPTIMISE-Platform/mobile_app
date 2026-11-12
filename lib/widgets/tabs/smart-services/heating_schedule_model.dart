@@ -17,6 +17,13 @@
 // Plan logic of the Heizungssteuerung; must match its process script, hence the EU rule for Europe/Berlin.
 
 import 'dart:convert';
+import 'dart:ui' show Color;
+
+import 'package:mobile_app/models/content_variable.dart';
+import 'package:mobile_app/models/device_command.dart';
+import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/device_type.dart';
 
 /// Name of the release, by which the app recognises the smart service.
 const heatingReleaseName = "Heizungssteuerung";
@@ -138,6 +145,32 @@ class HeatingSchedule {
     for (final c in sorted) {
       final t = target(c);
       if (t != current) return HeatingSwitch(c, t);
+    }
+    return null;
+  }
+
+  /// The latest instant up to [nowUtc] at which the target changed, or null for a constant plan.
+  /// Candidates are those of [nextSwitch], looked at backwards over a week and a day.
+  HeatingSwitch? lastSwitch(DateTime nowUtc) {
+    nowUtc = nowUtc.toUtc();
+    final today = heatingLocalTime(nowUtc);
+    final candidates = <DateTime>{};
+    for (final year in [nowUtc.year - 1, nowUtc.year]) {
+      candidates.add(_summerStart(year));
+      candidates.add(_summerEnd(year));
+    }
+    final minutes = {for (final w in windows) ...[w.from, w.to]};
+    for (var d = -8; d <= 0; d++) {
+      for (final m in minutes) {
+        final local = DateTime.utc(today.year, today.month, today.day + d, 0, m);
+        candidates.add(local.subtract(const Duration(hours: 1)));
+        candidates.add(local.subtract(const Duration(hours: 2)));
+      }
+    }
+    final sorted = candidates.where((c) => !c.isAfter(nowUtc)).toList()..sort((a, b) => b.compareTo(a));
+    for (final c in sorted) {
+      final t = target(c);
+      if (t != target(c.subtract(const Duration(minutes: 1)))) return HeatingSwitch(c, t);
     }
     return null;
   }
@@ -418,4 +451,165 @@ class HeatingPlan {
     if (out.isEmpty) throw HeatingScheduleException("No zone has a selected thermostat");
     return out;
   }
+}
+
+
+const heatingRoomFunctionId = "urn:infai:ses:measuring-function:d19ffeb0-877c-4611-951c-b3fc37d9b9ba";
+const heatingBatteryFunctionId = "urn:infai:ses:measuring-function:68dae5ce-a9ee-4487-8872-7943a94e2595";
+const heatingAirAspectId = "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6";
+const heatingTargetAspectId = "urn:infai:ses:aspect:4f4188b6-f944-45fa-9429-15655f691397";
+const heatingCelsiusCharacteristicId = "urn:infai:ses:characteristic:5ba31623-0ccb-4488-bfb7-f73b50e03b5a";
+const heatingPercentCharacteristicId = "urn:infai:ses:characteristic:46f808f4-bb9e-4cc2-bd50-dc33ca74f273";
+
+/// Battery level at or below which a thermostat is named in the widget.
+const heatingLowBattery = 20.0;
+
+enum HeatingValueKind { room, target, battery }
+
+/// The service of a device type that delivers one [kind] of value, and the aspect to ask it for.
+class HeatingValueSource {
+  final HeatingValueKind kind;
+  final String serviceId;
+  final String? aspectId;
+
+  const HeatingValueSource(this.kind, this.serviceId, this.aspectId);
+
+  String get _characteristic => kind == HeatingValueKind.battery ? heatingPercentCharacteristicId : heatingCelsiusCharacteristicId;
+
+  /// The characteristic is asked for explicitly because one device type reports in Kelvin.
+  DeviceCommand toCommand(DeviceInstance device) {
+    final command = DeviceCommand(functionId, device.id, serviceId, aspectId, null, null, null, _characteristic,
+        aspectId == null ? null : [aspectId!]);
+    command.deviceInstance = device;
+    return command;
+  }
+
+  String get functionId => kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
+}
+
+ContentVariable? _findVariable(ContentVariable v, String functionId, String? aspectId) {
+  if (v.function_id == functionId && (aspectId == null || v.effectiveAspects.contains(aspectId))) return v;
+  for (final sub in v.sub_content_variables ?? const <ContentVariable>[]) {
+    final found = _findVariable(sub, functionId, aspectId);
+    if (found != null) return found;
+  }
+  return null;
+}
+
+/// The first service of [type] whose outputs carry the function of [kind], and for the two
+/// temperatures their exact aspect, which is all that separates room from set point. Null when the
+/// device type lacks the value.
+HeatingValueSource? findHeatingValueSource(DeviceType type, HeatingValueKind kind) {
+  final functionId = kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
+  final aspectId = switch (kind) {
+    HeatingValueKind.room => heatingAirAspectId,
+    HeatingValueKind.target => heatingTargetAspectId,
+    HeatingValueKind.battery => null,
+  };
+  for (final service in type.services) {
+    for (final output in service.outputs ?? const []) {
+      final v = _findVariable(output.content_variable, functionId, aspectId);
+      if (v != null) return HeatingValueSource(kind, service.id, aspectId ?? v.effectiveAspects.firstOrNull);
+    }
+  }
+  return null;
+}
+
+/// What a thermostat reported; a null value is unavailable and left out of the widget.
+class HeatingDeviceValues {
+  final double? room, target, battery;
+
+  const HeatingDeviceValues({this.room, this.target, this.battery});
+}
+
+/// A finite number, or a text of one; null otherwise.
+double? heatingNumber(dynamic v) {
+  final n = v is num ? v.toDouble() : (v is String ? double.tryParse(v.trim()) : null);
+  return n != null && n.isFinite ? n : null;
+}
+
+/// Maps the answers of one command batch to values per device. [asked] and [answers] correspond by
+/// index; an entry that is not a 200 or not numeric stays unavailable.
+Map<String, HeatingDeviceValues> heatingValuesFromAnswers(
+    List<(String, HeatingValueKind)> asked, List<DeviceCommandResponse> answers) {
+  final found = <String, Map<HeatingValueKind, double>>{};
+  for (var i = 0; i < asked.length && i < answers.length; i++) {
+    if (answers[i].status_code != 200) continue;
+    final n = heatingNumber(answers[i].message);
+    if (n != null) (found[asked[i].$1] ??= {})[asked[i].$2] = n;
+  }
+  return {
+    for (final e in found.entries)
+      e.key: HeatingDeviceValues(room: e.value[HeatingValueKind.room], target: e.value[HeatingValueKind.target], battery: e.value[HeatingValueKind.battery])
+  };
+}
+
+/// The mean of the room temperatures present, rounded to one decimal; null when there is none.
+double? heatingMeanRoom(Iterable<double?> rooms) {
+  final present = rooms.whereType<double>().toList();
+  if (present.isEmpty) return null;
+  final mean = present.reduce((a, b) => a + b) / present.length;
+  return (mean * 10).round() / 10;
+}
+
+/// The thermostats of [thermostats] whose battery is at or below [heatingLowBattery], with the level.
+List<(HeatingThermostat, double)> heatingLowBatteries(
+    List<HeatingThermostat> thermostats, Map<String, HeatingDeviceValues> values) {
+  return [
+    for (final t in thermostats)
+      if (values[t.id]?.battery case final b? when b <= heatingLowBattery) (t, b)
+  ];
+}
+
+/// A deviation of the device set points from the plan: [temperature] is the common deviating set
+/// point or null when they differ, [until] the next switch of the zone or null without one.
+class HeatingOverride {
+  final double? temperature;
+  final DateTime? until;
+
+  const HeatingOverride(this.temperature, this.until);
+}
+
+/// Whether someone set a thermostat by hand: a set point differs by at least 0.5 K from the plan,
+/// and the last switch lies more than 10 minutes back, because a device needs that long to report
+/// the value the plan has just set.
+HeatingOverride? heatingManualOverride(HeatingSchedule schedule, Iterable<double> deviceTargets, DateTime now) {
+  // Tenths as integers: a difference of 0.5 must not depend on floating-point noise.
+  final planned = (schedule.target(now) * 10).round();
+  final deviating = {for (final t in deviceTargets) if (((t * 10).round() - planned).abs() >= 5) (t * 10).round()};
+  if (deviating.isEmpty) return null;
+  final last = schedule.lastSwitch(now);
+  if (last != null && now.toUtc().difference(last.at) <= const Duration(minutes: 10)) return null;
+  return HeatingOverride(deviating.length == 1 ? deviating.single / 10 : null, schedule.nextSwitch(now)?.at);
+}
+
+/// "in 3 h 10 min", "in 25 min", "in under a minute"; null when [d] is more than 24 hours.
+String? heatingCountdown(Duration d) {
+  if (d > const Duration(hours: 24)) return null;
+  if (d < const Duration(minutes: 1)) return "in under a minute";
+  final minutes = d.inMinutes;
+  if (minutes < 60) return "in $minutes min";
+  return minutes % 60 == 0 ? "in ${minutes ~/ 60} h" : "in ${minutes ~/ 60} h ${minutes % 60} min";
+}
+
+/// "22:00" of the Berlin clock at [at], with the weekday in front when that is not today of [now].
+String heatingClockText(DateTime now, DateTime at) {
+  final local = heatingLocalTime(at);
+  final today = heatingLocalTime(now);
+  final sameDay = local.year == today.year && local.month == today.month && local.day == today.day;
+  final time = formatHeatingMinutes(local.hour * 60 + local.minute);
+  return sameDay ? time : "${_dayNames[local.weekday - 1]} $time";
+}
+
+const _dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const heatingColdColor = Color(0xFF64B5F6);
+const heatingWarmColor = Color(0xFFFF8A3D);
+const heatingColdTemperature = 16.0;
+const heatingWarmTemperature = 22.0;
+
+/// Blue at 16 degrees and below, orange at 22 and above, linear between; the same scale in the web UI.
+Color heatingTemperatureColor(double t) {
+  final f = ((t - heatingColdTemperature) / (heatingWarmTemperature - heatingColdTemperature)).clamp(0.0, 1.0);
+  return Color.lerp(heatingColdColor, heatingWarmColor, f)!;
 }

@@ -184,9 +184,10 @@ void main() {
 
   test("the widget grows with the zones that have a thermostat", () async {
     backend.serveJson("GET", "$_repo/instances/inst-1", 200, _instance(schedule: _zonePlan, thermostats: _twoThermostats));
-    expect((await refreshed()).height, 3 + 11 * 2);
+    // several zones start with the week collapsed
+    expect((await refreshed()).height, 15);
 
-    // the rest zone has no thermostat left: it is not shown
+    // the rest zone has no thermostat left: it is not shown, and the single zone shows its week
     backend.serveJson("GET", "$_repo/instances/inst-1", 200, _instance(schedule: _zonePlan));
     expect((await refreshed()).height, 3 + 11);
 
@@ -222,7 +223,8 @@ void zoneLayout() {
       expect(find.text("Rest"), findsOneWidget);
       expect(find.text("CT Thermostat"), findsOneWidget);
       expect(find.text("Edit plan"), findsOneWidget);
-      expect(find.text("Mon"), findsNWidgets(2));
+      expect(find.text("Today"), findsNWidgets(2));
+      expect(find.text("Mon"), findsNothing);
     });
   }
 }
