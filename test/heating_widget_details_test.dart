@@ -20,6 +20,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/models/device_command_response.dart';
+import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/heating_schedule.dart';
@@ -69,11 +70,30 @@ void main() {
     test("room and set point share the function and are told apart by the aspect", () {
       final type = _type([
         _service("setpoint", [_variable("t", heatingRoomFunctionId, [heatingTargetAspectId])]),
-        _service("measured", [_variable("t", heatingRoomFunctionId, [heatingAirAspectId])]),
+        _service("measured", [_variable("t", heatingRoomFunctionId, [heatingAirAspectId, heatingReadingAspectId])]),
       ]);
       expect(findHeatingValueSource(type, HeatingValueKind.room)?.serviceId, "measured");
       expect(findHeatingValueSource(type, HeatingValueKind.target)?.serviceId, "setpoint");
       expect(findHeatingValueSource(type, HeatingValueKind.battery), isNull);
+    });
+
+    test("a set point listed before the room reading does not shadow it", () {
+      const indoor = "urn:infai:ses:aspect:indoor";
+      final type = _type([
+        _service("get", [
+          _variable("setpoint", heatingRoomFunctionId, [heatingTargetAspectId, heatingAirAspectId, indoor]),
+          _variable("room", heatingRoomFunctionId, [heatingAirAspectId, indoor, heatingReadingAspectId]),
+        ]),
+      ]);
+      final room = findHeatingValueSource(type, HeatingValueKind.room)!;
+      expect(room.serviceId, "get");
+      expect(room.aspectIds, [heatingAirAspectId, heatingReadingAspectId]);
+      final device = DeviceInstance.fromJson({
+        "id": "d", "local_id": "d", "name": "d", "attributes": [], "device_type_id": "type-1", "shared": false,
+        "owner_id": "u", "display_name": "d", "connection_state": "online",
+      });
+      expect(room.toCommand(device).aspect_ids, [heatingAirAspectId, heatingReadingAspectId]);
+      expect(findHeatingValueSource(type, HeatingValueKind.target)!.toCommand(device).aspect_ids, [heatingTargetAspectId]);
     });
 
     test("a variable nested in a structure is found, and the battery takes any aspect", () {
@@ -237,7 +257,7 @@ void main() {
       backend.serveJson("GET", "/device-repository/device-types", 200, [
         _type([
           _service("s", [
-            _variable("room", heatingRoomFunctionId, [heatingAirAspectId]),
+            _variable("room", heatingRoomFunctionId, [heatingAirAspectId, heatingReadingAspectId]),
             _variable("target", heatingRoomFunctionId, [heatingTargetAspectId]),
             _variable("battery", heatingBatteryFunctionId, ["urn:infai:ses:aspect:device"]),
           ])

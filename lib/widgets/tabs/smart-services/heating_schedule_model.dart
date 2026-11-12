@@ -458,6 +458,7 @@ const heatingRoomFunctionId = "urn:infai:ses:measuring-function:d19ffeb0-877c-46
 const heatingBatteryFunctionId = "urn:infai:ses:measuring-function:68dae5ce-a9ee-4487-8872-7943a94e2595";
 const heatingAirAspectId = "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6";
 const heatingTargetAspectId = "urn:infai:ses:aspect:4f4188b6-f944-45fa-9429-15655f691397";
+const heatingReadingAspectId = "urn:infai:ses:aspect:ffcdc0a6-0957-49d7-be9a-af912ecbd3cf";
 const heatingCelsiusCharacteristicId = "urn:infai:ses:characteristic:5ba31623-0ccb-4488-bfb7-f73b50e03b5a";
 const heatingPercentCharacteristicId = "urn:infai:ses:characteristic:46f808f4-bb9e-4cc2-bd50-dc33ca74f273";
 
@@ -466,20 +467,22 @@ const heatingLowBattery = 20.0;
 
 enum HeatingValueKind { room, target, battery }
 
-/// The service of a device type that delivers one [kind] of value, and the aspect to ask it for.
+/// The service of a device type that delivers one [kind] of value, and the aspects to ask it for.
 class HeatingValueSource {
   final HeatingValueKind kind;
   final String serviceId;
-  final String? aspectId;
+  final List<String> aspectIds;
 
-  const HeatingValueSource(this.kind, this.serviceId, this.aspectId);
+  const HeatingValueSource(this.kind, this.serviceId, this.aspectIds);
+
+  String? get aspectId => aspectIds.firstOrNull;
 
   String get _characteristic => kind == HeatingValueKind.battery ? heatingPercentCharacteristicId : heatingCelsiusCharacteristicId;
 
   /// The characteristic is asked for explicitly because one device type reports in Kelvin.
   DeviceCommand toCommand(DeviceInstance device) {
     final command = DeviceCommand(functionId, device.id, serviceId, aspectId, null, null, null, _characteristic,
-        aspectId == null ? null : [aspectId!]);
+        aspectIds.isEmpty ? null : aspectIds);
     command.deviceInstance = device;
     return command;
   }
@@ -487,29 +490,31 @@ class HeatingValueSource {
   String get functionId => kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
 }
 
-ContentVariable? _findVariable(ContentVariable v, String functionId, String? aspectId) {
-  if (v.function_id == functionId && (aspectId == null || v.effectiveAspects.contains(aspectId))) return v;
+ContentVariable? _findVariable(ContentVariable v, String functionId, List<String> aspectIds) {
+  if (v.function_id == functionId && aspectIds.every(v.effectiveAspects.contains)) return v;
   for (final sub in v.sub_content_variables ?? const <ContentVariable>[]) {
-    final found = _findVariable(sub, functionId, aspectId);
+    final found = _findVariable(sub, functionId, aspectIds);
     if (found != null) return found;
   }
   return null;
 }
 
 /// The first service of [type] whose outputs carry the function of [kind], and for the two
-/// temperatures their exact aspect, which is all that separates room from set point. Null when the
-/// device type lacks the value.
+/// temperatures a variable with all the aspects that separate room reading from set point (set
+/// points carry Air as well). Null when the device type lacks the value.
 HeatingValueSource? findHeatingValueSource(DeviceType type, HeatingValueKind kind) {
   final functionId = kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
-  final aspectId = switch (kind) {
-    HeatingValueKind.room => heatingAirAspectId,
-    HeatingValueKind.target => heatingTargetAspectId,
-    HeatingValueKind.battery => null,
+  final aspectIds = switch (kind) {
+    HeatingValueKind.room => [heatingAirAspectId, heatingReadingAspectId],
+    HeatingValueKind.target => [heatingTargetAspectId],
+    HeatingValueKind.battery => const <String>[],
   };
   for (final service in type.services) {
     for (final output in service.outputs ?? const []) {
-      final v = _findVariable(output.content_variable, functionId, aspectId);
-      if (v != null) return HeatingValueSource(kind, service.id, aspectId ?? v.effectiveAspects.firstOrNull);
+      final v = _findVariable(output.content_variable, functionId, aspectIds);
+      if (v != null) {
+        return HeatingValueSource(kind, service.id, kind == HeatingValueKind.battery ? v.effectiveAspects.take(1).toList() : aspectIds);
+      }
     }
   }
   return null;
