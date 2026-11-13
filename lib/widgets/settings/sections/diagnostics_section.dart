@@ -60,11 +60,21 @@ SettingsSection diagnosticsSection(BuildContext context, AppState state) {
               title: Row(children: [
                 const Text("Debug"),
                 const Spacer(),
-                IconButton(
-                    icon: const Icon(Icons.share),
-                    onPressed: () => SharePlus.instance.share(ShareParams(
-                        text: "OPTIMISE Debug Information\n$txt",
-                        subject: "OPTIMISE Debug Information")))
+                // The iPad needs the button's rect to anchor the share sheet.
+                Builder(
+                    builder: (button) => IconButton(
+                        icon: const Icon(Icons.share),
+                        onPressed: () {
+                          final box = button.findRenderObject();
+                          SharePlus.instance.share(ShareParams(
+                              text: "OPTIMISE Debug Information\n$txt",
+                              subject: "OPTIMISE Debug Information",
+                              sharePositionOrigin:
+                                  box is RenderBox && box.hasSize
+                                      ? box.localToGlobal(Offset.zero) &
+                                          box.size
+                                      : null));
+                        }))
               ]),
               content: Scrollbar(
                   child: SingleChildScrollView(

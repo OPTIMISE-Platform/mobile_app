@@ -16,8 +16,16 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 DOCKERFILE
 
+# Rootless Docker maps the calling user to container root, so 0:0 keeps the
+# mounted files owned by that user; rootful Docker needs the host ids.
+if docker info --format '{{.SecurityOptions}}' | grep -q 'name=rootless'; then
+  user="0:0"
+else
+  user="$(id -u):$(id -g)"
+fi
+
 exec docker run --rm \
-  --user "$(id -u):$(id -g)" \
+  --user "$user" \
   -e HOME=/tmp \
   -e PUB_CACHE="$pub_cache" \
   -e CI=true \

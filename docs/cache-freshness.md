@@ -107,8 +107,7 @@ resume or `refreshPressed`, so one resume retries a failing set once.
   `AccountEpoch.writeIfCurrent`. An account change (`CacheHelper.switchAccount`)
   persists `account_wipe_pending` and `fcm_token_deletion_pending`, advances
   the epoch, writes the new account key, resets the state in memory as a
-  logout does (`AppState.onLogout`, which the logout after an OIDC error or
-  logout event skips without a server, while the logout button runs it:
+  logout does (`AppState.onLogout`, which every logout runs through `Auth._cleanup`:
   lists, metadata maps, device index, paging and `initialized`, so the next
   account's `init` runs and loads its own) and then wipes the cache in parts
   that each run on their own: the metadata and HTTP cache, the entity rows
@@ -120,8 +119,8 @@ resume or `refreshPressed`, so one resume retries a failing set once.
   counter the wipe's transaction bumps, writes nothing more and does not mark
   its collection refreshed; together with the refresh times cleared after the
   rows, what the wipe drops of the signed-in account stays due and the next
-  refresh refills it. One switch runs at a time, so the login and the OIDC event it
-  raises switch once. The epoch does not know the account, so a save that
+  refresh refills it. One switch runs at a time, so a login and a refresh that ends
+  meanwhile switch once. The epoch does not know the account, so a save that
   returns after a logout and a new sign-in of the same account is dropped too;
   that row is missing from Isar until the next refresh or list fetch writes it.
   Accepted: the window is one request long, and the login refresh refills it.
@@ -226,10 +225,9 @@ own, so the pull always fetches fresh and reports a failure.
 | `CacheHelper.afterDeviceChunkForTest` | Called after each chunk the device refresh writes, to change the account between two chunks; the refresh awaits it |
 | `CacheHelper.afterDevicePruneForTest` | Called right after the device refresh prunes, before it marks the collection refreshed; the refresh awaits it |
 | `Auth.cleanupForTest()` | Runs the logout cleanup (`_cleanup`) without a signed-in client |
-| `Auth.serverAvailableOverride` | Replaces the server check of the logout, so a test can log out offline |
-| `Auth.onLogoutForTest()` | Runs the logout that follows the client's logout or error event (`_onLogout`) |
-| `Auth.rememberAccountForTest(identity)` | Records a sign-in of `identity`, switching the account when its `sub` differs (`_rememberAccount`) |
-| `Auth.clientListenerRegistered` / `listenToClientEventsForTest(events)` | Whether the client's events have a listener, and a stream to listen to as a set-up client's |
+| `Auth.serverAvailableOverride` | Replaces the server check of the refresh |
+| `Auth.onLogoutForTest()` | Runs the logout without the revocation, as offline (`_cleanup`) |
+| `Auth.rememberAccountForTest(sub)` | Records a sign-in of `sub`, switching the account when it differs from the stored one (`_rememberAccount`) |
 | `CacheHelper.beforeAccountWipeForTest` | Called before the cache clear of an account wipe; throwing from it fails that part |
 | `CacheHelper.afterAccountKeyForTest` | Called right after a switch wrote the new account key |
 | `AppInitializer.openCache(open)` | Opens Isar through `open` and retries a pending account wipe, as the start does |

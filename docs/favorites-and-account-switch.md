@@ -84,14 +84,12 @@ is the common upgrade path and not an edge case.
 `Auth._rememberAccount(identity)` is the only place that sees an account
 actually change: it compares the stored `account` against the `sub` of the
 identity just obtained. It is called from every path that establishes an
-identity — the stored-identity fast path in `init()`, the client setup, the
-OIDC `Refresh`/`Success` events and `login()` — always before `loggedIn`
-flips.
+identity — the load of the stored credentials, a refresh that ends, the code
+login and `login()` — always before `loggedIn` flips.
 
-Keying this on the identity rather than on `loggedIn` is deliberate. On the
-login path `loggedIn` is set by the OIDC event listener, so a check hung on the
-flag fires after the tabs have already mounted and read the favorites of the
-previous account.
+Keying this on the identity rather than on `loggedIn` is deliberate. A check
+hung on the flag would fire after the tabs have mounted on it and read the
+favorites of the previous account.
 
 The order of a switch is load-bearing. Step 1 runs in `Auth._rememberAccount`,
 steps 2 to 6 in `CacheHelper.switchAccount`:
@@ -122,30 +120,27 @@ refreshed) and stops without marking its collection, so the next refresh
 refills it; one that marked itself before the rows went loses its timestamp to
 the clear after them.
 
-The switch is serialized: the login and the OIDC `Success` event it raises
-both report the new identity, and the second call finds the new key already
+The switch is serialized: a login and a refresh that ends meanwhile both
+report the new identity, and the second call finds the new key already
 written.
 
 Logout and a transient `NotLoggedIn` deliberately do not trigger any of this.
 Logout clears the cache through its own path, and a transient event must not
 destroy the offline database of the account that is still signed in.
 
-A logout that cannot reach the server (`Auth._onLogout`) cannot revoke the
-tokens, but clears the stored identity through the client
-(`OpenIdConnectClient.clearIdentity`), so the next login signs in with the
-credentials it was given instead of resuming the previous account. It keeps
-`account` and the favorites, like every logout. It drops the client and
-cancels the listener of its events: a late event would otherwise act on the
-next client, and the client's own logout, still running, finds no identity
-left to clear. `Auth.logout` cleans up after the client's logout only while no
-new session has begun.
+Every logout, offline included, runs `Auth._cleanup()`: it marks the account
+signed out, deletes the stored credentials and clears the cache. An offline
+logout cannot revoke the tokens, but the deleted credentials mean the next
+login signs in with the credentials it was given instead of resuming the
+previous account. It keeps `account` and the favorites, like every logout.
+`Auth.logout` cleans up after the revocation only while no new session has
+begun.
 
 ## Verification
 
 `account_change_memory_test.dart` drives the switch with identities built in
-the test, and `settings_test.dart` the keyed settings. The OIDC client itself
-and the favorites migration over real rows are not covered; re-run these by
-hand after changing the storage, the migration or the switch:
+the test, and `settings_test.dart` the keyed settings. The favorites migration
+over real rows is not covered; re-run these by hand after changing the storage, the migration or the switch:
 
 - Star an entity, restart, star still set.
 - Sign in as A, then B, then A again: B sees neither A's devices nor A's

@@ -37,6 +37,7 @@ import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/models/network.dart';
 import 'package:mobile_app/models/protocol.dart';
 import 'package:mobile_app/models/service.dart';
+import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:mobile_app/services/settings.dart';
 
 import 'golden_helper.dart';
@@ -125,6 +126,13 @@ DeviceInstance device(String id, {String owner = 'owner-1'}) =>
 void main() {
   setUpAll(() async {
     await setUpGoldenEnvironment();
+    // The first AppState() starts a gateway discovery nobody awaits; its merge
+    // resets the gateways of every network, so it must end before a test adds
+    // one. Otherwise, under load, it ends in the middle of a test and moves the
+    // watched device from its gateway to the cloud.
+    await MgwStorage.init();
+    AppState();
+    await pumpEventQueue();
   });
 
   final protocols = <String, Protocol>{
