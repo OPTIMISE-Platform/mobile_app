@@ -77,7 +77,13 @@ void main() {
         reason: "the cached offline showed as a chip the refresh then took back");
 
     refresh.complete();
-    await Future<void>.delayed(const Duration(milliseconds: 100));
+    // The refresh runs on in the background through an Isar write; a fixed
+    // 100 ms was too short for a busy CI runner.
+    final waited = Stopwatch()..start();
+    while (AppState().devices.single.connection_state != DeviceConnectionStatus.online &&
+        waited.elapsed < const Duration(seconds: 5)) {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
     expect(AppState().devices.single.connection_state, DeviceConnectionStatus.online);
   });
 }
