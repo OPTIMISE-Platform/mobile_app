@@ -29,6 +29,7 @@ import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/app_version.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/firebase_service.dart';
@@ -44,6 +45,8 @@ class AppInitializer {
     await _timed('dotenv', () => dotenv.load(fileName: '.env'));
     await _timed('AppVersion', AppVersion.init);
     await _timed('Settings', () async => await Settings.init());
+    await _timed('SecureStorageMarks',
+        () => settleSecureStorageMarks(android: Platform.isAndroid));
     await _timed('MyTheme', () async => await MyTheme.loadTheme());
     unawaited(_initLocale());
     debugPrint('App init took ${DateTime.now().difference(appStart)}');
@@ -112,6 +115,12 @@ class AppInitializer {
   /// Starts in a row whose check failed, after which the store is reset.
   static const secureStorageFailureLimit = 3;
 
+  /// How long the start waits for the check's read. Past it the check runs
+  /// on in the background and its finding counts when it arrives; until then
+  /// the file's state is unknown ([SecureStorageHealth.unknown]).
+  @visibleForTesting
+  static Duration secureStorageTimeout = const Duration(seconds: 5);
+
   /// On Android flutter_secure_storage keeps every store in this one file.
   static const _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -135,31 +144,103 @@ class AppInitializer {
     return File('${dir.parent.path}/shared_prefs/FlutterSecureStorage.xml');
   };
 
+  /// Moves the marks of the secure storage to their own box and, on Android,
+  /// drops them when its file is not there, as after a restore that left the
+  /// file out. Runs before anything loads the file. Never throws.
+  static Future<void> settleSecureStorageMarks({required bool android}) async {
+    try {
+      await Settings.moveSecureStorageMarks();
+      if (!android) return;
+      final file = await secureStorageFile();
+      if (await file.exists() || await File('${file.path}.bak').exists()) return;
+      await Settings.clearSecureStorageMarks();
+    } catch (e) {
+      debugPrint('SecureStorage marks not settled: $e');
+    }
+  }
+
   /// Resets the Android secure storage, which holds the login, only once it
   /// is known to stay unreadable: at once for an error a retry cannot change,
   /// otherwise after [secureStorageFailureLimit] starts in a row whose read
   /// failed, as a Keystore can fail for a while. A readable start clears the
-  /// count. Never throws: Auth waits on it.
+  /// count. A read slower than [secureStorageTimeout] neither counts nor
+  /// resets: the start goes on and the finding is applied when it arrives.
+  /// Sets [SecureStorageHealth] for the stores, which wait for it. Never
+  /// throws: Auth waits on it.
   @visibleForTesting
-  static Future<void> checkSecureStorage() async {
+  static Future<void> checkSecureStorage() {
+    final check = _checkSecureStorage();
+    SecureStorageHealth.track(check);
+    return check;
+  }
+
+  static Future<void> _checkSecureStorage() async {
     try {
       if (Settings.getSecureStorageResetPending()) {
         await _deleteSecureStorageFile();
         await Settings.setSecureStorageResetPending(false);
       }
-      if (await _secureStorageReadable()) {
+    } catch (e) {
+      debugPrint('SecureStorage check failed: $e');
+      return;
+    }
+    final probe = _probeSecureStorage();
+    final _Finding finding;
+    try {
+      finding = await probe.timeout(secureStorageTimeout);
+    } on TimeoutException {
+      debugPrint('SecureStorage check runs on past its bound');
+      SecureStorageHealth.unknown = true;
+      unawaited(probe
+          .then(_applyFinding)
+          .whenComplete(() => SecureStorageHealth.unknown = false));
+      return;
+    }
+    await _applyFinding(finding);
+  }
+
+  /// Reads the check entry, and writes it at the first start. Never throws.
+  static Future<_Finding> _probeSecureStorage() async {
+    final String? value;
+    try {
+      value = await _secureStorage.read(key: secureStorageCheckKey);
+    } catch (e) {
+      debugPrint('SecureStorage read failed: $e');
+      if (e is PlatformException &&
+          _permanentErrors.any('${e.message}\n${e.details}'.contains)) {
+        return _Finding.permanent;
+      }
+      return _Finding.failed;
+    }
+    if (value != null) return _Finding.readable;
+    try {
+      // The plugin answers nothing for every entry when it cannot open the
+      // encrypted file, as after a restore without its Keystore key.
+      if (Settings.getSecureStorageCheckStored()) return _Finding.lost;
+      await _secureStorage.write(key: secureStorageCheckKey, value: '1');
+      await Settings.setSecureStorageCheckStored(true);
+      return _Finding.readable;
+    } catch (e) {
+      debugPrint('SecureStorage check entry not written: $e');
+      return _Finding.inconclusive;
+    }
+  }
+
+  /// Never throws.
+  static Future<void> _applyFinding(_Finding finding) async {
+    try {
+      if (finding == _Finding.inconclusive) return;
+      if (finding == _Finding.readable) {
         if (Settings.getSecureStorageCheckFailures() != 0) {
           await Settings.setSecureStorageCheckFailures(0);
         }
         return;
       }
-    } on _PermanentStorageError {
-      return _resetSecureStorage();
-    } catch (e) {
-      debugPrint('SecureStorage check failed: $e');
-      return;
-    }
-    try {
+      if (finding == _Finding.permanent) {
+        await _resetSecureStorage();
+        return;
+      }
+      if (finding == _Finding.lost) SecureStorageHealth.unreadable = true;
       final failures = Settings.getSecureStorageCheckFailures() + 1;
       if (failures < secureStorageFailureLimit) {
         await Settings.setSecureStorageCheckFailures(failures);
@@ -172,27 +253,9 @@ class AppInitializer {
     await _resetSecureStorage();
   }
 
-  /// False for a read that failed, also for the check entry reading as absent
-  /// once written: the plugin answers nothing for every entry when it cannot
-  /// open the encrypted file, as after a restore without its Keystore key.
-  static Future<bool> _secureStorageReadable() async {
-    final String? value;
-    try {
-      value = await _secureStorage.read(key: secureStorageCheckKey);
-    } catch (e) {
-      debugPrint('SecureStorage read failed: $e');
-      if (e is PlatformException &&
-          _permanentErrors.any('${e.message}\n${e.details}'.contains)) {
-        throw _PermanentStorageError();
-      }
-      return false;
-    }
-    if (value != null) return true;
-    if (Settings.getSecureStorageCheckStored()) return false;
-    await _secureStorage.write(key: secureStorageCheckKey, value: '1');
-    await Settings.setSecureStorageCheckStored(true);
-    return true;
-  }
+  /// Bounds the reset's call to the plugin; past it the file is deleted.
+  static Future<T> _bounded<T>(Future<T> call) =>
+      call.timeout(secureStorageTimeout);
 
   /// Through the plugin, which also drops its loaded copy of the file. Its
   /// clear decrypts every entry; where that fails the file is deleted now and
@@ -201,12 +264,14 @@ class AppInitializer {
     debugPrint('SecureStorage unreadable, resetting');
     try {
       try {
-        await _secureStorage.deleteAll();
+        await _bounded(_secureStorage.deleteAll());
       } catch (e) {
         debugPrint('SecureStorage reset failed, deleting its file: $e');
         await Settings.setSecureStorageResetPending(true);
         await _deleteSecureStorageFile();
       }
+      // Empty now, so an entry that reads as absent is absent.
+      SecureStorageHealth.unreadable = false;
       await Settings.setSecureStorageCheckFailures(0);
       await Settings.setSecureStorageCheckStored(false);
       // The credentials are gone; the mark would have Auth read the empty
@@ -217,15 +282,31 @@ class AppInitializer {
     }
   }
 
-  /// With the backup Android restores the file from on its next load.
+  /// With the backup Android restores the file from on its next load. The
+  /// login stored since the reset that deferred this goes with it.
   static Future<void> _deleteSecureStorageFile() async {
     final file = await secureStorageFile();
     for (final f in [File('${file.path}.bak'), file]) {
       if (await f.exists()) await f.delete();
     }
     await Settings.setSecureStorageCheckStored(false);
+    await Settings.setCredentialsStored(false);
   }
 }
 
-/// A read error that recurs on every read of the secure storage's file.
-class _PermanentStorageError implements Exception {}
+/// What a read of the check entry found.
+enum _Finding {
+  readable,
+
+  /// A read error that recurs on every read of the file.
+  permanent,
+
+  /// A read that failed, which a Keystore can do for a while.
+  failed,
+
+  /// The entry reads as absent although it was written.
+  lost,
+
+  /// The entry could not be written; nothing is known.
+  inconclusive,
+}

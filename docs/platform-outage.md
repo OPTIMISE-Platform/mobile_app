@@ -156,6 +156,41 @@ error that recurs on every read (an entry that does not decrypt) resets at
 once; any other failure, also the entry reading as absent after it was
 written, resets after three starts in a row, since a Keystore can fail for a
 while and the plugin answers nothing for every entry when it cannot open the
-file. The main case is a restore from a backup: the manifest leaves
-`allowBackup` at its default, which backs the file up without its Keystore
-key.
+file.
+
+The start waits for the check's read for at most
+`AppInitializer.secureStorageTimeout` (5 s); a cold Keystore can take that
+long. Past it the start goes on, the check runs on in the background, and its
+finding counts when it arrives, as one in time would. A slow read neither
+counts as a failure nor resets. Auth bounds each read of the credentials by
+`Auth.storageReadTimeout` (5 s): the login screen shows, a late answer is
+dropped, and the next call reads again. The reset bounds its `deleteAll` by
+the same 5 s and deletes the file past it.
+
+`SecureStorageHealth` (`lib/shared/secure_storage.dart`) holds what the check
+found for this process: `unreadable` once the entry reads as absent after it
+was written, until the check reset the file; `unknown` while the check runs on
+past its bound. The other stores go through `GuardedSecureStorage`, which waits
+for the check. In either state a read that answers nothing, and every write,
+deletion and `readAll`, throws, so each store takes the path of a read error
+above; a value that does read is used. `ClientCertificates.forgetAllBut`
+deletes nothing then and returns, so a pending account wipe ends. The
+background isolate of the push messages does not see the state.
+
+Backup and device transfer leave out the file, its `.bak`, the key file of the
+plugin, the files of the openidconnect package (`files/openidconnect_secure_storage/`)
+and the box `secure_storage_marks.box` (`res/xml/backup_rules.xml` up to
+Android 11, `res/xml/data_extraction_rules.xml` from Android 12). That box
+holds what describes the file: `Settings.getCredentialsStored()`, whether the
+check entry was written, the failure count and the pending deletion. A start,
+also one of the device controls' engine, moves them there from the settings
+box of an earlier version, and on Android drops them when the file is not
+there. A new device then starts with neither file nor marks: the login screen,
+one login, no reset. `Settings.getSignedOut()` stays in the settings box:
+restored, it only keeps a start from reading credentials that the restore did
+not bring.
+
+A restore applies the rules of the version installed at that moment, so a
+backup an earlier version made restores without the file as well. Only while
+a version without these rules is installed does a restore bring the file
+back; after it the check resets the file as above.

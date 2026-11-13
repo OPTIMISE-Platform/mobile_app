@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and earlier; the same exclusions as data_extraction_rules.xml. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+    <exclude domain="sharedpref" path="FlutterSecureStorage.xml.bak" />
+    <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+    <exclude domain="file" path="openidconnect_secure_storage/" />
+    <exclude domain="root" path="app_flutter/secure_storage_marks.box.hive" />
+    <exclude domain="root" path="app_flutter/secure_storage_marks.box.hivec" />
+    <exclude domain="root" path="app_flutter/secure_storage_marks.box.lock" />
+</full-backup-content>

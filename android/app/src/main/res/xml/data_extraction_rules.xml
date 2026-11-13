@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later. The secure storage file is encrypted with a Keystore
+     key that neither a backup nor a transfer carries, and the marks box
+     describes that file: restored, both stand for a login that cannot be read.
+     The same holds for the files of the openidconnect package before it.
+     Kept in step with backup_rules.xml. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml.bak" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+        <exclude domain="file" path="openidconnect_secure_storage/" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.hive" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.hivec" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.lock" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml" />
+        <exclude domain="sharedpref" path="FlutterSecureStorage.xml.bak" />
+        <exclude domain="sharedpref" path="FlutterSecureKeyStorage.xml" />
+        <exclude domain="file" path="openidconnect_secure_storage/" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.hive" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.hivec" />
+        <exclude domain="root" path="app_flutter/secure_storage_marks.box.lock" />
+    </device-transfer>
+</data-extraction-rules>

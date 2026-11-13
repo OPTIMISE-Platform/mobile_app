@@ -76,6 +76,12 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
   @visibleForTesting
   static Duration logoutTimeout = const Duration(seconds: 5);
 
+  /// Bounds each read of the stored credentials: the Android plugin never
+  /// answers a call that ran into a FileNotFoundException. Past it the read
+  /// counts as failed, and a late answer is dropped.
+  @visibleForTesting
+  static Duration storageReadTimeout = const Duration(seconds: 5);
+
   /// After a failed discovery, the next one waits this long unless the user
   /// starts it.
   static const setupRetryInterval = Duration(seconds: 30);
@@ -278,14 +284,20 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
     String? stored;
     String? migrated;
     try {
-      stored = await _storage.read(key: _credentialsKey);
+      stored = await _storage
+          .read(key: _credentialsKey)
+          .timeout(storageReadTimeout);
       if (stored == null && _credentialsMarked()) {
         // The iOS Keychain answers nothing instead of failing before the
         // first unlock; read as a failed read.
         _logger.w("Stored credentials not readable yet");
         return null;
       }
-      if (stored == null) migrated = await _storage.read(key: _legacyMigratedKey);
+      if (stored == null) {
+        migrated = await _storage
+            .read(key: _legacyMigratedKey)
+            .timeout(storageReadTimeout);
+      }
     } catch (e) {
       _logger.w("Could not read the stored credentials: ${e.runtimeType}");
       return null;

@@ -16,6 +16,7 @@
 
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/auth.dart';
@@ -79,8 +80,8 @@ class MgwService {
 
   // Without resetOnError: on Android every store shares one file, and its
   // reset would delete the other stores' values too.
-  static const _storage = FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true));
+  static const _storage = GuardedSecureStorage(FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true)));
 
   // The one session every gateway shared before pairings had their own; only
   // the migration in MgwStorage still reads them.

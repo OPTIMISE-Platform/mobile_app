@@ -20,9 +20,12 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:mobile_app/app_initializer.dart';
+import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 
 import 'golden_helper.dart';
 
@@ -52,12 +55,14 @@ class _Store extends MapBase<String, String> {
   Object? checkReadError;
   Object? clearError;
   int clears = 0;
+  int reads = 0;
 
   /// Called on each read of the check entry.
   void Function()? onCheckRead;
 
   @override
   String? operator [](Object? key) {
+    reads++;
     if (key == _check) onCheckRead?.call();
     final error = checkReadError;
     if (key == _check && error != null) throw error;
@@ -102,6 +107,7 @@ void main() {
 
   tearDown(() async {
     FlutterSecureStorage.setMockInitialValues({});
+    SecureStorageHealth.resetForTest();
     await dir.delete(recursive: true);
   });
 
@@ -244,6 +250,86 @@ void main() {
     expect(store.data.containsKey(_check), isFalse);
     expect(store.clears, 0);
     expect(Settings.getSecureStorageCheckFailures(), 1);
+  });
+
+  test('the deletion of the file at the next start also drops the mark of a '
+      'login stored since', () async {
+    await established();
+    await Settings.setSecureStorageResetPending(true);
+    await Settings.setCredentialsStored(true);
+
+    await AppInitializer.checkSecureStorage();
+
+    expect(Settings.getCredentialsStored(), isFalse,
+        reason: 'Auth would read the new file as one that failed');
+  });
+
+  group('the marks of the secure storage', () {
+    const oldMarks = {
+      'auth_credentials_stored': 'true',
+      'secure_storage_check_stored': 'true',
+      'secure_storage_check_failures': '2',
+      'secure_storage_reset_pending': 'true',
+    };
+    late Box<String> settingsBox;
+
+    setUp(() async {
+      // As an earlier version left them in the settings box.
+      settingsBox = Hive.box<String>('settings.box');
+      await settingsBox.putAll(oldMarks);
+    });
+
+    tearDown(() async {
+      await settingsBox.deleteAll(oldMarks.keys);
+      await Auth().resetForTest();
+    });
+
+    test('restored without the file are dropped, and the start reads the '
+        'empty store as empty', () async {
+      await AppInitializer.settleSecureStorageMarks(android: true);
+
+      expect(oldMarks.keys.where(settingsBox.containsKey), isEmpty);
+      expect(Settings.getCredentialsStored(), isFalse);
+      expect(Settings.getSecureStorageCheckStored(), isFalse);
+      expect(Settings.getSecureStorageCheckFailures(), 0);
+      expect(Settings.getSecureStorageResetPending(), isFalse);
+
+      await AppInitializer.checkSecureStorage();
+
+      expect(store.data[_check], isNotNull,
+          reason: 'a first start, which writes the entry');
+      expect(Settings.getSecureStorageCheckFailures(), 0);
+      expect(SecureStorageHealth.unreadable, isFalse);
+      expect(store.clears, 0);
+
+      await Auth().init();
+      final reads = store.reads;
+      await expectLater(Auth().getHeaders(), throwsA(isA<AuthException>()));
+
+      expect(Auth().loggedIn, isFalse);
+      expect(store.reads, reads,
+          reason: 'a read that failed would be read again');
+    });
+
+    test('of a file that is there move to their own box', () async {
+      await file.writeAsString('<map/>');
+
+      await AppInitializer.settleSecureStorageMarks(android: true);
+
+      expect(oldMarks.keys.where(settingsBox.containsKey), isEmpty);
+      expect(Settings.getCredentialsStored(), isTrue);
+      expect(Settings.getSecureStorageCheckStored(), isTrue);
+      expect(Settings.getSecureStorageCheckFailures(), 2);
+      expect(Settings.getSecureStorageResetPending(), isTrue);
+    });
+
+    test('move without a file outside Android, which has none', () async {
+      await AppInitializer.settleSecureStorageMarks(android: false);
+
+      expect(oldMarks.keys.where(settingsBox.containsKey), isEmpty);
+      expect(Settings.getCredentialsStored(), isTrue);
+      expect(Settings.getSecureStorageCheckFailures(), 2);
+    });
   });
 
   test('the check does not read the entries of Auth', () {

@@ -32,6 +32,13 @@ class Settings {
   static const _boxName = "settings.box";
   static Box<String>? _box;
 
+  /// The marks that describe the content of the Android secure storage's
+  /// file. In a box of their own, which the manifest's backup rules leave out
+  /// like that file: restored without it, they would describe a file that is
+  /// not there.
+  static const _secureStorageMarksBoxName = "secure_storage_marks.box";
+  static Box<String>? _marks;
+
   static const _themeKey = "theme";
   static const _defaultTheme = "";
   static String _currentThemeValue = "";
@@ -94,6 +101,13 @@ class Settings {
   static const _secureStorageCheckFailuresKey = "secure_storage_check_failures";
   static const _secureStorageResetPendingKey = "secure_storage_reset_pending";
 
+  static const _secureStorageMarkKeys = [
+    _credentialsStoredKey,
+    _secureStorageCheckStoredKey,
+    _secureStorageCheckFailuresKey,
+    _secureStorageResetPendingKey,
+  ];
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -104,6 +118,7 @@ class Settings {
     if (!isInitialized) {
       Hive.init((await getApplicationDocumentsDirectory()).path);
       _box = await Hive.openBox<String>(_boxName);
+      _marks = await Hive.openBox<String>(_secureStorageMarksBoxName);
 
       _setDefaults();
 
@@ -120,6 +135,7 @@ class Settings {
   static clear() async {
     checkInit();
     await _box?.clear();
+    await _marks?.clear();
     _setDefaults();
   }
 
@@ -127,6 +143,8 @@ class Settings {
     if (isInitialized) {
       await _box?.close();
       _box = null;
+      await _marks?.close();
+      _marks = null;
       _currentThemeValue = "";
       _currentThemeColorValue = "";
       _currentDisplayedFractionDigits = 0;
@@ -585,12 +603,12 @@ class Settings {
   /// an error before the first unlock.
   static bool getCredentialsStored() {
     checkInit();
-    return _box!.get(_credentialsStoredKey, defaultValue: "false") == "true";
+    return _marks!.get(_credentialsStoredKey, defaultValue: "false") == "true";
   }
 
   static Future<void> setCredentialsStored(bool value) {
     checkInit();
-    return _box!.put(_credentialsStoredKey, value.toString()).then((v) => _box?.flush());
+    return _marks!.put(_credentialsStoredKey, value.toString()).then((v) => _marks?.flush());
   }
 
   /// Set by every logout before it deletes the credentials, cleared once a
@@ -611,34 +629,55 @@ class Settings {
   /// absent can tell a store that lost it.
   static bool getSecureStorageCheckStored() {
     checkInit();
-    return _box!.get(_secureStorageCheckStoredKey, defaultValue: "false") == "true";
+    return _marks!.get(_secureStorageCheckStoredKey, defaultValue: "false") == "true";
   }
 
   static Future<void> setSecureStorageCheckStored(bool value) {
     checkInit();
-    return _box!.put(_secureStorageCheckStoredKey, value.toString()).then((v) => _box?.flush());
+    return _marks!.put(_secureStorageCheckStoredKey, value.toString()).then((v) => _marks?.flush());
   }
 
   /// Starts in a row whose secure-storage check failed.
   static int getSecureStorageCheckFailures() {
     checkInit();
-    return int.tryParse(_box!.get(_secureStorageCheckFailuresKey) ?? "") ?? 0;
+    return int.tryParse(_marks!.get(_secureStorageCheckFailuresKey) ?? "") ?? 0;
   }
 
   static Future<void> setSecureStorageCheckFailures(int value) {
     checkInit();
-    return _box!.put(_secureStorageCheckFailuresKey, value.toString()).then((v) => _box?.flush());
+    return _marks!.put(_secureStorageCheckFailuresKey, value.toString()).then((v) => _marks?.flush());
   }
 
   /// Whether the secure storage's file is to be deleted at the next start,
   /// before anything loads it.
   static bool getSecureStorageResetPending() {
     checkInit();
-    return _box!.get(_secureStorageResetPendingKey, defaultValue: "false") == "true";
+    return _marks!.get(_secureStorageResetPendingKey, defaultValue: "false") == "true";
   }
 
   static Future<void> setSecureStorageResetPending(bool value) {
     checkInit();
-    return _box!.put(_secureStorageResetPendingKey, value.toString()).then((v) => _box?.flush());
+    return _marks!.put(_secureStorageResetPendingKey, value.toString()).then((v) => _marks?.flush());
+  }
+
+  /// Moves the marks of the secure storage that an earlier version kept in
+  /// the settings box into their own box. A value found there wins: it was
+  /// put there after this box was filled, by an earlier version that ran
+  /// since or by a restore of its backup. Flushed before the delete.
+  static Future<void> moveSecureStorageMarks() async {
+    checkInit();
+    final present = _secureStorageMarkKeys.where(_box!.containsKey).toList();
+    if (present.isEmpty) return;
+    await _marks!.putAll({for (final key in present) key: _box!.get(key)!});
+    await _marks!.flush();
+    await _box!.deleteAll(present);
+    await _box!.flush();
+  }
+
+  /// Drops every mark of the secure storage, as for a file that is not there.
+  static Future<void> clearSecureStorageMarks() async {
+    checkInit();
+    await _marks!.deleteAll(_secureStorageMarkKeys);
+    await _marks!.flush();
   }
 }

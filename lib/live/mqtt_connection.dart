@@ -21,6 +21,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/models/mgw.dart';
 import 'package:mobile_app/services/mgw/gateway_host.dart';
@@ -268,9 +269,9 @@ class LiveConnection {
 
 // Without resetOnError: on Android every store shares one file, and its reset
 // would delete the other stores' values too.
-const _liveSecure = FlutterSecureStorage(
+const _liveSecure = GuardedSecureStorage(FlutterSecureStorage(
   aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
+));
 
 const _installIdKey = 'live-mqtt-install-id';
 

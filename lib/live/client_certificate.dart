@@ -20,6 +20,7 @@ import 'package:basic_utils/basic_utils.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/live/mqtt_connection.dart';
 import 'package:mobile_app/services/auth.dart';
@@ -46,9 +47,9 @@ class ClientCertificates {
 
   // Without resetOnError: on Android every store shares one file, and its
   // reset would delete the other stores' values too.
-  static const _secure = FlutterSecureStorage(
+  static const _secure = GuardedSecureStorage(FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  ));
 
   static const _expiration = '2160h';
 
@@ -101,9 +102,13 @@ class ClientCertificates {
   /// Deletes the key and certificate of every account but [keep]. What an
   /// account switch wipes: the previous account is not known to the wipe, so
   /// it is everything that is not the current one. Does nothing without
-  /// [keep].
+  /// [keep]. Also nothing while the secure storage cannot be trusted, so that
+  /// a pending wipe ends: the certificates go with the check's reset of the
+  /// file, or with the next account switch.
   static Future<void> forgetAllBut(String? keep) async {
     if (keep == null || keep.isEmpty) return;
+    await SecureStorageHealth.checked;
+    if (!SecureStorageHealth.trusted) return;
     await _mutex.protect(() async {
       final all = await _secure.readAll();
       Object? failure;

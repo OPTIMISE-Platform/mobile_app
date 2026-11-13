@@ -24,6 +24,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mobile_app/shared/secure_storage.dart';
 import 'package:logger/logger.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/notification.dart' as app;
@@ -49,9 +50,9 @@ mixin NotificationMixin on ChangeNotifier {
 
   // Without resetOnError: on Android every store shares one file, and its
   // reset would delete the other stores' values too.
-  static const _storage = FlutterSecureStorage(
+  static const _storage = GuardedSecureStorage(FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-  );
+  ));
   static final _messageMutex = Mutex();
   final _fcmTokenMutex = Mutex();
   final _notificationsMutex = Mutex();

@@ -78,6 +78,8 @@ Future<void> controlsMain() async {
 Future<void> _prepareControls() async {
   await dotenv.load(fileName: '.env');
   await Settings.init();
+  // Before Auth reads the marks: after an update this engine can start first.
+  await AppInitializer.settleSecureStorageMarks(android: Platform.isAndroid);
   // Not AppInitializer.openCache, which also finishes a pending account wipe:
   // that is a write, and the app does it on its own start. An instance the
   // app's engine in this process opened is shared.
