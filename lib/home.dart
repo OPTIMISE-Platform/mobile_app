@@ -25,10 +25,10 @@ import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 import 'package:mobile_app/widgets/shared/toast.dart';
 import 'package:mobile_app/widgets/tabs/device_tabs.dart';
-import 'package:openidconnect_platform_interface/openidconnect_platform_interface.dart';
 import 'package:provider/provider.dart';
 
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/exceptions/auth_exception.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/widgets/shared/app_bar.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -75,14 +75,12 @@ class _HomeState extends State<Home> {
       unawaited(CacheHelper.refreshCache()
           .then((_) => AppState().pushRefresh())
           .catchError((_) => Toast.showToastNoContext("Could not refresh cache")));
-    } on AuthenticationException catch (e) {
-      if (e.errorMessage != null && e.errorMessage!.contains("Invalid user credentials")) {
-        Toast.showToastNoContext("Invalid user credentials");
-        setState(() {});
-      } else {
-        rethrow;
-      }
     } catch (e, s) {
+      if (e is AuthException && e.message == Auth.invalidCredentials) {
+        Toast.showToastNoContext(Auth.invalidCredentials);
+        setState(() {});
+        return;
+      }
       ErrorReporter.log("Login failed", e, s);
       Toast.showToastNoContext(e.toString());
     }

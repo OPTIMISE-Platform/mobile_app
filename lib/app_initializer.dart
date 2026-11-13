@@ -18,6 +18,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
@@ -53,7 +54,8 @@ class AppInitializer {
     // EncryptedSharedPreferences crypto init, so it lives here (deferred, behind
     // the first frame) rather than in run(). Start it now but only Auth waits on
     // it — Isar/Firebase don't touch secure storage, so they overlap it freely.
-    final secureStorageReady = _clearCorruptedSecureStorage();
+    final secureStorageReady =
+        Platform.isAndroid ? checkSecureStorage() : Future<void>.value();
 
     // Isar first: Auth.init's early trust of a stored identity mounts the
     // tabs, and their first loads must find the Isar cache open — otherwise
@@ -104,30 +106,126 @@ class AppInitializer {
     debugPrint('$label init took ${DateTime.now().difference(start)}');
   }
 
-  static Future<void> _clearCorruptedSecureStorage() async {
-    if (!Platform.isAndroid) return;
-    // Canary read: only reset the encrypted store when it is actually corrupted
-    // (a known Android EncryptedSharedPreferences bug), instead of wiping it on
-    // every launch. The unconditional wipe regenerated the encryption key and
-    // logged the user out each start — ~900ms of Keystore work. A healthy read
-    // here keeps the key + saved login and warms the crypto for Auth's reads.
-    const canary = FlutterSecureStorage(
-      aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    );
+  /// The entry [checkSecureStorage] reads; nothing else uses it.
+  static const secureStorageCheckKey = 'secure_storage_check';
+
+  /// Starts in a row whose check failed, after which the store is reset.
+  static const secureStorageFailureLimit = 3;
+
+  /// On Android flutter_secure_storage keeps every store in this one file.
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  /// Messages of errors that recur on every read of the same file, found in
+  /// the Java stack trace the plugin sends as the details: a key or value that
+  /// does not match the keyset, or a Keystore key that is gone for good.
+  static const _permanentErrors = [
+    'Could not decrypt value',
+    'Could not decrypt key',
+    'Could not encrypt key',
+    'AEADBadTagException',
+    'KeyPermanentlyInvalidatedException',
+  ];
+
+  /// The file of the Android secure storage.
+  @visibleForTesting
+  static Future<File> Function() secureStorageFile = () async {
+    final dir = await getApplicationSupportDirectory();
+    return File('${dir.parent.path}/shared_prefs/FlutterSecureStorage.xml');
+  };
+
+  /// Resets the Android secure storage, which holds the login, only once it
+  /// is known to stay unreadable: at once for an error a retry cannot change,
+  /// otherwise after [secureStorageFailureLimit] starts in a row whose read
+  /// failed, as a Keystore can fail for a while. A readable start clears the
+  /// count. Never throws: Auth waits on it.
+  @visibleForTesting
+  static Future<void> checkSecureStorage() async {
     try {
-      await canary.read(key: Auth.encKeyName);
-      return; // readable → not corrupted → keep it
+      if (Settings.getSecureStorageResetPending()) {
+        await _deleteSecureStorageFile();
+        await Settings.setSecureStorageResetPending(false);
+      }
+      if (await _secureStorageReadable()) {
+        if (Settings.getSecureStorageCheckFailures() != 0) {
+          await Settings.setSecureStorageCheckFailures(0);
+        }
+        return;
+      }
+    } on _PermanentStorageError {
+      return _resetSecureStorage();
     } catch (e) {
-      debugPrint('SecureStorage corrupted, resetting: $e');
+      debugPrint('SecureStorage check failed: $e');
+      return;
     }
     try {
-      final dir = await getApplicationSupportDirectory();
-      final file = File('${dir.parent.path}/shared_prefs/FlutterSecureStorage.xml');
-      if (await file.exists()) {
-        await file.delete();
+      final failures = Settings.getSecureStorageCheckFailures() + 1;
+      if (failures < secureStorageFailureLimit) {
+        await Settings.setSecureStorageCheckFailures(failures);
+        return;
       }
+    } catch (e) {
+      debugPrint('SecureStorage check failed: $e');
+      return;
+    }
+    await _resetSecureStorage();
+  }
+
+  /// False for a read that failed, also for the check entry reading as absent
+  /// once written: the plugin answers nothing for every entry when it cannot
+  /// open the encrypted file, as after a restore without its Keystore key.
+  static Future<bool> _secureStorageReadable() async {
+    final String? value;
+    try {
+      value = await _secureStorage.read(key: secureStorageCheckKey);
+    } catch (e) {
+      debugPrint('SecureStorage read failed: $e');
+      if (e is PlatformException &&
+          _permanentErrors.any('${e.message}\n${e.details}'.contains)) {
+        throw _PermanentStorageError();
+      }
+      return false;
+    }
+    if (value != null) return true;
+    if (Settings.getSecureStorageCheckStored()) return false;
+    await _secureStorage.write(key: secureStorageCheckKey, value: '1');
+    await Settings.setSecureStorageCheckStored(true);
+    return true;
+  }
+
+  /// Through the plugin, which also drops its loaded copy of the file. Its
+  /// clear decrypts every entry; where that fails the file is deleted now and
+  /// at the next start, as this run's loaded copy goes back with any write.
+  static Future<void> _resetSecureStorage() async {
+    debugPrint('SecureStorage unreadable, resetting');
+    try {
+      try {
+        await _secureStorage.deleteAll();
+      } catch (e) {
+        debugPrint('SecureStorage reset failed, deleting its file: $e');
+        await Settings.setSecureStorageResetPending(true);
+        await _deleteSecureStorageFile();
+      }
+      await Settings.setSecureStorageCheckFailures(0);
+      await Settings.setSecureStorageCheckStored(false);
+      // The credentials are gone; the mark would have Auth read the empty
+      // store as one that failed.
+      await Settings.setCredentialsStored(false);
     } catch (e) {
       debugPrint('SecureStorage reset failed: $e');
     }
   }
+
+  /// With the backup Android restores the file from on its next load.
+  static Future<void> _deleteSecureStorageFile() async {
+    final file = await secureStorageFile();
+    for (final f in [File('${file.path}.bak'), file]) {
+      if (await f.exists()) await f.delete();
+    }
+    await Settings.setSecureStorageCheckStored(false);
+  }
 }
+
+/// A read error that recurs on every read of the secure storage's file.
+class _PermanentStorageError implements Exception {}

@@ -15,15 +15,16 @@
  */
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/app_state.dart';
@@ -35,15 +36,17 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mutex/mutex.dart';
-import 'package:openidconnect/openidconnect.dart';
+import 'package:oauth2/oauth2.dart' as oauth2;
 import 'package:mobile_app/services/cache_helper.dart';
 import 'package:mobile_app/live/client_certificate.dart';
 import 'package:mobile_app/live/live_values.dart';
 
-class Auth extends ChangeNotifier {
+/// Signs in with the password grant and keeps the session until Keycloak
+/// refuses its refresh token with `invalid_grant`.
+class Auth extends ChangeNotifier with WidgetsBindingObserver {
   static final _instance = Auth._internal();
 
-  /// Set only by golden/unit tests, to skip the real OIDC client entirely.
+  /// Set only by golden/unit tests, to skip the auth server entirely.
   @visibleForTesting
   static Future<Map<String, String>> Function()? headersOverride;
 
@@ -55,26 +58,26 @@ class Auth extends ChangeNotifier {
     ApiAvailableService.platformUnreachable.addListener(_onReachabilityChanged);
   }
 
-  /// Bounds the client setup: OpenIdConnectClient.create fetches the discovery
-  /// document with retries and no timeout of its own.
+  /// Bounds the discovery a background refresh needs for credentials stored
+  /// without their token endpoint.
   @visibleForTesting
   static Duration clientSetupTimeout = const Duration(seconds: 5);
 
-  /// Bounds a token refresh, which runs the same unbounded requests.
+  /// Bounds a token refresh.
   @visibleForTesting
   static Duration tokenRefreshTimeout = const Duration(seconds: 5);
 
-  /// Bounds the setup and refresh of a login the user started, in place of
-  /// [clientSetupTimeout] and [tokenRefreshTimeout].
+  /// Bounds the discovery, the refresh and the password grant of a login the
+  /// user started, in place of [clientSetupTimeout] and [tokenRefreshTimeout].
   @visibleForTesting
   static Duration loginTimeout = const Duration(seconds: 30);
 
-  /// Bounds the token revocation of a logout.
+  /// Bounds the discovery and token revocation of a logout.
   @visibleForTesting
   static Duration logoutTimeout = const Duration(seconds: 5);
 
-  /// After a failed client setup, the next one waits this long unless the
-  /// user starts it.
+  /// After a failed discovery, the next one waits this long unless the user
+  /// starts it.
   static const setupRetryInterval = Duration(seconds: 30);
 
   static final _stopwatch = Stopwatch()..start();
@@ -84,68 +87,108 @@ class Auth extends ChangeNotifier {
   @visibleForTesting
   static Duration Function() monotonicNow = _elapsed;
 
-  /// Replaces OpenIdConnectClient.create in the client setup.
+  /// Makes the client of each request to the auth server.
   @visibleForTesting
-  static Future<OpenIdConnectClient> Function()? createClientOverride;
+  static http.Client Function() httpClient = http.Client.new;
 
-  Duration? _setupFailedAt;
+  /// The toast text of a login Keycloak refused for its credentials.
+  static const invalidCredentials = "Invalid user credentials";
 
-  /// The client setup still running, also after its caller gave up on it. A
-  /// setup that starts meanwhile waits on it instead of starting a second.
-  _Setup? _runningSetup;
-
-  /// Set by every logout, cleared by a completed login with credentials.
-  /// While set, an identity in the storage or in a new client is not trusted:
-  /// an abandoned refresh can still store the signed-out account's identity.
-  bool _signedOut = false;
-
-  /// Counts the completed logins with credentials.
-  int _logins = 0;
-
-  /// Advanced by every login and logout. An operation abandoned on its
-  /// timeout compares it to tell whether the session it ran for still exists.
-  int _sessionChanges = 0;
-
+  // Without resetOnError, as every store of the app: on Android they share
+  // one file, and a reset after a read error would delete these credentials.
   static const _storage = FlutterSecureStorage(
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device),
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      resetOnError: true,),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
+  static const _credentialsKey = 'auth_credentials';
+
+  /// Set once the identity of the openidconnect package is moved or known to
+  /// be absent; it is never read again after.
+  static const _legacyMigratedKey = 'auth_legacy_migrated';
+
+  /// No longer written, and deleted with the previous identity.
   static const encKeyName = 'openid_encryption_key';
 
-  Future<String> _getOrCreateEncryptionKey() async {
-    final existing = await _storage.read(key: encKeyName);
-    if (existing != null) return existing;
+  /// The storage keys of the credentials and of the migration mark.
+  @visibleForTesting
+  static const storageKeys = (credentials: _credentialsKey, legacyMigrated: _legacyMigratedKey);
 
-    const chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
-    final rnd = Random.secure();
-    final newKey = List.generate(32, (_) => chars[rnd.nextInt(chars.length)]).join();
-    await _storage.write(key: encKeyName, value: newKey);
-    return newKey;
-  }
+  /// The openidconnect package's storage, read directly: its own
+  /// OpenIdIdentity.load clears the identity on any read error.
+  static const _legacyStorage =
+      MethodChannel('plugins.concerti.io/openidconnect_secure_storage');
+  static const _legacyKeys = [
+    'ACCESS_TOKEN',
+    'ID_TOKEN',
+    'REFRESH_TOKEN',
+    'EXPIRES_ON',
+    'TOKEN_TYPE',
+    'STATE',
+  ];
+
+  static const _scopes = ['offline_access', 'openid', 'profile', 'email'];
+
+  static String get _clientId =>
+      dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app';
 
   static final _logger = Logger(
     printer: SimplePrinter(),
   );
   final _m = Mutex();
-  final _clientSetupMutex = Mutex();
 
-  /// Serializes [_rememberAccount]: the login and the OIDC event it raises
-  /// both report the new identity, and two switches at once would each wipe.
+  /// Serializes the reads of the stored credentials, and the migration.
+  final _loadMutex = Mutex();
+
+  /// Orders the writes of the credentials against their deletion.
+  final _storeMutex = Mutex();
+
+  /// Serializes [_rememberAccount]: two switches at once would each wipe.
   final _accountMutex = Mutex();
-
-  /// The listener of the current client's events, cancelled when the client
-  /// is dropped: its late events would act on the next client.
-  StreamSubscription<AuthEvent>? _clientEvents;
 
   static DateTime? _lastOnlineCheck;
   static const Duration _checkCacheDuration = Duration(seconds: 30);
   static bool _checkCache = false;
 
-  OpenIdConnectClient? _client;
+  oauth2.Credentials? _credentials;
 
   bool loggedIn = false;
+
+  /// Whether the storage answered a read of the credentials. A read that
+  /// failed, as on an iPhone before its first unlock, leaves it false and
+  /// deletes nothing, so the next call reads again.
+  bool _loaded = false;
+
+  /// Whether the last read of the credentials failed; only then does a call
+  /// without a session read again.
+  bool _readFailed = false;
+
+  /// Set by every logout, cleared by a completed login with credentials.
+  /// While set, the storage is not read: a deletion that failed would sign
+  /// the logged-out account back in. [Settings.getSignedOut] does the same
+  /// across starts.
+  bool _signedOut = false;
+
+  /// Advanced by every login and logout. An operation that ends late compares
+  /// it to tell whether the session it ran for still exists.
+  int _sessionChanges = 0;
+
+  /// Discovery results by discovery URL.
+  final _discoveries = <String, _Discovery>{};
+  _RunningDiscovery? _runningDiscovery;
+  Duration? _discoveryFailedAt;
+
+  /// The cleanup of the last logout while it runs; a login waits for it.
+  Future<void>? _cleaning;
+
+  /// The retry of a pending account wipe while it runs.
+  Future<void>? _wipeRetry;
+
+  /// The refresh request still running, also after its caller gave up on it.
+  /// A refresh of the same credentials waits on it instead of sending their
+  /// refresh token a second time, unless it is older than [loginTimeout].
+  _Refresh? _refreshing;
+
+  bool _observingLifecycle = false;
 
   /// From the current settings: the auth server can be changed at runtime.
   String get discoveryUrl =>
@@ -153,309 +196,494 @@ class Auth extends ChangeNotifier {
 
   void _onReachabilityChanged() {
     if (!ApiAvailableService.isPlatformUnreachable) {
-      // Set up and check again right away rather than sending a stored token
-      // that may have expired meanwhile.
-      _setupFailedAt = null;
+      // Discover and check again right away rather than sending a stored
+      // token that may have expired meanwhile.
+      _discoveryFailedAt = null;
       _lastOnlineCheck = null;
     }
     notifyListeners();
   }
 
-  Future<void> init() => _init(retryNow: true, bound: clientSetupTimeout);
-
-  /// [retryNow] false leaves the setup alone within [setupRetryInterval] of a
-  /// failed one. [bound] limits the wait for the setup, not the setup itself.
-  Future<void> _init({required bool retryNow, required Duration bound}) async {
-    // Trust a stored identity before the client setup: the OIDC discovery in
-    // OpenIdConnectClient.create is a network round trip that held the login
-    // spinner on every app start. The offline fallback below has always
-    // trusted the stored token when the setup fails; trusting it while the
-    // setup is still running is the same assumption, just earlier. Backend
-    // calls still wait for the real client via getHeaders() -> refreshToken()
-    // -> init(), which blocks on the setup mutex.
-    if (!isInitialized && !loggedIn && !_signedOut) {
-      try {
-        final identity = await OpenIdIdentity.load();
-        if (identity != null) {
-          await _rememberAccount(identity);
-          loggedIn = true;
-          isInitialized = true;
-          notifyListeners();
-        }
-      } catch (_) {
-        // unreadable storage — leave the decision to the regular setup
-      }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A start in the background on a locked iPhone may not have read the
+    // credentials yet.
+    if (state == AppLifecycleState.resumed && _readFailed) {
+      unawaited(_ensureLoaded());
     }
-    await _clientSetupMutex.protect(() async {
-      if (_initialized) return;
-      final failedAt = _setupFailedAt;
-      if (!retryNow &&
-          failedAt != null &&
-          monotonicNow() - failedAt < setupRetryInterval) {
-        return;
-      }
-      final epoch = ApiAvailableService.reachabilityEpoch;
-      // A setup can hang for good (a connection that never answers), so only
-      // a recent one for the current URL is joined.
-      final running = _runningSetup;
-      final setup = running != null &&
-              !running.handled &&
-              running.url == discoveryUrl &&
-              monotonicNow() - running.startedAt < loginTimeout
-          ? running
-          : await _startSetup();
-      var timedOut = false;
-      try {
-        final start = DateTime.now();
-        // The mutex is released on the timeout; the setup goes on and is
-        // settled when it ends (_settleSetup).
-        final client = await setup.client.timeout(bound, onTimeout: () {
-          timedOut = true;
-          throw TimeoutException("Client setup", bound);
-        });
-        setup.handled = true;
-        _logger.d("OpenIdConnectClient.create ${DateTime.now().difference(start)}");
-        await _adoptClient(client);
-      } catch (e) {
-        // Offline or server unreachable — fall back to cached token
-        _logger.d("Client setup failed (offline?): $e");
-        if (!timedOut) setup.handled = true;
-        _setupFailedAt = monotonicNow();
-        // A slow or failing auth server alone is no outage; a transport
-        // error is.
-        if (timedOut || e is TimeoutException || e is HttpException) {
-          unawaited(
-              ApiAvailableService().confirmUnreachable(observedAt: epoch));
-        } else if (e is IOException) {
-          ApiAvailableService().markPlatformUnreachable(observedAt: epoch);
-        }
-        if (!loggedIn && !_signedOut) {
-          final token = await OpenIdIdentity.load();
-          if (token != null) {
-            _logger.d("Using token from storage, assuming still valid");
-            await _rememberAccount(token);
-            loggedIn = true;
-            notifyListeners();
-          }
-        }
-      }
-    });
+  }
+
+  /// Reads the stored credentials; no request to the auth server.
+  Future<void> init() async {
+    if (!_observingLifecycle) {
+      _observingLifecycle = true;
+      WidgetsBinding.instance.addObserver(this);
+    }
+    await _ensureLoaded();
     isInitialized = true;
     notifyListeners();
   }
 
-  bool get _initialized => _client != null;
-
-  Future<_Setup> _startSetup() async {
-    final sessions = _sessionChanges;
-    OpenIdIdentity? before;
-    try {
-      before = await OpenIdIdentity.load();
-    } catch (_) {}
-    final setup = _Setup(
-        _createClient(), sessions, before, discoveryUrl, monotonicNow());
-    _runningSetup = setup;
-    unawaited(_settleSetup(setup));
-    return setup;
-  }
-
-  /// Takes [client] as the session's client, as a setup that ended in time.
-  Future<void> _adoptClient(OpenIdConnectClient client) async {
-    _client = client;
-    _setupFailedAt = null;
-    if (_signedOut) {
-      // No login since the logout stored what the client found.
-      try {
-        await client.clearIdentity();
-        await OpenIdIdentity.clear();
-      } catch (e) {
-        _logger.w("Could not clear identity: $e");
-      }
-    }
-    // The auth server answered, so an outage mark may be stale; checked
-    // before the session's first requests would be refused for it.
-    if (ApiAvailableService.isPlatformUnreachable) {
-      await ApiAvailableService().recheckPlatform();
-    }
-    await _rememberAccount(_client?.identity);
-    loggedIn = _client?.identity != null;
-    notifyListeners();
-    if (_clientEvents == null && _client != null) {
-      _clientEvents = _client!.changes.listen(_onClientEvent);
-    }
-  }
-
-  /// Runs once [setup] ends. A client that no caller took in time is adopted
-  /// while the session it started in still has none, and disposed of
-  /// otherwise.
-  Future<void> _settleSetup(_Setup setup) async {
-    OpenIdConnectClient? client;
-    try {
-      client = await setup.client;
-    } catch (_) {}
-    final discarded = await _clientSetupMutex.protect(() async {
-      if (identical(_runningSetup, setup)) _runningSetup = null;
-      if (setup.handled) return false;
-      setup.handled = true;
-      if (client != null &&
-          _client == null &&
-          _sessionChanges == setup.sessions) {
-        _logger.d("Adopting a client set up late");
-        await _adoptClient(client);
-        return false;
-      }
-      client?.dispose();
-      return true;
+  Future<void> _ensureLoaded() async {
+    if (_loaded || _signedOut || _credentials != null) return;
+    await _loadMutex.protect(() async {
+      if (_loaded || _signedOut || _credentials != null) return;
+      final sessions = _sessionChanges;
+      final credentials = await _readCredentials(sessions);
+      _readFailed = !_loaded;
+      if (credentials == null || _sessionChanges != sessions) return;
+      _credentials = credentials;
+      await _rememberAccount(_subjectOf(credentials));
+      if (_sessionChanges != sessions) return;
+      loggedIn = true;
+      notifyListeners();
     });
-    // Outside the setup mutex: the reconcile takes _m, which is taken first
-    // everywhere else.
-    if (discarded) {
-      _afterAbandoned(Future.value(), setup.sessions, setup.before);
+  }
+
+  /// The stored credentials, or the openidconnect package's identity moved
+  /// over when there are none. Sets [_loaded] once the storage answered.
+  Future<oauth2.Credentials?> _readCredentials(int sessions) async {
+    if (_signedOutMarked()) {
+      // Neither stored nor previous credentials sign in after a logout whose
+      // deletion failed or did not take; it is tried again instead.
+      _loaded = true;
+      unawaited(_deleteStored(sessions));
+      return null;
     }
-  }
-
-  Future<OpenIdConnectClient> _createClient() async {
-    if (createClientOverride != null) return createClientOverride!();
-    final encKey = await _getOrCreateEncryptionKey();
-    return OpenIdConnectClient.create(
-      discoveryDocumentUrl: discoveryUrl,
-      clientId: dotenv.env['KEYCLOAK_CLIENTID'] ?? 'optimise_mobile_app',
-      encryptionKey: encKey,
-      redirectUrl: Settings.getKeycloakRedirect() ?? "https://localhost",
-      scopes: [
-        OpenIdConnectClient.OFFLINE_ACCESS_SCOPE,
-        ...OpenIdConnectClient.DEFAULT_SCOPES
-      ],
-      autoRefresh: false,
-    );
-  }
-
-  /// Drops [client] like an offline logout does, without touching the
-  /// session: its late events must not act on the next client.
-  Future<void> _abandonClient(OpenIdConnectClient client) async {
-    if (!identical(_client, client)) return;
-    _client = null;
-    _setupFailedAt = monotonicNow();
-    await _clientEvents?.cancel();
-    _clientEvents = null;
-  }
-
-  /// An operation abandoned on its timeout can still save a refreshed
-  /// identity or clear the stored one when it ends. Once [settled] completes,
-  /// the stored identity is made to match the session again. [before] is the
-  /// identity the operation started from.
-  void _afterAbandoned(
-      Future<void> settled, int sessions, OpenIdIdentity? before) {
-    unawaited(settled
-        .catchError((Object e) => _logger.d("Abandoned auth call failed: $e"))
-        .then((_) => _m.protect(() async {
-              try {
-                await _reconcileStoredIdentity(sessions, before);
-              } catch (e) {
-                _logger.w("Could not restore the stored identity: $e");
-              }
-            })));
-  }
-
-  Future<void> _reconcileStoredIdentity(
-      int sessions, OpenIdIdentity? before) async {
-    final current = _client?.identity;
-    if (_sessionChanges != sessions) {
-      // A login or logout came after: what the late call stored is not this
-      // session's.
-      if (current != null) {
-        await current.save();
-      } else if (!loggedIn) {
-        await OpenIdIdentity.clear();
+    String? stored;
+    String? migrated;
+    try {
+      stored = await _storage.read(key: _credentialsKey);
+      if (stored == null && _credentialsMarked()) {
+        // The iOS Keychain answers nothing instead of failing before the
+        // first unlock; read as a failed read.
+        _logger.w("Stored credentials not readable yet");
+        return null;
       }
-      return;
+      if (stored == null) migrated = await _storage.read(key: _legacyMigratedKey);
+    } catch (e) {
+      _logger.w("Could not read the stored credentials: ${e.runtimeType}");
+      return null;
     }
-    // Same session: a refreshed identity it stored is kept, one it cleared on
-    // a failure is put back.
-    if (!loggedIn || await OpenIdIdentity.load() != null) return;
-    await (current ?? before)?.save();
+    _loaded = stored != null || migrated != null;
+    if (stored != null) {
+      if (!_credentialsMarked()) {
+        unawaited(_storeMutex.protect(() async {
+          if (_sessionChanges == sessions) await _markStored(true);
+        }));
+      }
+      return _parse(stored);
+    }
+    if (migrated != null) return null;
+    return _migrateLegacy(sessions);
   }
 
-  /// [OpenIdConnectClient.refresh], bounded by [bound]. On the timeout the
-  /// client is abandoned, so its late result reaches neither the session nor
-  /// the next client.
-  Future<bool> _refreshBounded(
-      OpenIdConnectClient client, Duration bound) async {
-    final epoch = ApiAvailableService.reachabilityEpoch;
-    final sessions = _sessionChanges;
-    final before = client.identity;
-    final pending = client.refresh();
-    var timedOut = false;
-    final ok = await pending.timeout(bound, onTimeout: () {
-      timedOut = true;
+  static oauth2.Credentials? _parse(String json) {
+    try {
+      return oauth2.Credentials.fromJson(json);
+    } on FormatException {
+      // Its message holds the tokens.
+      _logger.w("Stored credentials are not readable");
+      return null;
+    }
+  }
+
+  Future<oauth2.Credentials?> _migrateLegacy(int sessions) async {
+    final values = <String, String?>{};
+    try {
+      await _legacyStorage.invokeMethod<void>('initialize');
+      for (final key in const ['ACCESS_TOKEN', 'ID_TOKEN', 'REFRESH_TOKEN', 'EXPIRES_ON']) {
+        values[key] = await _legacyStorage.invokeMethod<String>('read', {'key': key});
+      }
+    } on MissingPluginException {
+      // No plugin, so nothing it stored.
+    } catch (e) {
+      _logger.w("Could not read the previous identity: ${e.runtimeType}");
+      return null;
+    }
+    _loaded = true;
+    final accessToken = values['ACCESS_TOKEN'];
+    final idToken = values['ID_TOKEN'];
+    if (accessToken == null || idToken == null) {
+      unawaited(_retireLegacy());
+      return null;
+    }
+    // Without its token endpoint unless a discovery has run: the first
+    // refresh discovers it, and the migration does not wait for the network.
+    final credentials = oauth2.Credentials(
+      accessToken,
+      refreshToken: values['REFRESH_TOKEN'],
+      idToken: idToken,
+      tokenEndpoint: _discoveries[discoveryUrl]?.tokenEndpoint,
+      expiration: DateTime.fromMillisecondsSinceEpoch(
+          int.tryParse(values['EXPIRES_ON'] ?? '') ?? 0),
+    );
+    // The previous values go only once the new ones are stored; until then
+    // the next start moves them again.
+    if (await _store(credentials, sessions)) unawaited(_retireLegacy());
+    return credentials;
+  }
+
+  /// Marks the previous identity as moved, then deletes it. Best effort:
+  /// once marked it is never read again.
+  Future<void> _retireLegacy() async {
+    try {
+      await _storage.write(key: _legacyMigratedKey, value: '1');
+    } catch (e) {
+      _logger.w("Could not mark the previous identity as moved: ${e.runtimeType}");
+    }
+    try {
+      await _legacyStorage.invokeMethod<void>('initialize');
+      for (final key in _legacyKeys) {
+        await _legacyStorage.invokeMethod<void>('delete', {'key': key});
+      }
+    } on MissingPluginException {
+      // Nothing stored there.
+    } catch (e) {
+      _logger.w("Could not delete the previous identity: ${e.runtimeType}");
+    }
+    try {
+      await _storage.delete(key: encKeyName);
+    } catch (e) {
+      _logger.w("Could not delete the previous encryption key: ${e.runtimeType}");
+    }
+  }
+
+  /// Stores [credentials] unless the session changed since [sessions].
+  Future<bool> _store(oauth2.Credentials credentials, int sessions) =>
+      _storeMutex.protect(() async {
+        if (_sessionChanges != sessions) return false;
+        try {
+          await _storage.write(key: _credentialsKey, value: credentials.toJson());
+        } catch (e) {
+          _logger.w("Could not store the credentials: ${e.runtimeType}");
+          return false;
+        }
+        await _markStored(true);
+        return true;
+      });
+
+  /// Deletes the stored and the previous credentials, unless the session
+  /// changed since [sessions] when given.
+  Future<void> _deleteStored([int? sessions]) async {
+    var deleting = true;
+    await _storeMutex.protect(() async {
+      if (sessions != null && _sessionChanges != sessions) {
+        deleting = false;
+        return;
+      }
+      try {
+        await _storage.delete(key: _credentialsKey);
+      } catch (e) {
+        _logger.w("Could not delete the stored credentials: ${e.runtimeType}");
+        return;
+      }
+      await _markStored(false);
+    });
+    if (deleting) await _retireLegacy();
+  }
+
+  /// Whether credentials were stored and not deleted since, as recorded in
+  /// [Settings]; false when that cannot be read.
+  static bool _credentialsMarked() {
+    try {
+      return Settings.getCredentialsStored();
+    } catch (_) {
       return false;
+    }
+  }
+
+  /// [Settings.getSignedOut]; false when that cannot be read.
+  static bool _signedOutMarked() {
+    try {
+      return Settings.getSignedOut();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> _markSignedOut(bool signedOut) async {
+    try {
+      await Settings.setSignedOut(signedOut);
+    } catch (e) {
+      _logger.w("Could not record whether the account signed out: ${e.runtimeType}");
+    }
+  }
+
+  static Future<void> _markStored(bool stored) async {
+    try {
+      await Settings.setCredentialsStored(stored);
+    } catch (e) {
+      _logger.w("Could not record whether credentials are stored: ${e.runtimeType}");
+    }
+  }
+
+  /// The discovery document of the current URL, fetched at most once at a
+  /// time. [retryNow] false leaves it alone within [setupRetryInterval] of a
+  /// failed one. [bound] limits the wait, not the request.
+  Future<_Discovery?> _discover(
+      {required bool retryNow, required Duration bound}) async {
+    final url = discoveryUrl;
+    final known = _discoveries[url];
+    if (known != null) return known;
+    final failedAt = _discoveryFailedAt;
+    if (!retryNow &&
+        failedAt != null &&
+        monotonicNow() - failedAt < setupRetryInterval) {
+      return null;
+    }
+    final epoch = ApiAvailableService.reachabilityEpoch;
+    // A request can hang for good, so only a recent one for this URL is
+    // joined.
+    final running = _runningDiscovery;
+    final discovery = running != null &&
+            running.url == url &&
+            monotonicNow() - running.startedAt < loginTimeout
+        ? running
+        : _startDiscovery(url);
+    try {
+      final result = await discovery.result.timeout(bound);
+      _discoveryFailedAt = null;
+      // The auth server answered, so an outage mark may be stale; checked
+      // before the session's first requests would be refused for it.
+      if (ApiAvailableService.isPlatformUnreachable) {
+        await ApiAvailableService().recheckPlatform();
+      }
+      return result;
+    } catch (e) {
+      _logger.d("Discovery failed: ${_describe(e)}");
+      _discoveryFailedAt = monotonicNow();
+      _noteUnanswered(e, epoch);
+      return null;
+    }
+  }
+
+  _RunningDiscovery _startDiscovery(String url) {
+    final running = _RunningDiscovery(_fetchDiscovery(url), url, monotonicNow());
+    _runningDiscovery = running;
+    unawaited(running.result
+        .then<void>((d) => _discoveries[url] = d, onError: (Object _) {})
+        .whenComplete(() {
+      if (identical(_runningDiscovery, running)) _runningDiscovery = null;
+    }));
+    return running;
+  }
+
+  static Future<_Discovery> _fetchDiscovery(String url) async {
+    final client = httpClient();
+    try {
+      final response = await client.get(Uri.parse(url));
+      if (response.statusCode != 200) {
+        throw FormatException("Discovery answered ${response.statusCode}");
+      }
+      final document = jsonDecode(response.body);
+      final token = document is Map ? document['token_endpoint'] : null;
+      if (token is! String) throw const FormatException("No token endpoint");
+      final revocation = (document as Map)['revocation_endpoint'];
+      return _Discovery(Uri.parse(token),
+          revocation is String ? Uri.parse(revocation) : null);
+    } finally {
+      client.close();
+    }
+  }
+
+  /// A slow or failing auth server alone is no outage; a transport error is,
+  /// and a timeout or a broken connection once a probe fails as well.
+  static void _noteUnanswered(Object e, int epoch) {
+    if (e is TimeoutException || e is HttpException) {
+      unawaited(ApiAvailableService().confirmUnreachable(observedAt: epoch));
+    } else if (e is IOException) {
+      ApiAvailableService().markPlatformUnreachable(observedAt: epoch);
+    } else if (e is http.ClientException) {
+      unawaited(ApiAvailableService().confirmUnreachable(observedAt: epoch));
+    }
+  }
+
+  /// Never the message: oauth2 puts the response body into its exceptions,
+  /// and that can hold tokens.
+  static String _describe(Object e) => e is oauth2.AuthorizationException
+      ? "${e.runtimeType}(${e.error})"
+      : "${e.runtimeType}";
+
+  /// Refreshes [from], bounded by [bound] or [tokenRefreshTimeout]. A refresh
+  /// that runs into the bound goes on; [_settleRefresh] takes its result.
+  Future<bool> _refreshBounded(oauth2.Credentials from, Duration? bound) async {
+    final refresh = _joinableRefresh(from) ?? await _startRefresh(from, bound);
+    if (refresh == null) return tokenValid;
+    final limit = bound ?? tokenRefreshTimeout;
+    var timedOut = false;
+    await refresh.request
+        .then((_) {}, onError: (Object _) {})
+        .timeout(limit, onTimeout: () {
+      timedOut = true;
     });
     if (timedOut) {
-      unawaited(ApiAvailableService().confirmUnreachable(observedAt: epoch));
-      await _abandonClient(client);
-      _afterAbandoned(pending.then((_) => client.dispose()), sessions, before);
+      unawaited(
+          ApiAvailableService().confirmUnreachable(observedAt: refresh.epoch));
+      return false;
     }
-    return ok;
+    await refresh.settled;
+    return tokenValid;
   }
 
-  /// [OpenIdConnectClient.loginWithPassword], bounded by [loginTimeout]. On
-  /// the timeout the client is abandoned, and an identity the late login
-  /// stores is removed again unless a session began meanwhile.
-  Future<OpenIdIdentity?> _loginBounded(
-      OpenIdConnectClient client, String user, String pw) async {
-    final sessions = _sessionChanges;
-    // Widened, so the timeout below can answer null.
-    final pending = client
-        .loginWithPassword(userName: user, password: pw, prompts: ["none"])
-        .then<OpenIdIdentity?>((identity) => identity);
-    var timedOut = false;
-    final token = await pending.timeout(loginTimeout, onTimeout: () {
-      timedOut = true;
-      return null;
-    });
-    if (!timedOut) return token;
-    await _abandonClient(client);
-    unawaited(pending
-        .then((_) {}, onError: (Object e) => _logger.d("Late login failed: $e"))
-        .then((_) => _m.protect(() async {
-              client.dispose();
-              try {
-                if (_sessionChanges == sessions && !loggedIn) {
-                  await OpenIdIdentity.clear();
-                } else {
-                  await _reconcileStoredIdentity(sessions, null);
-                }
-              } catch (e) {
-                _logger.w("Could not clear a late login: $e");
-              }
-            })));
-    throw AuthException("Can't login, are you online?");
+  Future<_Refresh?> _startRefresh(oauth2.Credentials from, Duration? bound) async {
+    var request = from;
+    if (from.tokenEndpoint == null) {
+      final discovery = await _discover(
+          retryNow: bound != null, bound: bound ?? clientSetupTimeout);
+      if (discovery == null || !identical(_credentials, from)) return null;
+      final running = _joinableRefresh(from);
+      if (running != null) return running;
+      request = oauth2.Credentials(from.accessToken,
+          refreshToken: from.refreshToken,
+          idToken: from.idToken,
+          tokenEndpoint: discovery.tokenEndpoint,
+          scopes: from.scopes,
+          expiration: from.expiration);
+    }
+    final refresh = _Refresh(from, _sessionChanges,
+        ApiAvailableService.reachabilityEpoch, monotonicNow(),
+        _requestRefresh(request));
+    _refreshing = refresh;
+    refresh.settled = _settleRefresh(refresh);
+    return refresh;
   }
 
-  Future<void> _onClientEvent(AuthEvent event) async {
-    _logger.d("${event.type}: ${event.message}");
-    switch (event.type) {
-      case AuthEventTypes.Refresh:
-      case AuthEventTypes.Success:
-        // Signed out, an identity comes only from a login with credentials,
-        // which sets the session up itself.
-        if (_signedOut) break;
-        await _rememberAccount(_client?.identity);
-        loggedIn = true;
-        notifyListeners();
-        break;
-      case AuthEventTypes.NotLoggedIn:
-        // The logout that signed out has cleaned up already.
-        if (_signedOut) break;
-        loggedIn = _client?.identity != null;
-        notifyListeners();
-        if (!loggedIn) await _cleanup();
-        notifyListeners();
-        break;
-      case AuthEventTypes.Error:
-      case AuthEventTypes.LoggingOut:
-        await _onLogout();
+  /// The running refresh of [from], unless it is older than [loginTimeout]:
+  /// a request can hang for good, and then a new one goes out.
+  _Refresh? _joinableRefresh(oauth2.Credentials from) {
+    final running = _refreshing;
+    return running != null &&
+            identical(running.from, from) &&
+            monotonicNow() - running.startedAt < loginTimeout
+        ? running
+        : null;
+  }
+
+  static Future<oauth2.Credentials> _requestRefresh(
+      oauth2.Credentials credentials) async {
+    final client = httpClient();
+    try {
+      return await credentials.refresh(
+          identifier: _clientId,
+          newScopes: _scopes,
+          basicAuth: false,
+          httpClient: client);
+    } finally {
+      client.close();
     }
+  }
+
+  /// Applies the outcome of [refresh] once it ends, also late, unless a login
+  /// or logout came between or another refresh replaced its credentials.
+  /// Only `invalid_grant` ends the session; any other failure keeps it. A
+  /// refresh replaced by a newer one of the same credentials neither
+  /// overrides a result of that one nor logs out while it runs.
+  Future<void> _settleRefresh(_Refresh refresh) async {
+    oauth2.Credentials? refreshed;
+    Object? error;
+    try {
+      refreshed = await refresh.request;
+    } catch (e) {
+      error = e;
+    }
+    if (identical(_refreshing, refresh)) _refreshing = null;
+    if (_sessionChanges != refresh.sessions ||
+        !identical(_credentials, refresh.from)) {
+      _logger.d("Dropped a refresh that ended after its session");
+      return;
+    }
+    if (refreshed != null) {
+      // Kept also when its caller gave up: the server may have rotated the
+      // refresh token, which leaves the previous one invalid.
+      _credentials = refreshed;
+      await _store(refreshed, refresh.sessions);
+      if (_sessionChanges != refresh.sessions) return;
+      notifyListeners();
+      // Not awaited, nor is the cleanup below: both take the lock of
+      // ClientCertificates, whose holder may be waiting on this refresh.
+      unawaited(_rememberAccountOf(refreshed, refresh.sessions));
+      return;
+    }
+    _logger.w("Token refresh failed: ${_describe(error!)}");
+    if (error is oauth2.AuthorizationException && error.error == 'invalid_grant') {
+      // A newer request sent the same refresh token; its outcome decides.
+      final newer = _refreshing;
+      if (newer != null && identical(newer.from, refresh.from)) return;
+      unawaited(_cleanup());
+    } else {
+      _noteUnanswered(error, refresh.epoch);
+    }
+  }
+
+  /// The password grant, bounded by [loginTimeout]. A grant that answers
+  /// after it starts no session.
+  Future<oauth2.Credentials> _grantBounded(
+      Uri tokenEndpoint, String user, String pw) async {
+    final pending = _requestGrant(tokenEndpoint, user, pw);
+    try {
+      return await pending.timeout(loginTimeout);
+    } on TimeoutException {
+      unawaited(pending.then((_) {},
+          onError: (Object e) => _logger.d("Late login failed: ${_describe(e)}")));
+      throw AuthException("Can't login, are you online?");
+    } on oauth2.AuthorizationException catch (e) {
+      _logger.w("Login refused: ${_describe(e)}");
+      if (e.error == 'invalid_grant' &&
+          (e.description?.contains(invalidCredentials) ?? false)) {
+        throw AuthException(invalidCredentials);
+      }
+      throw AuthException(e.description ?? e.error);
+    } on IOException {
+      throw AuthException("Can't login, are you online?");
+    } on http.ClientException {
+      throw AuthException("Can't login, are you online?");
+    } on FormatException {
+      // Its message holds the response body.
+      throw AuthException("Unexpected answer from the auth server");
+    }
+  }
+
+  static Future<oauth2.Credentials> _requestGrant(
+      Uri tokenEndpoint, String user, String pw) async {
+    final client = httpClient();
+    try {
+      final granted = await oauth2.resourceOwnerPasswordGrant(
+          tokenEndpoint, user, pw,
+          identifier: _clientId,
+          scopes: _scopes,
+          // A public client: client_id in the body, no secret. The default
+          // basic auth would require one.
+          basicAuth: false,
+          httpClient: client);
+      return granted.credentials;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// The claims of the ID token, or of the access token without one. Not
+  /// verified: they only name the account.
+  static Map<String, dynamic> _claimsOf(oauth2.Credentials credentials) {
+    final claims = _decodeClaims(credentials.idToken);
+    return claims.isNotEmpty ? claims : _decodeClaims(credentials.accessToken);
+  }
+
+  static Map<String, dynamic> _decodeClaims(String? jwt) {
+    final parts = jwt?.split('.');
+    if (parts == null || parts.length != 3) return const {};
+    try {
+      final payload =
+          jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))));
+      return payload is Map<String, dynamic> ? payload : const {};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  static String? _subjectOf(oauth2.Credentials credentials) {
+    final sub = _claimsOf(credentials)['sub']?.toString();
+    return sub == null || sub.isEmpty ? null : sub;
   }
 
   // Written before loggedIn flips, because the tabs mount on that flag and read
@@ -463,19 +691,16 @@ class Auth extends ChangeNotifier {
   // favorites are keyed by it and have to survive until that account returns.
   //
   // This is also the one place that sees an account actually change, which is
-  // what the cache wipe below hangs on. Keying it on the identity just obtained
-  // rather than on loggedIn matters: at the login path loggedIn is set by the
-  // OIDC event listener, so a check placed there fires too late.
-  Future<void> _rememberAccount(OpenIdIdentity? identity) async {
-    if (identity == null) return;
+  // what the cache wipe below hangs on.
+  Future<void> _rememberAccount(String? sub) async {
+    if (sub == null) return;
+    var unchanged = false;
     try {
       await _accountMutex.protect(() async {
         final previous = Settings.getAccount();
-        if (previous == null || previous == identity.sub) {
-          await Settings.setAccount(identity.sub);
-          // A switch whose wipe did not complete. The rows of this account it
-          // drops too are refilled by the next refresh.
-          await CacheHelper.retryPendingAccountWipe();
+        if (previous == null || previous == sub) {
+          await Settings.setAccount(sub);
+          unchanged = true;
           return;
         }
         // Under the outgoing account, which owns what these move; neither
@@ -490,7 +715,7 @@ class Auth extends ChangeNotifier {
         } catch (e, s) {
           ErrorReporter.log("Could not move the unkeyed settings", e, s);
         }
-        await CacheHelper.switchAccount(identity.sub);
+        await CacheHelper.switchAccount(sub);
         _logger.d("Account changed, dropped the previous account's cache");
       });
     } catch (e) {
@@ -498,6 +723,25 @@ class Auth extends ChangeNotifier {
       // the app gets past the login spinner at all.
       _logger.w("Could not switch account cleanly: $e");
     }
+    // A switch whose wipe did not complete; the rows of this account it drops
+    // too are refilled by the next refresh. Not awaited: the wipe takes the
+    // lock of ClientCertificates, whose holder may be waiting on this sign-in.
+    if (unchanged) _wipeRetry = _retryPendingWipe();
+  }
+
+  static Future<void> _retryPendingWipe() async {
+    try {
+      await CacheHelper.retryPendingAccountWipe();
+    } catch (e, s) {
+      ErrorReporter.log("Could not retry the account wipe", e, s);
+    }
+  }
+
+  /// [_rememberAccount] for refreshed credentials, unless the session
+  /// changed since [sessions].
+  Future<void> _rememberAccountOf(oauth2.Credentials credentials, int sessions) async {
+    if (_sessionChanges != sessions) return;
+    await _rememberAccount(_subjectOf(credentials));
   }
 
   Future<void> login(String user, String pw) async {
@@ -505,74 +749,65 @@ class Auth extends ChangeNotifier {
       // loggingIn (== mutex held) just became true; without this notify the
       // login form stays frozen with no feedback until the grant completes.
       notifyListeners();
-      if (!_initialized) {
-        await _init(retryNow: true, bound: loginTimeout);
-        if (_client == null) {
-          throw AuthException("Can't login, are you online?");
-        }
-      }
-
+      await _ensureLoaded();
       if (tokenValid) {
         _logger.d("Old token still valid");
         return;
+      }
+      // Before the refresh, which then finds the token endpoint of
+      // credentials moved without it: the login waits for it only once.
+      final discovery = await _discover(retryNow: true, bound: loginTimeout);
+      if (discovery == null) {
+        throw AuthException("Can't login, are you online?");
       }
       if (await __refresh(bound: loginTimeout)) {
         _logger.d("refreshed token");
         return;
       }
-      // A refresh that timed out abandoned the client.
-      if (_client == null) {
-        throw AuthException("Can't login, are you online?");
-      }
-      final OpenIdIdentity? token;
-      try {
-        token = await _loginBounded(_client!, user, pw);
-      } catch (e) {
-        _logger.e("Login failed: $e");
-        rethrow;
-      }
-
-      if (token != null) {
-        _logger.i('Logged in');
-        _signedOut = false;
-        _logins++;
-        _sessionChanges++;
-        await _rememberAccount(token);
-        loggedIn = true;
-        notifyListeners();
-        //await AppState().initMessaging();
-      } else {
-        _logger.w("_token null");
+      final credentials =
+          await _grantBounded(discovery.tokenEndpoint, user, pw);
+      final sub = _subjectOf(credentials);
+      if (sub == null) {
+        _logger.w("Granted tokens name no account");
         throw AuthException("token null");
       }
-      return;
+      // A cleanup still running, also of a refresh refused above, would clear
+      // this session's state.
+      await _awaitCleanup();
+      _logger.i('Logged in');
+      _signedOut = false;
+      _loaded = true;
+      _readFailed = false;
+      final sessions = ++_sessionChanges;
+      _credentials = credentials;
+      // Only once stored: until then the next start takes no credentials.
+      if (await _store(credentials, sessions) && _sessionChanges == sessions) {
+        await _markSignedOut(false);
+      }
+      unawaited(_retireLegacy());
+      await _rememberAccount(sub);
+      loggedIn = true;
+      notifyListeners();
     });
   }
 
-  logout(BuildContext context) async {
-    // In an outage the setup could only run into its bound.
-    if (!_initialized && !ApiAvailableService.platformCallsOff) {
-      await init();
+  Future<void> logout(BuildContext context) async {
+    await _ensureLoaded();
+    if (!loggedIn) return;
+    final credentials = _credentials;
+    if (credentials == null || ApiAvailableService.isPlatformUnreachable) {
+      // Without revoking: there is no readable token, or the revocation could
+      // only run into its bound. Not in local mode, which leaves the auth
+      // server reachable.
+      await _cleanup();
+    } else {
+      await _revokeAndLogOut(credentials);
     }
-    if (_client == null && loggedIn) {
-      // Signed in on the stored token alone, the client setup having failed:
-      // log out without revoking, as after the client's own logout event.
-      await _onLogout();
-      if (!context.mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      return;
-    }
-    if (_client?.identity == null) {
-      return;
-    }
-    if (ApiAvailableService.isPlatformUnreachable) {
-      // The revocation could only run into its bound.
-      await _onLogout(offline: true);
-      if (!context.mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
-      return;
-    }
+    if (!context.mounted) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
+  }
 
+  Future<void> _revokeAndLogOut(oauth2.Credentials credentials) async {
     if (AppState().fcmToken != null) {
       // Never block the logout on this: an unreachable backend used to abort
       // logout here, leaving the user signed in with no way out. A token that
@@ -584,148 +819,172 @@ class Auth extends ChangeNotifier {
         _logger.w("Could not deregister FCM token: $e");
       }
     }
-
-    final client = _client!;
-    final logins = _logins;
-    final pending = client.logout();
-    var timedOut = false;
-    await pending.timeout(logoutTimeout, onTimeout: () => timedOut = true);
-    _logger.d("logout");
-    if (timedOut) {
-      // The revocation hangs: logged out without it, as when offline, unless
-      // a login came meanwhile. The client's own late clear then finds no
-      // identity left.
-      if (_logins == logins) {
-        try {
-          await client.clearIdentity();
-        } catch (e) {
-          _logger.w("Could not clear identity: $e");
-        }
-        await _onLogout(offline: true);
-      }
-      unawaited(pending
-          .catchError((Object e) => _logger.d("Late logout failed: $e"))
-          .whenComplete(() {
-        if (!identical(_client, client)) client.dispose();
-      }));
-    } else if (_client == null || identical(_client, client)) {
-      // Offline the client's own events were cancelled with it. Not when a
-      // new session began while this revoke was in flight.
-      await _cleanup();
-      loggedIn = false;
-      notifyListeners();
+    final sessions = _sessionChanges;
+    try {
+      final reached = await _revoke(credentials)
+          .timeout(logoutTimeout, onTimeout: () => false);
+      if (!reached) _logger.w("Token not revoked: the auth server did not answer");
+    } catch (e) {
+      _logger.w("Token revocation failed: ${_describe(e)}");
     }
-    if (!context.mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    _logger.d("logout");
+    // A login while the revocation ran keeps its session.
+    if (_sessionChanges != sessions) return;
+    await _cleanup();
   }
 
-  /// [offline] skips the server check, the server being known not to answer.
-  _onLogout({bool offline = false}) async {
+  /// Revokes the refresh token; false when the auth server could not be
+  /// discovered, as when it does not answer.
+  Future<bool> _revoke(oauth2.Credentials credentials) async {
+    final token = credentials.refreshToken;
+    if (token == null) return true;
+    final discovery = await _discover(retryNow: true, bound: logoutTimeout);
+    if (discovery == null) return false;
+    final endpoint = discovery.revocationEndpoint;
+    if (endpoint == null) return true;
+    final client = httpClient();
+    try {
+      final response = await client.post(endpoint, body: {
+        'token': token,
+        'token_type_hint': 'refresh_token',
+        'client_id': _clientId,
+      });
+      if (response.statusCode != 200) {
+        throw HttpException("Revocation answered ${response.statusCode}");
+      }
+      return true;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Ends the session in memory, so nothing uses it while the cleanup runs.
+  void _endSession() {
     _sessionChanges++;
     _signedOut = true;
-    if (!offline && await _serverAvailable()) {
-      await _cleanup();
-    } else {
-      final client = _client;
-      _client = null;
-      await _clientEvents?.cancel();
-      _clientEvents = null;
-      // Not revocable offline, but the stored tokens must not sign the next
-      // login back in, whatever credentials it was given. Through the client
-      // when there is one: it forgets its identity too, so its own logout,
-      // still running, cannot clear the next session's stored one.
-      try {
-        if (client != null) {
-          await client.clearIdentity();
-        } else {
-          await OpenIdIdentity.clear();
-        }
-      } catch (e) {
-        _logger.w("Could not clear identity: $e");
-      }
-    }
+    _credentials = null;
+    _refreshing = null;
     loggedIn = false;
     notifyListeners();
   }
 
-  /// Runs the logout cleanup without a signed-in client.
+  /// Runs [steps] as the current cleanup; a failure in them is logged.
+  Future<void> _runCleanup(Future<void> Function() steps) {
+    final running = () async {
+      try {
+        await steps();
+      } catch (e, s) {
+        ErrorReporter.log("Logout cleanup failed", e, s);
+      }
+    }();
+    _cleaning = running;
+    return running;
+  }
+
+  /// Waits at most [loginTimeout]; a cleanup that ran on past it could still
+  /// clear the next session's state, so the login fails instead.
+  Future<void> _awaitCleanup() async {
+    Future<void> drain() async {
+      for (var running = _cleaning; running != null; running = _cleaning) {
+        await running;
+        if (identical(_cleaning, running)) _cleaning = null;
+      }
+    }
+
+    try {
+      await drain().timeout(loginTimeout);
+    } on TimeoutException {
+      _logger.w("The cleanup of the last logout has not ended");
+      throw AuthException("Can't login, are you online?");
+    }
+  }
+
+  /// Runs the logout cleanup without a signed-in session.
   @visibleForTesting
   Future<void> cleanupForTest() => _cleanup();
 
-  /// Replaces the server check of the logout, so a test can log out offline.
+  /// Replaces the server check of the refresh.
   @visibleForTesting
   static Future<bool> Function()? serverAvailableOverride;
 
-  /// Runs the logout that follows the client's logout or error event.
+  /// Runs the logout without the revocation, as offline or after a refresh
+  /// Keycloak refused.
   @visibleForTesting
-  Future<void> onLogoutForTest() => _onLogout();
+  Future<void> onLogoutForTest() => _cleanup();
 
-  /// Records [identity] as signed in, as every sign-in path does before
-  /// [loggedIn] flips.
+  /// Records the account [sub] as signed in, as every sign-in path does
+  /// before [loggedIn] flips, and waits for the wipe retry that follows.
   @visibleForTesting
-  Future<void> rememberAccountForTest(OpenIdIdentity identity) =>
-      _rememberAccount(identity);
+  Future<void> rememberAccountForTest(String sub) async {
+    await _rememberAccount(sub);
+    await _wipeRetry;
+  }
 
-  /// Whether the client's events have a listener; the next client setup
-  /// registers one when not.
-  @visibleForTesting
-  bool get clientListenerRegistered => _clientEvents != null;
-
-  /// Listens to [events] as to the events of a set-up client.
-  @visibleForTesting
-  void listenToClientEventsForTest(Stream<AuthEvent> events) =>
-      _clientEvents = events.listen(_onClientEvent);
-
-  /// Forgets the client and a failed setup without logging out.
+  /// Forgets the session in memory, the discovery and a failed one, without
+  /// logging out; what runs on from before is dropped when it ends.
   @visibleForTesting
   Future<void> resetForTest() async {
-    _client = null;
-    await _clientEvents?.cancel();
-    _clientEvents = null;
-    _setupFailedAt = null;
-    _runningSetup = null;
+    _sessionChanges++;
+    _credentials = null;
+    _refreshing = null;
+    _cleaning = null;
+    _runningDiscovery = null;
+    _discoveries.clear();
+    _discoveryFailedAt = null;
     _signedOut = false;
+    _loaded = false;
+    _readFailed = false;
     loggedIn = false;
     isInitialized = false;
   }
 
-  Future<void> _cleanup() async {
-    _sessionChanges++;
-    _signedOut = true;
-    AccountEpoch.advance();
-    LiveValues.instance.accountChanged();
+  /// Every logout, with or without the revocation before it: no step needs
+  /// the network. Signed out at once, before the cleanup.
+  Future<void> _cleanup() {
+    _endSession();
+    return _runCleanup(_clearSessionData);
+  }
+
+  /// What a session leaves beyond [_endSession]. The stored credentials go
+  /// first, and each later step runs whatever the others do.
+  Future<void> _clearSessionData() async {
+    _logged("Could not reset the live values", () {
+      AccountEpoch.advance();
+      LiveValues.instance.accountChanged();
+    });
+    // Before the deletion, which may fail or report success without deleting.
+    await _markSignedOut(true);
+    await _deleteStored();
     // The live client certificate logs into the broker as this user until it
     // expires; it must not outlive the session.
-    final account = Settings.getAccount();
-    if (account != null) {
-      try {
-        await ClientCertificates.forget(account);
-      } catch (e, s) {
-        ErrorReporter.log("Could not delete the live client certificate", e, s);
-      }
+    await _loggedAsync("Could not delete the live client certificate", () async {
+      final account = Settings.getAccount();
+      if (account != null) await ClientCertificates.forget(account);
+    });
+    await _loggedAsync("Could not clear the cache", CacheHelper.clearCache);
+    await _loggedAsync("Could not reset the app state", AppState().onLogout);
+  }
+
+  static void _logged(String message, void Function() step) {
+    try {
+      step();
+    } catch (e, s) {
+      ErrorReporter.log(message, e, s);
     }
-    await CacheHelper.clearCache();
-    await AppState().onLogout();
-    if (_client != null) {
-      // Awaited, not slept on: clearIdentity returns a Future since
-      // openidconnect 2.0. The old fixed 2s wait predates that upgrade and
-      // neither guaranteed completion nor bounded the logout.
-      // Swallowed like the package does in _clearIdentityIgnoringErrors: an
-      // unusable Keystore entry must not stop the logout half-way, or the user
-      // stays logged in with no way back.
-      try {
-        await _client!.clearIdentity();
-      } catch (e) {
-        _logger.w("Could not clear identity: $e");
-      }
-    } else {
-      await OpenIdIdentity.clear(); // remove saved token
+  }
+
+  static Future<void> _loggedAsync(
+      String message, Future<void> Function() step) async {
+    try {
+      await step();
+    } catch (e, s) {
+      ErrorReporter.log(message, e, s);
     }
-    await _storage.delete(key: encKeyName);
   }
 
   Future<Map<String, String>> getHeaders() async {
     if (headersOverride != null) return headersOverride!();
+    if (!loggedIn && _readFailed) await _ensureLoaded();
     if (!loggedIn) {
       notifyListeners();
       throw AuthException("Not logged in");
@@ -742,15 +1001,8 @@ class Auth extends ChangeNotifier {
   }
 
   Future<Map<String, String>> _storedHeaders() async {
-    var token = _client?.identity?.accessToken;
-    if (token == null) {
-      try {
-        token = (await OpenIdIdentity.load())?.accessToken;
-      } catch (e) {
-        _logger.w("Could not read the stored identity: $e");
-      }
-    }
-    if (token == null) return {};
+    final token = await getToken();
+    if (token.isEmpty) return {};
     return {"authorization": "Bearer $token", "content-type": Headers.jsonContentType};
   }
 
@@ -763,35 +1015,40 @@ class Auth extends ChangeNotifier {
 
   /// [bound] replaces [clientSetupTimeout] and [tokenRefreshTimeout].
   Future<bool> __refresh({Duration? bound}) async {
-    if (!_initialized) {
-      await _init(retryNow: false, bound: bound ?? clientSetupTimeout);
-    }
+    await _ensureLoaded();
     if (tokenValid) return true;
-    final client = _client;
-    if (client != null && client.identity != null && client.hasTokenExpired == true && (await _serverAvailable())) {
-      final ok = await _refreshBounded(client, bound ?? tokenRefreshTimeout);
-      return ok && tokenValid;
+    final credentials = _credentials;
+    if (loggedIn &&
+        credentials != null &&
+        credentials.refreshToken != null &&
+        (await _serverAvailable())) {
+      return _refreshBounded(credentials, bound);
     }
     return false;
   }
 
-  bool get tokenValid => loggedIn && (_client == null || (_client!.identity != null && !_client!.hasTokenExpired)); //assumed logged in when offline
+  bool get tokenValid => loggedIn && (_credentials == null || !_credentials!.isExpired); //assumed logged in when offline
 
   bool get loggingIn => _m.isLocked;
 
   Future<String> getToken() async {
-    if (_client != null) {
-      return _client!.identity!.accessToken;
-    }
-    final token = await OpenIdIdentity.load();
-    if (token != null) {
-      return token.accessToken;
+    final credentials = _credentials;
+    if (credentials != null) return credentials.accessToken;
+    try {
+      final stored = await _storage.read(key: _credentialsKey);
+      if (stored != null) return _parse(stored)?.accessToken ?? "";
+    } catch (e) {
+      _logger.w("Could not read the stored credentials: ${e.runtimeType}");
     }
     return "";
   }
 
   String? getUsername() {
-    return _client?.identity?.userName;
+    final credentials = _credentials;
+    if (credentials == null) return null;
+    final claims = _claimsOf(credentials);
+    return (claims["username"] ?? claims["preferred_username"] ?? claims["sub"])
+        ?.toString();
   }
 
   Future<bool> _serverAvailable() async {
@@ -822,24 +1079,45 @@ class Auth extends ChangeNotifier {
   }
 }
 
-/// A client setup and the session it started in.
-class _Setup {
-  _Setup(this.client, this.sessions, this.before, this.url, this.startedAt);
+/// The endpoints of a discovery document.
+class _Discovery {
+  _Discovery(this.tokenEndpoint, this.revocationEndpoint);
 
-  final Future<OpenIdConnectClient> client;
+  final Uri tokenEndpoint;
+  final Uri? revocationEndpoint;
+}
+
+/// A discovery request and when it started.
+class _RunningDiscovery {
+  _RunningDiscovery(this.result, this.url, this.startedAt);
+
+  final Future<_Discovery> result;
 
   /// The discovery URL it was started with.
   final String url;
 
   /// [Auth.monotonicNow] when it started.
   final Duration startedAt;
+}
+
+/// A refresh request and the session it started in.
+class _Refresh {
+  _Refresh(this.from, this.sessions, this.epoch, this.startedAt, this.request);
+
+  /// The session's credentials it refreshes.
+  final oauth2.Credentials from;
 
   /// [Auth._sessionChanges] when it started.
   final int sessions;
 
-  /// The stored identity when it started.
-  final OpenIdIdentity? before;
+  /// [ApiAvailableService.reachabilityEpoch] when it started.
+  final int epoch;
 
-  /// Set once a caller or [Auth._settleSetup] dealt with its outcome.
-  bool handled = false;
+  /// [Auth.monotonicNow] when it started.
+  final Duration startedAt;
+
+  final Future<oauth2.Credentials> request;
+
+  /// Completes once [Auth._settleRefresh] has applied the outcome.
+  late final Future<void> settled;
 }

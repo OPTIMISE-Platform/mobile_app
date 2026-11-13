@@ -266,11 +266,10 @@ class LiveConnection {
   return (host: uri.host, port: uri.port);
 }
 
+// Without resetOnError: on Android every store shares one file, and its reset
+// would delete the other stores' values too.
 const _liveSecure = FlutterSecureStorage(
-  aOptions: AndroidOptions(
-    encryptedSharedPreferences: true,
-    resetOnError: true,
-  ),
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
 );
 
 const _installIdKey = 'live-mqtt-install-id';
@@ -278,13 +277,12 @@ const _installIdKey = 'live-mqtt-install-id';
 /// The id of this installation, made once and kept in the secure store. The
 /// app has no other install id: the FCM token changes and is not unique per
 /// install.
+///
+/// Throws when the store cannot be read: a fresh id would replace the stored
+/// one, and the certificate issued for it with it.
 Future<String> liveInstallId() async {
-  try {
-    final stored = await _liveSecure.read(key: _installIdKey);
-    if (stored != null && stored.isNotEmpty) return stored;
-  } catch (_) {
-    // A read that fails falls through to a fresh id, as a missing one does.
-  }
+  final stored = await _liveSecure.read(key: _installIdKey);
+  if (stored != null && stored.isNotEmpty) return stored;
   final id = const Uuid().v4();
   try {
     await _liveSecure.write(key: _installIdKey, value: id);

@@ -20,7 +20,6 @@ library;
 import 'dart:async';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:isar_community/isar.dart';
 import 'package:mobile_app/app_state.dart';
@@ -254,14 +253,9 @@ void main() {
       expect(Settings.getCacheUpdated("devices"), isNotNull);
     });
 
-    // Auth._cleanup has no caller without a real identity; the seam runs it.
+    // Auth._cleanup has no caller without a signed-in session; the seam runs
+    // it.
     test("a logout drops a refresh that is still fetching", () async {
-      // The identity package keeps its tokens behind a channel of its own.
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(
-              const MethodChannel(
-                  'plugins.concerti.io/openidconnect_secure_storage'),
-              (call) async => null);
       await _store([deviceJson("d0", "Device 0")]);
       await _devicesOverdue();
       backend.serveDevicesPaged(_devices(2));

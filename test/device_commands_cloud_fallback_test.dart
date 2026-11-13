@@ -30,8 +30,8 @@ import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
-import 'package:openidconnect/openidconnect.dart';
 
+import 'fake_auth_server.dart';
 import 'fake_backend.dart';
 import 'golden_helper.dart';
 
@@ -437,19 +437,22 @@ void main() {
     final shown = <String>[];
     ErrorReporter.present = shown.add;
     Auth.headersOverride = null;
-    Auth.clientSetupTimeout = const Duration(milliseconds: 100);
-    // The probe after the setup's timeout confirms the outage.
+    Auth.tokenRefreshTimeout = const Duration(milliseconds: 100);
+    Auth.serverAvailableOverride = () async => true;
+    // The probe after the refresh's timeout confirms the outage.
     ApiAvailableService.probeOverride = () async => false;
-    var setups = 0;
-    // As the discovery request does when the auth server drops connections.
-    Auth.createClientOverride = () {
-      setups++;
-      return Completer<OpenIdConnectClient>().future;
-    };
-    Auth().loggedIn = true;
+    // As the token endpoint does when the auth server drops connections.
+    final server = FakeAuthServer()
+      ..holdToken = Completer<void>()
+      ..install();
+    SecureStore()
+      ..put(credentials("expired", validFor: const Duration(minutes: -1)))
+      ..install();
+    await Auth().init();
     addTearDown(() async {
-      Auth.createClientOverride = null;
-      Auth.clientSetupTimeout = const Duration(seconds: 5);
+      FakeAuthServer.uninstall();
+      Auth.serverAvailableOverride = null;
+      Auth.tokenRefreshTimeout = const Duration(seconds: 5);
       await Auth().resetForTest();
       ErrorReporter.present = (_) {};
     });
@@ -472,7 +475,8 @@ void main() {
       expect(responses[1].status_code, 502);
       expect(responses[1].message, ErrorReporter.offlineMessage);
     }
-    expect(setups, 1, reason: "the outage keeps the second round off the setup");
+    expect(server.tokenRequests, hasLength(1),
+        reason: "the outage keeps the second round off the refresh");
     expect(requestsTo("POST", _platformBatch), isEmpty);
     expect(shown, isEmpty);
   });

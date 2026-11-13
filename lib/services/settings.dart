@@ -87,6 +87,13 @@ class Settings {
   static const _accountWipePendingKey = "account_wipe_pending";
   static const _fcmTokenDeletionPendingKey = "fcm_token_deletion_pending";
 
+  static const _credentialsStoredKey = "auth_credentials_stored";
+  static const _signedOutKey = "auth_signed_out";
+
+  static const _secureStorageCheckStoredKey = "secure_storage_check_stored";
+  static const _secureStorageCheckFailuresKey = "secure_storage_check_failures";
+  static const _secureStorageResetPendingKey = "secure_storage_reset_pending";
+
   static checkInit() {
     if (!isInitialized) {
       throw SettingsNotInitializedException();
@@ -571,5 +578,67 @@ class Settings {
   static Future<void> setFcmTokenDeletionPending(bool value) {
     checkInit();
     return _box!.put(_fcmTokenDeletionPendingKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Whether [Auth] has stored credentials it has not deleted since. Kept
+  /// outside the secure storage, whose iOS read answers nothing instead of
+  /// an error before the first unlock.
+  static bool getCredentialsStored() {
+    checkInit();
+    return _box!.get(_credentialsStoredKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setCredentialsStored(bool value) {
+    checkInit();
+    return _box!.put(_credentialsStoredKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Set by every logout before it deletes the credentials, cleared once a
+  /// login has stored its own. Kept outside the secure storage, whose
+  /// deletion can fail or report success without deleting.
+  static bool getSignedOut() {
+    checkInit();
+    return _box!.get(_signedOutKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setSignedOut(bool value) {
+    checkInit();
+    return _box!.put(_signedOutKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Whether the entry the secure-storage check of `AppInitializer` reads was
+  /// written. Kept outside the secure storage, so that the entry reading as
+  /// absent can tell a store that lost it.
+  static bool getSecureStorageCheckStored() {
+    checkInit();
+    return _box!.get(_secureStorageCheckStoredKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setSecureStorageCheckStored(bool value) {
+    checkInit();
+    return _box!.put(_secureStorageCheckStoredKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Starts in a row whose secure-storage check failed.
+  static int getSecureStorageCheckFailures() {
+    checkInit();
+    return int.tryParse(_box!.get(_secureStorageCheckFailuresKey) ?? "") ?? 0;
+  }
+
+  static Future<void> setSecureStorageCheckFailures(int value) {
+    checkInit();
+    return _box!.put(_secureStorageCheckFailuresKey, value.toString()).then((v) => _box?.flush());
+  }
+
+  /// Whether the secure storage's file is to be deleted at the next start,
+  /// before anything loads it.
+  static bool getSecureStorageResetPending() {
+    checkInit();
+    return _box!.get(_secureStorageResetPendingKey, defaultValue: "false") == "true";
+  }
+
+  static Future<void> setSecureStorageResetPending(bool value) {
+    checkInit();
+    return _box!.put(_secureStorageResetPendingKey, value.toString()).then((v) => _box?.flush());
   }
 }

@@ -39,8 +39,8 @@ import 'package:mobile_app/services/mgw/storage.dart';
 import 'package:hive/hive.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
-import 'package:openidconnect/openidconnect.dart';
 
+import 'fake_auth_server.dart';
 import 'fake_backend.dart';
 import 'golden_helper.dart';
 
@@ -73,50 +73,12 @@ class _QueueUndeletable extends MapBase<String, String> {
   }
 }
 
-/// The identity package's own secure storage, as its method channel sees it.
-final _identityStorage = <String, String>{};
-
-void _mockIdentityStorage() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-          const MethodChannel('plugins.concerti.io/openidconnect_secure_storage'),
-          (call) async {
-    final args = (call.arguments as Map?)?.cast<String, Object?>() ?? {};
-    final key = args['key'] as String?;
-    switch (call.method) {
-      case 'write':
-        _identityStorage[key!] = args['value'] as String;
-        return null;
-      case 'read':
-        return _identityStorage[key];
-      case 'delete':
-        _identityStorage.remove(key);
-        return null;
-      case 'containsKey':
-        return _identityStorage.containsKey(key);
-    }
-    return null;
-  });
-}
-
 RemoteMessage _update(String id, String userId) => RemoteMessage(data: {
       "type": notificationUpdateType,
       "payload": jsonEncode(
           app.Notification("2026-10-01T00:00:00Z", "m", userId, id, false, "t")
               .toJson()),
     });
-
-/// An identity whose id token carries [sub], the only claim the switch reads.
-OpenIdIdentity _identity(String sub) {
-  String part(Map<String, dynamic> claims) =>
-      base64Url.encode(utf8.encode(jsonEncode(claims))).replaceAll("=", "");
-  return OpenIdIdentity(
-    accessToken: "access",
-    expiresAt: DateTime.now().add(const Duration(hours: 1)),
-    idToken: "${part({"alg": "none"})}.${part({"sub": sub})}.sig",
-    tokenType: "bearer",
-  );
-}
 
 /// Hands out [token] until a deletion completes, which, as on a phone, makes
 /// the next request return a new one.
@@ -316,8 +278,8 @@ void main() {
   });
 
   group("in memory", () {
-    test("an account change after an offline logout drops what the previous "
-        "account loaded, and the next account's init loads its own", () async {
+    test("an account change drops what the previous account loaded, and the "
+        "next account's init loads its own", () async {
       serveAccount("a");
       await signInAndLoad("a");
       expect(loaded(), {
@@ -330,12 +292,8 @@ void main() {
       });
       expect(AppState().initialized, isTrue);
 
-      await Auth().onLogoutForTest();
-      expect(Auth().loggedIn, isFalse);
-      expect(AppState().locations.map((l) => l.id), ["location-a"],
-          reason: "an offline logout keeps the state in memory");
-
-      await Auth().rememberAccountForTest(_identity("b"));
+      // Without a logout first, which resets the state in memory itself.
+      await Auth().rememberAccountForTest("b");
 
       expect(Settings.getAccount(), "b");
       for (final entry in loaded().entries) {
@@ -374,7 +332,7 @@ void main() {
       await _until(() => reads == 1);
       expect(reads, 1);
       await Auth().onLogoutForTest();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       gate.complete();
       await old;
 
@@ -386,8 +344,8 @@ void main() {
       final epoch = AccountEpoch.current;
 
       await Future.wait([
-        Auth().rememberAccountForTest(_identity("b")),
-        Auth().rememberAccountForTest(_identity("b")),
+        Auth().rememberAccountForTest("b"),
+        Auth().rememberAccountForTest("b"),
       ]);
 
       expect(AccountEpoch.current, epoch + 1,
@@ -395,7 +353,7 @@ void main() {
       expect(Settings.getAccount(), "b");
     });
 
-    test("an offline logout and a sign-in of the same account keep the state "
+    test("an offline logout and a sign-in of the same account switch nothing "
         "and leave nothing loading", () async {
       serveAccount("a");
       await signInAndLoad("a");
@@ -403,12 +361,16 @@ void main() {
       final epoch = AccountEpoch.current;
 
       await Auth().onLogoutForTest();
-      await Auth().rememberAccountForTest(_identity("a"));
+      await Auth().rememberAccountForTest("a");
       Auth().loggedIn = true;
 
-      expect(AccountEpoch.current, epoch);
-      expect(loaded(), before);
-      expect(AppState().initialized, isTrue);
+      expect(AccountEpoch.current, epoch + 1, reason: "only the logout's");
+      expect(Settings.getAccountWipePending(), isFalse);
+      for (final entry in loaded().entries) {
+        expect(entry.value, isEmpty, reason: "${entry.key} after the logout");
+      }
+      expect(AppState().initialized, isFalse,
+          reason: "otherwise the init after the sign-in is skipped");
       expect(AppState().loadingLocations(), isFalse);
       expect(AppState().loadingDeviceGroups(), isFalse);
       expect(AppState().loadingNetworks(), isFalse);
@@ -416,6 +378,8 @@ void main() {
       expect(AppState().loadingDeviceClasses, isFalse);
       expect(AppState().loadingNotifications, isFalse);
 
+      await signInAndLoad("a");
+      expect(loaded(), before);
       backend.serveJson("GET", "/device-repository/locations", 200,
           [_location("location-a2")]);
       await AppState().loadLocations();
@@ -428,10 +392,9 @@ void main() {
       serveAccount("a");
       await signInAndLoad("a");
       CacheHelper.beforeAccountWipeForTest = () => throw Exception("disk full");
-      await Auth().onLogoutForTest();
       final epoch = AccountEpoch.current;
 
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       expect(AccountEpoch.current, epoch + 1);
       expect(AppState().locations, isEmpty);
       expect(Settings.getAccount(), "b");
@@ -442,7 +405,7 @@ void main() {
       await signInAndLoad("b");
       final session = loaded();
       // Every token refresh of b retries the wipe.
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       expect(AccountEpoch.current, epoch + 1);
       expect(loaded(), session);
@@ -452,7 +415,7 @@ void main() {
 
       CacheHelper.beforeAccountWipeForTest = null;
       await Settings.setCacheUpdated("devices");
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       expect(Settings.getAccountWipePending(), isFalse);
       expect(AccountEpoch.current, epoch + 1);
@@ -467,7 +430,7 @@ void main() {
       await Settings.setSensorTabs([const SensorTab(id: "tab-a", name: "a")]);
       CacheHelper.beforeAccountWipeForTest = () => throw Exception("disk full");
 
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       expect(Settings.getAccountWipePending(), isTrue);
 
       expect(Settings.getFavoriteDeviceIds(), isEmpty);
@@ -489,14 +452,14 @@ void main() {
         wipes++;
         throw Exception("disk full");
       };
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       serveAccount("b");
       await signInAndLoad("b");
       await Auth().onLogoutForTest();
       CacheHelper.beforeAccountWipeForTest = () => wipes++;
       await Settings.setCacheUpdated("devices");
 
-      await Auth().rememberAccountForTest(_identity("a"));
+      await Auth().rememberAccountForTest("a");
 
       expect(wipes, 2);
       expect(Settings.getAccountWipePending(), isFalse);
@@ -514,7 +477,7 @@ void main() {
       CacheHelper.afterAccountKeyForTest =
           () => deletionRecorded = Settings.getFcmTokenDeletionPending();
 
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       expect(keyAtWipe, "b");
       expect(deletionRecorded, isTrue,
@@ -535,7 +498,7 @@ void main() {
     test("a pending wipe survives a restart and runs at the next start",
         () async {
       CacheHelper.beforeAccountWipeForTest = () => throw Exception("disk full");
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       CacheHelper.beforeAccountWipeForTest = null;
       await Settings.setCacheUpdated("devices");
       await AppState().fcmTokenDeletionsForTest;
@@ -554,31 +517,50 @@ void main() {
       await Hive.box<String>("settings.box").put(
           "sensor_tabs", jsonEncode([const SensorTab(id: "tab-a", name: "a")]));
 
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       expect(Settings.getSensorTabs(), isEmpty);
 
-      await Auth().rememberAccountForTest(_identity("a"));
+      await Auth().rememberAccountForTest("a");
       expect(Settings.getSensorTabs().map((t) => t.id), ["tab-a"]);
     });
 
-    test("a late event of the client dropped by an offline logout leaves the "
-        "next session alone", () async {
-      final oldClient = StreamController<AuthEvent>();
-      Auth().listenToClientEventsForTest(oldClient.stream);
+    test("a refresh refused after an offline logout leaves the next session "
+        "alone", () async {
+      final server = FakeAuthServer()..install();
+      final store = SecureStore()..install();
+      addTearDown(() async {
+        FakeAuthServer.uninstall();
+        Auth.tokenRefreshTimeout = const Duration(seconds: 5);
+        await Auth().resetForTest();
+      });
+      // Earlier logouts in this file left Auth signed out.
+      await Auth().resetForTest();
+      store.put(credentials("a-expired",
+          validFor: const Duration(minutes: -1), sub: "a"));
+      await Auth().init();
+      expect(Auth().loggedIn, isTrue);
+      final refused = Completer<void>();
+      server.onToken = (_) async {
+        await refused.future;
+        return oauthError("invalid_grant");
+      };
+      Auth.serverAvailableOverride = () async => true;
+      Auth.tokenRefreshTimeout = const Duration(milliseconds: 50);
+      ApiAvailableService.probeOverride = () async => true;
+      expect(await Auth().refreshToken(), isFalse);
+      expect(server.tokenRequests, hasLength(1));
+      Auth.serverAvailableOverride = () async => false;
       await Auth().onLogoutForTest();
-      expect(Auth().clientListenerRegistered, isFalse);
       serveAccount("a");
       await signInAndLoad("a");
       final epoch = AccountEpoch.current;
-      Auth.serverAvailableOverride = () async => true;
 
-      oldClient.add(const AuthEvent(AuthEventTypes.Error));
+      refused.complete();
       await pumpEventQueue();
 
       expect(Auth().loggedIn, isTrue);
       expect(AccountEpoch.current, epoch);
       expect(AppState().locations, isNotEmpty);
-      await oldClient.close();
     });
 
     test("a message queue that cannot be cleared does not stop the switch",
@@ -593,7 +575,7 @@ void main() {
       addTearDown(() => AppState().removeListener(count));
 
       await Auth().onLogoutForTest();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       expect(Settings.getAccount(), "b");
       expect(AppState().locations, isEmpty);
@@ -614,16 +596,15 @@ void main() {
       await reset;
     });
 
-    test("an offline logout clears the stored identity and keeps the account "
-        "key and its favorites", () async {
-      _mockIdentityStorage();
-      await _identity("a").save();
-      expect((await OpenIdIdentity.load())?.sub, "a");
+    test("an offline logout clears the stored credentials and keeps the "
+        "account key and its favorites", () async {
+      final store = SecureStore()..install();
+      store.put(credentials("access", sub: "a"));
       await Settings.setFavoriteDeviceIds({"device-1"});
 
       await Auth().onLogoutForTest();
 
-      expect(await OpenIdIdentity.load(), isNull,
+      expect(store.stored, isNull,
           reason: "the next login must not resume it");
       expect(Settings.getAccount(), "a");
       expect(Settings.getFavoriteDeviceIds(), {"device-1"});
@@ -645,9 +626,7 @@ void main() {
       await AppState().initMessaging();
       expect(requestsTo("POST", "$tokens/token-a"), 1);
 
-      await Auth().onLogoutForTest();
-      expect(messaging.deletes, 0, reason: "an offline logout keeps it");
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       expect(messaging.deletes, 1,
           reason: "it may still be registered to account a");
       expect(AppState().fcmToken, isNull);
@@ -666,7 +645,7 @@ void main() {
       messaging.holdDelete = Completer<void>();
 
       await Auth()
-          .rememberAccountForTest(_identity("b"))
+          .rememberAccountForTest("b")
           .timeout(const Duration(seconds: 5));
       final init = AppState().initMessaging();
       await Future<void>.delayed(const Duration(milliseconds: 50));
@@ -689,7 +668,7 @@ void main() {
       await _until(() => requestsTo("POST", "$tokens/token-a") == 1);
       expect(requestsTo("POST", "$tokens/token-a"), 1);
       await Auth().onLogoutForTest();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       backend.holds.remove("POST $tokens/token-a");
       gate.complete();
       await old;
@@ -730,8 +709,8 @@ void main() {
         () async {
       await AppState().initMessaging();
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
-      await Auth().rememberAccountForTest(_identity("c"));
+      await Auth().rememberAccountForTest("b");
+      await Auth().rememberAccountForTest("c");
       await pumpEventQueue();
 
       expect(messaging.deletes, 1);
@@ -746,7 +725,7 @@ void main() {
         "next token request", () async {
       await AppState().initMessaging();
       messaging.deleteFails = true;
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       expect(messaging.token, "token-a", reason: "the deletion failed");
 
       messaging.deleteFails = false;
@@ -763,7 +742,7 @@ void main() {
       await AppState().initMessaging();
       AppState().fcmTokenDeletionTimeout = const Duration(milliseconds: 50);
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       await AppState().initMessaging().timeout(const Duration(seconds: 5));
       expect(requestsTo("POST", "$tokens/token-a"), 2,
@@ -778,7 +757,7 @@ void main() {
         "token request", () async {
       await AppState().initMessaging();
       messaging.deleteFails = true;
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       await AppState().fcmTokenDeletionsForTest;
 
       await Settings.close();
@@ -796,7 +775,7 @@ void main() {
       await AppState().initMessaging();
       AppState().fcmTokenDeletionTimeout = const Duration(milliseconds: 50);
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
 
       await AppState().initMessaging();
       messaging.holdDelete!.complete();
@@ -811,10 +790,10 @@ void main() {
       await AppState().initMessaging();
       AppState().fcmTokenDeletionTimeout = const Duration(milliseconds: 50);
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       await AppState().initMessaging();
       final tokenRequests = requestsTo("POST", "$tokens/token-a");
-      await Auth().rememberAccountForTest(_identity("c"));
+      await Auth().rememberAccountForTest("c");
 
       messaging.holdDelete!.complete();
       await AppState().fcmTokenDeletionsForTest;
@@ -828,8 +807,8 @@ void main() {
         "fails", () async {
       messaging.holdDelete = Completer<void>();
       messaging.failingDeletes.add(2);
-      await Auth().rememberAccountForTest(_identity("b"));
-      await Auth().rememberAccountForTest(_identity("c"));
+      await Auth().rememberAccountForTest("b");
+      await Auth().rememberAccountForTest("c");
       messaging.holdDelete!.complete();
       await AppState().fcmTokenDeletionsForTest;
 
@@ -843,7 +822,7 @@ void main() {
       await AppState().initMessaging();
       AppState().fcmTokenDeletionTimeout = const Duration(milliseconds: 50);
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       await AppState().initMessaging();
       messaging.topics.clear();
 
@@ -865,7 +844,7 @@ void main() {
     test("messages queued until the deletion ended are dropped with it",
         () async {
       messaging.holdDelete = Completer<void>();
-      await Auth().rememberAccountForTest(_identity("b"));
+      await Auth().rememberAccountForTest("b");
       await NotificationMixin.queueRemoteMessage(_update("n-a", "a"));
       messaging.holdDelete!.complete();
       await AppState().fcmTokenDeletionsForTest;

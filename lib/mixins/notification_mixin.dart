@@ -47,11 +47,10 @@ const preReleaseTopic = 'android-prerelease';
 mixin NotificationMixin on ChangeNotifier {
   static final _logger = Logger(printer: SimplePrinter());
 
+  // Without resetOnError: on Android every store shares one file, and its
+  // reset would delete the other stores' values too.
   static const _storage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      resetOnError: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
   static final _messageMutex = Mutex();
   final _fcmTokenMutex = Mutex();
@@ -251,7 +250,13 @@ mixin NotificationMixin on ChangeNotifier {
       return;
     }
     _notificationsLoadEpoch = epoch;
-    await _storage.delete(key: messageKey);
+    // The load brings everything the queue holds. A failure here must not
+    // keep the lock, which only the finally below releases.
+    try {
+      await _storage.delete(key: messageKey);
+    } catch (e) {
+      _logger.w('Could not clear the queued messages: ${e.runtimeType}');
+    }
 
     const limit = 10000;
     int offset = 0;
@@ -358,20 +363,30 @@ mixin NotificationMixin on ChangeNotifier {
   Future<void> handleQueuedMessages() async {
     await _messageMutex.acquire();
     try {
-      final read = await _storage.read(key: messageKey);
-      final list = read != null ? json.decode(read) as List : [];
-      list.map((e) => RemoteMessage.fromMap(e as Map<String, dynamic>))
-          .forEach(_handleRemoteMessage);
-    } finally {
+      final String? read;
       try {
-        // Dropped even when handling threw, and this runs on every resume: an
-        // entry that cannot be decoded would otherwise be retried forever, and
-        // the ones before it re-applied each time - every release_info among
-        // them schedules another update check.
-        await _storage.delete(key: messageKey);
+        read = await _storage.read(key: messageKey);
       } catch (e) {
-        _logger.e('Could not clear the queued messages: $e');
+        // Kept for the next resume; the next load of the list clears it.
+        _logger.w('Could not read the queued messages: ${e.runtimeType}');
+        return;
       }
+      try {
+        final list = read != null ? json.decode(read) as List : [];
+        list.map((e) => RemoteMessage.fromMap(e as Map<String, dynamic>))
+            .forEach(_handleRemoteMessage);
+      } finally {
+        try {
+          // Dropped even when handling threw, and this runs on every resume:
+          // an entry that cannot be decoded would otherwise be retried
+          // forever, and the ones before it re-applied each time - every
+          // release_info among them schedules another update check.
+          await _storage.delete(key: messageKey);
+        } catch (e) {
+          _logger.e('Could not clear the queued messages: $e');
+        }
+      }
+    } finally {
       _messageMutex.release();
     }
   }

@@ -75,13 +75,10 @@ class MgwStorage {
   // shared set cannot overwrite credentials a pairing stored meanwhile.
   static final _listLock = Mutex();
 
-  // Same options as the rest of the app, so one corrupted store resets the same
-  // way everywhere (see AppInitializer._clearCorruptedSecureStorage).
+  // Without resetOnError: on Android every store shares one file, and its
+  // reset would delete the other stores' values too.
   static const _secure = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-      resetOnError: true,
-    ),
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
   static final _logger = Logger(

@@ -54,6 +54,7 @@ dependencies:
   fluttertoast: ^9.1.0
   geolocator: ^14.0.0
   hive: ^2.2.3
+  http: ^1.6.0
   intl: ^0.20.0
   isar_community: ^3.3.0
   isar_community_flutter_libs: ^3.3.0
@@ -62,6 +63,7 @@ dependencies:
   mutex: ^3.1.0
   nsd: ^5.0.0
   numberpicker: ^2.1.1
+  oauth2: ^2.0.5
   open_filex: ^4.7.0
   open_location_picker: ^1.1.0
   openidconnect: ^2.0.0

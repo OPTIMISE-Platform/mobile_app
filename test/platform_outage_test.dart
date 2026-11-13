@@ -15,11 +15,11 @@
  */
 
 import 'dart:async';
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/exceptions/api_unavailable_exception.dart';
@@ -34,128 +34,10 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/widgets/tabs/nav.dart';
-import 'package:openidconnect/openidconnect.dart';
 
+import 'fake_auth_server.dart';
 import 'fake_backend.dart';
 import 'golden_helper.dart';
-
-/// The identity package's own secure storage, as its method channel sees it.
-final _identityStorage = <String, String>{};
-
-void _mockIdentityStorage() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(
-          const MethodChannel('plugins.concerti.io/openidconnect_secure_storage'),
-          (call) async {
-    final args = (call.arguments as Map?)?.cast<String, Object?>() ?? {};
-    final key = args['key'] as String?;
-    switch (call.method) {
-      case 'write':
-        _identityStorage[key!] = args['value'] as String;
-        return null;
-      case 'read':
-        return _identityStorage[key];
-      case 'delete':
-        _identityStorage.remove(key);
-        return null;
-      case 'containsKey':
-        return _identityStorage.containsKey(key);
-    }
-    return null;
-  });
-}
-
-/// An identity of the account the golden environment signs in, or of [sub].
-OpenIdIdentity _identity(String accessToken,
-    {Duration validFor = const Duration(hours: 1),
-    String sub = "test-account"}) {
-  String part(Map<String, dynamic> claims) =>
-      base64Url.encode(utf8.encode(jsonEncode(claims))).replaceAll("=", "");
-  return OpenIdIdentity(
-    accessToken: accessToken,
-    expiresAt: DateTime.now().add(validFor),
-    idToken: "${part({"alg": "none"})}.${part({"sub": sub})}.sig",
-    tokenType: "bearer",
-    refreshToken: "refresh-$accessToken",
-  );
-}
-
-Future<String?> _storedToken() async =>
-    (await OpenIdIdentity.load())?.accessToken;
-
-/// A set-up client whose refresh and logout the test answers.
-class _FakeClient extends Fake implements OpenIdConnectClient {
-  _FakeClient(this.current, {this.loginIdentity});
-
-  OpenIdIdentity? current;
-
-  /// What a login with credentials signs in.
-  final OpenIdIdentity? loginIdentity;
-  final events = StreamController<AuthEvent>.broadcast();
-  final refreshResult = Completer<bool>();
-  final logoutResult = Completer<void>();
-  bool disposed = false;
-
-  @override
-  Future<OpenIdIdentity> loginWithPassword(
-      {required String userName,
-      required String password,
-      Iterable<String>? prompts,
-      Map<String, String>? additionalParameters}) async {
-    current = loginIdentity!;
-    await current!.save();
-    events.add(const AuthEvent(AuthEventTypes.Success));
-    return current!;
-  }
-
-  /// As the package's: the event, then the revocation, then the clear.
-  @override
-  Future<void> logout() async {
-    events.add(const AuthEvent(AuthEventTypes.LoggingOut));
-    await logoutResult.future;
-    await clearIdentity();
-  }
-
-  @override
-  OpenIdIdentity? get identity => current;
-
-  @override
-  bool get hasTokenExpired => current!.expiresAt.isBefore(DateTime.now());
-
-  @override
-  Stream<AuthEvent> get changes => events.stream;
-
-  @override
-  Future<bool> refresh({bool raiseEvents = true}) => refreshResult.future;
-
-  @override
-  Future<void> clearIdentity() async {
-    if (current == null) return;
-    await OpenIdIdentity.clear();
-    current = null;
-  }
-
-  @override
-  void dispose() => disposed = true;
-}
-
-/// A client whose password grant answers only once [grant] completes.
-class _HangingLoginClient extends _FakeClient {
-  _HangingLoginClient(OpenIdIdentity identity)
-      : super(null, loginIdentity: identity);
-
-  final grant = Completer<void>();
-
-  @override
-  Future<OpenIdIdentity> loginWithPassword(
-      {required String userName,
-      required String password,
-      Iterable<String>? prompts,
-      Map<String, String>? additionalParameters}) async {
-    await grant.future;
-    return super.loginWithPassword(userName: userName, password: password);
-  }
-}
 
 /// A context whose screen is gone, so the logout does not navigate.
 class _Context extends Fake implements BuildContext {
@@ -178,11 +60,26 @@ Future<T> _within<T>(Future<T> future) =>
 
 void main() {
   late List<String> shown;
+  late FakeAuthServer server;
+  late SecureStore store;
   final monotonicNow = Auth.monotonicNow;
+
+  String? storedToken() => store.stored?.accessToken;
+
+  /// Signs in on [stored], as the app start does.
+  Future<void> start(String stored,
+      {Duration validFor = const Duration(hours: 1),
+      String sub = "test-account",
+      bool discovered = true}) async {
+    store.put(credentials(stored,
+        validFor: validFor, sub: sub, discovered: discovered));
+    await _within(Auth().init());
+  }
+
+  const expired = Duration(minutes: -1);
 
   setUpAll(() async {
     await setUpGoldenEnvironment();
-    _mockIdentityStorage();
   });
 
   setUp(() {
@@ -191,12 +88,16 @@ void main() {
     ErrorReporter.present = shown.add;
     Auth.clientSetupTimeout = _bound;
     Auth.tokenRefreshTimeout = _bound;
+    server = FakeAuthServer()..install();
+    store = SecureStore()..install();
+    LegacyIdentityStore().install();
   });
 
   tearDown(() async {
-    // Lets a late reconcile of the previous test finish before resetting.
+    // Lets a late settle of the previous test finish before resetting.
     await pumpEventQueue();
-    Auth.createClientOverride = null;
+    FakeAuthServer.uninstall();
+    LegacyIdentityStore.uninstall();
     Auth.serverAvailableOverride = null;
     Auth.monotonicNow = monotonicNow;
     Auth.clientSetupTimeout = const Duration(seconds: 5);
@@ -204,59 +105,57 @@ void main() {
     Auth.loginTimeout = const Duration(seconds: 30);
     Auth.logoutTimeout = const Duration(seconds: 5);
     await Auth().resetForTest();
+    // Survives resetForTest, as across a start; set by the logouts here.
+    await Settings.setSignedOut(false);
     resetGoldenBackend();
     resetAppStateForGolden();
     await Settings.setLocalMode(false);
-    _identityStorage.clear();
     ErrorReporter.present = (_) {};
   });
 
   group("getHeaders", () {
-    test("a client setup that hangs holds it no longer than its bound",
-        () async {
-      await _identity("stored").save();
-      var setups = 0;
-      Auth.createClientOverride = () {
-        setups++;
-        return Completer<OpenIdConnectClient>().future;
-      };
+    test("a discovery that hangs holds it no longer than its bound, and a "
+        "login waits on the one still running", () async {
+      // Moved from the previous package, so without the token endpoint.
+      await start("stored", validFor: expired, discovered: false);
+      server.holdDiscovery = Completer<void>();
+      Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => false;
-      Auth().loggedIn = true;
 
       final headers = await _within(Auth().getHeaders());
 
-      expect(headers["authorization"], "Bearer stored",
-          reason: "the stored token stands in for the client");
+      expect(headers, isEmpty,
+          reason: "a refresh that did not happen yields no token, as before");
       await pumpEventQueue();
       expect(ApiAvailableService.isPlatformUnreachable, isTrue,
           reason: "the probe failed as well");
-      // The setup mutex is free again, and a setup the user starts waits on
-      // the one still running, within its own bound.
-      await _within(Auth().init());
-      expect(setups, 1);
+      expect(Auth().loggedIn, isTrue);
+      expect(storedToken(), "stored");
+      // The login waits on the discovery still running, within its own
+      // bound.
+      Auth.loginTimeout = const Duration(milliseconds: 300);
+      await expectLater(_within(Auth().login("user", "pw")),
+          throwsA(isA<AuthException>()));
+      expect(server.discoveries, 1);
+      expect(Auth().loggedIn, isTrue, reason: "a failed login keeps the session");
     });
 
-    test("a setup that never ends is not joined past the login bound",
+    test("a discovery that never ends is not joined past the login bound",
         () async {
       var now = Duration.zero;
       Auth.monotonicNow = () => now;
       Auth.loginTimeout = const Duration(milliseconds: 200);
       Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => true;
-      var setups = 0;
-      Auth.createClientOverride = () {
-        setups++;
-        return setups == 1
-            ? Completer<OpenIdConnectClient>().future
-            : Future.value(
-                _FakeClient(null, loginIdentity: _identity("signed-in")));
-      };
-      await _within(Auth().init());
+      server.holdDiscovery = Completer<void>();
+      await expectLater(_within(Auth().login("user", "pw")),
+          throwsA(isA<AuthException>()));
 
       now += const Duration(seconds: 1);
+      server.holdDiscovery = null;
       await _within(Auth().login("user", "pw"));
 
-      expect(setups, 2);
+      expect(server.discoveries, 2);
       expect(Auth().loggedIn, isTrue);
     });
 
@@ -264,26 +163,25 @@ void main() {
         "keeps no late identity", () async {
       Auth.loginTimeout = const Duration(milliseconds: 200);
       Auth.serverAvailableOverride = () async => true;
-      final client = _HangingLoginClient(_identity("late"));
-      Auth.createClientOverride = () async => client;
+      server.holdToken = Completer<void>();
 
       await expectLater(
           _within(Auth().login("user", "pw")), throwsA(isA<AuthException>()));
       expect(Auth().loggedIn, isFalse);
 
-      client.grant.complete();
-      await _until(() => client.disposed);
+      server.holdToken!.complete();
+      await _until(() => server.tokenRequests.isNotEmpty);
       await pumpEventQueue();
-      expect(await _storedToken(), isNull);
+      expect(storedToken(), isNull);
       expect(Auth().loggedIn, isFalse);
     });
 
-    test("a setup that runs into its bound marks nothing while a probe "
+    test("a discovery that runs into its bound marks nothing while a probe "
         "finds the platform", () async {
-      await _identity("stored").save();
-      Auth.createClientOverride = () => Completer<OpenIdConnectClient>().future;
+      await start("stored", validFor: expired, discovered: false);
+      server.holdDiscovery = Completer<void>();
+      Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => true;
-      Auth().loggedIn = true;
 
       await _within(Auth().getHeaders());
       await pumpEventQueue();
@@ -291,78 +189,68 @@ void main() {
       expect(ApiAvailableService.isPlatformUnreachable, isFalse);
     });
 
-    test("a setup that ends late is taken while no session change came "
+    test("a discovery that ends late is taken while no session change came "
         "between", () async {
-      await _identity("stored").save();
-      final setup = Completer<OpenIdConnectClient>();
-      Auth.createClientOverride = () => setup.future;
+      await start("stored", validFor: expired, discovered: false);
+      server.holdDiscovery = Completer<void>();
+      Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => true;
-      Auth().loggedIn = true;
       await _within(Auth().getHeaders());
 
-      final late = _FakeClient(_identity("fresh"));
-      setup.complete(late);
-      await _until(() => Auth().clientListenerRegistered);
+      server.holdDiscovery!.complete();
+      await pumpEventQueue();
 
-      expect(late.disposed, isFalse);
-      expect(Auth().clientListenerRegistered, isTrue);
       expect(Auth().loggedIn, isTrue);
       expect((await _within(Auth().getHeaders()))["authorization"],
-          "Bearer fresh");
+          "Bearer refreshed");
+      expect(server.discoveries, 1, reason: "the late answer was kept");
+      expect(storedToken(), "refreshed");
+      expect(store.stored!.tokenEndpoint, tokenEndpoint,
+          reason: "the refreshed credentials carry the endpoint");
     });
 
-    test("a login waits for the setup longer than a background request",
+    test("a login waits for the discovery longer than a background request",
         () async {
       Auth.loginTimeout = const Duration(seconds: 1);
       Auth.serverAvailableOverride = () async => true;
-      Auth.createClientOverride = () async {
-        await Future<void>.delayed(const Duration(milliseconds: 300));
-        return _FakeClient(null, loginIdentity: _identity("signed-in"));
-      };
+      server.holdDiscovery = Completer<void>();
+      unawaited(Future<void>.delayed(const Duration(milliseconds: 300))
+          .then((_) => server.holdDiscovery!.complete()));
 
       await _within(Auth().login("user", "password"));
 
       expect(Auth().loggedIn, isTrue);
-      expect(await _storedToken(), "signed-in");
+      expect(storedToken(), "signed-in");
     });
 
-    test("a failed setup is tried again after 30 s, not on every request",
+    test("a failed discovery is tried again after 30 s, not on every request",
         () async {
-      await _identity("stored").save();
+      await start("stored", validFor: expired, discovered: false);
       var now = Duration.zero;
       Auth.monotonicNow = () => now;
-      var setups = 0;
-      Auth.createClientOverride = () async {
-        setups++;
-        throw StateError("invalid discovery document");
-      };
-      Auth().loggedIn = true;
+      Auth.serverAvailableOverride = () async => true;
+      server.discoveryStatus = 500;
 
       await Auth().getHeaders();
       await Auth().getHeaders();
-      expect(setups, 1);
+      expect(server.discoveries, 1);
       expect(ApiAvailableService.isPlatformUnreachable, isFalse,
           reason: "not a connection failure");
 
       now += const Duration(seconds: 29);
       await Auth().getHeaders();
-      expect(setups, 1);
+      expect(server.discoveries, 1);
 
       now += const Duration(seconds: 2);
       await Auth().getHeaders();
-      expect(setups, 2);
+      expect(server.discoveries, 2);
+      expect(Auth().loggedIn, isTrue);
     });
 
     for (final cause in ["the local mode", "an outage"]) {
-      test("in $cause sets up nothing and asks no server", () async {
-        await _identity("stored").save();
-        // Counted, not failed in place: the setup catches what it throws.
-        var setups = 0;
+      test("in $cause asks no server", () async {
+        await start("stored", validFor: expired);
         var checks = 0;
-        Auth.createClientOverride = () async {
-          setups++;
-          throw StateError("client setup");
-        };
         Auth.serverAvailableOverride = () async {
           checks++;
           return true;
@@ -375,56 +263,53 @@ void main() {
         } else {
           await Settings.setLocalMode(true);
         }
-        Auth().loggedIn = true;
 
         final headers = await _within(Auth().getHeaders());
 
         expect(headers["authorization"], "Bearer stored");
-        expect(setups, 0);
+        expect(server.requests, isEmpty);
         expect(checks, 0);
         expect(backend.requests, isEmpty);
       });
     }
 
-    test("a setup that succeeds has an outage mark checked again", () async {
+    test("a login that reaches the auth server has an outage mark checked "
+        "again", () async {
       ApiAvailableService.setUnreachableForTest(true);
       ApiAvailableService.probeOverride = () async => true;
-      Auth.createClientOverride = () async => _FakeClient(_identity("fresh"));
+      Auth.serverAvailableOverride = () async => true;
 
-      await _within(Auth().init());
+      await _within(Auth().login("user", "pw"));
 
       expect(ApiAvailableService.isPlatformUnreachable, isFalse);
       expect(Auth().loggedIn, isTrue);
     });
 
-    test("a refresh that hangs is abandoned with its client", () async {
-      final client = _FakeClient(
-          _identity("expired", validFor: const Duration(minutes: -1)));
-      await client.current!.save();
-      Auth.createClientOverride = () async => client;
+    test("a refresh that hangs is bounded, and the next one waits on it "
+        "instead of sending the refresh token again", () async {
+      await start("expired", validFor: expired);
+      server.holdToken = Completer<void>();
       Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => false;
-      Auth().loggedIn = true;
 
       expect(await _within(Auth().getHeaders()), isEmpty,
           reason: "a refresh that did not finish yields no token, as before");
       await pumpEventQueue();
       expect(ApiAvailableService.isPlatformUnreachable, isTrue);
-      expect(Auth().clientListenerRegistered, isFalse,
-          reason: "the client's late events must not reach the session");
       expect((await _within(Auth().getHeaders()))["authorization"],
           "Bearer expired");
+
+      expect(await _within(Auth().refreshToken()), isFalse);
+      expect(server.tokenRequests, hasLength(1));
+      expect(Auth().loggedIn, isTrue);
     });
 
     test("a refresh that runs into its bound marks nothing while a probe "
         "finds the platform", () async {
-      final client = _FakeClient(
-          _identity("expired", validFor: const Duration(minutes: -1)));
-      await client.current!.save();
-      Auth.createClientOverride = () async => client;
+      await start("expired", validFor: expired);
+      server.holdToken = Completer<void>();
       Auth.serverAvailableOverride = () async => true;
       ApiAvailableService.probeOverride = () async => true;
-      Auth().loggedIn = true;
 
       await _within(Auth().getHeaders());
       await pumpEventQueue();
@@ -442,217 +327,217 @@ void main() {
     expect(Auth().discoveryUrl, startsWith("https://auth-two.test/"));
   });
 
-  test("a logout without a client still logs out", () async {
-    await _identity("stored").save();
-    Auth.createClientOverride = () async => throw StateError("no client");
+  test("a logout whose auth server does not answer still logs out", () async {
+    await start("stored");
+    server.discoveryError = const SocketException("connection refused");
     Auth.serverAvailableOverride = () async => false;
-    Auth().loggedIn = true;
 
-    await _within(Auth().logout(_Context()) as Future);
+    await _within(Auth().logout(_Context()));
 
     expect(Auth().loggedIn, isFalse);
-    expect(await _storedToken(), isNull);
+    expect(storedToken(), isNull);
+    expect(server.revocations, isEmpty);
   });
 
-  test("a logout in an outage sets up no client", () async {
-    await _identity("stored").save();
-    var setups = 0;
-    Auth.createClientOverride = () {
-      setups++;
-      return Completer<OpenIdConnectClient>().future;
-    };
+  test("a logout revokes the refresh token as a public client", () async {
+    await start("valid");
+    Auth.serverAvailableOverride = () async => true;
+
+    await _within(Auth().logout(_Context()));
+
+    expect(server.revocations, [
+      {
+        "token": "refresh-valid",
+        "token_type_hint": "refresh_token",
+        "client_id": dotenv.env["KEYCLOAK_CLIENTID"],
+      }
+    ]);
+    expect(Auth().loggedIn, isFalse);
+    expect(storedToken(), isNull);
+  });
+
+  test("a logout in an outage asks no server", () async {
+    await start("stored");
     Auth.serverAvailableOverride = () async => false;
     ApiAvailableService.setUnreachableForTest(true);
-    Auth().loggedIn = true;
 
-    await _within(Auth().logout(_Context()) as Future);
+    await _within(Auth().logout(_Context()));
 
-    expect(setups, 0);
+    expect(server.requests, isEmpty);
     expect(Auth().loggedIn, isFalse);
-    expect(await _storedToken(), isNull);
+    expect(storedToken(), isNull);
   });
 
   test("a logout in an outage does not wait for the revocation", () async {
-    final client = _FakeClient(_identity("valid"));
-    await client.current!.save();
-    Auth.createClientOverride = () async => client;
+    await start("valid");
+    server.holdRevocation = Completer<void>();
     Auth.serverAvailableOverride = () async => false;
     Auth.logoutTimeout = const Duration(seconds: 10);
-    await _within(Auth().init());
     ApiAvailableService.setUnreachableForTest(true);
 
-    await _within(Auth().logout(_Context()) as Future);
+    await _within(Auth().logout(_Context()));
 
     expect(Auth().loggedIn, isFalse);
-    expect(await _storedToken(), isNull);
+    expect(storedToken(), isNull);
   });
 
   test("a logout whose revocation hangs logs out locally", () async {
-    final client = _FakeClient(_identity("valid"));
-    await client.current!.save();
-    Auth.createClientOverride = () async => client;
+    await start("valid");
+    server.holdRevocation = Completer<void>();
     Auth.serverAvailableOverride = () async => true;
     Auth.logoutTimeout = _bound;
-    await _within(Auth().init());
     expect(Auth().loggedIn, isTrue);
 
-    await _within(Auth().logout(_Context()) as Future);
+    await _within(Auth().logout(_Context()));
 
     expect(Auth().loggedIn, isFalse);
-    expect(await _storedToken(), isNull);
-    expect(Auth().clientListenerRegistered, isFalse,
-        reason: "the client is dropped, as by an offline logout");
-    expect(client.current, isNull,
-        reason: "its own late clear finds no identity left");
+    expect(storedToken(), isNull);
 
-    client.logoutResult.complete();
+    // A login meanwhile keeps its session when the revocation ends.
+    await _within(Auth().login("user", "pw"));
+    server.holdRevocation!.complete();
     await pumpEventQueue();
-    expect(client.disposed, isTrue);
+    expect(server.revocations, hasLength(1));
+    expect(Auth().loggedIn, isTrue);
+    expect(storedToken(), "signed-in");
   });
 
   test("a refresh that ends after an offline logout does not sign the next "
       "login in as that account", () async {
-    // Signed in as A; the refresh runs into its bound and its client is
-    // abandoned, the refresh still running.
-    final a = _FakeClient(_identity("a-expired",
-        validFor: const Duration(minutes: -1), sub: "account-a"));
-    await a.current!.save();
-    Auth.createClientOverride = () async => a;
+    // Signed in as A; the refresh runs into its bound, the refresh still
+    // running.
+    await start("a-expired", validFor: expired, sub: "account-a");
+    final refreshOfA = Completer<void>();
+    server.onToken = (form) async {
+      if (form["grant_type"] == "refresh_token") {
+        await refreshOfA.future;
+        return tokens("a-refreshed", sub: "account-a");
+      }
+      return tokens("b", sub: "account-b");
+    };
     Auth.serverAvailableOverride = () async => true;
     ApiAvailableService.probeOverride = () async => false;
-    Auth().loggedIn = true;
     await _within(Auth().getHeaders());
     await pumpEventQueue();
     expect(ApiAvailableService.isPlatformUnreachable, isTrue);
 
     // A logs out while the platform is down.
     Auth.serverAvailableOverride = () async => false;
-    await _within(Auth().logout(_Context()) as Future);
-    expect(await _storedToken(), isNull);
+    await _within(Auth().logout(_Context()));
+    expect(storedToken(), isNull);
 
-    // The platform is back, and B logs in. The setup loads the stored
-    // identity once it has the discovery document, as the package's does.
+    // The platform is back, and B logs in; the discovery holds the login
+    // until A's refresh has ended.
     ApiAvailableService.probeOverride = () async => true;
     await ApiAvailableService().recheckPlatform();
     Auth.serverAvailableOverride = () async => true;
-    final discovery = Completer<void>();
-    Auth.createClientOverride = () async {
-      await discovery.future;
-      return _FakeClient(await OpenIdIdentity.load(),
-          loginIdentity: _identity("b", sub: "account-b"));
-    };
+    server.holdDiscovery = Completer<void>();
     final login = Auth().login("b", "password");
     await pumpEventQueue();
 
-    // Meanwhile A's abandoned refresh ends and stores A's identity.
-    a.current = _identity("a-refreshed", sub: "account-a");
-    await a.current!.save();
-    a.refreshResult.complete(true);
+    refreshOfA.complete();
     await pumpEventQueue();
-    discovery.complete();
+    server.holdDiscovery!.complete();
     await _within(login);
     await pumpEventQueue();
 
-    expect(Auth().getUsername(), "account-b");
+    expect(Auth().getUsername(), "user-account-b");
     expect(Settings.getAccount(), "account-b");
-    expect(await _storedToken(), "b");
+    expect(storedToken(), "b");
   });
 
-  test("a login whose setup fails after a logout does not trust an identity "
-      "stored meanwhile", () async {
+  test("a login after a logout does not trust credentials stored meanwhile",
+      () async {
     Auth.serverAvailableOverride = () async => false;
-    Auth().loggedIn = true;
+    await start("a", sub: "account-a");
     await Auth().onLogoutForTest();
-    // As a refresh abandoned before the logout stores when it ends.
-    await _identity("late", sub: "account-a").save();
-    Auth.createClientOverride = () async => throw StateError("no client");
+    // As a deletion that did not take leaves them.
+    store.put(credentials("late", sub: "account-a"));
+    server.discoveryError = StateError("no discovery");
 
     await expectLater(Auth().login("b", "password"), throwsA(anything));
 
     expect(Auth().loggedIn, isFalse);
   });
 
-  group("an abandoned call that ends late", () {
+  group("a refresh that ends late", () {
     test("does not sign a logged-out session back in", () async {
-      await _identity("stored").save();
-      final setup = Completer<OpenIdConnectClient>();
-      Auth.createClientOverride = () => setup.future;
-      Auth().loggedIn = true;
+      await start("expired", validFor: expired);
+      server.holdToken = Completer<void>();
+      Auth.serverAvailableOverride = () async => true;
+      ApiAvailableService.probeOverride = () async => true;
       await _within(Auth().getHeaders());
 
       Auth.serverAvailableOverride = () async => false;
       await Auth().onLogoutForTest();
-      expect(await _storedToken(), isNull);
+      expect(storedToken(), isNull);
 
-      // The setup refreshed on its way, which stores the identity it got.
-      final late = _FakeClient(_identity("late"));
-      await late.current!.save();
-      setup.complete(late);
+      server.holdToken!.complete();
+      await _until(() => server.tokenRequests.isNotEmpty);
       await pumpEventQueue();
 
-      expect(late.disposed, isTrue);
-      expect(await _storedToken(), isNull);
+      expect(storedToken(), isNull);
       expect(Auth().loggedIn, isFalse);
-      expect(Auth().clientListenerRegistered, isFalse);
+      expect(Settings.getAccount(), "test-account");
     });
 
-    test("puts back the stored identity it cleared on a failure", () async {
-      final client = _FakeClient(
-          _identity("expired", validFor: const Duration(minutes: -1)));
-      await client.current!.save();
-      Auth.createClientOverride = () async => client;
+    test("keeps the stored credentials when it failed", () async {
+      await start("expired", validFor: expired);
+      server.holdToken = Completer<void>();
+      server.tokenError = const SocketException("connection reset");
       Auth.serverAvailableOverride = () async => true;
-      Auth().loggedIn = true;
+      ApiAvailableService.probeOverride = () async => true;
       await _within(Auth().getHeaders());
 
-      // The refresh failed on an expired identity, which clears it.
-      await client.clearIdentity();
-      client.refreshResult.complete(false);
+      server.holdToken!.complete();
       await pumpEventQueue();
 
-      expect(await _storedToken(), "expired");
+      expect(storedToken(), "expired");
       expect(Auth().loggedIn, isTrue);
     });
 
-    test("a late refresh after a logout leaves the identity cleared",
+    test("with invalid_grant after the next login leaves that session alone",
         () async {
-      final client = _FakeClient(
-          _identity("expired", validFor: const Duration(minutes: -1)));
-      await client.current!.save();
-      Auth.createClientOverride = () async => client;
+      await start("expired", validFor: expired);
+      final refresh = Completer<void>();
+      server.onToken = (form) async {
+        if (form["grant_type"] == "refresh_token") {
+          await refresh.future;
+          return oauthError("invalid_grant", description: "Token is not active");
+        }
+        return tokens("next");
+      };
       Auth.serverAvailableOverride = () async => true;
-      Auth().loggedIn = true;
+      ApiAvailableService.probeOverride = () async => true;
       await _within(Auth().getHeaders());
 
       Auth.serverAvailableOverride = () async => false;
       await Auth().onLogoutForTest();
-      client.current = _identity("refreshed");
-      await client.current!.save();
-      client.events.add(const AuthEvent(AuthEventTypes.Refresh));
-      client.refreshResult.complete(true);
+      Auth.serverAvailableOverride = () async => true;
+      await _within(Auth().login("user", "pw"));
+      refresh.complete();
       await pumpEventQueue();
 
-      expect(client.disposed, isTrue);
-      expect(await _storedToken(), isNull);
-      expect(Auth().loggedIn, isFalse);
+      expect(Auth().loggedIn, isTrue);
+      expect(storedToken(), "next");
     });
 
-    test("a late refresh in the same session keeps what it stored", () async {
-      final client = _FakeClient(
-          _identity("expired", validFor: const Duration(minutes: -1)));
-      await client.current!.save();
-      Auth.createClientOverride = () async => client;
+    test("in the same session keeps what it got", () async {
+      await start("expired", validFor: expired);
+      server.holdToken = Completer<void>();
       Auth.serverAvailableOverride = () async => true;
-      Auth().loggedIn = true;
+      ApiAvailableService.probeOverride = () async => true;
       await _within(Auth().getHeaders());
 
-      client.current = _identity("refreshed");
-      await client.current!.save();
-      client.refreshResult.complete(true);
+      server.holdToken!.complete();
       await pumpEventQueue();
 
-      expect(await _storedToken(), "refreshed");
+      expect(storedToken(), "refreshed",
+          reason: "a rotated refresh token leaves the previous one invalid");
       expect(Auth().loggedIn, isTrue);
+      expect((await _within(Auth().getHeaders()))["authorization"],
+          "Bearer refreshed");
+      expect(server.tokenRequests, hasLength(1));
     });
   });
 

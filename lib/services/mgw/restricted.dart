@@ -77,11 +77,10 @@ class MgwService {
   /// gateway rejected the stored session.
   bool retriedWithFreshSession = false;
 
+  // Without resetOnError: on Android every store shares one file, and its
+  // reset would delete the other stores' values too.
   static const _storage = FlutterSecureStorage(
-      aOptions: AndroidOptions(
-        encryptedSharedPreferences: true,
-        resetOnError: true,
-  ));
+      aOptions: AndroidOptions(encryptedSharedPreferences: true));
 
   // The one session every gateway shared before pairings had their own; only
   // the migration in MgwStorage still reads them.
