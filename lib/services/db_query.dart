@@ -39,6 +39,21 @@ class DbQueryService {
     return List<List<dynamic>>.generate(decoded.length, (i) => decoded[i] as List<dynamic>);
   }
 
+  /// Runs [queries] in one request; the answer of each, in order.
+  static Future<List<List<List<dynamic>>>> queryAll(List<DbQuery> queries) async {
+    final url = '${Settings.getApiUrl() ?? 'localhost'}/db/v3/queries';
+    final headers = await Auth().getHeaders();
+
+    final dio = await DioFactory.create(DioConfig.standard);
+    final resp = await dio.post<List<dynamic>>(url, options: Options(headers: headers), data: json.encode(queries));
+    if (resp.statusCode == null || resp.data == null || resp.statusCode != 200) {
+      throw UnexpectedStatusCodeException(resp.statusCode, url);
+    }
+    return [
+      for (final answer in resp.data!) [for (final row in answer as List<dynamic>) row as List<dynamic>]
+    ];
+  }
+
   /// The newest value of [columnName] in the export [exportId], or null when
   /// the export has no row. Unlike [query], it does not need a time range, so a
   /// value that has not changed for a long time is still found.

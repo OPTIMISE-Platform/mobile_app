@@ -18,11 +18,14 @@
 
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
+import 'package:mobile_app/models/db_query.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/smart_service.dart';
+import 'package:mobile_app/services/db_query.dart';
 import 'package:mobile_app/services/device_commands.dart';
 import 'package:mobile_app/services/device_types.dart';
 import 'package:mobile_app/services/devices.dart';
@@ -34,6 +37,8 @@ import 'package:mobile_app/widgets/tabs/dashboard/dashboard.dart';
 import 'package:mobile_app/widgets/tabs/dashboard/smart_service_widgets/base.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_editor.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_schedule_model.dart';
+import 'package:mobile_app/widgets/tabs/smart-services/automation_suggestions_load.dart' show exportHasNoTable;
+import 'package:mobile_app/widgets/tabs/smart-services/heating_warmup_model.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/heating_zone_editor.dart';
 import 'package:mobile_app/widgets/tabs/smart-services/instance_parameters.dart';
 
@@ -48,7 +53,8 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   static const _namedHeaderPx = 36.0;
   static const _bigRowPx = 40.0;
   static const _nextRowPx = 20.0;
-  static const _manualPx = 32.0;
+  static const _manualPx = 32.0; // the status row with the manual and warm-up pills
+  static const _warmupLinePx = 20.0;
   static const _batteryPx = 20.0;
   static const _gapPx = 8.0;
   static const _axisPx = 16.0;
@@ -67,6 +73,12 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   /// What the thermostats reported, by device id; empty while unknown or when reading failed.
   Map<String, HeatingDeviceValues> _values = const {};
 
+  /// Set when the instance has a warm-up export; null for every older instance.
+  HeatingWarmupConfig? _warmup;
+
+  /// The newest export row per zone key; null while unknown or when reading failed.
+  Map<String, HeatingWarmupRow>? _warmupRows;
+
   List<DeviceCommand>? _commands;
   List<(String, HeatingValueKind)> _asked = const [];
 
@@ -83,13 +95,37 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
   double width = 1;
 
   @override
-  Future<void> configure(dynamic data) async {}
+  Future<void> configure(dynamic data) async {
+    _warmup = HeatingWarmupConfig.from(data);
+  }
 
   bool _weekExpanded(HeatingZone zone) => _weekOpen[zone.name] ?? _zones!.length == 1;
 
   HeatingOverride? _override(HeatingZone zone, DateTime now) {
     final targets = [for (final t in zone.thermostats) ?_values[t.id]?.target];
     return heatingManualOverride(zone.schedule, targets, now);
+  }
+
+  HeatingWarmupRow? _warmupRow(HeatingZone zone) => _warmupRows?[zone.key];
+
+  String? _warmupStatus(HeatingZone zone, DateTime now) =>
+      _warmup == null ? null : heatingWarmupStatus(_warmupRow(zone), zone.schedule.target(now));
+
+  String? _warmupNextLine(HeatingZone zone, DateTime now) =>
+      _warmup == null ? null : heatingWarmupNextLine(_warmupRow(zone), _warmup!.mode, now);
+
+  /// Only when the export was read: without information the widget looks as before.
+  String? _warmupLearning(HeatingZone zone) => _warmupRows == null ? null : heatingWarmupLearning(_warmupRow(zone));
+
+  /// The stations are the same in every zone's row, so the first row that names them speaks for the instance.
+  String? _stationLine() {
+    final rows = _warmupRows;
+    if (_zones == null || rows == null) return null;
+    for (final zone in _zones!) {
+      final row = rows[zone.key];
+      if (row != null) return heatingStationLine(row.measure, row.forecast);
+    }
+    return null;
   }
 
   @override
@@ -102,9 +138,14 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
       px += _bigRowPx + _nextRowPx + _gapPx + _axisPx + _dayRowPx + _toggleRowPx + _gapPx;
       if (!_plan!.legacy) px += _namedHeaderPx;
       if (heatingLowBatteries(zone.thermostats, _values).isNotEmpty) px += _batteryPx;
-      if (_override(zone, now) != null) px += _manualPx;
+      final status = _warmupStatus(zone, now) != null;
+      if (_override(zone, now) != null || status) px += _manualPx;
+      if (_override(zone, now) != null && status) px += _manualPx;
+      if (_warmupNextLine(zone, now) != null) px += _warmupLinePx;
+      if (_warmupLearning(zone) != null) px += _warmupLinePx;
       if (_weekExpanded(zone)) px += 7 * _dayRowPx;
     }
+    if (_stationLine() != null) px += _warmupLinePx;
     return (px / heightUnit).ceilToDouble();
   }
 
@@ -127,6 +168,7 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
         return;
       }
       await _loadValues(reuseCommands: true);
+      await _loadWarmup();
       dashboard.redraw();
     });
   }
@@ -161,6 +203,37 @@ class SmSeHeatingSchedule extends SmartServiceModuleWidget {
     } else {
       _values = const {};
       _commands = null;
+    }
+    await _loadWarmup();
+  }
+
+  /// Reads the newest export row of every zone in one request. An export without a table yet
+  /// means no rows so far; any other failure is logged and leaves the widget without warm-up information.
+  Future<void> _loadWarmup() async {
+    final warmup = _warmup, zones = _zones;
+    if (warmup == null || zones == null) {
+      _warmupRows = null;
+      return;
+    }
+    try {
+      final keys = [for (final z in zones) z.key];
+      final results = await DbQueryService.queryAll([
+        for (final key in keys)
+          DbQuery(warmup.exportId, null, null, null, null, 1, null, null,
+              [for (final c in heatingWarmupColumns) QueriesRequestElementColumn(c, null, null, null, null, null)],
+              [QueriesRequestElementFilter("zone", "=", null, key)]),
+      ]);
+      _warmupRows = heatingWarmupRows(keys, results, (m) => ErrorReporter.log(m));
+    } on DioException catch (e, s) {
+      if (exportHasNoTable(e.response?.statusCode, e.response?.data)) {
+        _warmupRows = const {};
+      } else {
+        ErrorReporter.log("Could not read the warm-up export", e, s);
+        _warmupRows = null;
+      }
+    } catch (e, s) {
+      ErrorReporter.log("Could not read the warm-up export", e, s);
+      _warmupRows = null;
     }
   }
 
@@ -285,6 +358,14 @@ class _HeatingBodyState extends State<_HeatingBody> {
             ]),
             const SizedBox(height: Spacing.xxs),
             for (final zone in zones) _zoneBlock(context, zone, now, named: !plan.legacy),
+            if (m._stationLine() != null)
+              SizedBox(
+                height: SmSeHeatingSchedule._warmupLinePx,
+                child: Text(m._stationLine()!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+              ),
             Wrap(
               alignment: WrapAlignment.spaceBetween,
               crossAxisAlignment: WrapCrossAlignment.center,
@@ -366,6 +447,10 @@ class _HeatingBodyState extends State<_HeatingBody> {
     final low = heatingLowBatteries(zone.thermostats, m._values);
     final manual = m._override(zone, now);
     final expanded = m._weekExpanded(zone);
+    final warmupStatus = m._warmupStatus(zone, now);
+    final warmupNext = m._warmupNextLine(zone, now);
+    final warmupLearning = m._warmupLearning(zone);
+    final hatches = m._warmup == null ? null : m._warmupRow(zone)?.windows;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -394,11 +479,26 @@ class _HeatingBodyState extends State<_HeatingBody> {
           height: 20,
           child: next == null ? null : Text(_nextLine(now, next), style: theme.textTheme.bodyMedium),
         ),
-        if (manual != null)
-          Align(alignment: Alignment.centerLeft, child: _pill(context, _manualText(now, manual), _warn(context), icon: Icons.pan_tool_alt)),
+        if (warmupNext != null) Text(warmupNext, style: theme.textTheme.bodyMedium),
+        if (warmupLearning != null) Text(warmupLearning, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        if (manual != null || warmupStatus != null)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(spacing: Spacing.sm, runSpacing: Spacing.xxs, children: [
+              if (warmupStatus != null)
+                _pill(context, warmupStatus, theme.colorScheme.primary, icon: Icons.trending_up, tooltip: warmupStatus),
+              if (manual != null) _pill(context, _manualText(now, manual), _warn(context), icon: Icons.pan_tool_alt),
+            ]),
+          ),
         // Room for the line about the heat-up time (SNRGY-3607).
         const SizedBox(height: Spacing.sm),
-        _TimeOverview(plan: zone.schedule, now: now, expanded: expanded),
+        _TimeOverview(
+          plan: zone.schedule,
+          now: now,
+          expanded: expanded,
+          warmupWindows: hatches ?? const [],
+          lightHatch: m._warmup?.mode == HeatingWarmupMode.show,
+        ),
         _weekToggle(context, zone, expanded),
         const SizedBox(height: Spacing.sm),
       ],
@@ -436,11 +536,21 @@ class _HeatingBodyState extends State<_HeatingBody> {
 
 /// The row of today and, below it when [expanded], the seven days of the week.
 class _TimeOverview extends StatelessWidget {
-  const _TimeOverview({required this.plan, required this.now, required this.expanded});
+  const _TimeOverview({
+    required this.plan,
+    required this.now,
+    required this.expanded,
+    this.warmupWindows = const [],
+    this.lightHatch = false,
+  });
 
   final HeatingSchedule plan;
   final DateTime now;
   final bool expanded;
+
+  /// The warm-up phases to hatch, and whether they are only a hint (mode show) rather than the plan.
+  final List<HeatingWarmupWindow> warmupWindows;
+  final bool lightHatch;
 
   @override
   Widget build(BuildContext context) {
@@ -462,6 +572,8 @@ class _TimeOverview extends StatelessWidget {
                 size: const Size.fromHeight(20),
                 painter: _DayBarPainter(
                   segments: plan.segmentsOf(d),
+                  hatches: heatingWarmupHatches(warmupWindows, now, d),
+                  hatchAlpha: lightHatch ? 0.45 : 1,
                   base: base,
                   nowMinute: d == today ? nowMinute : null,
                   nowColor: theme.colorScheme.onSurface,
@@ -498,6 +610,8 @@ class _TimeOverview extends StatelessWidget {
 class _DayBarPainter extends CustomPainter {
   _DayBarPainter({
     required this.segments,
+    this.hatches = const [],
+    this.hatchAlpha = 1,
     required this.base,
     required this.nowMinute,
     required this.nowColor,
@@ -507,6 +621,8 @@ class _DayBarPainter extends CustomPainter {
   });
 
   final List<HeatingSegment> segments;
+  final List<HeatingHatch> hatches;
+  final double hatchAlpha;
   final Color base;
   final int? nowMinute;
   final Color nowColor, labelColor;
@@ -535,15 +651,35 @@ class _DayBarPainter extends CustomPainter {
       // Drawn only where it fits, so narrow segments stay unlabelled.
       if (tp.width + 4 <= rect.width) tp.paint(canvas, Offset(rect.left + (rect.width - tp.width) / 2, y + (barHeight - tp.height) / 2));
     }
+    for (final h in hatches) {
+      _hatch(canvas, Rect.fromLTRB(h.from * scale, y, h.to * scale, y + barHeight), heatingTemperatureColor(h.temperature));
+    }
     final now = nowMinute;
     if (now != null) {
       canvas.drawRect(Rect.fromLTWH(now * scale - 1, y - 2, 2, barHeight + 4), Paint()..color = nowColor);
     }
   }
 
+  /// Diagonal stripes in [color] over a faint fill, clipped to [rect].
+  void _hatch(Canvas canvas, Rect rect, Color color) {
+    canvas.save();
+    canvas.clipRect(rect);
+    canvas.drawRect(rect, Paint()..color = color.withValues(alpha: 0.25 * hatchAlpha));
+    final stripe = Paint()
+      ..color = color.withValues(alpha: hatchAlpha)
+      ..strokeWidth = 1.5;
+    const step = 5.0;
+    for (var x = rect.left - rect.height; x < rect.right; x += step) {
+      canvas.drawLine(Offset(x, rect.bottom), Offset(x + rect.height, rect.top), stripe);
+    }
+    canvas.restore();
+  }
+
   @override
   bool shouldRepaint(_DayBarPainter old) =>
       old.segments != segments ||
+      old.hatches != hatches ||
+      old.hatchAlpha != hatchAlpha ||
       old.base != base ||
       old.nowMinute != nowMinute ||
       old.nowColor != nowColor ||

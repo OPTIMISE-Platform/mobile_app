@@ -324,13 +324,17 @@ class HeatingZoneDef {
   const HeatingZoneDef(this.name, this.devices, this.windows, this.setback);
 }
 
-/// A zone with the thermostats it controls; it gets a process of its own.
+/// A zone with the thermostats it controls; it gets a process of its own. [index] is the position
+/// in the stored plan, which also numbers the zone keys of the smart service (`zone:<index>`).
 class HeatingZone {
   final String name;
   final List<HeatingThermostat> thermostats;
   final HeatingSchedule schedule;
+  final int index;
 
-  const HeatingZone(this.name, this.thermostats, this.schedule);
+  const HeatingZone(this.name, this.thermostats, this.schedule, {this.index = 0});
+
+  String get key => "zone:$index";
 }
 
 /// The `schedule` parameter: either the legacy shape `{"windows":[..]}` (one zone "Alle" with every
@@ -446,7 +450,7 @@ class HeatingPlan {
     if (rest >= 0) devices[rest].addAll(selected.where((t) => !taken.containsKey(t.id)));
     final out = [
       for (final (i, z) in zones.indexed)
-        if (devices[i].isNotEmpty) HeatingZone(z.name, devices[i], HeatingSchedule(z.windows, z.setback ?? setback))
+        if (devices[i].isNotEmpty) HeatingZone(z.name, devices[i], HeatingSchedule(z.windows, z.setback ?? setback), index: i)
     ];
     if (out.isEmpty) throw HeatingScheduleException("No zone has a selected thermostat");
     return out;
