@@ -204,6 +204,12 @@ void main() {
       expect(heatingStationLine(null, halle), "Forecast: Halle (8.1 km)");
     });
 
+    test("a station without a name is shown by its id", () {
+      expect(heatingStationLine(null, const HeatingStation(id: "10471", distanceKm: 5)), "Forecast: station 10471 (5.0 km)");
+      expect(heatingStationLine(const HeatingStation(id: "10471"), null), "Outdoor: station 10471");
+      expect(heatingStationLine(null, const HeatingStation(id: "10471", name: "Halle")), "Forecast: Halle");
+    });
+
     test("nothing when both are unknown", () {
       expect(heatingStationLine(null, null), isNull);
       expect(heatingStationLine(const HeatingStation(), const HeatingStation()), isNull);

@@ -63,13 +63,13 @@ class HeatingWarmupWindow {
   const HeatingWarmupWindow(this.start, this.target, this.leadMinutes);
 }
 
-/// A weather station in use; [own] marks an own outdoor sensor. Name and distance are null while unknown.
+/// A weather station in use; [own] marks an own outdoor sensor. Id, name and distance are null while unknown.
 class HeatingStation {
   final bool own;
-  final String? name;
+  final String? id, name;
   final double? distanceKm;
 
-  const HeatingStation({this.own = false, this.name, this.distanceKm});
+  const HeatingStation({this.own = false, this.id, this.name, this.distanceKm});
 
   static const ownSensor = HeatingStation(own: true);
 }
@@ -118,8 +118,12 @@ HeatingStation? _station(dynamic column, void Function(String) onError) {
   try {
     final decoded = _jsonColumn(column);
     if (decoded is! Map) throw const FormatException("not an object");
-    final name = decoded["name"], distance = heatingNumber(decoded["distance_km"]);
-    return HeatingStation(name: name is String && name.isNotEmpty ? name : null, distanceKm: distance);
+    final id = decoded["id"], name = decoded["name"], distance = heatingNumber(decoded["distance_km"]);
+    return HeatingStation(
+      id: id is String && id.isNotEmpty ? id : id is num ? "$id" : null,
+      name: name is String && name.isNotEmpty ? name : null,
+      distanceKm: distance,
+    );
   } on FormatException catch (e) {
     onError("Unreadable station of the warm-up export: ${e.message}");
     return null;
@@ -214,7 +218,8 @@ String? heatingStationLine(HeatingStation? measure, HeatingStation? forecast) {
   String? part(String label, HeatingStation? s) {
     if (s == null) return null;
     if (s.own) return "$label: own sensor";
-    final name = s.name, km = s.distanceKm;
+    final id = s.id, km = s.distanceKm;
+    final name = s.name ?? (id == null ? null : "station $id");
     if (name == null && km == null) return null;
     final distance = km == null ? null : "${km.toStringAsFixed(1)} km";
     return "$label: ${name == null ? distance : distance == null ? name : "$name ($distance)"}";

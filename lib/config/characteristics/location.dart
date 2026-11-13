@@ -23,6 +23,16 @@ import 'package:mobile_app/shared/location.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
 
+/// Application id sent to OpenStreetMap as user agent; its tile servers block the default `flutter_map (unknown)`.
+const osmUserAgentPackageName = 'org.infai.optimise.mobile_app';
+
+/// The picker's default layer on the plain OSM tile host, identified by [osmUserAgentPackageName].
+TileLayer osmTileLayer(TileLayer defaultLayer) => TileLayer(
+      urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      userAgentPackageName: osmUserAgentPackageName,
+      tileBuilder: defaultLayer.tileBuilder,
+    );
+
 class Location extends StatefulWidget {
   final Characteristic characteristic;
   final StateSetter externalSetState;
@@ -107,6 +117,7 @@ class _LocationState extends State<Location> {
 
     return OpenMapSettings(
       onError: (context, error) => debugPrint(error.toString()),
+      tileLayer: osmTileLayer,
       getCurrentLocation: _getCurrentLocation,
       getLocationStream: _getLocationStream,
       child: OpenMapPicker(
