@@ -14,10 +14,13 @@
  *  limitations under the License.
  */
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/config/functions/light_functions.dart';
+import 'package:mobile_app/models/aspect.dart';
 import 'package:mobile_app/models/characteristic.dart';
 import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_state.dart';
@@ -171,6 +174,54 @@ List<ClimateCardModel> climateCardsOf(List<DeviceState> rows, List<DeviceState> 
   return cards;
 }
 
+bool _isTargetAspect(String id) =>
+    id == targetAspect || joinAspectNames(AppState().aspects.values, [id]).toLowerCase() == _targetAspect;
+
+/// Whether [state] carries the value role Target, by the aspect's id or name.
+bool hasTargetRole(DeviceState state) => state.aspectIds.any(_isTargetAspect);
+
+/// The control of a group's setpoint [reading]: the group's single control of
+/// a related function on exactly the reading's aspects, Target among them.
+/// A criterion on a part of the aspects, such as `[Air]`, matches the
+/// setpoint and the external input of every member alike, so nothing else
+/// counts.
+DeviceState? groupSetpointControl(DeviceState reading, List<DeviceState> states) {
+  if (reading.isControlling || !hasTargetRole(reading)) return null;
+  final related = relatedControllingFunctionsOf(reading.functionId) ?? const <String>[];
+  final exact = states
+      .where((s) =>
+          s.isControlling &&
+          related.contains(s.functionId) &&
+          s.aspectKey == reading.aspectKey &&
+          (s.deviceClassId ?? '') == (reading.deviceClassId ?? ''))
+      .toList(growable: false);
+  return exact.length == 1 && !isReadingInput(exact.single) ? exact.single : null;
+}
+
+/// The control a group's sensor card of [reading] sets: the group's single
+/// control of the function its value selects ([resolveGroupControl]), else
+/// for a setpoint [groupSetpointControl].
+DeviceState? groupCardControl(DeviceState reading, List<DeviceState> states) =>
+    resolveGroupControl(reading, states) ?? groupSetpointControl(reading, states);
+
+/// The setpoint of the measured [reading] among [states]: the reading of its
+/// function whose aspects are [reading]'s with Target in place of Reading,
+/// within its service group when there are several. Null for a reading
+/// without the role Reading or when none or more than one remain.
+DeviceState? setpointOfMeasured(DeviceState reading, List<DeviceState> states) {
+  if (reading.isControlling || !hasReadingRole(reading)) return null;
+  final rest = reading.aspectIds.where((id) => !isReadingAspect(id)).toSet();
+  if (rest.length != reading.aspectIds.length - 1) return null;
+  final setpoints = states.where((s) {
+    if (s.isControlling || s.functionId != reading.functionId) return false;
+    final other = s.aspectIds.where((id) => !_isTargetAspect(id)).toSet();
+    return other.length == s.aspectIds.length - 1 && setEquals(other, rest);
+  }).toList(growable: false);
+  if (setpoints.length == 1) return setpoints.single;
+  final own = setpoints.where((s) => s.serviceGroupKey == reading.serviceGroupKey).toList(growable: false);
+  return own.length == 1 ? own.single : null;
+}
+
 /// The chip text of a thermostat's heating states: "Heating off" when it is not
 /// enabled, else "Heating" or "Idle" from the running state, else "Heating on"
 /// from an enabled state alone; null when nothing is known.
@@ -182,18 +233,22 @@ String? climateChipText({dynamic running, dynamic enabled}) {
   return null;
 }
 
-/// The stepper of a setpoint: 0.5 steps (1 for whole numbers) within the range
-/// the characteristic gives, else within a thermostat's 5 to 30 degrees.
-InlineControlSpec? climateSetpointSpec(DeviceState control) {
+/// The stepper of a setpoint: 0.5 steps (1 for whole numbers) within the
+/// bounds the characteristic gives. As in [controlRange], the setpoint of a
+/// [thermostat] without a maximum takes the range a thermostat accepts;
+/// anything else without bounds steps freely.
+InlineControlSpec? climateSetpointSpec(DeviceState control, {bool thermostat = false}) {
   final c = _characteristicOf(control);
   if (c == null) return null;
   final integer = c.type == ContentVariable.integer;
   if (!integer && c.type != ContentVariable.float) return null;
-  var min = c.min_value, max = c.max_value;
-  if (min == null || max == null || !min.isFinite || !max.isFinite || max <= min) {
+  double? finite(double? v) => v != null && v.isFinite ? v : null;
+  var min = finite(c.min_value), max = finite(c.max_value);
+  if (thermostat && max == null && hasTargetRole(control)) {
     final range = thermostatSetpointRange(c.id);
-    (min, max) = range ?? (null, null);
+    if (range != null) (min, max) = range;
   }
+  if (min != null && max != null && max <= min) min = max = null;
   return InlineControlSpec(InlineControlKind.stepper, integer: integer, min: min, max: max);
 }
 
@@ -466,6 +521,9 @@ class ClimateCard extends StatelessWidget {
   final String setpointTitle;
   final SendControl onSend;
 
+  /// A thermostat, or a group of only such; see [climateSetpointSpec].
+  final bool thermostat;
+
   /// Opens the history of the measured value; null for a group.
   final VoidCallback? onOpenMeasured;
 
@@ -476,6 +534,7 @@ class ClimateCard extends StatelessWidget {
     required this.enabled,
     required this.setpointTitle,
     required this.onSend,
+    this.thermostat = false,
     this.onOpenMeasured,
     super.key,
   });
@@ -489,7 +548,7 @@ class ClimateCard extends StatelessWidget {
     final chip = climateChipText(running: running?.value, enabled: enabledState?.value);
     final heating = chip == 'Heating';
     final start = inlineStartValue(model.control, states, isGroup: isGroup)?.value;
-    final spec = climateSetpointSpec(model.control);
+    final spec = climateSetpointSpec(model.control, thermostat: thermostat);
     final busy = model.setpoint.transitioning;
 
     final Widget value;

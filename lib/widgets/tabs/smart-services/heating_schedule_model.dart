@@ -19,6 +19,7 @@
 import 'dart:convert';
 import 'dart:ui' show Color;
 
+import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_command.dart';
 import 'package:mobile_app/models/device_command_response.dart';
@@ -462,7 +463,7 @@ const heatingRoomFunctionId = "urn:infai:ses:measuring-function:d19ffeb0-877c-46
 const heatingBatteryFunctionId = "urn:infai:ses:measuring-function:68dae5ce-a9ee-4487-8872-7943a94e2595";
 const heatingAirAspectId = "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6";
 const heatingTargetAspectId = "urn:infai:ses:aspect:4f4188b6-f944-45fa-9429-15655f691397";
-const heatingReadingAspectId = "urn:infai:ses:aspect:ffcdc0a6-0957-49d7-be9a-af912ecbd3cf";
+const heatingReadingAspectId = readingAspectId;
 const heatingBinaryStateFunctionId = "urn:infai:ses:measuring-function:2c284729-9bcd-4cde-b00c-1edbdaaab724";
 const heatingHeatingAspectId = "urn:infai:ses:aspect:1d69d3b6-d16f-430c-bf58-f23b26cd84c4";
 const heatingBooleanCharacteristicId = "urn:infai:ses:characteristic:7dc1bb7e-b256-408a-a6f9-044dc60fdcf5";

@@ -63,8 +63,12 @@ States that differ only by service group get the group's name.
 ## Sensor cards, picker and list rows
 
 The sensors tab and its picker label a reading with `sensorLabel` (the detail
-page's `detailLabel`; a control keeps its plain function name), so titles,
-roles and disambiguation are the same as on the detail page. A card with no
+page's `detailLabel`), so titles, roles and disambiguation are the same as on
+the detail page. A control of a "Set-" function is "Set" and its title in
+sentence case, "Set target temperature", so its card is not named like its
+reading's; an input with the role Reading is "External temperature input". The
+picker leaves out a control that a listed reading's card sets, and gives a
+control's aspects only when another row has the same title. A card with no
 alias shows title and subtitle as "Title · Subtitle". Only the label changes: a
 pin is found by function, aspects, service group and kind as before. A read-only
 on/off reading on a card is its `binaryValueText`, never a power icon; values go
@@ -111,6 +115,14 @@ controlling functions sharing the function's concept. Among them C picks:
 A control that picks no reading gets its own row on the detail page. The rule
 lives in `DeviceState.controlsAmong` and `pairedReadings`; `controlsFor` (an
 extension in `function_config.dart`) binds it to the function configs.
+
+An input with the value role Reading (`isReadingInput`), such as a
+thermostat's external temperature input, is never a reading's control: a value
+entered there is fed to the device as the room temperature it regulates on.
+`controlsFor` leaves it out, and `controlOfReading` gives the reading it picks
+no control, not even a group's single one. It still picks that reading, so no
+other control of its function takes the measured value, and keeps a row of its
+own titled "External temperature input".
 
 The first-aspect rule from before aspect lists, `legacyMatchAspects` (equal
 set, else the unique subset, else the first candidate with the same first

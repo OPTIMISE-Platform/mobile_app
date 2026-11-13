@@ -26,3 +26,6 @@ List<String> effectiveAspectIds(String? aspectId, List<String>? aspectIds) {
 /// Renders a sorted aspect list the way models' `AspectIdsShort` does, so equal
 /// sets give equal keys.
 String aspectIdsKey(List<String> sortedAspectIds) => sortedAspectIds.join(",");
+
+/// The aspect Reading, the value role of a measured value.
+const readingAspectId = 'urn:infai:ses:aspect:ffcdc0a6-0957-49d7-be9a-af912ecbd3cf';

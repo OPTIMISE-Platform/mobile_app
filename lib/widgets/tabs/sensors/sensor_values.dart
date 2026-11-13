@@ -47,8 +47,11 @@ import 'package:mobile_app/widgets/tabs/shared/value_change.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_commands.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/chart.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/inline_control.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/device_controls.dart';
 import 'package:mobile_app/shared/unavailability.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 
@@ -1020,6 +1023,7 @@ class _SensorValuesState extends State<SensorValues>
         final toggle = switchTile
             ? _switchActionFor(pin, state, device, group)
             : null;
+        final setpoint = switchTile ? null : _setpointOf(state, device, group);
 
         // The chart queries by device and service, which a group value has
         // neither of — the detail page disables it for groups too.
@@ -1127,6 +1131,7 @@ class _SensorValuesState extends State<SensorValues>
                               state,
                               device,
                               leftAligned: switchTile,
+                              stable: setpoint != null,
                               child: switchTile
                                   ? SwitchTileFooter(
                                       reading: reading,
@@ -1136,7 +1141,7 @@ class _SensorValuesState extends State<SensorValues>
                                               SwitchCommands.isRunning(state)),
                                       onToggle: toggle,
                                     )
-                                  : _buildValue(state, device, group),
+                                  : _buildValue(state, device, group, setpoint),
                             ),
                           ),
                         ),
@@ -1154,20 +1159,22 @@ class _SensorValuesState extends State<SensorValues>
 
   /// [child] with the time of the reading's last message below it. Groups
   /// show nothing: their members' times differ.
+  ///
+  /// A [stable] child keeps its place in the tree while the time comes and
+  /// goes, so a stepper in it keeps the value it has not sent yet.
   Widget _withTime(
     DeviceState? state,
     DeviceInstance? device, {
     required bool leftAligned,
+    bool stable = false,
     required Widget child,
   }) {
-    final time = state?.lastMessageTime;
-    if (device == null ||
-        state == null ||
-        time == null ||
-        state.transitioning ||
-        SwitchCommands.isRunning(state)) {
-      return child;
-    }
+    if (device == null || state == null) return child;
+    final time = state.lastMessageTime;
+    final showTime = time != null &&
+        !state.transitioning &&
+        !SwitchCommands.isRunning(state);
+    if (!showTime && !stable) return child;
     // Flexible keeps the value inside the height left by the caption, so its
     // FittedBox still shrinks at a large text scale.
     return Column(
@@ -1176,10 +1183,11 @@ class _SensorValuesState extends State<SensorValues>
           leftAligned ? CrossAxisAlignment.start : CrossAxisAlignment.end,
       children: [
         Flexible(child: child),
-        StateTimeCaption(
-          time,
-          textAlign: leftAligned ? TextAlign.start : TextAlign.end,
-        ),
+        if (showTime)
+          StateTimeCaption(
+            time,
+            textAlign: leftAligned ? TextAlign.start : TextAlign.end,
+          ),
       ],
     );
   }
@@ -1213,7 +1221,10 @@ class _SensorValuesState extends State<SensorValues>
     // unswitchable.
     if (isGroup) {
       return allStates.any(
-        (s) => s.isControlling && controllingFunctions.contains(s.functionId),
+        (s) =>
+            s.isControlling &&
+            controllingFunctions.contains(s.functionId) &&
+            !isReadingInput(s),
       );
     }
     // The same pairing the shared action applies to a device's measurement.
@@ -1301,10 +1312,10 @@ class _SensorValuesState extends State<SensorValues>
 
     // Act on the control itself. A device's measurement is handed over as it is,
     // because the shared action pairs it up the same way the detail page does; a
-    // group's measurement has to be resolved here (see [resolveGroupControl]).
+    // group's measurement has to be resolved here ([groupCardControl]).
     final DeviceState element;
     if (group != null && !state.isControlling) {
-      final control = resolveGroupControl(state, states);
+      final control = groupCardControl(state, states);
       if (control == null) return null;
       element = control;
     } else {
@@ -1329,12 +1340,82 @@ class _SensorValuesState extends State<SensorValues>
   // the value that replaces it once one arrives.
   Widget get _placeholder => Text('—', style: Theme.of(context).textTheme.headlineMedium);
 
-  Widget _buildValue(
+  /// The setpoint a card of [state] sets with minus and plus: for a reading
+  /// with the role Target itself, for one with the role Reading the setpoint of
+  /// its device or group ([setpointOfMeasured]). Null when the setpoint has no
+  /// numeric control, no value to step from, or the device or group cannot be
+  /// reached.
+  _CardSetpoint? _setpointOf(
     DeviceState? state,
     DeviceInstance? device,
     DeviceGroup? group,
   ) {
+    final states = device?.states ?? group?.states;
+    if (state == null || states == null || state.isControlling) return null;
+    if (device != null && _isUnavailable(device)) return null;
+    if (group != null && groupUnavailability(group) != null) return null;
+    final own = hasTargetRole(state);
+    final setpoint = own ? state : setpointOfMeasured(state, states);
+    if (setpoint == null) return null;
+    final isGroup = group != null;
+    final control = isGroup
+        ? groupSetpointControl(setpoint, states)
+        : controlOfReading(setpoint, states, isGroup: false);
+    if (control == null) return null;
+    final spec = climateSetpointSpec(control,
+        thermostat: device != null ? deviceIsThermostat(device) : groupIsThermostats(group!));
+    final start = inlineStartValue(control, states, isGroup: isGroup);
+    if (spec == null || start == null) return null;
+    // While it is being set the value may be gone; the stepper stays.
+    if (start.value is! num && !setpoint.transitioning) return null;
+    return _CardSetpoint(setpoint, control, spec, start.value, own: own);
+  }
+
+  Widget _buildValue(
+    DeviceState? state,
+    DeviceInstance? device,
+    DeviceGroup? group,
+    _CardSetpoint? setpoint,
+  ) {
     if (state == null) return _placeholder;
+    if (setpoint == null) return _buildReadingValue(state, device, group);
+    final states = device?.states ?? group!.states;
+    final stepper = InlineControl(
+      spec: setpoint.spec,
+      value: setpoint.start,
+      unit: controlUnit(setpoint.control),
+      busy: setpoint.reading.transitioning,
+      enabled: setpoint.start is num,
+      compact: true,
+      label: setpoint.own ? null : 'Target',
+      valueStyle: setpoint.own ? Theme.of(context).textTheme.headlineMedium : null,
+      onSend: (value) => performDeviceStateAction(
+        context: context,
+        connectionStatus: device?.connection_state,
+        element: setpoint.control,
+        states: states,
+        isGroup: group != null,
+        setState: setState,
+        notifyEntity: device?.notifyStateChanged ?? group!.notifyStateChanged,
+        value: value,
+      ),
+    );
+    if (setpoint.own) return stepper;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Flexible(child: _buildReadingValue(state, device, group)),
+        stepper,
+      ],
+    );
+  }
+
+  Widget _buildReadingValue(
+    DeviceState state,
+    DeviceInstance? device,
+    DeviceGroup? group,
+  ) {
     if (state.transitioning) return const DelayedCircularProgressIndicator();
 
     // A group has no connection state of its own, so it never shows the
@@ -1425,6 +1506,18 @@ class _SensorValuesState extends State<SensorValues>
       ),
     );
   }
+}
+
+/// The setpoint a sensor card steps: [reading] set by [control], starting
+/// from [start] in the control's characteristic. [own] when the card is that
+/// of the setpoint itself rather than of the measured value.
+class _CardSetpoint {
+  final DeviceState reading, control;
+  final InlineControlSpec spec;
+  final dynamic start;
+  final bool own;
+
+  const _CardSetpoint(this.reading, this.control, this.spec, this.start, {required this.own});
 }
 
 /// Placeholder listenable for cards whose device hasn't loaded yet.

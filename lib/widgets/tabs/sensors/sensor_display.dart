@@ -16,7 +16,6 @@
 
 import 'package:mobile_app/app_state.dart';
 import 'package:mobile_app/models/aspect.dart';
-import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
@@ -46,51 +45,6 @@ String aspectsLabel(DeviceState state, {String? missing, String? missingClass}) 
   final classId = state.deviceClassId;
   if (classId == null || classId.isEmpty) return missing ?? '';
   return AppState().deviceClasses[classId]?.name ?? missingClass ?? '';
-}
-
-/// Disambiguating detail (aspect and/or service group), empty when the
-/// function name alone is already unique for [device].
-///
-/// [siblings] are all states of the same device.
-String sensorSubtitle(
-  DeviceState state,
-  List<DeviceState> siblings,
-  DeviceInstance? device,
-) {
-  var subtitle = '';
-  if (siblings.any(
-    (s) =>
-        s.functionId == state.functionId &&
-        s != state &&
-        s.aspectKey != state.aspectKey,
-  )) {
-    subtitle += aspectsLabel(state);
-  }
-  final groupKey = state.serviceGroupKey;
-  if (device != null &&
-      groupKey != null &&
-      groupKey.isNotEmpty &&
-      siblings.any(
-        (s) =>
-            s.functionId == state.functionId &&
-            s != state &&
-            s.aspectKey == state.aspectKey,
-      )) {
-    String? groupName;
-    for (final g
-        in AppState().deviceTypes[device.device_type_id]?.service_groups ??
-            const []) {
-      if (g.key == groupKey) {
-        groupName = g.name;
-        break;
-      }
-    }
-    if (groupName != null && groupName.isNotEmpty) {
-      if (subtitle.isNotEmpty) subtitle += ', ';
-      subtitle += groupName;
-    }
-  }
-  return subtitle;
 }
 
 /// The display unit for [state], or an empty string when it has none.

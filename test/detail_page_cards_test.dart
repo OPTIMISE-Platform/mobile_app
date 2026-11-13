@@ -29,10 +29,12 @@ import 'package:mobile_app/models/characteristic.dart';
 import 'package:mobile_app/models/concept.dart';
 import 'package:mobile_app/models/content_variable.dart';
 import 'package:mobile_app/models/device_instance.dart';
+import 'package:mobile_app/models/device_type.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/function.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/colour_value.dart';
+import 'package:mobile_app/shared/device_controls.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_page.dart';
@@ -132,8 +134,13 @@ void main() {
   }
 
   /// A thermostat: setpoint with its control, measured value, heating states.
-  DeviceInstance addThermostat({double setpoint = 22.0, dynamic running = 'idle', dynamic mode = 'heat'}) {
+  /// Without [thermostat] its device type is of another class, as a water
+  /// heater's.
+  DeviceInstance addThermostat(
+      {double setpoint = 22.0, dynamic running = 'idle', dynamic mode = 'heat', bool thermostat = true}) {
     final d = addDevice();
+    AppState().deviceTypes['type-1'] =
+        DeviceType('type-1', 'Thermostat', '', thermostat ? thermostatDeviceClass : 'class-water-heater', [], null);
     AppState().characteristics['char-off-heat'] =
         _char('char-off-heat', ContentVariable.string, name: 'Binary State (off/heat)', allowed: ['off', 'heat']);
     d.states
@@ -762,6 +769,41 @@ void main() {
       await pump(tester, d, answering([30.0]));
       expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.add)).onPressed, isNull);
       expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.remove)).onPressed, isNotNull);
+    });
+
+    testWidgets('a setpoint of another device is held only to its characteristic', (tester) async {
+      registerAll();
+      final d = addThermostat(setpoint: 55.0, thermostat: false);
+      final backend = answering([54.5]);
+      await pump(tester, d, backend);
+
+      expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.add)).onPressed, isNotNull,
+          reason: 'a water heater sets far above 30 degrees');
+      await tester.runAsync(() async {
+        tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.remove)).onPressed!();
+        await Future<void>.delayed(const Duration(milliseconds: 1100));
+      });
+      await tester.pump();
+      expect(controlsSent(backend).map((c) => c['input']), [54.5]);
+    });
+
+    testWidgets('the external temperature input steps from the measured value it feeds', (tester) async {
+      registerAll();
+      final d = addThermostat();
+      d.states.add(state(d, _setTemperature, ['air', 'indoor', 'reading'], true, 'external_temperature_input', group: 'g-t'));
+      final backend = answering([22.0]);
+      await pump(tester, d, backend);
+
+      final row = rowWith('External temperature input');
+      expect(find.descendant(of: row, matching: find.text('21.5 °C')), findsOneWidget);
+      await tester.runAsync(() async {
+        tester.widget<IconButton>(find.descendant(of: row, matching: find.widgetWithIcon(IconButton, Icons.add))).onPressed!();
+        await Future<void>.delayed(const Duration(milliseconds: 1100));
+      });
+      await tester.pump();
+      final sent = controlsSent(backend);
+      expect(sent.map((c) => c['input']), [22.0]);
+      expect(sent.single['aspect_ids'], ['air', 'indoor', 'reading']);
     });
 
     testWidgets('a switched-off heating shows as a chip text', (tester) async {

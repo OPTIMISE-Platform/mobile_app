@@ -388,16 +388,13 @@ void main() {
       expect(joinAspectNames(aspects, ["air", "gone"]), "Air");
     });
 
-    test("sensor subtitles tell apart states sharing their first aspect", () {
+    test("aspect labels tell apart states sharing their first aspect", () {
       for (final a in aspects) {
         AppState().aspects[a.id] = a;
       }
-      final inside = _state(_measure, ["air", "inside"]);
-      final outside = _state(_measure, ["air", "outside"]);
-      final siblings = [inside, outside];
 
-      expect(sensorSubtitle(inside, siblings, null), "Air, Inside");
-      expect(sensorSubtitle(outside, siblings, null), "Air, Outside");
+      expect(aspectsLabel(_state(_measure, ["air", "inside"])), "Air, Inside");
+      expect(aspectsLabel(_state(_measure, ["air", "outside"])), "Air, Outside");
     });
 
     test("a group control without aspects is named by its device class", () {
@@ -405,12 +402,9 @@ void main() {
       AppState().deviceClasses["class-1"] = DeviceClass("class-1", "Thermostat", "");
       DeviceState groupControl(List<String> aspectIds, String? deviceClassId) =>
           DeviceState(null, null, null, _control, null, true, "group-1", deviceClassId, null, null, null, aspectIds: aspectIds);
-      final byClass = groupControl([], "class-1");
-      final byAspect = groupControl(["water"], "");
-      final siblings = [byClass, byAspect];
 
-      expect(sensorSubtitle(byClass, siblings, null), "Thermostat");
-      expect(sensorSubtitle(byAspect, siblings, null), "Water");
+      expect(aspectsLabel(groupControl([], "class-1")), "Thermostat");
+      expect(aspectsLabel(groupControl(["water"], "")), "Water");
     });
 
     test("an unknown device class gets its own placeholder", () {

@@ -40,7 +40,7 @@ final _logger = Logger(printer: SimplePrinter());
 /// controlling and measuring states are looked up in it.
 ///
 /// The measurements refreshed afterwards are those the control pairs with
-/// ([ControlPairing.controlsFor]). For a control that pairs with none,
+/// ([ControlPairing.pairedControls]). For a control that pairs with none,
 /// [isGroup] selects them: for groups all related controlling functions count,
 /// for a single device only the one matching the current value. [setState] is
 /// handed to the function config's input builder, [notifyEntity] signals the
@@ -190,7 +190,9 @@ Future<void> performDeviceStateAction({
     if (states[i].isControlling || states[i].serviceGroupKey != control.serviceGroupKey) {
       continue;
     }
-    if (states[i].controlsFor(states, control.functionId).any((c) => identical(c, control))) {
+    // From the control's side an input with the role Reading keeps the reading
+    // it picks, as its start value and read-back ([ControlPairing.pairedControls]).
+    if (states[i].pairedControls(states, control.functionId).any((c) => identical(c, control))) {
       paired.add(i);
     }
     var measuringFunctionConfig = functionConfigs[states[i].functionId];
@@ -311,6 +313,8 @@ DeviceState? resolveGroupControl(DeviceState state, List<DeviceState> states, [S
   // own control; there is no single command to send, so leave it alone rather
   // than switch an arbitrary subset.
   if (candidates.length != 1) return null;
+  // An input that feeds a measured value to the devices sets no reading.
+  if (isReadingInput(candidates.single)) return null;
   return candidates.first;
 }
 

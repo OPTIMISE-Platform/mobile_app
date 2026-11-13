@@ -36,6 +36,7 @@ import 'package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/inline_control.dart';
 import 'package:mobile_app/widgets/tabs/shared/device_state_action.dart';
+import 'package:mobile_app/shared/device_controls.dart';
 import 'package:mobile_app/shared/unavailability.dart';
 
 import 'package:mobile_app/app_state.dart';
@@ -487,6 +488,34 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
         var functionConfig = functionConfigs[element.functionId];
         final label = detailLabel(element, rows, device, states: states, isGroup: isGroup);
 
+        // An input with the role Reading steps from the measured value it feeds,
+        // which no longer carries it as its control.
+        final start = isReadingInput(element) ? inlineStartValue(element, states, isGroup: isGroup) : null;
+        final fed = start == null ? const <DeviceState>[] : readingsOfControl(element, states, isGroup: isGroup);
+        final spec = start == null || fed.length != 1 ? null : inlineControlSpec(element, start.value, reading: fed.single);
+        if (spec != null) {
+          controlWidgets.insert(
+            element.functionId,
+            (
+              rowKey: _rowKey(element),
+              tile: InlineControl(
+                spec: spec,
+                value: start!.value,
+                unit: controlUnit(element),
+                busy: fed.single.transitioning,
+                enabled: unavailability == null,
+                onSend: (value) => _performAction(connectionStatus, context, element, states, value),
+                tile: (trailing) => ListTile(
+                  title: Text(label.title),
+                  subtitle: label.subtitle.isEmpty ? null : Text(label.subtitle),
+                  trailing: trailing,
+                ),
+              ),
+            ),
+          );
+          continue;
+        }
+
         controlWidgets.insert(
           element.functionId,
           (
@@ -542,6 +571,7 @@ class _DetailPageState extends State<DetailPage> with ResumeRefreshMixin {
               isGroup: isGroup,
               enabled: unavailability == null,
               setpointTitle: detailLabel(climate.setpoint, rows, device, states: states, isGroup: isGroup).title,
+              thermostat: device != null ? deviceIsThermostat(device) : groupIsThermostats(deviceGroup!),
               onSend: (control, value) => _performAction(connectionStatus, context, control, states, value),
               onOpenMeasured: device == null || climate.measured == null
                   ? null

@@ -97,6 +97,23 @@ bool? heatingFlagOf(dynamic value) {
   };
 }
 
+/// What an input with the role Reading does, for a row that offers it.
+const readingInputSubtitle = 'Feeds a measured value to the device';
+
+/// [title] continuing a sentence: "Target Temperature" as "target temperature".
+/// An abbreviation such as "CO2" keeps its capitals.
+String continuedTitle(String title) => title.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      final second = word.length > 1 ? word[1] : '';
+      final abbreviation = second.toUpperCase() == second && second.toLowerCase() != second;
+      return abbreviation ? word : word[0].toLowerCase() + word.substring(1);
+    }).join(' ');
+
+/// The title of an input with the role Reading whose function measures
+/// [quantity]: "External temperature input".
+String externalInputTitle(String quantity) =>
+    quantity.isEmpty ? 'External input' : 'External ${continuedTitle(quantity)} input';
+
 /// [name] without a leading "Get-" or "Set-": a value is named by what it
 /// measures, not by the direction of the platform function.
 String stripFunctionPrefix(String name) => name.replaceFirst(RegExp(r'^(Get|Set)-\s*'), '');
@@ -120,16 +137,16 @@ String humanizeVariableName(String? path) {
 /// then the variable's name. States of one aspect set that differ only by
 /// service group are told apart by the group's name.
 ///
+/// An input with the role Reading is titled by [externalInputTitle].
+///
 /// A binary state with a [BinaryRole] is titled by it, and needs no subtitle
 /// unless another row has the same title. [states] are all states of the
 /// device or group, to tell what a binary state is switched by; [rows] by
 /// default.
 ({String title, String subtitle}) detailLabel(DeviceState element, List<DeviceState> rows, DeviceInstance? device,
     {List<DeviceState>? states, bool isGroup = false}) {
-  final function = AppState().platformFunctions[element.functionId];
-  var name = function?.display_name ?? '';
-  if (name.isEmpty) name = function?.name ?? 'MISSING_FUNCTION_NAME';
-  var title = stripFunctionPrefix(name);
+  var title = stripFunctionPrefix(_functionName(element));
+  if (isReadingInput(element)) title = externalInputTitle(title);
 
   final others = rows.where((s) => s.functionId == element.functionId && s != element).toList();
   final aspectPeers = others.where((s) => s.aspectKey != element.aspectKey).toList();
@@ -164,6 +181,12 @@ String humanizeVariableName(String? path) {
     parts.add(groups?.firstWhere((g) => g.key == groupKey).name ?? 'MISSING_SERVICE_GROUP_NAME');
   }
   return (title: title, subtitle: parts.where((p) => p.isNotEmpty).join(', '));
+}
+
+String _functionName(DeviceState element) {
+  final function = AppState().platformFunctions[element.functionId];
+  final name = function?.display_name ?? '';
+  return name.isNotEmpty ? name : function?.name ?? 'MISSING_FUNCTION_NAME';
 }
 
 /// What sets [element] apart from [peers] of another aspect set: its aspects
@@ -251,14 +274,16 @@ String formatValueWithUnit(dynamic value, String unit) {
   return unit.isEmpty ? formatValue(value) : '${formatValue(value)} $unit';
 }
 
-/// The label of a sensor card or picker row: [detailLabel] for a reading, the
-/// plain function name for a control, whose Get-/Set- prefix is all that tells
-/// it from the reading it belongs to. [siblings] are the states shown for the
-/// device or group, [states] all of them.
+/// The label of a sensor card or picker row: [detailLabel], for a control of
+/// a "Set-" function with "Set" before the title in sentence case ("Set
+/// target temperature"), so its card is not named like its reading's. An
+/// input with the role Reading keeps [externalInputTitle]. [siblings] are the
+/// states shown for the device or group, [states] all of them.
 ({String title, String subtitle}) sensorLabel(DeviceState state, List<DeviceState> siblings, DeviceInstance? device,
     {required List<DeviceState> states, bool isGroup = false}) {
-  if (state.isControlling) return (title: sensorTitle(state), subtitle: sensorSubtitle(state, siblings, device));
-  return detailLabel(state, siblings, device, states: states, isGroup: isGroup);
+  final label = detailLabel(state, siblings, device, states: states, isGroup: isGroup);
+  if (!state.isControlling || isReadingInput(state) || !_functionName(state).startsWith('Set-')) return label;
+  return (title: 'Set ${continuedTitle(label.title)}', subtitle: label.subtitle);
 }
 
 /// [label] on one line, as a card title has no second one.

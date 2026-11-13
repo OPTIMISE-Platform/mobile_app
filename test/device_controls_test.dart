@@ -20,6 +20,8 @@ import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:mobile_app/app_state.dart";
 import "package:mobile_app/config/functions/function_config.dart";
+import "package:mobile_app/models/aspect.dart";
+import "package:mobile_app/models/aspect_ids.dart";
 import "package:mobile_app/models/characteristic.dart";
 import "package:mobile_app/models/concept.dart";
 import "package:mobile_app/models/content_variable.dart";
@@ -28,6 +30,8 @@ import "package:mobile_app/models/device_instance.dart";
 import "package:mobile_app/models/device_state.dart";
 import "package:mobile_app/models/function.dart";
 import "package:mobile_app/shared/device_controls.dart";
+import "package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart";
+import "package:mobile_app/widgets/tabs/shared/device_state_action.dart";
 
 import "golden_helper.dart";
 
@@ -379,6 +383,119 @@ void main() {
       final gone = DeviceState(null, "service-9", "group-1", _tempGet, "air", false, null, null, d.id, "gone", null);
 
       expect(readingForEntry(gone, null, d.states, isGroup: false), isNull);
+    });
+  });
+
+  group("inputs with the role Reading", () {
+    // As zigbee2mqtt SONOFF TRVZB: a setpoint and an external temperature input
+    // among the inputs, the measured temperature and the setpoint among the outputs.
+    const setpointAspects = ["target", "air", "indoor"];
+    const readingAspects = ["air", "indoor", "reading"];
+
+    setUp(() {
+      for (final name in ["Air", "Indoor", "Reading", "Target"]) {
+        AppState().aspects[name.toLowerCase()] = Aspect(name.toLowerCase(), name, null);
+      }
+    });
+
+    ({DeviceInstance device, DeviceState measured, DeviceState setpoint, DeviceState setControl, DeviceState input})
+        thermostat({List<String> reading = readingAspects}) {
+      final d = device();
+      final measured = deviceState(d, _tempGet, false, value: 19.5, path: "local_temperature", aspects: reading);
+      final setpoint = deviceState(d, _tempGet, false, value: 21.0, path: "occupied_heating_setpoint", aspects: setpointAspects);
+      final setControl = deviceState(d, _tempSet, true, path: "occupied_heating_setpoint", aspects: setpointAspects);
+      final input = deviceState(d, _tempSet, true, path: "external_temperature_input", aspects: reading);
+      d.states.addAll([measured, setpoint, setControl, input]);
+      return (device: d, measured: measured, setpoint: setpoint, setControl: setControl, input: input);
+    }
+
+    test("the measured value of a device has no control, the setpoint has its own", () {
+      final t = thermostat();
+
+      expect(controlOfReading(t.measured, t.device.states, isGroup: false), isNull,
+          reason: "a value entered there would replace the room temperature the device measures");
+      expect(t.measured.controlsFor(t.device.states, _tempSet), isEmpty);
+      expect(controlOfReading(t.setpoint, t.device.states, isGroup: false), same(t.setControl));
+      expect(t.setpoint.controlsFor(t.device.states, _tempSet), [same(t.setControl)]);
+      expect(deviceControlEntries(t.device.states, thermostat: true).map((e) => e.state), [same(t.setpoint)]);
+    });
+
+    test("the input still keeps its reading from a setpoint control on fewer aspects", () {
+      // A setpoint control without Target would otherwise have two readings of
+      // equal size to choose from and pair with neither.
+      final t = thermostat();
+      final d = t.device;
+      d.states.remove(t.setControl);
+      final fewer = deviceState(d, _tempSet, true, path: "occupied_heating_setpoint", aspects: const ["air", "indoor"]);
+      d.states.add(fewer);
+
+      expect(controlOfReading(t.setpoint, d.states, isGroup: false), same(fewer));
+      expect(controlOfReading(t.measured, d.states, isGroup: false), isNull);
+    });
+
+    test("the Reading aspect is known by its id without aspect metadata", () {
+      AppState().aspects.clear();
+      final t = thermostat(reading: const ["air", "indoor", readingAspectId]);
+
+      expect(isReadingInput(t.input), isTrue);
+      expect(isReadingInput(t.setControl), isFalse);
+      expect(controlOfReading(t.measured, t.device.states, isGroup: false), isNull);
+    });
+
+    test("a group's measured value has no control and does not fall back to the group's only control", () {
+      Map<String, dynamic> criterion(String functionId, List<String> aspectIds) => {
+            "aspect_id": ([...aspectIds]..sort()).first,
+            "aspect_ids": aspectIds,
+            "device_class_id": "",
+            "function_id": functionId,
+            "interaction": functionId == _tempSet ? "request" : "event",
+          };
+      DeviceGroup groupOf(List<Map<String, dynamic>> criteria) =>
+          DeviceGroup("group-1", "Thermostats", criteria.map(DeviceGroupCriteria.fromJson).toList(), "", [], null)
+            ..prepareStates();
+      DeviceState find(DeviceGroup g, String functionId, List<String> aspects) =>
+          g.states.singleWhere((s) => s.functionId == functionId && s.aspectKey == ([...aspects]..sort()).join(","));
+
+      final g = groupOf([
+        for (final a in [setpointAspects, readingAspects]) ...[criterion(_tempGet, a), criterion(_tempSet, a)],
+      ]);
+      expect(controlOfReading(find(g, _tempGet, readingAspects), g.states, isGroup: true), isNull);
+      expect(controlOfReading(find(g, _tempGet, setpointAspects), g.states, isGroup: true),
+          same(find(g, _tempSet, setpointAspects)));
+      expect(groupControlEntries(g.shownStates, g.states, thermostat: true).map((e) => e.state),
+          [same(find(g, _tempGet, setpointAspects))]);
+
+      // The input as the group's only temperature control.
+      final inputOnly = groupOf([criterion(_tempGet, readingAspects), criterion(_tempSet, readingAspects)]);
+      final measured = find(inputOnly, _tempGet, readingAspects);
+      expect(controlOfReading(measured, inputOnly.states, isGroup: true), isNull);
+      expect(resolveGroupControl(measured, inputOnly.states, _tempSet), isNull);
+    });
+
+    test("a group's card sets only its setpoint, by the control on exactly its aspects", () {
+      // As the platform keeps the group: each variable's aspects and each aspect
+      // alone. A pin from before aspect lists can name such a part, [air] say.
+      final g = DeviceGroup("group-1", "Thermostats", [
+        for (final a in [setpointAspects, readingAspects, ["air"], ["indoor"], ["reading"], ["target"]])
+          for (final f in [_tempGet, _tempSet])
+            DeviceGroupCriteria.fromJson({
+              "aspect_id": ([...a]..sort()).first,
+              "aspect_ids": a,
+              "device_class_id": "",
+              "function_id": f,
+              "interaction": f == _tempSet ? "request" : "event",
+            }),
+      ], "", [], null)
+        ..prepareStates();
+      DeviceState state(bool controlling, List<String> aspects) => g.states
+          .singleWhere((s) => s.isControlling == controlling && s.aspectKey == ([...aspects]..sort()).join(","));
+
+      for (final part in [["air"], ["indoor"], ["reading"], readingAspects]) {
+        expect(groupCardControl(state(false, part), g.states), isNull,
+            reason: "a command on $part reaches the setpoint and the external input of every member");
+      }
+      expect(groupCardControl(state(false, setpointAspects), g.states), same(state(true, setpointAspects)));
+      expect(groupCardControl(state(false, ["target"]), g.states), same(state(true, ["target"])));
     });
   });
 }

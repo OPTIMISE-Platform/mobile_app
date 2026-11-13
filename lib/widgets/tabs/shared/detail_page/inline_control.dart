@@ -216,6 +216,10 @@ class _GradientTrackShape extends RoundedRectSliderTrackShape {
 /// per [inlineControlDebounce] window, a choice on selection. While the row is
 /// [busy] the control is disabled; a change that gets there anyway is dropped
 /// and the control shows the reading again.
+///
+/// A [compact] stepper is a bare row for a sensor card: [label] and the value,
+/// then minus and plus. It shows a value not yet read back muted instead of
+/// a spinner.
 class InlineControl extends StatefulWidget {
   final InlineControlSpec spec;
   final dynamic value;
@@ -224,8 +228,16 @@ class InlineControl extends StatefulWidget {
   final bool enabled;
   final Future<void> Function(dynamic value) onSend;
 
-  /// The row's list tile around [trailing].
-  final ListTile Function(Widget? trailing) tile;
+  /// The row's list tile around [trailing]; unused when [compact].
+  final ListTile Function(Widget? trailing)? tile;
+
+  final bool compact;
+
+  /// Before the value of a [compact] stepper, such as "Target".
+  final String? label;
+
+  /// The value's style in a [compact] stepper.
+  final TextStyle? valueStyle;
 
   const InlineControl({
     required this.spec,
@@ -234,9 +246,12 @@ class InlineControl extends StatefulWidget {
     required this.busy,
     required this.enabled,
     required this.onSend,
-    required this.tile,
+    this.tile,
+    this.compact = false,
+    this.label,
+    this.valueStyle,
     super.key,
-  });
+  }) : assert(compact || tile != null);
 
   @override
   State<InlineControl> createState() => _InlineControlState();
@@ -295,6 +310,16 @@ class _InlineControlState extends State<InlineControl> {
     return v;
   }
 
+  /// [next] held to the bounds a step from [base] crosses. A [base] outside
+  /// them (a value the device took from elsewhere) moves by the step towards
+  /// them instead of jumping onto the bound.
+  num _clampFrom(num base, num next) {
+    final spec = widget.spec;
+    if (spec.max != null && next > spec.max! && base <= spec.max!) return spec.max!;
+    if (spec.min != null && next < spec.min! && base >= spec.min!) return spec.min!;
+    return next;
+  }
+
   void _step(int direction) {
     final spec = widget.spec;
     final base = _shown;
@@ -305,7 +330,7 @@ class _InlineControlState extends State<InlineControl> {
     final ratio = base / spec.step;
     final onGrid = (ratio - ratio.round()).abs() < 1e-6;
     final target = onGrid ? base + direction * spec.step : (direction > 0 ? ratio.floor() + 1 : ratio.floor()) * spec.step;
-    final next = _clamp(double.parse(target.toStringAsFixed(4)));
+    final next = _clampFrom(base, double.parse(target.toStringAsFixed(4)));
     setState(() => _draft = spec.integer ? next.round() : next.toDouble());
     _timer?.cancel();
     _timer = Timer(inlineControlDebounce, () {
@@ -316,15 +341,58 @@ class _InlineControlState extends State<InlineControl> {
 
   Widget get _spinner => const SizedBox.square(dimension: 24, child: DelayedCircularProgressIndicator());
 
+  /// A [InlineControl.compact] stepper.
+  Widget _compactStepper(bool atMin, bool atMax) {
+    final theme = Theme.of(context);
+    // Chosen and not read back yet: still in its window, or being sent.
+    final pending = _draft != null && (!widget.busy || _sending);
+    final style = (widget.valueStyle ?? theme.textTheme.titleMedium)
+        ?.copyWith(color: pending ? theme.colorScheme.onSurfaceVariant : null, fontStyle: pending ? FontStyle.italic : null);
+    final label = widget.label;
+    Widget button(IconData icon, String tooltip, VoidCallback? onPressed) => IconButton(
+          tooltip: tooltip,
+          icon: Icon(icon),
+          visualDensity: VisualDensity.compact,
+          style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+          onPressed: onPressed,
+        );
+    // Takes the taps on the row, so one on a disabled button at a bound does
+    // not reach the card around it.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {},
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
+          child: widget.busy && !pending
+              ? _spinner
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text.rich(
+                    TextSpan(children: [
+                      if (label != null) TextSpan(text: '$label ', style: theme.textTheme.bodySmall),
+                      TextSpan(text: formatValueWithUnit(_shown, widget.unit), style: style),
+                    ]),
+                    key: const Key('stepperValue'),
+                    maxLines: 1,
+                  ),
+                ),
+        ),
+        button(Icons.remove, 'Decrease', _active && !atMin ? () => _step(-1) : null),
+        button(Icons.add, 'Increase', _active && !atMax ? () => _step(1) : null),
+      ]),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final spec = widget.spec;
+    final tile = widget.tile ?? (Widget? trailing) => ListTile(trailing: trailing);
     switch (spec.kind) {
       case InlineControlKind.slider:
         final shown = _shown;
         final value = shown is num ? _clamp(shown).toDouble() : spec.min!;
         return Column(mainAxisSize: MainAxisSize.min, children: [
-          widget.tile(widget.busy ? _spinner : null),
+          tile(widget.busy ? _spinner : null),
           Padding(
             padding: const EdgeInsets.only(left: 8, right: 16),
             child: Row(children: [
@@ -353,7 +421,8 @@ class _InlineControlState extends State<InlineControl> {
         final shown = _shown;
         final atMin = shown is num && spec.min != null && shown <= spec.min!;
         final atMax = shown is num && spec.max != null && shown >= spec.max!;
-        return widget.tile(Row(mainAxisSize: MainAxisSize.min, children: [
+        if (widget.compact) return _compactStepper(atMin, atMax);
+        return tile(Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
             tooltip: 'Decrease',
             icon: const Icon(Icons.remove),
@@ -376,7 +445,7 @@ class _InlineControlState extends State<InlineControl> {
       case InlineControlKind.choice:
         final selected = spec.options.indexWhere((o) => o == _shown);
         return Column(mainAxisSize: MainAxisSize.min, children: [
-          widget.tile(widget.busy ? _spinner : null),
+          tile(widget.busy ? _spinner : null),
           Padding(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
             child: SizedBox(
@@ -403,7 +472,7 @@ class _InlineControlState extends State<InlineControl> {
         ]);
       case InlineControlKind.dropdown:
         final selected = spec.options.indexWhere((o) => o == _shown);
-        return widget.tile(widget.busy
+        return tile(widget.busy
             ? _spinner
             : ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * .5 - 12),

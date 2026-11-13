@@ -18,12 +18,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:mobile_app/app_state.dart';
+import 'package:mobile_app/config/functions/function_config.dart';
 import 'package:mobile_app/models/device_group.dart';
 import 'package:mobile_app/models/device_instance.dart';
 import 'package:mobile_app/models/device_search_filter.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/models/sensor_pin.dart';
 import 'package:mobile_app/services/devices.dart';
+import 'package:mobile_app/shared/device_controls.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/theme.dart';
 import 'package:mobile_app/widgets/shared/delay_circular_progress_indicator.dart';
@@ -31,6 +33,7 @@ import 'package:mobile_app/widgets/shared/grouped_list_tile.dart';
 import 'package:mobile_app/widgets/shared/paged_device_list.dart';
 import 'package:mobile_app/widgets/shared/sectioned_list_view.dart';
 import 'package:mobile_app/widgets/tabs/sensors/sensor_display.dart';
+import 'package:mobile_app/widgets/tabs/shared/detail_page/control_cards.dart';
 import 'package:mobile_app/widgets/tabs/shared/detail_page/detail_labels.dart';
 import 'package:mobile_app/widgets/tabs/sensors/switch_tile.dart';
 
@@ -508,14 +511,33 @@ class _ValuePickerState extends State<_ValuePicker> {
 
   late final List<DeviceState> _shown = widget.target.shownStates(_all);
 
-  /// Readable measurements first, then controls (switches and other inputs).
-  late final List<DeviceState> _selectable = _shown.toList()
+  late final bool _isGroup = widget.target.device == null;
+
+  /// The controls a listed value reading's card sets, as the card resolves
+  /// them: they get no row of their own. On/off controls keep theirs, as the
+  /// switch tile pairs them by itself.
+  late final Set<DeviceState> _setOnCard = {
+    for (final r in _shown)
+      if (!r.isControlling && !isOnOffReading(r.functionId))
+        _isGroup ? groupCardControl(r, _all) : controlOfReading(r, _all, isGroup: false),
+  }.whereType<DeviceState>().toSet();
+
+  /// Readable measurements first, then controls (switches and other inputs),
+  /// then the inputs that feed a measured value to the device.
+  late final List<DeviceState> _selectable = _shown
+      .where((s) => !_setOnCard.contains(s))
+      .toList()
     ..sort((a, b) {
-      if (a.isControlling != b.isControlling) {
-        return a.isControlling ? 1 : -1;
-      }
+      final byKind = _rank(a).compareTo(_rank(b));
+      if (byKind != 0) return byKind;
       return _label(a).title.compareTo(_label(b).title);
     });
+
+  static int _rank(DeviceState state) => !state.isControlling
+      ? 0
+      : isReadingInput(state)
+      ? 2
+      : 1;
 
   // Each label scans all shown states, so it is computed once per state.
   final _labels = <DeviceState, ({String title, String subtitle})>{};
@@ -523,7 +545,29 @@ class _ValuePickerState extends State<_ValuePicker> {
   ({String title, String subtitle}) _label(DeviceState state) => _labels.putIfAbsent(
       state,
       () => sensorLabel(state, _shown, widget.target.device,
-          states: _all, isGroup: widget.target.device == null));
+          states: _all, isGroup: _isGroup));
+
+  /// The label of a row. A control's subtitle tells it from a row of the same
+  /// title, and is left out when there is none; an input with the role
+  /// Reading says what it does instead.
+  ({String title, String subtitle}) _rowLabel(DeviceState state) {
+    final label = _label(state);
+    if (!state.isControlling) return label;
+    if (isReadingInput(state)) {
+      return (
+        title: label.title,
+        subtitle: [readingInputSubtitle, label.subtitle].where((p) => p.isNotEmpty).join(', '),
+      );
+    }
+    final namesake = _selectable.any(
+      (s) => !identical(s, state) && _label(s).title == label.title,
+    );
+    if (!namesake) return (title: label.title, subtitle: '');
+    return (
+      title: label.title,
+      subtitle: label.subtitle.isNotEmpty ? label.subtitle : aspectsLabel(state),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -574,7 +618,7 @@ class _ValuePickerState extends State<_ValuePicker> {
     final existing = widget.selection.isExisting(state, _all);
     final picked = existing || widget.selection.isPicked(pin);
 
-    final label = _label(state);
+    final label = _rowLabel(state);
     var subtitle = label.subtitle;
     if (existing) {
       subtitle = subtitle.isEmpty
@@ -588,7 +632,7 @@ class _ValuePickerState extends State<_ValuePicker> {
           ? const Icon(Icons.input)
           // The page shows an on/off reading as a switch, not a value with a
           // history.
-          : isSwitchableOnOff(state, _all, isGroup: widget.target.device == null)
+          : isSwitchableOnOff(state, _all, isGroup: _isGroup)
           ? const Icon(Icons.toggle_on_outlined)
           : const Icon(Icons.show_chart),
       title: Text(label.title),

@@ -150,13 +150,17 @@ List<ControlEntry> groupControlEntries(List<DeviceState> shown, List<DeviceState
 /// reading pairs with none this way has the control of the concept's single
 /// controlling function ([resolveGroupControl]); a group of thermostats has a
 /// set-temperature control per aspect and is paired by aspect.
+///
+/// A reading claimed by an input with the role Reading ([isReadingInput]) has
+/// no control, and a group's falls back to none either.
 DeviceState? controlOfReading(DeviceState reading, List<DeviceState> states, {required bool isGroup}) {
-  final controls = [
+  final paired = [
     for (final f in relatedControllingFunctionsOf(reading.functionId) ?? const <String>[])
-      ...reading.controlsFor(states, f),
+      ...reading.pairedControls(states, f),
   ];
+  final controls = paired.where((c) => !isReadingInput(c)).toList(growable: false);
   if (controls.length == 1) return controls.single;
-  return isGroup && controls.isEmpty ? resolveGroupControl(reading, states) : null;
+  return isGroup && paired.isEmpty ? resolveGroupControl(reading, states) : null;
 }
 
 /// The slider the characteristic of [control]'s function allows, null when it

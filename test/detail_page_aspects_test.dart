@@ -222,7 +222,7 @@ void main() {
     await pumpGolden(tester, DetailPage(null, group), dark: false);
 
     expect(find.text("Target Temperature"), findsOneWidget);
-    expect(find.text("Temperature"), findsOneWidget);
+    expect(find.text("External temperature input"), findsOneWidget, reason: "the control on [reading] is named by its role");
     expect(find.text("Thermostat"), findsNothing);
     expect(find.text("Reading"), findsNothing, reason: "the setpoint's title tells the two apart");
     expect(find.text("MISSING_ASPECT_NAME"), findsNothing);
@@ -273,6 +273,8 @@ void main() {
     expect(find.text("Target Temperature"), findsOneWidget);
     expect(find.text("Temperature"), findsOneWidget);
     expect(find.text("Set-Temperature"), findsNothing,
-        reason: "each control acts on the reading with its aspect set and is part of that row");
+        reason: "the setpoint control acts on the reading with its aspect set and is part of that row");
+    expect(find.text("External temperature input"), findsOneWidget,
+        reason: "the input feeds a room temperature to the devices and never sets the measured one");
   });
 }

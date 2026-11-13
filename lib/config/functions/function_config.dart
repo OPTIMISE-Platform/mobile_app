@@ -25,6 +25,8 @@ import 'package:mobile_app/config/functions/set_off_state.dart';
 import 'package:mobile_app/config/functions/set_on_state.dart';
 import 'package:mobile_app/services/settings.dart';
 
+import 'package:mobile_app/models/aspect.dart';
+import 'package:mobile_app/models/aspect_ids.dart';
 import 'package:mobile_app/models/characteristic.dart';
 import 'package:mobile_app/models/device_state.dart';
 import 'package:mobile_app/shared/math_list.dart';
@@ -62,10 +64,29 @@ List<String>? relatedControllingFunctionsOf(String functionId) {
       : FunctionConfigDefault.relatedControllingFunctions(functionId);
 }
 
+/// Whether [id] is the aspect Reading, by its id or, for an instance with
+/// other ids, its name.
+bool isReadingAspect(String id) =>
+    id == readingAspectId || joinAspectNames(AppState().aspects.values, [id]).toLowerCase() == 'reading';
+
+/// Whether [state] carries the value role Reading.
+bool hasReadingRole(DeviceState state) => state.aspectIds.any(isReadingAspect);
+
+/// Whether [state] is an input with the value role Reading, such as a
+/// thermostat's external temperature input. It feeds a measured value to the
+/// device and is never the setting of a reading.
+bool isReadingInput(DeviceState state) => state.isControlling && hasReadingRole(state);
+
 extension ControlPairing on DeviceState {
   /// The controls of [controllingFunctionId] in [states] that act on this
   /// reading, with readings related to controls through the function configs.
+  /// An input with the role Reading still claims its reading from other
+  /// controls but is not returned ([isReadingInput]).
   List<DeviceState> controlsFor(Iterable<DeviceState> states, String controllingFunctionId) =>
+      pairedControls(states, controllingFunctionId).where((c) => !isReadingInput(c)).toList(growable: false);
+
+  /// [controlsFor] with inputs of the role Reading kept.
+  List<DeviceState> pairedControls(Iterable<DeviceState> states, String controllingFunctionId) =>
       controlsAmong(states, controllingFunctionId, relatedControllingFunctionsOf);
 }
 

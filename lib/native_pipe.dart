@@ -433,7 +433,10 @@ class NativePipe {
     if (measurement != null) return measurement.controlsFor(states, controllingFunction);
     return DeviceState.legacyMatchAspects(
         states.where((s) =>
-            s.isControlling && s.functionId == controllingFunction && s.serviceGroupKey == entry.serviceGroupKey),
+            s.isControlling &&
+            s.functionId == controllingFunction &&
+            s.serviceGroupKey == entry.serviceGroupKey &&
+            !isReadingInput(s)),
         entry.aspectIds);
   }
 
