@@ -35,6 +35,7 @@ String jwt(Map<String, Object?> claims) {
 
 final tokenEndpoint = Uri.parse("https://localhost/auth/token");
 final revocationEndpoint = Uri.parse("https://localhost/auth/revoke");
+final deviceEndpoint = Uri.parse("https://localhost/auth/device");
 
 /// Credentials of [sub] as a login stores them; [discovered] false leaves out
 /// the token endpoint, as the migration does.
@@ -72,6 +73,31 @@ http.Response oauthError(String error, {String? description, int status = 400}) 
         status,
         headers: {"content-type": "application/json"});
 
+/// A device authorization answer: the code `ABCD-EFGH` for [deviceCode].
+/// [interval] null leaves it out.
+http.Response deviceAuthorization(
+        {String deviceCode = "device-1",
+        String userCode = "ABCD-EFGH",
+        Object? expiresIn = 600,
+        Object? interval = 1,
+        String verificationUri = "https://localhost/auth/realms/test/device",
+        bool complete = true}) =>
+    http.Response(
+        jsonEncode({
+          "device_code": deviceCode,
+          "user_code": userCode,
+          "verification_uri": verificationUri,
+          if (complete)
+            "verification_uri_complete": "$verificationUri?user_code=$userCode",
+          "expires_in": expiresIn,
+          if (interval != null) "interval": interval,
+        }),
+        200,
+        headers: {"content-type": "application/json"});
+
+/// The poll answer while the user has not confirmed yet.
+http.Response pending() => oauthError("authorization_pending");
+
 /// Answers Auth's discovery, token and revocation requests through
 /// [Auth.httpClient], and records them.
 class FakeAuthServer {
@@ -93,12 +119,41 @@ class FakeAuthServer {
   /// "signed-in" and a refresh "refreshed", both for test-account.
   Future<http.Response> Function(Map<String, String> form)? onToken;
 
+  /// Whether the discovery names [deviceEndpoint].
+  bool offersDeviceLogin = true;
+
+  /// Answers the device authorization requests; by default
+  /// [deviceAuthorization].
+  Future<http.Response> Function(Map<String, String> form)? onDevice;
+
+  /// Answer the device code polls, one each, unless [onToken] is set; an entry
+  /// may throw, as a transport error, or never complete. Once they are used
+  /// up, a poll gets [tokens] "by-code".
+  final codePolls = Queue<Future<http.Response> Function()>();
+
+  /// When each request arrived, by the clock of [stopwatch].
+  final arrivals = <Duration>[];
+  final stopwatch = Stopwatch()..start();
+
   int get discoveries => requests
       .where((r) => r.url.path.endsWith("/.well-known/openid-configuration"))
       .length;
 
   List<Map<String, String>> get tokenRequests =>
       [for (final r in requests) if (r.url == tokenEndpoint) r.bodyFields];
+
+  List<http.Request> get deviceRequests =>
+      [for (final r in requests) if (r.url == deviceEndpoint) r];
+
+  /// The device code polls with when each arrived.
+  List<(Map<String, String>, Duration)> get polls => [
+        for (var i = 0; i < requests.length; i++)
+          if (requests[i].url == tokenEndpoint &&
+              requests[i].bodyFields["grant_type"] == deviceCodeGrant)
+            (requests[i].bodyFields, arrivals[i])
+      ];
+
+  static const deviceCodeGrant = "urn:ietf:params:oauth:grant-type:device_code";
 
   List<http.Request> get tokenHttpRequests =>
       [for (final r in requests) if (r.url == tokenEndpoint) r];
@@ -112,6 +167,7 @@ class FakeAuthServer {
 
   Future<http.Response> _handle(http.Request request) async {
     requests.add(request);
+    arrivals.add(stopwatch.elapsed);
     if (request.url.path.endsWith("/.well-known/openid-configuration")) {
       await holdDiscovery?.future;
       if (discoveryError != null) throw discoveryError!;
@@ -119,6 +175,8 @@ class FakeAuthServer {
           jsonEncode({
             "token_endpoint": "$tokenEndpoint",
             "revocation_endpoint": "$revocationEndpoint",
+            if (offersDeviceLogin)
+              "device_authorization_endpoint": "$deviceEndpoint",
           }),
           discoveryStatus,
           headers: {"content-type": "application/json"});
@@ -128,9 +186,19 @@ class FakeAuthServer {
       if (tokenError != null) throw tokenError!;
       final form = request.bodyFields;
       if (onToken != null) return onToken!(form);
+      if (form["grant_type"] == deviceCodeGrant) {
+        return codePolls.isEmpty
+            ? tokens("by-code")
+            : await codePolls.removeFirst()();
+      }
       return form["grant_type"] == "password"
           ? tokens("signed-in")
           : tokens("refreshed");
+    }
+    if (request.url == deviceEndpoint) {
+      final form = request.bodyFields;
+      if (onDevice != null) return onDevice!(form);
+      return deviceAuthorization();
     }
     if (request.url == revocationEndpoint) {
       await holdRevocation?.future;

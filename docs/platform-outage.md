@@ -113,6 +113,32 @@ without it. Every logout then runs the same local cleanup, none of which needs
 the network: the stored credentials, the live client certificate, the HTTP and
 metadata caches and the state in memory go.
 
+### Sign-in with a code
+
+`Auth.loginWithCode` is the OAuth 2.0 Device Authorization Grant (RFC 8628):
+the app shows a code, the user enters it at the server's address on another
+device. The discovery is the login's; without `device_authorization_endpoint`
+in it the sign-in ends with a message, the button stays. The device
+authorization request is bounded by `loginTimeout`. Then the token endpoint is
+polled at the server's `interval` (5 s without one, at least 1 s), 5 s slower
+after each `slow_down`, until the code's `expires_in` has passed, counted from
+before the request. `authorization_pending`, transport errors, timeouts (each
+poll bounded by `loginTimeout`) and answers that are no OAuth error go on;
+`access_denied`, `expired_token`, `unauthorized_client` and any other OAuth
+error end with a message.
+
+The wait does not hold the login lock, so `loggingIn` stays false and
+`getHeaders()` is not blocked. Only the start of the session with the tokens
+takes it, and it runs the password login's own steps. The tokens are dropped
+when the sign-in was cancelled meanwhile or a valid session came first. One
+sign-in with a code runs at a time: a new one, a password login, Cancel, Back,
+leaving the login screen and a stored session that loads meanwhile end it.
+Its wait between polls and its running request end at once; a discovery still
+running is not stopped and runs on for at most `loginTimeout`, without
+starting a session. An answer that arrives later starts nothing. When it ends
+without signing in and without a message to show, the login screen shows the
+password form again.
+
 ## Secure storage on Android
 
 flutter_secure_storage 9.2.4 keeps every store with

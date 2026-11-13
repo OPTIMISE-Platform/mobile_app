@@ -94,6 +94,26 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
   /// The toast text of a login Keycloak refused for its credentials.
   static const invalidCredentials = "Invalid user credentials";
 
+  /// The messages a sign-in with a code ends with.
+  static const codeLoginDeclined = "Sign-in was declined";
+  static const codeExpired = "The code has expired";
+  static const codeLoginDisabled =
+      "Sign-in with a code is not enabled on the server";
+  static const codeLoginUnavailable =
+      "Sign-in with a code is not offered by the server";
+
+  static const _offline = "Can't login, are you online?";
+  static const _unexpectedAnswer = "Unexpected answer from the auth server";
+
+  /// What one second of a device authorization lasts: its lifetime, its
+  /// poll interval and the slow_down step.
+  @visibleForTesting
+  static Duration deviceSecond = const Duration(seconds: 1);
+
+  /// Caps the lifetime and the poll interval a server gives, so that the
+  /// conversion to a [Duration] cannot overflow.
+  static const _maxDeviceSeconds = 86400;
+
   // Without resetOnError, as every store of the app: on Android they share
   // one file, and a reset after a read error would delete these credentials.
   static const _storage = FlutterSecureStorage(
@@ -188,6 +208,9 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
   /// refresh token a second time, unless it is older than [loginTimeout].
   _Refresh? _refreshing;
 
+  /// The sign-in with a code while it runs; one at a time.
+  _CodeLogin? _codeLogin;
+
   bool _observingLifecycle = false;
 
   /// From the current settings: the auth server can be changed at runtime.
@@ -236,6 +259,8 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
       await _rememberAccount(_subjectOf(credentials));
       if (_sessionChanges != sessions) return;
       loggedIn = true;
+      // The session is there; a sign-in with a code would only be dropped.
+      cancelCodeLogin();
       notifyListeners();
     });
   }
@@ -480,8 +505,11 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
       final token = document is Map ? document['token_endpoint'] : null;
       if (token is! String) throw const FormatException("No token endpoint");
       final revocation = (document as Map)['revocation_endpoint'];
-      return _Discovery(Uri.parse(token),
-          revocation is String ? Uri.parse(revocation) : null);
+      final device = document['device_authorization_endpoint'];
+      return _Discovery(
+          Uri.parse(token),
+          revocation is String ? Uri.parse(revocation) : null,
+          device is String ? _httpUri(device) : null);
     } finally {
       client.close();
     }
@@ -745,6 +773,7 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> login(String user, String pw) async {
+    cancelCodeLogin();
     await _m.protect(() async {
       // loggingIn (== mutex held) just became true; without this notify the
       // login form stays frozen with no feedback until the grant completes.
@@ -771,24 +800,302 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
         _logger.w("Granted tokens name no account");
         throw AuthException("token null");
       }
-      // A cleanup still running, also of a refresh refused above, would clear
-      // this session's state.
-      await _awaitCleanup();
-      _logger.i('Logged in');
-      _signedOut = false;
-      _loaded = true;
-      _readFailed = false;
-      final sessions = ++_sessionChanges;
-      _credentials = credentials;
-      // Only once stored: until then the next start takes no credentials.
-      if (await _store(credentials, sessions) && _sessionChanges == sessions) {
-        await _markSignedOut(false);
-      }
-      unawaited(_retireLegacy());
-      await _rememberAccount(sub);
-      loggedIn = true;
-      notifyListeners();
+      await _startSession(credentials, sub);
     });
+  }
+
+  /// Starts the session of [credentials] granted to [sub], for every kind of
+  /// login. The caller holds [_m].
+  Future<void> _startSession(oauth2.Credentials credentials, String sub) async {
+    // A cleanup still running, also of a refresh refused before, would clear
+    // this session's state.
+    await _awaitCleanup();
+    _logger.i('Logged in');
+    _signedOut = false;
+    _loaded = true;
+    _readFailed = false;
+    final sessions = ++_sessionChanges;
+    _credentials = credentials;
+    // Only once stored: until then the next start takes no credentials.
+    if (await _store(credentials, sessions) && _sessionChanges == sessions) {
+      await _markSignedOut(false);
+    }
+    unawaited(_retireLegacy());
+    await _rememberAccount(sub);
+    loggedIn = true;
+    notifyListeners();
+  }
+
+  /// Signs in with a code the user enters on another device (RFC 8628).
+  /// [onCode] gets the code once the server issued it. True once signed in;
+  /// false when cancelled, replaced by another sign-in, or when a session
+  /// came first. Throws an [AuthException] with the message to show.
+  ///
+  /// The wait does not hold [_m]: [loggingIn] and [getHeaders] stay free.
+  Future<bool> loginWithCode(void Function(DeviceCode code) onCode) async {
+    _codeLogin?.cancel();
+    final run = _CodeLogin();
+    _codeLogin = run;
+    try {
+      final discovery = await _discover(retryNow: true, bound: loginTimeout);
+      if (run.cancelled) return false;
+      if (discovery == null) throw AuthException(_offline);
+      final endpoint = discovery.deviceAuthorizationEndpoint;
+      if (endpoint == null) throw AuthException(codeLoginUnavailable);
+      final grant = await _requestDeviceCode(run, endpoint);
+      onCode(grant.code);
+      final credentials =
+          await _pollDeviceCode(run, discovery.tokenEndpoint, grant);
+      try {
+        return await _m.protect(() async {
+          if (run.cancelled) return false;
+          // loggingIn is true: the spinner replaces Cancel, which could no
+          // longer stop this session.
+          notifyListeners();
+          await _ensureLoaded();
+          if (tokenValid) {
+            _logger.d("Dropped the tokens of a code: a session came first");
+            return false;
+          }
+          final sub = _subjectOf(credentials);
+          if (sub == null) {
+            _logger.w("Granted tokens name no account");
+            throw AuthException("token null");
+          }
+          await _startSession(credentials, sub);
+          return true;
+        });
+      } finally {
+        // loggingIn is false again.
+        notifyListeners();
+      }
+    } on _CodeLoginCancelled {
+      return false;
+    } finally {
+      run.cancel();
+      if (identical(_codeLogin, run)) _codeLogin = null;
+    }
+  }
+
+  /// Ends a running [loginWithCode]; a result it gets later starts no session.
+  void cancelCodeLogin() {
+    _codeLogin?.cancel();
+    _codeLogin = null;
+  }
+
+  Future<_DeviceGrant> _requestDeviceCode(_CodeLogin run, Uri endpoint) async {
+    final sentAt = monotonicNow();
+    final response = await _postBounded(run, endpoint,
+        {'client_id': _clientId, 'scope': _scopes.join(' ')}, loginTimeout);
+    if (response == null) throw AuthException(_offline);
+    if (response.statusCode != 200) {
+      final error = _oauthErrorOf(response);
+      if (error == null) {
+        _logger.w("Device authorization answered ${response.statusCode}");
+        throw AuthException(_unexpectedAnswer);
+      }
+      _logger.w("Device authorization refused: ${error.error}");
+      if (error.error == 'unauthorized_client') {
+        throw AuthException(codeLoginDisabled);
+      }
+      throw AuthException(error.description ?? error.error);
+    }
+    final grant = _parseDeviceGrant(response.body, sentAt);
+    if (grant == null) {
+      _logger.w("Device authorization answered an unreadable code");
+      throw AuthException(_unexpectedAnswer);
+    }
+    return grant;
+  }
+
+  /// The parts of a device authorization answer, or null when one is missing
+  /// or malformed. The lifetime counts from [sentAt], before the server's.
+  static _DeviceGrant? _parseDeviceGrant(String body, Duration sentAt) {
+    final Object? json;
+    try {
+      json = jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+    if (json is! Map) return null;
+    final deviceCode = json['device_code'];
+    final userCode = json['user_code'];
+    final uri = json['verification_uri'];
+    final complete = json['verification_uri_complete'];
+    final expiresIn = _seconds(json['expires_in']);
+    final interval = json['interval'] == null ? 5 : _seconds(json['interval']);
+    if (deviceCode is! String ||
+        deviceCode.isEmpty ||
+        userCode is! String ||
+        userCode.trim().isEmpty ||
+        uri is! String ||
+        expiresIn == null ||
+        expiresIn <= 0 ||
+        interval == null) {
+      return null;
+    }
+    final verificationUri = _httpUri(uri);
+    if (verificationUri == null) return null;
+    final lifetime = deviceSecond * _capSeconds(expiresIn);
+    return _DeviceGrant(
+        deviceCode,
+        DeviceCode._(userCode.trim(), verificationUri,
+            complete is String ? _httpUri(complete) : null, sentAt + lifetime),
+        // At least a second, so that a server sending 0 is not polled in a
+        // loop.
+        deviceSecond * _capSeconds(interval < 1 ? 1 : interval));
+  }
+
+  /// A whole number of seconds as JSON may carry it, or null.
+  static int? _seconds(Object? value) {
+    if (value is int) return value;
+    if (value is double && value.isFinite && value == value.truncateToDouble()) {
+      return value.clamp(-_maxDeviceSeconds, _maxDeviceSeconds).toInt();
+    }
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  static int _capSeconds(int seconds) =>
+      seconds > _maxDeviceSeconds ? _maxDeviceSeconds : seconds;
+
+  /// [value] as an absolute http(s) address, or null.
+  static Uri? _httpUri(String value) {
+    final uri = Uri.tryParse(value.trim());
+    if (uri == null || !uri.hasAuthority || uri.host.isEmpty) return null;
+    return uri.scheme == 'https' || uri.scheme == 'http' ? uri : null;
+  }
+
+  /// Polls the token endpoint until the user confirmed or declined on the
+  /// other device, or the code expired. Transport errors, timeouts and
+  /// answers that are no OAuth error are retried at the interval.
+  Future<oauth2.Credentials> _pollDeviceCode(
+      _CodeLogin run, Uri tokenEndpoint, _DeviceGrant grant) async {
+    var interval = grant.interval;
+    final expiresAt = grant.code._expiresAt;
+    while (true) {
+      final left = expiresAt - monotonicNow();
+      if (left <= Duration.zero) throw AuthException(codeExpired);
+      await run.sleep(interval < left ? interval : left);
+      final remaining = expiresAt - monotonicNow();
+      if (remaining <= Duration.zero) throw AuthException(codeExpired);
+      // The wall clock, as oauth2 takes it for the expiration it compares.
+      final startTime = DateTime.now();
+      final response = await _postBounded(
+          run,
+          tokenEndpoint,
+          {
+            'grant_type': 'urn:ietf:params:oauth:grant-type:device_code',
+            'device_code': grant.deviceCode,
+            'client_id': _clientId,
+          },
+          remaining < loginTimeout ? remaining : loginTimeout);
+      if (response == null) continue;
+      if (response.statusCode == 200) {
+        final credentials =
+            _parseTokens(response.body, tokenEndpoint, startTime);
+        if (credentials == null) {
+          _logger.w("Code login answered unreadable tokens");
+          throw AuthException(_unexpectedAnswer);
+        }
+        return credentials;
+      }
+      final error = _oauthErrorOf(response);
+      switch (error?.error) {
+        case null:
+          _logger.d("Code poll answered ${response.statusCode}");
+        case 'authorization_pending':
+          break;
+        case 'slow_down':
+          interval += deviceSecond * 5;
+        case 'access_denied':
+          throw AuthException(codeLoginDeclined);
+        case 'expired_token':
+          throw AuthException(codeExpired);
+        case 'unauthorized_client':
+          throw AuthException(codeLoginDisabled);
+        default:
+          _logger.w("Code login refused: ${error!.error}");
+          throw AuthException(error.description ?? error.error);
+      }
+    }
+  }
+
+  /// Posts [form] as a public client. Null on a transport error or past
+  /// [bound]; a late answer is dropped, and a cancellation is thrown.
+  Future<http.Response?> _postBounded(_CodeLogin run, Uri endpoint,
+      Map<String, String> form, Duration bound) async {
+    final client = httpClient();
+    try {
+      return await run.bounded(client.post(endpoint, body: form), bound);
+    } on TimeoutException {
+      _logger.d("Code login request ran into its bound");
+      return null;
+    } on IOException catch (e) {
+      _logger.d("Code login request failed: ${e.runtimeType}");
+      return null;
+    } on http.ClientException catch (e) {
+      _logger.d("Code login request failed: ${e.runtimeType}");
+      return null;
+    } finally {
+      // Aborts a request still running.
+      client.close();
+    }
+  }
+
+  /// The OAuth error of a 4xx answer, or null for any other answer.
+  static ({String error, String? description})? _oauthErrorOf(
+      http.Response response) {
+    if (response.statusCode < 400 || response.statusCode >= 500) return null;
+    try {
+      final json = jsonDecode(response.body);
+      if (json is! Map) return null;
+      final error = json['error'];
+      final description = json['error_description'];
+      if (error is! String || error.isEmpty) return null;
+      return (
+        error: error,
+        description: description is String ? description : null
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// A token answer as oauth2's own grants read it, which it does not
+  /// export; null when malformed. Never logs the body, which holds tokens.
+  static oauth2.Credentials? _parseTokens(
+      String body, Uri tokenEndpoint, DateTime startTime) {
+    final Object? json;
+    try {
+      json = jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+    if (json is! Map) return null;
+    final accessToken = json['access_token'];
+    final tokenType = json['token_type'];
+    if (accessToken is! String || accessToken.isEmpty) return null;
+    if (tokenType is! String || tokenType.toLowerCase() != 'bearer') return null;
+    for (final name in const ['refresh_token', 'id_token', 'scope']) {
+      if (json[name] != null && json[name] is! String) return null;
+    }
+    DateTime? expiration;
+    if (json['expires_in'] != null) {
+      final expiresIn = _seconds(json['expires_in']);
+      if (expiresIn == null) return null;
+      // The grace oauth2 takes, so the token counts as expired a little
+      // before the server's view.
+      expiration = startTime.add(
+          Duration(seconds: _capSeconds(expiresIn)) - const Duration(seconds: 10));
+    }
+    final scope = json['scope'] as String?;
+    return oauth2.Credentials(accessToken,
+        refreshToken: json['refresh_token'] as String?,
+        idToken: json['id_token'] as String?,
+        tokenEndpoint: tokenEndpoint,
+        scopes: scope?.split(' ') ?? _scopes,
+        expiration: expiration);
   }
 
   Future<void> logout(BuildContext context) async {
@@ -924,6 +1231,7 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
   /// logging out; what runs on from before is dropped when it ends.
   @visibleForTesting
   Future<void> resetForTest() async {
+    cancelCodeLogin();
     _sessionChanges++;
     _credentials = null;
     _refreshing = null;
@@ -1081,10 +1389,109 @@ class Auth extends ChangeNotifier with WidgetsBindingObserver {
 
 /// The endpoints of a discovery document.
 class _Discovery {
-  _Discovery(this.tokenEndpoint, this.revocationEndpoint);
+  _Discovery(this.tokenEndpoint, this.revocationEndpoint,
+      this.deviceAuthorizationEndpoint);
 
   final Uri tokenEndpoint;
   final Uri? revocationEndpoint;
+
+  /// Null when the server offers no sign-in with a code.
+  final Uri? deviceAuthorizationEndpoint;
+}
+
+/// The code of a sign-in on another device, as the app shows it.
+class DeviceCode {
+  DeviceCode._(this.userCode, this.verificationUri, this.verificationUriComplete,
+      this._expiresAt);
+
+  /// What the user enters on the other device.
+  final String userCode;
+
+  /// Where the user enters it.
+  final Uri verificationUri;
+
+  /// [verificationUri] with the code filled in, when the server gives one.
+  final Uri? verificationUriComplete;
+
+  /// [Auth.monotonicNow] when the code expires.
+  final Duration _expiresAt;
+
+  /// The address to share: the one with the code in it when there is one.
+  Uri get shareUri => verificationUriComplete ?? verificationUri;
+
+  /// The time left until the code expires, never negative.
+  Duration get remaining {
+    final left = _expiresAt - Auth.monotonicNow();
+    return left.isNegative ? Duration.zero : left;
+  }
+}
+
+/// A device authorization: the code shown and what the polling needs.
+class _DeviceGrant {
+  _DeviceGrant(this.deviceCode, this.code, this.interval);
+
+  /// Never shown or logged: it redeems the sign-in.
+  final String deviceCode;
+  final DeviceCode code;
+  final Duration interval;
+}
+
+/// Thrown into a sign-in with a code that was cancelled.
+class _CodeLoginCancelled implements Exception {
+  const _CodeLoginCancelled();
+}
+
+/// One sign-in with a code. Its waits end at once when it is cancelled and
+/// leave no timer behind.
+class _CodeLogin {
+  bool cancelled = false;
+
+  /// Ends the wait that runs.
+  void Function()? _interrupt;
+
+  void cancel() {
+    cancelled = true;
+    final interrupt = _interrupt;
+    _interrupt = null;
+    interrupt?.call();
+  }
+
+  /// Waits [duration]; throws [_CodeLoginCancelled] once cancelled.
+  Future<void> sleep(Duration duration) => _race<void>(duration, () {});
+
+  /// [request]'s outcome, a [TimeoutException] past [bound], or
+  /// [_CodeLoginCancelled] once cancelled. A late outcome is dropped.
+  Future<T> bounded<T>(Future<T> request, Duration bound) => _race<T>(
+      bound, () => throw TimeoutException("Code login request", bound), request);
+
+  Future<T> _race<T>(Duration limit, T Function() atLimit,
+      [Future<T>? request]) {
+    if (cancelled) return Future.error(const _CodeLoginCancelled());
+    final outcome = Completer<T>();
+    late final Timer timer;
+    late final void Function() interrupt;
+    void settle(void Function() complete) {
+      if (outcome.isCompleted) return;
+      timer.cancel();
+      if (identical(_interrupt, interrupt)) _interrupt = null;
+      complete();
+    }
+
+    timer = Timer(limit, () => settle(() {
+          try {
+            outcome.complete(atLimit());
+          } catch (e, s) {
+            outcome.completeError(e, s);
+          }
+        }));
+    interrupt =
+        () => settle(() => outcome.completeError(const _CodeLoginCancelled()));
+    _interrupt = interrupt;
+    request?.then((value) => settle(() => outcome.complete(value)),
+        onError: (Object e, StackTrace s) =>
+            settle(() => outcome.completeError(e, s)));
+    return outcome.future;
+  }
 }
 
 /// A discovery request and when it started.
