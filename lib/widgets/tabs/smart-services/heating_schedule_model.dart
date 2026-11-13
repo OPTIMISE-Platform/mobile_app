@@ -463,13 +463,23 @@ const heatingBatteryFunctionId = "urn:infai:ses:measuring-function:68dae5ce-a9ee
 const heatingAirAspectId = "urn:infai:ses:aspect:a14c5efb-b0b6-46c3-982e-9fded75b5ab6";
 const heatingTargetAspectId = "urn:infai:ses:aspect:4f4188b6-f944-45fa-9429-15655f691397";
 const heatingReadingAspectId = "urn:infai:ses:aspect:ffcdc0a6-0957-49d7-be9a-af912ecbd3cf";
+const heatingBinaryStateFunctionId = "urn:infai:ses:measuring-function:2c284729-9bcd-4cde-b00c-1edbdaaab724";
+const heatingHeatingAspectId = "urn:infai:ses:aspect:1d69d3b6-d16f-430c-bf58-f23b26cd84c4";
+const heatingBooleanCharacteristicId = "urn:infai:ses:characteristic:7dc1bb7e-b256-408a-a6f9-044dc60fdcf5";
 const heatingCelsiusCharacteristicId = "urn:infai:ses:characteristic:5ba31623-0ccb-4488-bfb7-f73b50e03b5a";
 const heatingPercentCharacteristicId = "urn:infai:ses:characteristic:46f808f4-bb9e-4cc2-bd50-dc33ca74f273";
 
 /// Battery level at or below which a thermostat is named in the widget.
 const heatingLowBattery = 20.0;
 
-enum HeatingValueKind { room, target, battery }
+/// [heating] is whether the valve of the thermostat is open.
+enum HeatingValueKind { room, target, battery, heating }
+
+String _functionOf(HeatingValueKind kind) => switch (kind) {
+      HeatingValueKind.battery => heatingBatteryFunctionId,
+      HeatingValueKind.heating => heatingBinaryStateFunctionId,
+      _ => heatingRoomFunctionId,
+    };
 
 /// The service of a device type that delivers one [kind] of value, and the aspects to ask it for.
 class HeatingValueSource {
@@ -481,7 +491,11 @@ class HeatingValueSource {
 
   String? get aspectId => aspectIds.firstOrNull;
 
-  String get _characteristic => kind == HeatingValueKind.battery ? heatingPercentCharacteristicId : heatingCelsiusCharacteristicId;
+  String get _characteristic => switch (kind) {
+        HeatingValueKind.battery => heatingPercentCharacteristicId,
+        HeatingValueKind.heating => heatingBooleanCharacteristicId,
+        _ => heatingCelsiusCharacteristicId,
+      };
 
   /// The characteristic is asked for explicitly because one device type reports in Kelvin.
   DeviceCommand toCommand(DeviceInstance device) {
@@ -491,7 +505,7 @@ class HeatingValueSource {
     return command;
   }
 
-  String get functionId => kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
+  String get functionId => _functionOf(kind);
 }
 
 ContentVariable? _findVariable(ContentVariable v, String functionId, List<String> aspectIds) {
@@ -507,8 +521,9 @@ ContentVariable? _findVariable(ContentVariable v, String functionId, List<String
 /// temperatures a variable with all the aspects that separate room reading from set point (set
 /// points carry Air as well). Null when the device type lacks the value.
 HeatingValueSource? findHeatingValueSource(DeviceType type, HeatingValueKind kind) {
-  final functionId = kind == HeatingValueKind.battery ? heatingBatteryFunctionId : heatingRoomFunctionId;
+  final functionId = _functionOf(kind);
   final aspectIds = switch (kind) {
+    HeatingValueKind.heating => [heatingHeatingAspectId],
     HeatingValueKind.room => [heatingAirAspectId, heatingReadingAspectId],
     HeatingValueKind.target => [heatingTargetAspectId],
     HeatingValueKind.battery => const <String>[],
@@ -527,8 +542,9 @@ HeatingValueSource? findHeatingValueSource(DeviceType type, HeatingValueKind kin
 /// What a thermostat reported; a null value is unavailable and left out of the widget.
 class HeatingDeviceValues {
   final double? room, target, battery;
+  final bool? heating;
 
-  const HeatingDeviceValues({this.room, this.target, this.battery});
+  const HeatingDeviceValues({this.room, this.target, this.battery, this.heating});
 }
 
 /// A finite number, or a text of one; null otherwise.
@@ -537,21 +553,38 @@ double? heatingNumber(dynamic v) {
   return n != null && n.isFinite ? n : null;
 }
 
+/// The value of an answer: `device-command` answers with the list of the output values, of which
+/// exactly one is read; any other list is unavailable, a scalar counts as itself.
+dynamic heatingAnswerValue(dynamic message) {
+  if (message is List) return message.length == 1 ? message.single : null;
+  return message;
+}
+
 /// Maps the answers of one command batch to values per device. [asked] and [answers] correspond by
-/// index; an entry that is not a 200 or not numeric stays unavailable.
+/// index; an entry that is not a 200 or has no usable value stays unavailable.
 Map<String, HeatingDeviceValues> heatingValuesFromAnswers(
     List<(String, HeatingValueKind)> asked, List<DeviceCommandResponse> answers) {
-  final found = <String, Map<HeatingValueKind, double>>{};
+  final found = <String, Map<HeatingValueKind, Object>>{};
   for (var i = 0; i < asked.length && i < answers.length; i++) {
     if (answers[i].status_code != 200) continue;
-    final n = heatingNumber(answers[i].message);
-    if (n != null) (found[asked[i].$1] ??= {})[asked[i].$2] = n;
+    final value = heatingAnswerValue(answers[i].message);
+    final Object? parsed = asked[i].$2 == HeatingValueKind.heating ? (value is bool ? value : null) : heatingNumber(value);
+    if (parsed != null) (found[asked[i].$1] ??= {})[asked[i].$2] = parsed;
   }
   return {
     for (final e in found.entries)
-      e.key: HeatingDeviceValues(room: e.value[HeatingValueKind.room], target: e.value[HeatingValueKind.target], battery: e.value[HeatingValueKind.battery])
+      e.key: HeatingDeviceValues(
+        room: e.value[HeatingValueKind.room] as double?,
+        target: e.value[HeatingValueKind.target] as double?,
+        battery: e.value[HeatingValueKind.battery] as double?,
+        heating: e.value[HeatingValueKind.heating] as bool?,
+      )
   };
 }
+
+/// A zone is heating when at least one of its thermostats reports it.
+bool heatingZoneHeating(List<HeatingThermostat> thermostats, Map<String, HeatingDeviceValues> values) =>
+    thermostats.any((t) => values[t.id]?.heating == true);
 
 /// The mean of the room temperatures present, rounded to one decimal; null when there is none.
 double? heatingMeanRoom(Iterable<double?> rooms) {

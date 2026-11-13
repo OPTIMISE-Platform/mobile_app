@@ -75,6 +75,24 @@ void main() {
       expect(findHeatingValueSource(type, HeatingValueKind.room)?.serviceId, "measured");
       expect(findHeatingValueSource(type, HeatingValueKind.target)?.serviceId, "setpoint");
       expect(findHeatingValueSource(type, HeatingValueKind.battery), isNull);
+      expect(findHeatingValueSource(type, HeatingValueKind.heating), isNull);
+    });
+
+    test("the heating state is found by function and aspect and asked as Boolean", () {
+      final type = _type([
+        _service("other", [_variable("b", heatingBinaryStateFunctionId, ["urn:infai:ses:aspect:window"])]),
+        _service("valve", [_variable("h", heatingBinaryStateFunctionId, [heatingHeatingAspectId])]),
+      ]);
+      final source = findHeatingValueSource(type, HeatingValueKind.heating)!;
+      expect(source.serviceId, "valve");
+      final device = DeviceInstance.fromJson({
+        "id": "d", "local_id": "d", "name": "d", "attributes": [], "device_type_id": "type-1", "shared": false,
+        "owner_id": "u", "display_name": "d", "connection_state": "online",
+      });
+      final command = source.toCommand(device);
+      expect(command.function_id, heatingBinaryStateFunctionId);
+      expect(command.aspect_id, heatingHeatingAspectId);
+      expect(command.characteristic_id, heatingBooleanCharacteristicId);
     });
 
     test("a set point listed before the room reading does not shadow it", () {
@@ -126,6 +144,44 @@ void main() {
       expect(values["a"]!.target, isNull);
       expect(values["a"]!.battery, isNull);
       expect(values["b"]!.room, 19);
+    });
+
+    test("a list of one value is read as that value, any other list is unavailable", () {
+      final values = heatingValuesFromAnswers([
+        ("a", HeatingValueKind.room),
+        ("a", HeatingValueKind.target),
+        ("a", HeatingValueKind.battery),
+        ("a", HeatingValueKind.heating),
+        ("b", HeatingValueKind.room),
+        ("b", HeatingValueKind.target),
+        ("b", HeatingValueKind.heating),
+        ("c", HeatingValueKind.heating),
+      ], [
+        DeviceCommandResponse(200, [18.2]),
+        DeviceCommandResponse(200, ["21"]),
+        DeviceCommandResponse(200, [87]),
+        DeviceCommandResponse(200, [true]),
+        DeviceCommandResponse(200, [18.2, 19.0]),
+        DeviceCommandResponse(200, []),
+        DeviceCommandResponse(200, [false]),
+        DeviceCommandResponse(200, "true"),
+      ]);
+      expect(values["a"]!.room, 18.2);
+      expect(values["a"]!.target, 21);
+      expect(values["a"]!.battery, 87);
+      expect(values["a"]!.heating, isTrue);
+      expect(values["b"]!.room, isNull);
+      expect(values["b"]!.target, isNull);
+      expect(values["b"]!.heating, isFalse);
+      expect(values["c"], isNull);
+    });
+
+    test("a zone heats when at least one thermostat reports true", () {
+      const a = HeatingThermostat("a", "A"), b = HeatingThermostat("b", "B"), c = HeatingThermostat("c", "C");
+      expect(heatingZoneHeating([a, b], {"a": const HeatingDeviceValues(heating: false), "b": const HeatingDeviceValues(heating: true)}), isTrue);
+      expect(heatingZoneHeating([a, b], {"a": const HeatingDeviceValues(heating: false)}), isFalse);
+      expect(heatingZoneHeating([c], {"c": const HeatingDeviceValues(room: 20)}), isFalse);
+      expect(heatingZoneHeating([], {}), isFalse);
     });
 
     test("mean of the room temperatures present, one decimal", () {
@@ -260,13 +316,15 @@ void main() {
             _variable("room", heatingRoomFunctionId, [heatingAirAspectId, heatingReadingAspectId]),
             _variable("target", heatingRoomFunctionId, [heatingTargetAspectId]),
             _variable("battery", heatingBatteryFunctionId, ["urn:infai:ses:aspect:device"]),
+            _variable("valve", heatingBinaryStateFunctionId, [heatingHeatingAspectId]),
           ])
         ]).toJson()
       ]);
       backend.serveJson("POST", "/device-command/commands/batch", 200, [
-        {"status_code": 200, "message": 19.5},
-        {"status_code": 200, "message": 24},
-        {"status_code": 200, "message": 12},
+        {"status_code": 200, "message": [19.5]},
+        {"status_code": 200, "message": [24]},
+        {"status_code": 200, "message": [12]},
+        {"status_code": 200, "message": [true]},
       ]);
       serveGoldenBackend(backend);
     });
@@ -290,12 +348,12 @@ void main() {
     }
 
     // One test, one load: later loads in the same file may never get their answers (docs/testing.md).
-    test("the batch asks for the three values in Celsius and percent", () async {
+    test("the batch asks for the four values in Celsius, percent and Boolean", () async {
       final w = await refreshed();
       final sent = (json.decode(backend.requests.singleWhere((r) => r.method == "POST").data as String) as List).cast<Map<String, dynamic>>();
-      expect(sent.map((c) => c["aspect_id"]), [heatingAirAspectId, heatingTargetAspectId, "urn:infai:ses:aspect:device"]);
+      expect(sent.map((c) => c["aspect_id"]), [heatingAirAspectId, heatingTargetAspectId, "urn:infai:ses:aspect:device", heatingHeatingAspectId]);
       expect(sent.map((c) => c["characteristic_id"]),
-          [heatingCelsiusCharacteristicId, heatingCelsiusCharacteristicId, heatingPercentCharacteristicId]);
+          [heatingCelsiusCharacteristicId, heatingCelsiusCharacteristicId, heatingPercentCharacteristicId, heatingBooleanCharacteristicId]);
       expect(sent.every((c) => c["device_id"] == ct && c["service_id"] == "s"), isTrue);
       expect(backend.requests.singleWhere((r) => r.method == "POST").uri.queryParameters["prefer_event_value"], "true");
       expect(w.height, 13 + 1 + 1); // legacy plan: week open, battery line, manual pill
@@ -307,6 +365,10 @@ void main() {
       expect(find.text("19.5 °C"), findsOneWidget);
       expect(find.text("target 21 °C"), findsOneWidget);
       expect(find.text("Window 12 %"), findsOneWidget);
+      // The title of the instance is also "Heating", so the pill is found by its icon.
+      final flame = find.byIcon(Icons.local_fire_department);
+      expect(flame, findsOneWidget);
+      expect(find.descendant(of: find.ancestor(of: flame, matching: find.byType(Row)).first, matching: find.text("Heating")), findsOneWidget);
       expect(find.text("Manual 24 °C"), findsOneWidget);
       expect(find.text("Running"), findsOneWidget);
       expect(find.text("Today"), findsOneWidget);

@@ -445,6 +445,7 @@ class _HeatingBodyState extends State<_HeatingBody> {
     final planned = zone.schedule.target(now);
     final room = heatingMeanRoom([for (final t in zone.thermostats) m._values[t.id]?.room]);
     final low = heatingLowBatteries(zone.thermostats, m._values);
+    final heating = heatingZoneHeating(zone.thermostats, m._values);
     final manual = m._override(zone, now);
     final expanded = m._weekExpanded(zone);
     final warmupStatus = m._warmupStatus(zone, now);
@@ -473,6 +474,10 @@ class _HeatingBodyState extends State<_HeatingBody> {
           if (room != null) ...[
             const SizedBox(width: Spacing.sm),
             Text("target ${formatHeatingTemperature(planned)}", style: theme.textTheme.bodyMedium),
+          ],
+          if (heating) ...[
+            const SizedBox(width: Spacing.sm),
+            Flexible(child: _pill(context, "Heating", _warn(context), icon: Icons.local_fire_department)),
           ],
         ]),
         SizedBox(
