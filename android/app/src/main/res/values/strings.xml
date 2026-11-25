@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="silent_channel_name">Live status</string>
+    <string name="silent_channel_description">Notifications that update without sound, such as the remaining time of a device</string>
+</resources>
