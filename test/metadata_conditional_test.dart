@@ -185,27 +185,26 @@ void main() {
       expect(MetadataCache.isStale(reported!, metadataMaxAge), isFalse);
     });
 
-    test("an entry with a validator is current for an hour, then fetched "
-        "conditionally", () async {
+    test("an entry with a validator is current for metadataMaxAge, then "
+        "fetched conditionally", () async {
       backend.serveJson("GET", _aspectsPath, 200, _aspects,
           headers: {"ETag": '"v1"'}, notModifiedFor: '"v1"');
       await AspectsService.getAspects();
       await stored('aspects', (e) => e.etag != null);
 
-      await age('aspects', const Duration(minutes: 30));
+      await age('aspects', const Duration(days: 6));
       DateTime? reported;
       await AspectsService.getAspects(serveStale: (t) => reported = t);
-      expect(to(_aspectsPath), hasLength(1));
+      expect(to(_aspectsPath), hasLength(1), reason: "served from the store");
       expect(MetadataCache.isStale(reported!, metadataMaxAge), isFalse);
 
-      await age('aspects', const Duration(hours: 2));
+      await age('aspects', const Duration(days: 8));
       await AspectsService.getAspects(serveStale: (t) => reported = t);
       expect(to(_aspectsPath), hasLength(1),
           reason: "stale is served, the pass revalidates");
       expect(MetadataCache.isStale(reported!, metadataMaxAge), isTrue);
 
-      await AspectsService.getAspects(
-          maxAge: const Duration(hours: 3), serveStale: null);
+      await AspectsService.getAspects();
       expect(to(_aspectsPath), hasLength(2));
       expect(ifNoneMatch(to(_aspectsPath).last), '"v1"');
     });
@@ -225,7 +224,7 @@ void main() {
       expect(
           MetadataCache.isStale(
               reported!, metadataMaxAge,
-              DateTime.now().add(const Duration(hours: 1, minutes: 1))),
+              DateTime.now().add(metadataMaxAge + const Duration(minutes: 1))),
           isTrue);
     });
 

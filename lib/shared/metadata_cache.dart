@@ -177,28 +177,6 @@ final _decodeLimiter = Semaphore(2);
 /// rarely, so a week of staleness is cheaper than refetching megabytes.
 const metadataMaxAge = Duration(days: 7);
 
-/// How long a stored set that came with a validator (`ETag`) counts as current.
-/// Revalidating it costs a request with an empty answer when nothing changed,
-/// so it is checked far more often than [metadataMaxAge].
-const metadataRevalidateAge = Duration(hours: 1);
-
-/// The time [loadMetadataCached] reports through `serveStale` for data stored
-/// at [storedAt]: the reference the caller compares with [metadataMaxAge] to
-/// decide when the set is due. With a validator the set is due after
-/// [metadataRevalidateAge], so the time moves back by the difference. A time in
-/// the future stays as it is and keeps counting as expired.
-@visibleForTesting
-DateTime metadataDueReference(DateTime storedAt, bool hasValidator,
-    [DateTime? now]) {
-  if (!hasValidator || storedAt.isAfter(now ?? DateTime.now())) return storedAt;
-  return storedAt.subtract(metadataMaxAge - metadataRevalidateAge);
-}
-
-Duration _freshFor(Duration maxAge, bool hasValidator) =>
-    hasValidator && metadataRevalidateAge < maxAge
-        ? metadataRevalidateAge
-        : maxAge;
-
 /// Decodes stored bytes and builds the list. See the notes on the isolate in
 /// [loadMetadataCached].
 Future<List<T>> _parseStored<T>(
@@ -220,19 +198,16 @@ Future<List<T>> _parseStored<T>(
 /// parsed. The JSON decode of the cached bytes runs in a background isolate,
 /// the `fromJson` build is chunked - neither blocks the UI isolate in one go.
 ///
-/// A stored entry that came with a validator is current for
-/// [metadataRevalidateAge] at most, and its validator goes to [fetchRaw], which
-/// answers [NotModified] when the backend confirms it. The stored bytes are
+/// When a fetch is due, the validator of the stored entry goes to [fetchRaw],
+/// which answers [NotModified] when the backend confirms it. The stored bytes are
 /// then parsed as for a cache hit and their time is renewed. [Fetched] is
 /// stored with its validator, if it has one. An entry that cannot be used
 /// never sends its validator.
 ///
 /// With [serveStale] set, a stored entry of any age is returned instead of
-/// fetched, so only an empty cache blocks; [serveStale] then receives the time
-/// to compare with [metadataMaxAge] to see when the returned data is due: when
-/// it was stored (the entry's time, or now after a fetch), moved back by
-/// `metadataMaxAge - metadataRevalidateAge` when the set has a validator, so it
-/// is due after [metadataRevalidateAge].
+/// fetched, so only an empty cache blocks; [serveStale] then receives when the
+/// returned data was stored (the entry's time, or now after a fetch or a 304)
+/// so the caller can revalidate what is older than [maxAge].
 ///
 /// `Duration.zero` always fetches, with or without [serveStale], and sends the
 /// stored validator. That keeps the stored copy intact if the fetch fails,
@@ -252,11 +227,10 @@ Future<List<T>> loadMetadataCached<T>(
   if (entry != null &&
       maxAge > Duration.zero &&
       (serveStale != null ||
-          !MetadataCache.isStale(
-              entry.storedAt, _freshFor(maxAge, validator != null)))) {
+          !MetadataCache.isStale(entry.storedAt, maxAge))) {
     try {
       final parsed = await _parseStored(entry.bytes, fromJson);
-      serveStale?.call(metadataDueReference(entry.storedAt, validator != null));
+      serveStale?.call(entry.storedAt);
       return parsed;
     } catch (e) {
       // Corrupt cache, an incompatible shape, or a failed isolate spawn - all
@@ -273,7 +247,7 @@ Future<List<T>> loadMetadataCached<T>(
       // entry is not null: without a validator no If-None-Match is sent.
       final parsed = await _parseStored(entry!.bytes, fromJson);
       await MetadataCache.touch(key, epoch);
-      serveStale?.call(metadataDueReference(DateTime.now(), true));
+      serveStale?.call(DateTime.now());
       return parsed;
     } catch (e) {
       // Only reached with Duration.zero, where the entry was not tried before.
@@ -287,6 +261,6 @@ Future<List<T>> loadMetadataCached<T>(
   unawaited(MetadataCache.write(key, JsonUtf8Encoder().convert(fetched.raw), epoch,
       validator: fetched.validator));
   final parsed = await parseListChunked(fetched.raw, fromJson);
-  serveStale?.call(metadataDueReference(fetchedAt, fetched.validator != null));
+  serveStale?.call(fetchedAt);
   return parsed;
 }

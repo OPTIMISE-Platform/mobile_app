@@ -29,7 +29,7 @@ The explicit refreshes (login, Settings) still report their failures.
 
 | Cache | Limit | Stored in |
 |---|---|---|
-| Device types, device classes, functions, aspects, concepts, characteristics | `metadataMaxAge`, 7 days; with a validator (`ETag`) `metadataRevalidateAge`, 1 hour, see "Revalidation" | Isar `CachedMetadata` |
+| Device types, device classes, functions, aspects, concepts, characteristics | `metadataMaxAge`, 7 days, revalidated with `ETag` where the backend sends one, see "Revalidation" | Isar `CachedMetadata` |
 | Devices, device groups, networks, locations | `CacheHelper.entityMaxAge`, 1 day | Isar entity collections, refresh time in Settings (`cacheUpdated_*`) |
 
 Device classes (`/device-repository/v2/device-classes`, key `device-classes`)
@@ -66,11 +66,8 @@ downloading again; a refresh still ends with the backend's current state.
   only the matching request carries `If-None-Match`. A `304` from the fallback
   keeps `userListIsAllTypes` true, one from `/user-device-types` false. Loads
   with `ids` are never conditional.
-- An entry with a validator is current for `metadataRevalidateAge`.
-  `loadMetadataCached` reports it through `serveStale` with its stored time
-  moved back by `metadataMaxAge - metadataRevalidateAge`, so
-  `AppState._dueMetadata` finds it due after an hour with the 7-day comparison
-  unchanged. A time in the future is reported as it is and stays expired.
+- An entry with a validator is due after `metadataMaxAge` like one without;
+  the validator only makes the refetch a `304` when nothing changed.
 - An entry that cannot be used (corrupt, wrong shape) never sends its
   validator. With `Duration.zero` the entry is not tried beforehand: a `304`
   over bytes that turn out unusable is followed by one unconditional request.
@@ -78,8 +75,8 @@ downloading again; a refresh still ends with the backend's current state.
   its transaction, so a `304` that returns after an account change renews
   nothing.
 - A `304` in the background still parses the stored bytes and notifies the
-  open screens, at most once an hour per set.
-- Against a backend without `ETag` nothing changes: no validator, 7 days.
+  open screens.
+- Against a backend without `ETag` nothing changes: no validator, full download.
 
 The entity lists (devices, groups, networks, locations) and
 `getDeviceType(id)` / `getProtocol(id)` do not use validators.
@@ -263,7 +260,6 @@ own, so the pull always fetches fresh and reports a failure.
 | `DeviceMixin.deviceTypesAreAll` | Replaces the read of `DeviceTypesService.userListIsAllTypes` taken at each type load |
 | `CacheHelper.refreshDeviceGroupsNow()` | Runs the device group refresh as an explicit one, counted as running like any other |
 | `CacheHelper.refreshDevicesInBackgroundForTest()` | Runs the device refresh quietly, as `scheduleCacheUpdates` does, so an explicit one can join it |
-| `metadataDueReference(storedAt, hasValidator, now)` | The time `loadMetadataCached` reports through `serveStale`, for the due check of a set with or without a validator |
 | `DeviceClassesService.resetLegacyMigrationForTest()` | Lets the next class load migrate the `device-class-uses` entry again |
 | `CacheHelper.entityRefreshDue(refreshedAt, now)` | The due check of the entity refresh |
 | `CacheHelper.afterDeviceChunkForTest` | Called after each chunk the device refresh writes, to change the account between two chunks; the refresh awaits it |
