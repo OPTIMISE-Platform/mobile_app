@@ -84,6 +84,9 @@ Golden diffs of a failed run land in `test/failures/`, which is ignored.
 registered answers 404 and is recorded in `requests`, which also documents what
 a screen fetches.
 
+- `serveJson(..., headers:, notModifiedFor:)` adds answer headers such as an
+  `ETag`; a request whose `If-None-Match` equals `notModifiedFor` gets `304`
+  with an empty body. `typesHeaders[path]` does the same for a `types` route.
 - `stopServing(method, path)` removes a route again, for a test that lets a
   second load fail after a first one succeeded.
 - `holds["METHOD path"] = Completer()` delays the answer of a `serveJson` route

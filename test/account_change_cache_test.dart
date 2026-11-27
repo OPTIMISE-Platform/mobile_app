@@ -43,6 +43,7 @@ import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:mobile_app/shared/isar.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 
 import 'fake_backend.dart';
@@ -434,11 +435,11 @@ void main() {
   group("stored metadata", () {
     test("a fetch from before an account change is not stored", () async {
       final gate = Completer<void>();
-      final load = loadMetadataCached<String>('user-device-types', () async {
+      final load = loadMetadataCached<String>('user-device-types', (_) async {
         await gate.future;
-        return [
+        return const Fetched([
           {"id": "previous-account-type"}
-        ];
+        ], null);
       }, (j) => j["id"] as String, maxAge: Duration.zero);
 
       AccountEpoch.advance();

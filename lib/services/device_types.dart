@@ -22,6 +22,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mobile_app/exceptions/unexpected_status_code_exception.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
 import 'package:logger/logger.dart';
@@ -98,10 +99,11 @@ class DeviceTypesService {
     final epoch = AccountEpoch.current;
     final storedAll = await _readStoredAllTypes();
     bool? fetchedAll;
-    final types = await loadMetadataCached('user-device-types', () async {
-      final fetched = await _fetchUserTypesRaw();
+    final types = await loadMetadataCached('user-device-types',
+        (validator) async {
+      final fetched = await _fetchUserTypesRaw(validator);
       fetchedAll = fetched.all;
-      return fetched.types;
+      return fetched.fetch;
     }, DeviceType.fromJson, maxAge: maxAge,
         serveStale: serveStale == null
             ? null
@@ -143,19 +145,30 @@ class DeviceTypesService {
     }
   }
 
-  static Future<({List<dynamic> types, bool all})> _fetchUserTypesRaw() async {
+  /// [validator] goes along only with the request of the URI it came from, so
+  /// one stored from the fallback is not sent to /user-device-types. A
+  /// [NotModified] carries `all` of the request that answered it.
+  static Future<({MetadataFetch fetch, bool all})> _fetchUserTypesRaw(
+      MetadataValidator? validator) async {
     try {
-      return (types: await _fetchRaw(userUri, null), all: false);
+      return (fetch: await _fetchList(userUri, null, validator), all: false);
     } on UnexpectedStatusCodeException catch (e) {
       // A device-repository older than /user-device-types, or a gateway policy
       // that does not cover the path yet.
       if (e.code != 404 && e.code != 403) rethrow;
       ErrorReporter.log('user-device-types unavailable, loading all device types', e);
-      return (types: await _fetchRaw(uri, null), all: true);
+      return (fetch: await _fetchList(uri, null, validator), all: true);
     }
   }
 
-  static Future<List<dynamic>> _fetchRaw(String url, List<String>? ids) async {
+  /// Always the list itself, never conditional.
+  static Future<List<dynamic>> _fetchRaw(String url, List<String>? ids) async =>
+      (await _fetchList(url, ids, null) as Fetched).raw;
+
+  /// Pages through [url]. Only the first request carries [validator], and a
+  /// validator is returned only for a list that came in one answer.
+  static Future<MetadataFetch> _fetchList(
+      String url, List<String>? ids, MetadataValidator? validator) async {
     final Map<String, String> queryParameters = {"limit": "9999"};
     if (ids != null && ids.isNotEmpty) {
       queryParameters["ids"] = ids.join(",");
@@ -165,22 +178,29 @@ class DeviceTypesService {
     final dio = await listDio();
 
     final raw = <dynamic>[];
+    MetadataValidator? firstValidator;
     var cont = true;
     while (cont) {
       queryParameters["offset"] = raw.length.toString();
+      final requestUri = Uri.parse(url).replace(queryParameters: queryParameters);
+      final first = raw.isEmpty;
       final Response<List<dynamic>?> resp;
       try {
-        resp = await dio.get<List<dynamic>?>(url,
-            queryParameters: queryParameters, options: Options(headers: headers));
+        resp = await dio.getUri<List<dynamic>?>(requestUri,
+            options: first
+                ? conditionalOptions(headers, requestUri, validator)
+                : Options(headers: headers));
       } on DioException catch (e) {
         checkReadStatus(e, url);
         rethrow;
       }
+      if (first && resp.statusCode == 304) return const NotModified();
       final l = resp.data ?? [];
+      if (first) firstValidator = validatorOf(resp);
       raw.addAll(l);
       cont = l.length == 9999 && (ids == null || ids.isNotEmpty);
     }
-    return raw;
+    return Fetched(raw, raw.length < 9999 ? firstValidator : null);
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

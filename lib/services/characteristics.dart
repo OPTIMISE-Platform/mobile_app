@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -35,20 +36,22 @@ class CharacteristicsService {
         maxAge: maxAge, serveStale: serveStale);
   }
 
-  static Future<List<dynamic>> _fetchRaw() async {
+  static Future<MetadataFetch> _fetchRaw(MetadataValidator? validator) async {
     final Map<String, String> queryParameters = {"leafsOnly": "false"};
     final headers = await Auth().getHeaders();
     // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
     final dio = await DioFactory.create(DioConfig.standard);
+    final requestUri = Uri.parse(uri).replace(queryParameters: queryParameters);
     final Response<List<dynamic>?> resp;
     try {
-      resp = await dio.get<List<dynamic>?>(uri,
-          queryParameters: queryParameters, options: Options(headers: headers));
+      resp = await dio.getUri<List<dynamic>?>(requestUri,
+          options: conditionalOptions(headers, requestUri, validator));
     } on DioException catch (e) {
       checkReadStatus(e, uri);
       rethrow;
     }
-    return resp.data ?? [];
+    if (resp.statusCode == 304) return const NotModified();
+    return Fetched(resp.data ?? [], validatorOf(resp));
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);

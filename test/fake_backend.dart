@@ -33,6 +33,9 @@ class FakeBackend implements HttpClientAdapter {
   final Map<String, int> status = {};
   final Map<String, List<Map<String, dynamic>>> types = {};
 
+  /// Headers added to every answer of a [types] route, by path, e.g. an `ETag`.
+  final Map<String, Map<String, String>> typesHeaders = {};
+
   final Map<String, _Route> _routes = {};
   final List<RequestOptions> requests = [];
   final List<String> unmatchedRequests = [];
@@ -43,10 +46,16 @@ class FakeBackend implements HttpClientAdapter {
 
   /// Serves [statusCode] with [body] (JSON-encoded unless [contentType] says
   /// otherwise) for every request matching [method] and [path].
+  ///
+  /// [headers] are added to the answer, e.g. an `ETag` or `X-Total-Count`.
+  /// With [notModifiedFor], a request whose `If-None-Match` is exactly that
+  /// value gets `304` with an empty body and the same [headers] instead.
   void serveJson(String method, String path, int statusCode, dynamic body,
-      {String contentType = Headers.jsonContentType}) {
+      {String contentType = Headers.jsonContentType,
+      Map<String, String>? headers,
+      String? notModifiedFor}) {
     _routes['${method.toUpperCase()} $path'] =
-        _Route(statusCode, body, contentType);
+        _Route(statusCode, body, contentType, headers, notModifiedFor);
   }
 
   /// Removes a route registered with [serveJson].
@@ -95,7 +104,12 @@ class FakeBackend implements HttpClientAdapter {
     }
     final route = _routes[key];
     if (route != null) {
-      return _respond(route.status, route.body, route.contentType);
+      final sent = _headerValue(options, 'if-none-match');
+      if (route.notModifiedFor != null && sent == route.notModifiedFor) {
+        return _respond(304, null, route.contentType, headers: route.headers);
+      }
+      return _respond(route.status, route.body, route.contentType,
+          headers: route.headers);
     }
 
     if (_devicesPage != null &&
@@ -133,11 +147,20 @@ class FakeBackend implements HttpClientAdapter {
       final offset = int.parse(options.uri.queryParameters["offset"] ?? "0");
       final limit = int.parse(options.uri.queryParameters["limit"] ?? "100");
       final page = all.skip(offset).take(limit).toList();
-      return _respond(200, page, Headers.jsonContentType);
+      return _respond(200, page, Headers.jsonContentType,
+          headers: typesHeaders[path]);
     }
 
     unmatchedRequests.add(key);
     return ResponseBody.fromString("", 404);
+  }
+
+  /// The value of the request header [name], whatever its case.
+  static String? _headerValue(RequestOptions options, String name) {
+    for (final entry in options.headers.entries) {
+      if (entry.key.toLowerCase() == name) return entry.value?.toString();
+    }
+    return null;
   }
 
   ResponseBody _respond(int statusCode, dynamic body, String contentType,
@@ -159,8 +182,11 @@ class _Route {
   final int status;
   final dynamic body;
   final String contentType;
+  final Map<String, String>? headers;
+  final String? notModifiedFor;
 
-  _Route(this.status, this.body, this.contentType);
+  _Route(this.status, this.body, this.contentType, this.headers,
+      this.notModifiedFor);
 }
 
 const _base = "https://api.test/device-repository";

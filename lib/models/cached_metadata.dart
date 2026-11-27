@@ -43,4 +43,12 @@ class CachedMetadata {
   late List<byte> bytes;
 
   late DateTime updatedAt;
+
+  /// The `ETag` the backend sent with [bytes], as sent. Null for entries stored
+  /// without one, and for those written before the field existed.
+  String? etag;
+
+  /// The full request URI [etag] belongs to. An `ETag` is sent back only for
+  /// exactly this URI.
+  String? etagUri;
 }

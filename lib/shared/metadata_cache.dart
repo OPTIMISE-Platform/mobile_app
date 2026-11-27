@@ -22,6 +22,7 @@ import 'package:logger/logger.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
 import 'package:mobile_app/models/cached_metadata.dart';
 import 'package:mobile_app/shared/chunked_parse.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/isar.dart';
 import 'package:mobile_app/shared/semaphore.dart';
 
@@ -53,15 +54,28 @@ class MetadataCache {
   }
 
   /// Returns the cached bytes for [key] whatever their age, with the time they
-  /// were stored, or null when nothing usable is stored.
-  static Future<({List<int> bytes, DateTime storedAt})?> readEntry(
-      String key) async {
+  /// were stored and the validator they came with, or null when nothing usable
+  /// is stored.
+  static Future<
+      ({
+        List<int> bytes,
+        DateTime storedAt,
+        MetadataValidator? validator
+      })?> readEntry(String key) async {
     final db = isar;
     if (db == null) return null;
     try {
       final entry = await db.cachedMetadatas.getByKey(key);
       if (entry == null) return null;
-      return (bytes: entry.bytes, storedAt: entry.updatedAt);
+      final etag = entry.etag;
+      final etagUri = entry.etagUri;
+      return (
+        bytes: entry.bytes,
+        storedAt: entry.updatedAt,
+        validator: etag != null && etagUri != null
+            ? MetadataValidator(etag, etagUri)
+            : null,
+      );
     } catch (_) {
       return null;
     }
@@ -99,20 +113,43 @@ class MetadataCache {
 
   /// Skipped when the account changed since [epoch], taken before the fetch.
   /// Checked inside the transaction, so a clear queued after the change always
-  /// runs after the check. [storedAt] defaults to now.
+  /// runs after the check. [storedAt] defaults to now. [validator] is stored
+  /// with the bytes; without one, a validator already stored under [key] is
+  /// dropped, since it no longer belongs to the new bytes.
   static Future<void> write(String key, List<int> bytes, int epoch,
-      {DateTime? storedAt}) async {
+      {DateTime? storedAt, MetadataValidator? validator}) async {
     final db = isar;
     if (db == null) return;
     try {
       final entry = CachedMetadata()
         ..key = key
         ..bytes = bytes
-        ..updatedAt = storedAt ?? DateTime.now();
+        ..updatedAt = storedAt ?? DateTime.now()
+        ..etag = validator?.etag
+        ..etagUri = validator?.uri;
       await db.writeTxn(() async {
         if (epoch == AccountEpoch.current) {
           await db.cachedMetadatas.putByKey(entry);
         }
+      });
+    } catch (_) {
+      // best-effort cache; ignore write failures
+    }
+  }
+
+  /// Sets the stored time of [key] to now after the backend confirmed the
+  /// stored copy with `304`; bytes and validator stay. Skipped, like [write],
+  /// when the account changed since [epoch], checked inside the transaction.
+  static Future<void> touch(String key, int epoch) async {
+    final db = isar;
+    if (db == null) return;
+    try {
+      await db.writeTxn(() async {
+        if (epoch != AccountEpoch.current) return;
+        final entry = await db.cachedMetadatas.getByKey(key);
+        if (entry == null) return;
+        entry.updatedAt = DateTime.now();
+        await db.cachedMetadatas.putByKey(entry);
       });
     } catch (_) {
       // best-effort cache; ignore write failures
@@ -140,58 +177,116 @@ final _decodeLimiter = Semaphore(2);
 /// rarely, so a week of staleness is cheaper than refetching megabytes.
 const metadataMaxAge = Duration(days: 7);
 
+/// How long a stored set that came with a validator (`ETag`) counts as current.
+/// Revalidating it costs a request with an empty answer when nothing changed,
+/// so it is checked far more often than [metadataMaxAge].
+const metadataRevalidateAge = Duration(hours: 1);
+
+/// The time [loadMetadataCached] reports through `serveStale` for data stored
+/// at [storedAt]: the reference the caller compares with [metadataMaxAge] to
+/// decide when the set is due. With a validator the set is due after
+/// [metadataRevalidateAge], so the time moves back by the difference. A time in
+/// the future stays as it is and keeps counting as expired.
+@visibleForTesting
+DateTime metadataDueReference(DateTime storedAt, bool hasValidator,
+    [DateTime? now]) {
+  if (!hasValidator || storedAt.isAfter(now ?? DateTime.now())) return storedAt;
+  return storedAt.subtract(metadataMaxAge - metadataRevalidateAge);
+}
+
+Duration _freshFor(Duration maxAge, bool hasValidator) =>
+    hasValidator && metadataRevalidateAge < maxAge
+        ? metadataRevalidateAge
+        : maxAge;
+
+/// Decodes stored bytes and builds the list. See the notes on the isolate in
+/// [loadMetadataCached].
+Future<List<T>> _parseStored<T>(
+    List<int> stored, T Function(Map<String, dynamic>) fromJson) async {
+  // convert() is one synchronous multi-MB parse and froze the UI for its
+  // whole duration when it ran here (~800ms per blob, six blobs at every
+  // app start). compute() sends the bytes as typed data (a memcpy) and
+  // returns the decoded tree via Isolate.exit, i.e. without copying it
+  // back - the copy-out concern in parseListChunked's doc applies to
+  // constructed model objects, not to this plain JSON tree.
+  final data = stored is Uint8List ? stored : Uint8List.fromList(stored);
+  final decoded = await _decodeLimiter
+      .withResource(() => compute(_decodeJsonListFromUtf8, data));
+  return parseListChunked(decoded, fromJson);
+}
+
 /// Returns metadata for [key]: decoded from the Isar byte cache when it is
-/// younger than [maxAge], otherwise fetched fresh via [fetchRaw], persisted,
-/// and parsed. The JSON decode of the cached bytes runs in a background
-/// isolate, the `fromJson` build is chunked — neither blocks the UI isolate
-/// in one go.
+/// younger than [maxAge], otherwise fetched via [fetchRaw], persisted, and
+/// parsed. The JSON decode of the cached bytes runs in a background isolate,
+/// the `fromJson` build is chunked - neither blocks the UI isolate in one go.
+///
+/// A stored entry that came with a validator is current for
+/// [metadataRevalidateAge] at most, and its validator goes to [fetchRaw], which
+/// answers [NotModified] when the backend confirms it. The stored bytes are
+/// then parsed as for a cache hit and their time is renewed. [Fetched] is
+/// stored with its validator, if it has one. An entry that cannot be used
+/// never sends its validator.
 ///
 /// With [serveStale] set, a stored entry of any age is returned instead of
-/// fetched, so only an empty cache blocks; [serveStale] then receives when the
-/// returned data was stored (the entry's time, or now after a fetch) so the
-/// caller can revalidate what is older than [maxAge].
+/// fetched, so only an empty cache blocks; [serveStale] then receives the time
+/// to compare with [metadataMaxAge] to see when the returned data is due: when
+/// it was stored (the entry's time, or now after a fetch), moved back by
+/// `metadataMaxAge - metadataRevalidateAge` when the set has a validator, so it
+/// is due after [metadataRevalidateAge].
 ///
-/// `Duration.zero` always fetches, with or without [serveStale]. That keeps
-/// the stored copy intact if the fetch fails, which clearing the cache
-/// beforehand would not.
+/// `Duration.zero` always fetches, with or without [serveStale], and sends the
+/// stored validator. That keeps the stored copy intact if the fetch fails,
+/// which clearing the cache beforehand would not.
 Future<List<T>> loadMetadataCached<T>(
   String key,
-  Future<List<dynamic>> Function() fetchRaw,
+  Future<MetadataFetch> Function(MetadataValidator? validator) fetchRaw,
   T Function(Map<String, dynamic>) fromJson, {
   Duration maxAge = metadataMaxAge,
   void Function(DateTime storedAt)? serveStale,
 }) async {
-  final entry =
-      maxAge > Duration.zero ? await MetadataCache.readEntry(key) : null;
+  // Taken before the entry is read, so a validator of a gone account never
+  // renews or replaces anything of the next one.
+  final epoch = AccountEpoch.current;
+  final entry = await MetadataCache.readEntry(key);
+  var validator = entry?.validator;
   if (entry != null &&
-      (serveStale != null || !MetadataCache.isStale(entry.storedAt, maxAge))) {
+      maxAge > Duration.zero &&
+      (serveStale != null ||
+          !MetadataCache.isStale(
+              entry.storedAt, _freshFor(maxAge, validator != null)))) {
     try {
-      // convert() is one synchronous multi-MB parse and froze the UI for its
-      // whole duration when it ran here (~800ms per blob, six blobs at every
-      // app start). compute() sends the bytes as typed data (a memcpy) and
-      // returns the decoded tree via Isolate.exit, i.e. without copying it
-      // back — the copy-out concern in parseListChunked's doc applies to
-      // constructed model objects, not to this plain JSON tree.
-      final bytes = entry.bytes;
-      final data = bytes is Uint8List ? bytes : Uint8List.fromList(bytes);
-      final decoded = await _decodeLimiter
-          .withResource(() => compute(_decodeJsonListFromUtf8, data));
-      final parsed = await parseListChunked(decoded, fromJson);
-      serveStale?.call(entry.storedAt);
+      final parsed = await _parseStored(entry.bytes, fromJson);
+      serveStale?.call(metadataDueReference(entry.storedAt, validator != null));
       return parsed;
     } catch (e) {
-      // Corrupt cache, an incompatible shape, or a failed isolate spawn — all
+      // Corrupt cache, an incompatible shape, or a failed isolate spawn - all
       // recoverable by fetching, but logged rather than swallowed: a spawn
-      // failure otherwise looks like six corrupt blobs.
+      // failure otherwise looks like six corrupt blobs. Its validator must not
+      // go along: a 304 would leave nothing to use.
       _logger.w("Cached metadata for $key unusable, fetching: $e");
+      validator = null;
     }
   }
-  final epoch = AccountEpoch.current;
-  final raw = await fetchRaw();
+  var result = await fetchRaw(validator);
+  if (result is NotModified) {
+    try {
+      // entry is not null: without a validator no If-None-Match is sent.
+      final parsed = await _parseStored(entry!.bytes, fromJson);
+      await MetadataCache.touch(key, epoch);
+      serveStale?.call(metadataDueReference(DateTime.now(), true));
+      return parsed;
+    } catch (e) {
+      // Only reached with Duration.zero, where the entry was not tried before.
+      _logger.w("Cached metadata for $key unusable after 304, fetching: $e");
+      result = await fetchRaw(null);
+    }
+  }
+  final fetched = result as Fetched;
   final fetchedAt = DateTime.now();
   // JsonUtf8Encoder emits bytes directly (no giant intermediate String).
-  unawaited(MetadataCache.write(key, JsonUtf8Encoder().convert(raw), epoch));
-  final parsed = await parseListChunked(raw, fromJson);
-  serveStale?.call(fetchedAt);
+  unawaited(MetadataCache.write(key, JsonUtf8Encoder().convert(fetched.raw), epoch,
+      validator: fetched.validator));
+  final parsed = await parseListChunked(fetched.raw, fromJson);
+  serveStale?.call(metadataDueReference(fetchedAt, fetched.validator != null));
   return parsed;
 }

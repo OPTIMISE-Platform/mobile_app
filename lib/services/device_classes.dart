@@ -23,6 +23,7 @@ import 'package:mobile_app/services/api_available.dart';
 import 'package:mobile_app/services/auth.dart';
 import 'package:mobile_app/services/settings.dart';
 import 'package:mobile_app/shared/account_epoch.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/dio_factory.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/error_reporter.dart';
@@ -82,27 +83,37 @@ class DeviceClassesService {
     }
   }
 
-  static Future<List<dynamic>> _fetchRaw() async {
+  static Future<MetadataFetch> _fetchRaw(MetadataValidator? validator) async {
     final headers = await Auth().getHeaders();
     // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
     final dio = await DioFactory.create(DioConfig.standard);
     final byId = <String, Map<String, dynamic>>{};
     var fetched = 0;
+    var pages = 0;
+    MetadataValidator? firstValidator;
     while (true) {
+      final first = pages == 0;
+      // Paged by id, which is unique, so no class falls between two pages.
+      final requestUri = Uri.parse(uri).replace(queryParameters: {
+        "limit": "$_pageSize",
+        "offset": "$fetched",
+        "sort": "id.asc",
+      });
       final Response<List<dynamic>?> resp;
       try {
-        // Paged by id, which is unique, so no class falls between two pages.
-        resp = await dio.get<List<dynamic>?>(uri,
-            queryParameters: {
-              "limit": "$_pageSize",
-              "offset": "$fetched",
-              "sort": "id.asc",
-            },
-            options: Options(headers: headers));
+        // Only the first request is conditional: a 304 on it would say
+        // nothing about the pages behind it.
+        resp = await dio.getUri<List<dynamic>?>(requestUri,
+            options: first
+                ? conditionalOptions(headers, requestUri, validator)
+                : Options(headers: headers));
       } on DioException catch (e) {
         checkReadStatus(e, uri);
         rethrow;
       }
+      if (first && resp.statusCode == 304) return const NotModified();
+      pages++;
+      if (first) firstValidator = validatorOf(resp);
       final page = resp.data ?? const [];
       final known = byId.length;
       for (final c in page) {
@@ -119,7 +130,10 @@ class DeviceClassesService {
         break;
       }
     }
-    return _sorted(byId.values.toList());
+    // The classes are stored deduplicated and sorted, not as sent. That is
+    // sound because the validator covers the one request they come from; with
+    // more than one page there is none.
+    return Fetched(_sorted(byId.values.toList()), pages == 1 ? firstValidator : null);
   }
 
   /// Stored in display order, which is the order the map keeps them in.

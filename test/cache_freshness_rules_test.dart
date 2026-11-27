@@ -39,6 +39,32 @@ void main() {
               now.add(const Duration(microseconds: 1)), metadataMaxAge, now),
           isTrue);
     });
+
+    bool due(Duration age, bool validator, [DateTime? storedAt]) =>
+        MetadataCache.isStale(
+            metadataDueReference(
+                storedAt ?? now.subtract(age), validator, now),
+            metadataMaxAge,
+            now);
+
+    test("with a validator it is due after an hour", () {
+      expect(due(metadataRevalidateAge, true), isFalse);
+      expect(
+          due(metadataRevalidateAge + const Duration(microseconds: 1), true),
+          isTrue);
+    });
+
+    test("without a validator it stays current for seven days", () {
+      expect(due(const Duration(days: 1), false), isFalse);
+      expect(due(metadataMaxAge, false), isFalse);
+      expect(due(metadataMaxAge + const Duration(microseconds: 1), false),
+          isTrue);
+    });
+
+    test("with a validator, a time in the future still counts as stale", () {
+      expect(due(Duration.zero, true, now.add(const Duration(days: 1))),
+          isTrue);
+    });
   });
 
   group("entities", () {

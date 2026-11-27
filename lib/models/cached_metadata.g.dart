@@ -18,9 +18,11 @@ const CachedMetadataSchema = CollectionSchema(
   id: 8577931195188195036,
   properties: {
     r'bytes': PropertySchema(id: 0, name: r'bytes', type: IsarType.byteList),
-    r'key': PropertySchema(id: 1, name: r'key', type: IsarType.string),
+    r'etag': PropertySchema(id: 1, name: r'etag', type: IsarType.string),
+    r'etagUri': PropertySchema(id: 2, name: r'etagUri', type: IsarType.string),
+    r'key': PropertySchema(id: 3, name: r'key', type: IsarType.string),
     r'updatedAt': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
@@ -62,6 +64,18 @@ int _cachedMetadataEstimateSize(
 ) {
   var bytesCount = offsets.last;
   bytesCount += 3 + object.bytes.length;
+  {
+    final value = object.etag;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.etagUri;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.key.length * 3;
   return bytesCount;
 }
@@ -73,8 +87,10 @@ void _cachedMetadataSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeByteList(offsets[0], object.bytes);
-  writer.writeString(offsets[1], object.key);
-  writer.writeDateTime(offsets[2], object.updatedAt);
+  writer.writeString(offsets[1], object.etag);
+  writer.writeString(offsets[2], object.etagUri);
+  writer.writeString(offsets[3], object.key);
+  writer.writeDateTime(offsets[4], object.updatedAt);
 }
 
 CachedMetadata _cachedMetadataDeserialize(
@@ -85,9 +101,11 @@ CachedMetadata _cachedMetadataDeserialize(
 ) {
   final object = CachedMetadata();
   object.bytes = reader.readByteList(offsets[0]) ?? [];
+  object.etag = reader.readStringOrNull(offsets[1]);
+  object.etagUri = reader.readStringOrNull(offsets[2]);
   object.id = id;
-  object.key = reader.readString(offsets[1]);
-  object.updatedAt = reader.readDateTime(offsets[2]);
+  object.key = reader.readString(offsets[3]);
+  object.updatedAt = reader.readDateTime(offsets[4]);
   return object;
 }
 
@@ -101,8 +119,12 @@ P _cachedMetadataDeserializeProp<P>(
     case 0:
       return (reader.readByteList(offset) ?? []) as P;
     case 1:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 2:
+      return (reader.readStringOrNull(offset)) as P;
+    case 3:
+      return (reader.readString(offset)) as P;
+    case 4:
       return (reader.readDateTime(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -430,6 +452,324 @@ extension CachedMetadataQueryFilter
     });
   }
 
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'etag'),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'etag'),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'etag',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'etag',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'etag',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'etag', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'etag', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNull(property: r'etagUri'),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        const FilterCondition.isNotNull(property: r'etagUri'),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriEqualTo(String? value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(
+          include: include,
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.lessThan(
+          include: include,
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.between(
+          property: r'etagUri',
+          lower: lower,
+          includeLower: includeLower,
+          upper: upper,
+          includeUpper: includeUpper,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriStartsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.startsWith(
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriEndsWith(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.endsWith(
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.contains(
+          property: r'etagUri',
+          value: value,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.matches(
+          property: r'etagUri',
+          wildcard: pattern,
+          caseSensitive: caseSensitive,
+        ),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.equalTo(property: r'etagUri', value: ''),
+      );
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition>
+  etagUriIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(
+        FilterCondition.greaterThan(property: r'etagUri', value: ''),
+      );
+    });
+  }
+
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterFilterCondition> idEqualTo(
     Id value,
   ) {
@@ -686,6 +1026,31 @@ extension CachedMetadataQueryLinks
 
 extension CachedMetadataQuerySortBy
     on QueryBuilder<CachedMetadata, CachedMetadata, QSortBy> {
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByEtag() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etag', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByEtagDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etag', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByEtagUri() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etagUri', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy>
+  sortByEtagUriDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etagUri', Sort.desc);
+    });
+  }
+
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> sortByKey() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'key', Sort.asc);
@@ -714,6 +1079,31 @@ extension CachedMetadataQuerySortBy
 
 extension CachedMetadataQuerySortThenBy
     on QueryBuilder<CachedMetadata, CachedMetadata, QSortThenBy> {
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByEtag() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etag', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByEtagDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etag', Sort.desc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenByEtagUri() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etagUri', Sort.asc);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy>
+  thenByEtagUriDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'etagUri', Sort.desc);
+    });
+  }
+
   QueryBuilder<CachedMetadata, CachedMetadata, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -760,6 +1150,22 @@ extension CachedMetadataQueryWhereDistinct
     });
   }
 
+  QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> distinctByEtag({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'etag', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> distinctByEtagUri({
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'etagUri', caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<CachedMetadata, CachedMetadata, QDistinct> distinctByKey({
     bool caseSensitive = true,
   }) {
@@ -787,6 +1193,18 @@ extension CachedMetadataQueryProperty
   QueryBuilder<CachedMetadata, List<int>, QQueryOperations> bytesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'bytes');
+    });
+  }
+
+  QueryBuilder<CachedMetadata, String?, QQueryOperations> etagProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'etag');
+    });
+  }
+
+  QueryBuilder<CachedMetadata, String?, QQueryOperations> etagUriProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'etagUri');
     });
   }
 

@@ -24,6 +24,7 @@ import 'package:isar_community/isar.dart';
 import 'package:mobile_app/models/cached_metadata.dart';
 import 'package:mobile_app/models/exception_log_element.dart';
 import 'package:mobile_app/services/device_classes.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 
 import 'test_helper.dart';
@@ -39,12 +40,12 @@ void main() {
   var fetches = 0;
   var fetchFails = false;
 
-  Future<List<dynamic>> fetch() async {
+  Future<MetadataFetch> fetch(MetadataValidator? validator) async {
     fetches++;
     if (fetchFails) throw Exception("offline");
-    return [
+    return const Fetched([
       {"v": "fetched"}
-    ];
+    ], null);
   }
 
   Future<List<String>> load(

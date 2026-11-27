@@ -15,6 +15,7 @@
  */
 
 import 'package:dio/dio.dart';
+import 'package:mobile_app/shared/conditional_get.dart';
 import 'package:mobile_app/shared/dio_status.dart';
 import 'package:mobile_app/shared/metadata_cache.dart';
 import 'package:mobile_app/services/settings.dart';
@@ -35,7 +36,7 @@ class ConceptsService {
         maxAge: maxAge, serveStale: serveStale);
   }
 
-  static Future<List<dynamic>> _fetchRaw() async {
+  static Future<MetadataFetch> _fetchRaw(MetadataValidator? validator) async {
     final headers = await Auth().getHeaders();
     // Uncached dio — persisted via MetadataCache (Isar) instead of Hive.
     final dio = await DioFactory.create(DioConfig.standard);
@@ -44,24 +45,34 @@ class ConceptsService {
     final Map<String, String> queryParameters = {};
     queryParameters["limit"] = "9999";
     queryParameters["sub-class"] = "true";
+    MetadataValidator? firstValidator;
     bool cont = true;
     while (cont) {
       queryParameters["offset"] = raw.length.toString();
       queryParameters["sort"] = "name.desc";
+      final requestUri =
+          Uri.parse(uri).replace(queryParameters: queryParameters);
+      final first = raw.isEmpty;
       final Response<List<dynamic>?> resp;
       try {
-        resp = await dio.get<List<dynamic>?>(uri,
-            queryParameters: queryParameters,
-            options: Options(headers: headers));
+        // Only the first request is conditional: a 304 on it would say
+        // nothing about the pages behind it.
+        resp = await dio.getUri<List<dynamic>?>(requestUri,
+            options: first
+                ? conditionalOptions(headers, requestUri, validator)
+                : Options(headers: headers));
       } on DioException catch (e) {
         checkReadStatus(e, uri);
         rethrow;
       }
+      if (first && resp.statusCode == 304) return const NotModified();
       final l = resp.data ?? [];
+      if (first) firstValidator = validatorOf(resp);
       raw.addAll(l);
       cont = l.length == 9999;
     }
-    return raw;
+    // A validator only covers a list that came in one answer.
+    return Fetched(raw, raw.length < 9999 ? firstValidator : null);
   }
 
   static bool isAvailable() => ApiAvailableService().isAvailable(uri);
